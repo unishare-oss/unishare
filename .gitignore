@@ -6,3 +6,5 @@ dist
 *.env
 .next
 *.tsbuildinfo
+
+apps/api/src/generated/
