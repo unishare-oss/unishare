@@ -5,19 +5,40 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "format": "turbo run format"
+    "format": "turbo run format",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.4.2",
+    "@commitlint/config-conventional": "^20.4.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.3.0",
     "turbo": "latest",
-    "typescript": "^5.4.0",
-    "prettier": "^3.3.0"
+    "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=20",
     "pnpm": ">=10"
   },
   "packageManager": "pnpm@10.29.2",
+  "lint-staged": {
+    "**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{js,mjs,cjs}": [
+      "prettier --write"
+    ],
+    "**/*.{json,md,yaml,yml,css}": [
+      "prettier --write"
+    ]
+  },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/engines", "prisma", "sharp"]
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma",
+      "sharp"
+    ]
   }
 }
