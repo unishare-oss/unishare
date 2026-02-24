@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "prisma.prisma",
+    "editorconfig.editorconfig",
+    "bradlc.vscode-tailwindcss",
+    "ms-azuretools.vscode-docker",
+    "github.vscode-github-actions",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}
