@@ -11,6 +11,10 @@ export default defineConfig({
       client: 'react-query',
       httpClient: 'fetch',
       override: {
+        mutator: {
+          path: './src/lib/api/fetcher.ts',
+          name: 'customFetch',
+        },
         query: {
           useQuery: true,
           useMutation: true,
