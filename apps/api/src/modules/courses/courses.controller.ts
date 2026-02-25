@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
-import { AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesService } from './courses.service'
