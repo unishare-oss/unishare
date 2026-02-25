@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "api:generate": "orval --config orval.config.ts"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
     "better-auth": "^1.4.19",
     "next": "16.1.6",
     "react": "19.2.3",
@@ -22,6 +24,7 @@
     "@unishare/tsconfig": "workspace:*",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "orval": "^8.4.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
