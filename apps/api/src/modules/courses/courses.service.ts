@@ -1,0 +1,33 @@
+import { Injectable, NotFoundException } from '@nestjs/common'
+import { CoursesRepository } from './courses.repository'
+import { CreateCourseDto } from './dto/create-course.dto'
+import { UpdateCourseDto } from './dto/update-course.dto'
+
+@Injectable()
+export class CoursesService {
+  constructor(private readonly coursesRepository: CoursesRepository) {}
+
+  create(dto: CreateCourseDto) {
+    return this.coursesRepository.create(dto)
+  }
+
+  findAll() {
+    return this.coursesRepository.findAll()
+  }
+
+  async findOne(id: string) {
+    const course = await this.coursesRepository.findById(id)
+    if (!course) throw new NotFoundException('Course not found')
+    return course
+  }
+
+  async update(id: string, dto: UpdateCourseDto) {
+    await this.findOne(id)
+    return this.coursesRepository.update(id, dto)
+  }
+
+  async remove(id: string) {
+    await this.findOne(id)
+    return this.coursesRepository.remove(id)
+  }
+}
