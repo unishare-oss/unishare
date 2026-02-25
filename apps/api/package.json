@@ -29,6 +29,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.4.1",
+    "@thallesp/nestjs-better-auth": "^2.4.0",
     "better-auth": "^1.4.19",
     "dotenv": "^17.3.1",
     "pg": "^8.13.0",
