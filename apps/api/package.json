@@ -31,6 +31,8 @@
     "@prisma/adapter-pg": "^7.4.1",
     "@thallesp/nestjs-better-auth": "^2.4.0",
     "better-auth": "^1.4.19",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
     "dotenv": "^17.3.1",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.2",
