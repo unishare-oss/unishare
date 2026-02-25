@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -6,7 +7,7 @@ import { auth } from './auth/auth.config'
 import { PrismaModule } from './prisma/prisma.module'
 
 @Module({
-  imports: [PrismaModule, AuthModule.forRoot({ auth })],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule.forRoot({ auth })],
   controllers: [AppController],
   providers: [AppService],
 })
