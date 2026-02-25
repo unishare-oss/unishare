@@ -48,6 +48,8 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
     "@prisma/client": "^7.4.1",
+    "@swc/cli": "^0.8.0",
+    "@swc/core": "^1.15.13",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
