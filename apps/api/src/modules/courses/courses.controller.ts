@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
+import { AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesService } from './courses.service'
@@ -18,12 +19,14 @@ export class CoursesController {
   }
 
   @Get()
+  @OptionalAuth()
   @ResponseMessage('Courses fetched successfully')
   findAll(@Query() pagination: PaginationDto) {
     return this.coursesService.findAll(pagination)
   }
 
   @Get(':id')
+  @OptionalAuth()
   @ResponseMessage('Course fetched successfully')
   findOne(@Param('id') id: string) {
     return this.coursesService.findOne(id)
