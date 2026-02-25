@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
+import { PaginationDto } from '@/common/dto/pagination.dto'
+import { paginate } from '@/common/utils/paginate'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 
@@ -11,8 +13,8 @@ export class CoursesRepository {
     return this.prisma.course.create({ data: dto })
   }
 
-  findAll() {
-    return this.prisma.course.findMany({ orderBy: { createdAt: 'desc' } })
+  findAll(pagination: PaginationDto) {
+    return paginate(this.prisma.course, { orderBy: { createdAt: 'desc' } }, pagination)
   }
 
   findById(id: string) {

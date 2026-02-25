@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesRepository } from './courses.repository'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
@@ -11,8 +12,8 @@ export class CoursesService {
     return this.coursesRepository.create(dto)
   }
 
-  findAll() {
-    return this.coursesRepository.findAll()
+  findAll(pagination: PaginationDto) {
+    return this.coursesRepository.findAll(pagination)
   }
 
   async findOne(id: string) {

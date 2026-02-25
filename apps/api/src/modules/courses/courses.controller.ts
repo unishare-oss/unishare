@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesService } from './courses.service'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
@@ -18,8 +19,8 @@ export class CoursesController {
 
   @Get()
   @ResponseMessage('Courses fetched successfully')
-  findAll() {
-    return this.coursesService.findAll()
+  findAll(@Query() pagination: PaginationDto) {
+    return this.coursesService.findAll(pagination)
   }
 
   @Get(':id')
