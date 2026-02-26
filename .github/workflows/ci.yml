@@ -30,6 +30,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter api db:generate
 
+      - name: Create metadata stub
+        run: echo "export default async () => {};" > apps/api/src/metadata.ts
+
       - name: Lint
         run: pnpm lint
 
