@@ -10,6 +10,5 @@ export class CreateCourseDto {
   name: string
 
   @IsString()
-  @MinLength(2)
-  department: string
+  departmentId: string
 }

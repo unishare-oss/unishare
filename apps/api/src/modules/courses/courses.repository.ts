@@ -10,19 +10,23 @@ export class CoursesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(dto: CreateCourseDto) {
-    return this.prisma.course.create({ data: dto })
+    return this.prisma.course.create({ data: dto, include: { department: true } })
   }
 
   findAll(pagination: PaginationDto) {
-    return paginate(this.prisma.course, { orderBy: { createdAt: 'desc' } }, pagination)
+    return paginate(
+      this.prisma.course,
+      { orderBy: { createdAt: 'desc' }, include: { department: true } },
+      pagination,
+    )
   }
 
   findById(id: string) {
-    return this.prisma.course.findUnique({ where: { id } })
+    return this.prisma.course.findUnique({ where: { id }, include: { department: true } })
   }
 
   update(id: string, dto: UpdateCourseDto) {
-    return this.prisma.course.update({ where: { id }, data: dto })
+    return this.prisma.course.update({ where: { id }, data: dto, include: { department: true } })
   }
 
   remove(id: string) {
