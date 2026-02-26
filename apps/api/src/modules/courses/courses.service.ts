@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesRepository } from './courses.repository'
 import { CreateCourseDto } from './dto/create-course.dto'
@@ -8,7 +8,9 @@ import { UpdateCourseDto } from './dto/update-course.dto'
 export class CoursesService {
   constructor(private readonly coursesRepository: CoursesRepository) {}
 
-  create(dto: CreateCourseDto) {
+  async create(dto: CreateCourseDto) {
+    const existing = await this.coursesRepository.findByCode(dto.code)
+    if (existing) throw new ConflictException('Course code already exists')
     return this.coursesRepository.create(dto)
   }
 
