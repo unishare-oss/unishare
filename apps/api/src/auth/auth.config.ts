@@ -27,7 +27,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
-  plugins: [openAPI()],
+  plugins: process.env.NODE_ENV !== 'production' ? [openAPI()] : [],
   trustedOrigins: [process.env.FRONTEND_URL ?? 'http://localhost:3000'],
   user: {
     additionalFields: {

@@ -6,7 +6,12 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  OnModuleInit,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 
@@ -76,11 +81,19 @@ export class StorageService implements OnModuleInit {
   }
 
   async generatePresignedDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
+    this.assertSafeKey(key)
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
     return getSignedUrl(this.s3Client, command, { expiresIn })
   }
 
+  private assertSafeKey(key: string): void {
+    if (!/^[a-zA-Z0-9/_\-.]+$/.test(key) || key.includes('..')) {
+      throw new InternalServerErrorException('Invalid storage key')
+    }
+  }
+
   async fileExists(key: string): Promise<boolean> {
+    this.assertSafeKey(key)
     try {
       await this.s3Client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
       return true
@@ -90,6 +103,7 @@ export class StorageService implements OnModuleInit {
   }
 
   async deleteFile(key: string): Promise<void> {
+    this.assertSafeKey(key)
     const command = new DeleteObjectCommand({ Bucket: this.bucket, Key: key })
     await this.s3Client.send(command)
   }
