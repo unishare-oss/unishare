@@ -19,6 +19,12 @@ enum PostType {
   OLD_QUESTION
 }
 
+enum PostStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String   @id
   name          String
@@ -66,15 +72,17 @@ model Course {
 }
 
 model Post {
-  id       String   @id @default(cuid())
-  type     PostType
-  title    String?
-  content  String?
-  urlLink  String?
-  examYear Int?
-  module   Int?
-  year     Int?
-  semester Int?
+  id           String     @id @default(cuid())
+  shortCode    String     @unique
+  type         PostType
+  status       PostStatus @default(PENDING)
+  title        String?
+  description  String?
+  externalUrl  String?
+  examYear     Int?
+  moduleNumber Int?
+  year         Int?
+  semester     Int?
 
   authorId String
   courseId String
@@ -85,13 +93,32 @@ model Post {
 
   author   User        @relation("AuthorPosts", fields: [authorId], references: [id])
   course   Course      @relation(fields: [courseId], references: [id])
+  files    File[]
   comments Comment[]
   savedBy  SavedPost[]
 
   @@index([authorId])
   @@index([courseId])
   @@index([type])
+  @@index([status])
   @@map("post")
+}
+
+model File {
+  id       String @id @default(cuid())
+  key      String
+  name     String
+  size     Int
+  mimeType String
+
+  postId String
+
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("file")
 }
 
 model Comment {
