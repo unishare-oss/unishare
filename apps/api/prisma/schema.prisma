@@ -26,7 +26,7 @@ model User {
   emailVerified Boolean  @default(false)
   image         String?
   role          UserRole @default(STUDENT)
-  departmentId  Int?
+  departmentId  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -41,7 +41,7 @@ model User {
 }
 
 model Department {
-  id   Int    @id @default(autoincrement())
+  id   String @id @default(cuid())
   name String @unique
 
   courses Course[]
@@ -51,10 +51,10 @@ model Department {
 }
 
 model Course {
-  id           Int    @id @default(autoincrement())
+  id           String @id @default(cuid())
   code         String @unique
   name         String
-  departmentId Int
+  departmentId String
 
   createdAt DateTime @default(now())
 
@@ -66,7 +66,7 @@ model Course {
 }
 
 model Post {
-  id       Int      @id @default(autoincrement())
+  id       String   @id @default(cuid())
   type     PostType
   title    String?
   content  String?
@@ -77,7 +77,7 @@ model Post {
   semester Int?
 
   authorId String
-  courseId Int
+  courseId String
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -95,11 +95,11 @@ model Post {
 }
 
 model Comment {
-  id      Int    @id @default(autoincrement())
+  id      String @id @default(cuid())
   content String
 
   userId String
-  postId Int
+  postId String
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -115,7 +115,7 @@ model Comment {
 
 model SavedPost {
   userId  String
-  postId  Int
+  postId  String
   savedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
