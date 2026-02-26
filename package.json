@@ -23,11 +23,7 @@
   },
   "packageManager": "pnpm@10.29.2",
   "lint-staged": {
-    "**/*.{ts,tsx,js,mjs,cjs}": [
-      "prettier --write",
-      "eslint --cache --fix"
-    ],
-    "**/*.{json,md,yaml,yml,css}": [
+    "**/*.{ts,tsx,js,mjs,cjs,json,md,yaml,yml,css}": [
       "prettier --write"
     ]
   },
