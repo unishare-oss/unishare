@@ -6,6 +6,7 @@ dist
 *.env
 .next
 *.tsbuildinfo
+next-env.d.ts
 
 apps/api/src/generated/
 apps/web/src/lib/api/generated/
