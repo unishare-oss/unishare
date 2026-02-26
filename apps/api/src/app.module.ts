@@ -6,6 +6,7 @@ import { AppService } from './app.service'
 import { auth } from './auth/auth.config'
 import { PrismaModule } from './prisma/prisma.module'
 import { CoursesModule } from './modules/courses/courses.module'
+import { UsersModule } from './modules/users/users.module'
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CoursesModule } from './modules/courses/courses.module'
     PrismaModule,
     AuthModule.forRoot({ auth }),
     CoursesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
