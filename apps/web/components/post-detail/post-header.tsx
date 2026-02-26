@@ -1,7 +1,6 @@
 'use client'
 
 import { Bookmark, Link2, Pencil, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import type { Post } from '@/lib/mock-data'

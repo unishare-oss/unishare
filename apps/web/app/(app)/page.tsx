@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { posts } from '@/lib/mock-data'
 import { FeedHeader } from '@/components/feed/feed-header'
-import { FilterStrip, typeFilters, type TypeFilter } from '@/components/feed/filter-strip'
+import { FilterStrip, type TypeFilter } from '@/components/feed/filter-strip'
 import { PostFeed } from '@/components/feed/post-feed'
 
 export default function FeedPage() {
