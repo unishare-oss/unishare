@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly config: ConfigService,
+  ) {}
 
   async findById(id: string) {
     const user = await this.usersRepository.findById(id)
@@ -17,9 +21,14 @@ export class UsersService {
     return this.toProfileView(user)
   }
 
-  private toProfileView(user: { startYear: number | null; [key: string]: unknown }) {
-    const currentYear = new Date().getFullYear()
-    const yearLevel = user.startYear === null ? null : Math.max(1, currentYear - user.startYear + 1)
+  private toProfileView(user: { enrollmentYear: number | null; [key: string]: unknown }) {
+    if (user.enrollmentYear === null) return { ...user, yearLevel: null }
+
+    const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
+    const now = new Date()
+    const currentAcademicYear =
+      now.getMonth() + 1 >= academicStartMonth ? now.getFullYear() : now.getFullYear() - 1
+    const yearLevel = Math.max(1, currentAcademicYear - user.enrollmentYear + 1)
 
     return { ...user, yearLevel }
   }

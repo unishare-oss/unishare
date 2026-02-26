@@ -13,7 +13,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsInt()
-  @Min(1900)
-  @Max(9999)
-  startYear?: number
+  @Min(1950)
+  @Max(2100)
+  enrollmentYear?: number
 }
