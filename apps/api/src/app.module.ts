@@ -5,6 +5,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { auth } from './auth/auth.config'
 import { PrismaModule } from './prisma/prisma.module'
+import { StorageModule } from './modules/storage/storage.module'
 import { CoursesModule } from './modules/courses/courses.module'
 import { UsersModule } from './modules/users/users.module'
 
@@ -12,6 +13,7 @@ import { UsersModule } from './modules/users/users.module'
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    StorageModule,
     AuthModule.forRoot({ auth }),
     CoursesModule,
     UsersModule,
