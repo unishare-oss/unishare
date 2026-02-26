@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'
+import { IsInt, IsOptional, IsString, IsUrl, Max, Min, MaxLength } from 'class-validator'
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -10,4 +10,10 @@ export class UpdateProfileDto {
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(500)
   image?: string
+
+  @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(9999)
+  startYear?: number
 }

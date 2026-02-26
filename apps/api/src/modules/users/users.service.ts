@@ -9,10 +9,18 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.usersRepository.findById(id)
     if (!user) throw new NotFoundException('User not found')
-    return user
+    return this.toProfileView(user)
   }
 
-  updateProfile(id: string, dto: UpdateProfileDto) {
-    return this.usersRepository.updateProfile(id, dto)
+  async updateProfile(id: string, dto: UpdateProfileDto) {
+    const user = await this.usersRepository.updateProfile(id, dto)
+    return this.toProfileView(user)
+  }
+
+  private toProfileView(user: { startYear: number | null; [key: string]: unknown }) {
+    const currentYear = new Date().getFullYear()
+    const yearLevel = user.startYear === null ? null : Math.max(1, currentYear - user.startYear + 1)
+
+    return { ...user, yearLevel }
   }
 }
