@@ -3,6 +3,7 @@ import { NestFactory, Reflector } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
+import metadata from './metadata'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
@@ -26,6 +27,7 @@ async function bootstrap() {
       .addBearerAuth()
       .build()
 
+    await SwaggerModule.loadPluginMetadata(metadata)
     const document = SwaggerModule.createDocument(app, config)
     SwaggerModule.setup('api', app, document)
   }

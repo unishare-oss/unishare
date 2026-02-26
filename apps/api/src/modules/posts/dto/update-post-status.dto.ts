@@ -1,7 +1,7 @@
 import { IsEnum } from 'class-validator'
-import { PostStatus } from '@/generated/prisma/client'
+import { PostStatus } from '@/generated/prisma/enums'
 
 export class UpdatePostStatusDto {
   @IsEnum({ APPROVED: PostStatus.APPROVED, REJECTED: PostStatus.REJECTED })
-  status: PostStatus.APPROVED | PostStatus.REJECTED
+  status: Exclude<PostStatus, 'PENDING'>
 }
