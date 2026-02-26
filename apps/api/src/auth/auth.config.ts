@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { openAPI } from 'better-auth/plugins'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
@@ -26,6 +27,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  plugins: [openAPI()],
   trustedOrigins: [process.env.FRONTEND_URL ?? 'http://localhost:3000'],
   user: {
     additionalFields: {
