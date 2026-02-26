@@ -8,48 +8,29 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
-  STUDENT
-  MODERATOR
-  ADMIN
-}
-
-enum PostType {
-  NOTE
-  OLD_QUESTION
-}
-
-enum PostStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model User {
-  id            String   @id
+  id            String      @id
   name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
+  email         String      @unique
+  emailVerified Boolean     @default(false)
   image         String?
-  role          UserRole @default(STUDENT)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   departmentId  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  department Department? @relation(fields: [departmentId], references: [id])
-  sessions   Session[]
-  accounts   Account[]
-  posts      Post[]      @relation("AuthorPosts")
-  comments   Comment[]
-  savedPosts SavedPost[]
+  role          UserRole    @default(STUDENT)
+  accounts      Account[]
+  comments      Comment[]
+  posts         Post[]      @relation("AuthorPosts")
+  savedPosts    SavedPost[]
+  sessions      Session[]
+  department    Department? @relation(fields: [departmentId], references: [id])
 
   @@map("user")
 }
 
 model Department {
-  id   String @id @default(cuid())
-  name String @unique
-
+  id      String   @id @default(cuid())
+  name    String   @unique
   courses Course[]
   users   User[]
 
@@ -57,45 +38,40 @@ model Department {
 }
 
 model Course {
-  id           String @id @default(cuid())
-  code         String @unique
+  id           String     @id @default(cuid())
+  code         String     @unique
   name         String
   departmentId String
-
-  createdAt DateTime @default(now())
-
-  department Department @relation(fields: [departmentId], references: [id])
-  posts      Post[]
+  createdAt    DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id])
+  posts        Post[]
 
   @@index([departmentId])
   @@map("course")
 }
 
 model Post {
-  id           String     @id @default(cuid())
-  shortCode    String     @unique
+  id           String      @id @default(cuid())
   type         PostType
-  status       PostStatus @default(PENDING)
   title        String?
-  description  String?
-  externalUrl  String?
   examYear     Int?
-  moduleNumber Int?
   year         Int?
   semester     Int?
-
-  authorId String
-  courseId String
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  author   User        @relation("AuthorPosts", fields: [authorId], references: [id])
-  course   Course      @relation(fields: [courseId], references: [id])
-  files    File[]
-  comments Comment[]
-  savedBy  SavedPost[]
+  authorId     String
+  courseId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+  moduleNumber Int?
+  status       PostStatus  @default(PENDING)
+  description  String?
+  externalUrl  String?
+  shortCode    String      @unique
+  comments     Comment[]
+  files        File[]
+  author       User        @relation("AuthorPosts", fields: [authorId], references: [id])
+  course       Course      @relation(fields: [courseId], references: [id])
+  savedBy      SavedPost[]
 
   @@index([authorId])
   @@index([courseId])
@@ -105,35 +81,29 @@ model Post {
 }
 
 model File {
-  id       String @id @default(cuid())
-  key      String
-  name     String
-  size     Int
-  mimeType String
-
-  postId String
-
+  id        String   @id @default(cuid())
+  key       String
+  name      String
+  size      Int
+  mimeType  String
+  postId    String
   createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@map("file")
 }
 
 model Comment {
-  id      String @id @default(cuid())
-  content String
-
-  userId String
-  postId String
-
+  id        String    @id @default(cuid())
+  content   String
+  userId    String
+  postId    String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
-  user User @relation(fields: [userId], references: [id])
-  post Post @relation(fields: [postId], references: [id])
+  post      Post      @relation(fields: [postId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([postId])
@@ -144,9 +114,8 @@ model SavedPost {
   userId  String
   postId  String
   savedAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([postId])
@@ -162,8 +131,7 @@ model Session {
   ipAddress String?
   userAgent String?
   userId    String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("session")
@@ -183,8 +151,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")
@@ -200,4 +167,21 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+enum UserRole {
+  STUDENT
+  MODERATOR
+  ADMIN
+}
+
+enum PostType {
+  NOTE
+  OLD_QUESTION
+}
+
+enum PostStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
