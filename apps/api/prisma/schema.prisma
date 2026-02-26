@@ -8,32 +8,65 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String      @id
-  name          String
-  email         String
-  emailVerified Boolean     @default(false)
-  image         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  departmentId  Int
-  department    Department  @relation(fields: [departmentId], references: [id])
-  posts         Post[]      @relation("AuthorPosts")
-  comments      Comment[]
-  savedPosts    SavedPost[]
+enum UserRole {
+  STUDENT
+  MODERATOR
+  ADMIN
+}
 
-  @@unique([email])
+enum PostType {
+  NOTE
+  OLD_QUESTION
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          UserRole @default(STUDENT)
+  departmentId  Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  sessions   Session[]
+  accounts   Account[]
+  posts      Post[]      @relation("AuthorPosts")
+  comments   Comment[]
+  savedPosts SavedPost[]
+
   @@map("user")
 }
 
-model Post {
-  id           Int    @id @default(autoincrement())
-  authorId     String
-  departmentId Int
-  courseId     Int
+model Department {
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
+  courses Course[]
+  users   User[]
+
+  @@map("department")
+}
+
+model Course {
+  id           Int    @id @default(autoincrement())
+  code         String @unique
+  name         String
+  departmentId Int
+
+  createdAt DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id])
+  posts      Post[]
+
+  @@index([departmentId])
+  @@map("course")
+}
+
+model Post {
+  id       Int      @id @default(autoincrement())
   type     PostType
   title    String?
   content  String?
@@ -43,66 +76,31 @@ model Post {
   year     Int?
   semester Int?
 
+  authorId String
+  courseId Int
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  author     User       @relation("AuthorPosts", fields: [authorId], references: [id])
-  department Department @relation(fields: [departmentId], references: [id])
-  course     Course     @relation(fields: [courseId], references: [id])
-
+  author   User        @relation("AuthorPosts", fields: [authorId], references: [id])
+  course   Course      @relation(fields: [courseId], references: [id])
   comments Comment[]
   savedBy  SavedPost[]
 
   @@index([authorId])
-  @@index([departmentId])
   @@index([courseId])
   @@index([type])
   @@map("post")
 }
 
-model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([token])
-  @@index([userId])
-  @@map("session")
-}
-
-model Account {
-  id                    String    @id
-  accountId             String
-  providerId            String
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@index([userId])
-  @@map("account")
-}
-
 model Comment {
-  id     Int    @id @default(autoincrement())
+  id      Int    @id @default(autoincrement())
+  content String
+
   userId String
   postId Int
 
-  content   String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -113,32 +111,6 @@ model Comment {
   @@index([userId])
   @@index([postId])
   @@map("comment")
-}
-
-model Department {
-  id       Int    @id @default(autoincrement())
-  name     String
-  courseId Int
-
-  course Course @relation(fields: [courseId], references: [id])
-  users  User[]
-  posts  Post[]
-
-  @@index([courseId])
-  @@map("department")
-}
-
-model Course {
-  id   Int    @id @default(autoincrement())
-  code String @unique
-  name String
-
-  createdAt DateTime @default(now())
-
-  departments Department[]
-  posts       Post[]
-
-  @@map("course")
 }
 
 model SavedPost {
@@ -154,6 +126,43 @@ model SavedPost {
   @@map("saved_post")
 }
 
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
 model Verification {
   id         String   @id
   identifier String
@@ -164,9 +173,4 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
-}
-
-enum PostType {
-  NOTE
-  OLD_QUESTION
 }
