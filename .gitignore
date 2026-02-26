@@ -9,4 +9,5 @@ dist
 next-env.d.ts
 
 apps/api/src/generated/
+apps/api/src/metadata.ts
 apps/web/src/lib/api/generated/
