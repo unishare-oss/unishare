@@ -9,6 +9,7 @@ import { StorageModule } from './modules/storage/storage.module'
 import { CoursesModule } from './modules/courses/courses.module'
 import { UsersModule } from './modules/users/users.module'
 import { DepartmentsModule } from './modules/departments/departments.module'
+import { PostsModule } from './modules/posts/posts.module'
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { DepartmentsModule } from './modules/departments/departments.module'
     CoursesModule,
     UsersModule,
     DepartmentsModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

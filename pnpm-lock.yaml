@@ -73,6 +73,9 @@ importers:
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
       pg:
         specifier: ^8.13.0
         version: 8.18.0
@@ -8157,6 +8160,14 @@ packages:
     engines: { node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1 }
     hasBin: true
 
+  nanoid@5.1.6:
+    resolution:
+      {
+        integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==,
+      }
+    engines: { node: ^18 || >=20 }
+    hasBin: true
+
   nanostores@1.1.0:
     resolution:
       {
@@ -16125,6 +16136,8 @@ snapshots:
   nano-spawn@2.0.0: {}
 
   nanoid@3.3.11: {}
+
+  nanoid@5.1.6: {}
 
   nanostores@1.1.0: {}
 
