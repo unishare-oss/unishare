@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -77,6 +78,15 @@ export class StorageService implements OnModuleInit {
   async generatePresignedDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
     return getSignedUrl(this.s3Client, command, { expiresIn })
+  }
+
+  async fileExists(key: string): Promise<boolean> {
+    try {
+      await this.s3Client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      return true
+    } catch {
+      return false
+    }
   }
 
   async deleteFile(key: string): Promise<void> {
