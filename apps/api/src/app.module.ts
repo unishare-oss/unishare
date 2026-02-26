@@ -10,6 +10,7 @@ import { CoursesModule } from './modules/courses/courses.module'
 import { UsersModule } from './modules/users/users.module'
 import { DepartmentsModule } from './modules/departments/departments.module'
 import { PostsModule } from './modules/posts/posts.module'
+import { FilesModule } from './modules/files/files.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PostsModule } from './modules/posts/posts.module'
     UsersModule,
     DepartmentsModule,
     PostsModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
