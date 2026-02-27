@@ -1,7 +1,8 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { posts, currentUser } from '@/lib/mock-data'
+import { useUIStore } from '@/lib/store'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
@@ -13,6 +14,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const post = posts.find((p) => p.id === id) ?? posts[0]
   const isOwner = post.author.id === currentUser.id
   const [commentText, setCommentText] = useState('')
+  const markRead = useUIStore((s) => s.markRead)
+
+  useEffect(() => {
+    markRead(post.id)
+  }, [post.id, markRead])
 
   return (
     <div className="flex flex-col min-h-screen">
