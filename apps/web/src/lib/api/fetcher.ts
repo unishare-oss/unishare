@@ -16,6 +16,7 @@ export const customFetch = async <T>(
   options: RequestInit = {},
 ): Promise<ApiResult<T>> => {
   const response = await fetch(`${API_URL}${url}`, {
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
