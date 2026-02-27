@@ -5,6 +5,7 @@ import { Bookmark, FileText, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
+import { authClient } from '@/src/lib/auth/client'
 import type { Post } from '@/lib/mock-data'
 
 export function TypeBadge({ type }: { type: Post['type'] }) {
@@ -23,6 +24,20 @@ export function TypeBadge({ type }: { type: Post['type'] }) {
 export function PostCard({ post }: { post: Post }) {
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
+  const guestSavedIds = useUIStore((s) => s.savedPostIds)
+  const toggleSaved = useUIStore((s) => s.toggleSaved)
+  const { data: session } = authClient.useSession()
+
+  const isSaved = session ? post.savedByUser : guestSavedIds.includes(post.id)
+
+  function handleSave(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!session) {
+      toggleSaved(post.id)
+    }
+    // TODO: call save/unsave API mutation when posts are wired to API
+  }
 
   return (
     <Link href={`/posts/${post.id}`} className="block" onClick={() => markRead(post.id)}>
@@ -43,32 +58,37 @@ export function PostCard({ post }: { post: Post }) {
             {post.title}
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <UserAvatar name={post.author.name} size="xs" className="shrink-0" />
-            <span className="font-mono text-xs text-foreground">{post.author.name}</span>
+            <span className="flex items-center gap-1">
+              <UserAvatar name={post.author.name} size="xs" className="shrink-0" />
+              <span className="font-mono text-xs text-foreground">{post.author.name}</span>
+            </span>
             <span className="text-text-muted text-xs">{'·'}</span>
             <span className="font-mono text-xs text-text-muted">Year {post.yearLevel}</span>
             <span className="text-text-muted text-xs">{'·'}</span>
-            <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
-            <span className="font-mono text-xs text-text-muted">
-              {post.fileCount} {post.fileCount === 1 ? 'file' : 'files'}
+            <span className="flex items-center gap-1">
+              <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
+              <span className="font-mono text-xs text-text-muted">
+                {post.fileCount} {post.fileCount === 1 ? 'file' : 'files'}
+              </span>
             </span>
             <span className="text-text-muted text-xs">{'·'}</span>
-            <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />
-            <span className="font-mono text-xs text-text-muted">{post.commentCount} comments</span>
+            <span className="flex items-center gap-1">
+              <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />
+              <span className="font-mono text-xs text-text-muted">
+                {post.commentCount} comments
+              </span>
+            </span>
             <span className="text-text-muted text-xs">{'·'}</span>
             <span className="font-mono text-xs text-text-muted">{post.createdAt}</span>
           </div>
         </div>
         <button
           className="p-2 rounded-[6px] hover:bg-background transition-colors duration-150 shrink-0 mt-1"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
-          aria-label={post.savedByUser ? 'Unsave post' : 'Save post'}
+          onClick={handleSave}
+          aria-label={isSaved ? 'Unsave post' : 'Save post'}
         >
           <Bookmark
-            className={cn('size-4', post.savedByUser ? 'fill-amber text-amber' : 'text-text-muted')}
+            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
             strokeWidth={1.5}
           />
         </button>
