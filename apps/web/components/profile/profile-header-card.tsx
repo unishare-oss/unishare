@@ -1,9 +1,9 @@
 import { Camera } from 'lucide-react'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import type { User } from '@/lib/mock-data'
+import type { UserProfileEntity } from '@/lib/api/generated/unishareAPI.schemas'
 
 interface ProfileHeaderCardProps {
-  user: User
+  user: UserProfileEntity
 }
 
 export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
@@ -23,16 +23,20 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
             <span className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border border-border rounded-[4px] text-foreground">
               {user.role}
             </span>
-            <span className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border border-border rounded-[4px] text-foreground">
-              {user.department}
-            </span>
+            {user.department && (
+              <span className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border border-border rounded-[4px] text-foreground">
+                {user.department.name}
+              </span>
+            )}
           </div>
-          <p
-            className="font-mono text-[13px] text-amber mt-2 cursor-help"
-            title="Based on enrollment year + academic calendar"
-          >
-            Year {user.yearLevel} Student
-          </p>
+          {user.yearLevel != null && (
+            <p
+              className="font-mono text-[13px] text-amber mt-2 cursor-help"
+              title="Based on enrollment year + academic calendar"
+            >
+              Year {user.yearLevel} Student
+            </p>
+          )}
         </div>
       </div>
     </div>
