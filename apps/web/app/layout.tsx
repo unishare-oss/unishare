@@ -14,7 +14,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Unishare — Student Resource Sharing',
+  title: {
+    template: '%s | Unishare',
+    default: 'Unishare — Student Resource Sharing',
+  },
   description:
     "Every lecture note, past paper, and study guide — shared by students who've been there.",
 }

@@ -1,21 +1,11 @@
-'use client'
-
-import { useEffect } from 'react'
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { authClient } from '@/src/lib/auth/client'
+import { GuestGuard } from '@/components/guest-guard'
+
+export const metadata: Metadata = {
+  title: 'Sign In',
+}
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  const router = useRouter()
-  const { data: session, isPending } = authClient.useSession()
-
-  useEffect(() => {
-    if (!isPending && session) {
-      router.replace('/')
-    }
-  }, [session, isPending, router])
-
-  if (isPending || session) return null
-
-  return <>{children}</>
+  return <GuestGuard>{children}</GuestGuard>
 }
