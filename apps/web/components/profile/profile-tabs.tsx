@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { PostCard } from '@/components/post-card'
-import type { Post } from '@/lib/mock-data'
+import type { ApiPost } from '@/lib/api-types'
 
 export const tabs = ['MY POSTS', 'SAVED POSTS'] as const
 export type Tab = (typeof tabs)[number]
@@ -10,7 +10,7 @@ export type Tab = (typeof tabs)[number]
 interface ProfileTabsProps {
   activeTab: Tab
   onTabChange: (tab: Tab) => void
-  posts: Post[]
+  posts: ApiPost[]
 }
 
 export function ProfileTabs({ activeTab, onTabChange, posts }: ProfileTabsProps) {

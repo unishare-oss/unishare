@@ -32,7 +32,10 @@ export default function FeedPage() {
 
   const { data } = usePostsControllerFindAll(
     {
-      type: activeFilter !== 'ALL' ? (activeFilter as 'NOTE' | 'OLD_QUESTION') : undefined,
+      type: (activeFilter !== 'ALL' ? activeFilter : undefined) as unknown as Record<
+        string,
+        unknown
+      >,
       courseId: selectedCourseId || undefined,
       departmentId: selectedDeptId || undefined,
       page,

@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
-import { posts } from '@/lib/mock-data'
 import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
+import {
+  usePostsControllerFindAll,
+  usePostsControllerGetSavedPosts,
+} from '@/src/lib/api/generated/posts/posts'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { authClient } from '@/src/lib/auth/client'
 import { PageHeader } from '@/components/shared/page-header'
@@ -20,8 +23,17 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
     user.enrollmentYear != null ? String(user.enrollmentYear) : '',
   )
 
-  const myPosts = posts.filter((p) => p.author.id === user.id)
-  const savedPosts = posts.filter((p) => p.savedByUser)
+  const { data: myPostsData } = usePostsControllerFindAll(
+    { authorId: user.id, limit: 100 },
+    { query: { select: (r) => r.data } },
+  )
+  const { data: savedPostsData } = usePostsControllerGetSavedPosts(
+    {},
+    { query: { select: (r) => r.data } },
+  )
+
+  const myPosts = myPostsData?.items ?? []
+  const savedPosts = savedPostsData?.items ?? []
 
   return (
     <>
