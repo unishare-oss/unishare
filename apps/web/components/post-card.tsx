@@ -2,13 +2,22 @@
 
 import Link from 'next/link'
 import { Bookmark, FileText, MessageSquare } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
-import type { Post } from '@/lib/mock-data'
+import {
+  usePostsControllerSavePost,
+  usePostsControllerUnsavePost,
+  getPostsControllerFindAllQueryKey,
+} from '@/src/lib/api/generated/posts/posts'
+import type { ApiPost } from '@/lib/api-types'
 
-export function TypeBadge({ type }: { type: Post['type'] }) {
+const typeLabel: Record<string, string> = { NOTE: 'NOTE', OLD_QUESTION: 'PAST EXAM' }
+
+export function TypeBadge({ type }: { type: string }) {
   return (
     <span
       className={cn(
@@ -16,28 +25,48 @@ export function TypeBadge({ type }: { type: Post['type'] }) {
         type === 'NOTE' ? 'border-info text-info' : 'border-amber text-amber',
       )}
     >
-      {type}
+      {typeLabel[type] ?? type}
     </span>
   )
 }
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({ post }: { post: ApiPost }) {
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
-  const guestSavedIds = useUIStore((s) => s.savedPostIds)
   const toggleSaved = useUIStore((s) => s.toggleSaved)
+  const isGuestSaved = useUIStore((s) => s.isGuestSaved)
   const { data: session } = authClient.useSession()
+  const queryClient = useQueryClient()
 
-  const isSaved = session ? post.savedByUser : guestSavedIds.includes(post.id)
+  const isSaved = session ? post.savedByCurrentUser : isGuestSaved(post.id)
+
+  const { mutate: savePost } = usePostsControllerSavePost({
+    mutation: {
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+    },
+  })
+  const { mutate: unsavePost } = usePostsControllerUnsavePost({
+    mutation: {
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+    },
+  })
 
   function handleSave(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     if (!session) {
-      toggleSaved(post.id)
+      toggleSaved(post)
+    } else if (isSaved) {
+      unsavePost({ id: post.id })
+    } else {
+      savePost({ id: post.id })
     }
-    // TODO: call save/unsave API mutation when posts are wired to API
   }
+
+  const currentYear = new Date().getFullYear()
+  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
 
   return (
     <Link href={`/posts/${post.id}`} className="block" onClick={() => markRead(post.id)}>
@@ -45,9 +74,9 @@ export function PostCard({ post }: { post: Post }) {
         <div className="flex-1 min-w-0 pr-4">
           <div className="flex items-center gap-2 mb-1.5">
             <TypeBadge type={post.type} />
-            <span className="font-mono text-[13px] text-amber font-medium">{post.courseCode}</span>
+            <span className="font-mono text-[13px] text-amber font-medium">{post.course.code}</span>
             <span className="text-text-muted text-[13px]">{'·'}</span>
-            <span className="text-text-muted text-[13px]">{post.department}</span>
+            <span className="text-text-muted text-[13px]">{post.course.department.name}</span>
           </div>
           <h3
             className={cn(
@@ -62,24 +91,30 @@ export function PostCard({ post }: { post: Post }) {
               <UserAvatar name={post.author.name} size="xs" className="shrink-0" />
               <span className="font-mono text-xs text-foreground">{post.author.name}</span>
             </span>
-            <span className="text-text-muted text-xs">{'·'}</span>
-            <span className="font-mono text-xs text-text-muted">Year {post.yearLevel}</span>
+            {yearLevel != null && (
+              <>
+                <span className="text-text-muted text-xs">{'·'}</span>
+                <span className="font-mono text-xs text-text-muted">Year {yearLevel}</span>
+              </>
+            )}
             <span className="text-text-muted text-xs">{'·'}</span>
             <span className="flex items-center gap-1">
               <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
               <span className="font-mono text-xs text-text-muted">
-                {post.fileCount} {post.fileCount === 1 ? 'file' : 'files'}
+                {post.files.length} {post.files.length === 1 ? 'file' : 'files'}
               </span>
             </span>
             <span className="text-text-muted text-xs">{'·'}</span>
             <span className="flex items-center gap-1">
               <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />
               <span className="font-mono text-xs text-text-muted">
-                {post.commentCount} comments
+                {post._count.comments} comments
               </span>
             </span>
             <span className="text-text-muted text-xs">{'·'}</span>
-            <span className="font-mono text-xs text-text-muted">{post.createdAt}</span>
+            <span className="font-mono text-xs text-text-muted">
+              {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+            </span>
           </div>
         </div>
         <button

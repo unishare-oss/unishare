@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { LogIn } from 'lucide-react'
-import { posts } from '@/lib/mock-data'
+import { usePostsControllerGetSavedPosts } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
 import { PostCard } from '@/components/post-card'
@@ -11,11 +11,14 @@ import { EmptyState } from '@/components/shared/empty-state'
 
 export default function SavedPage() {
   const { data: session } = authClient.useSession()
-  const guestSavedIds = useUIStore((s) => s.savedPostIds)
+  const guestSavedPosts = useUIStore((s) => s.savedPosts)
 
-  const savedPosts = session
-    ? posts.filter((p) => p.savedByUser)
-    : posts.filter((p) => guestSavedIds.includes(p.id))
+  const { data: apiSavedData } = usePostsControllerGetSavedPosts(
+    {},
+    { query: { select: (r) => r.data, enabled: !!session } },
+  )
+
+  const savedPosts = session ? (apiSavedData?.items ?? []) : guestSavedPosts
 
   return (
     <div className="flex flex-col min-h-screen">

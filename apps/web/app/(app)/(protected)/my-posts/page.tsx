@@ -1,10 +1,20 @@
-import { posts, currentUser } from '@/lib/mock-data'
+'use client'
+
+import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
+import { authClient } from '@/src/lib/auth/client'
 import { PostCard } from '@/components/post-card'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 
 export default function MyPostsPage() {
-  const myPosts = posts.filter((p) => p.author.id === currentUser.id)
+  const { data: session } = authClient.useSession()
+
+  const { data } = usePostsControllerFindAll(
+    { authorId: session?.user?.id, limit: 100 },
+    { query: { select: (r) => r.data, enabled: !!session?.user?.id } },
+  )
+
+  const myPosts = data?.items ?? []
 
   return (
     <div className="flex flex-col min-h-screen">

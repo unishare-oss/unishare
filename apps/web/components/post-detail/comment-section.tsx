@@ -1,10 +1,11 @@
 'use client'
 
+import { formatDistanceToNow } from 'date-fns'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import type { Post } from '@/lib/mock-data'
+import type { ApiPostDetail } from '@/lib/api-types'
 
 interface CommentSectionProps {
-  post: Post
+  post: ApiPostDetail
   commentText: string
   onCommentChange: (value: string) => void
 }
@@ -13,7 +14,7 @@ export function CommentSection({ post, commentText, onCommentChange }: CommentSe
   return (
     <section className="py-6">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-4">
-        Comments ({post.commentCount})
+        Comments ({post._count.comments})
       </h2>
 
       <div className="mb-6">
@@ -34,14 +35,16 @@ export function CommentSection({ post, commentText, onCommentChange }: CommentSe
       <div className="flex flex-col">
         {post.comments.map((comment) => (
           <div key={comment.id} className="py-4 border-b border-border last:border-b-0">
-            {comment.deleted ? (
+            {comment.deletedAt !== null ? (
               <p className="text-sm text-text-muted italic">[deleted]</p>
             ) : (
               <>
                 <div className="flex items-center gap-2.5 mb-2">
-                  <UserAvatar name={comment.author.name} size="sm" />
-                  <span className="text-sm font-medium text-foreground">{comment.author.name}</span>
-                  <span className="font-mono text-xs text-text-muted">{comment.createdAt}</span>
+                  <UserAvatar name={comment.user.name} size="sm" />
+                  <span className="text-sm font-medium text-foreground">{comment.user.name}</span>
+                  <span className="font-mono text-xs text-text-muted">
+                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                  </span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed pl-[34px]">
                   {comment.content}

@@ -1,17 +1,67 @@
 'use client'
 
-import { Bookmark, Link2, Pencil, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import type { Post } from '@/lib/mock-data'
+import { useUIStore } from '@/lib/store'
+import { authClient } from '@/src/lib/auth/client'
+import {
+  usePostsControllerSavePost,
+  usePostsControllerUnsavePost,
+  getPostsControllerFindAllQueryKey,
+} from '@/src/lib/api/generated/posts/posts'
+import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
 
 interface PostHeaderProps {
-  post: Post
+  post: ApiPostDetail
   isOwner: boolean
 }
 
 export function PostHeader({ post, isOwner }: PostHeaderProps) {
+  const [copied, setCopied] = useState(false)
+  const { data: session } = authClient.useSession()
+  const toggleSaved = useUIStore((s) => s.toggleSaved)
+  const isGuestSaved = useUIStore((s) => s.isGuestSaved)
+  const queryClient = useQueryClient()
+
+  const isSaved = session ? post.savedByCurrentUser : isGuestSaved(post.id)
+
+  const { mutate: savePost } = usePostsControllerSavePost({
+    mutation: {
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+    },
+  })
+  const { mutate: unsavePost } = usePostsControllerUnsavePost({
+    mutation: {
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+    },
+  })
+
+  function handleSave() {
+    if (!session) {
+      toggleSaved(post as unknown as ApiPost)
+    } else if (isSaved) {
+      unsavePost({ id: post.id })
+    } else {
+      savePost({ id: post.id })
+    }
+  }
+
+  function handleShare() {
+    navigator.clipboard.writeText(post.shortCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const currentYear = new Date().getFullYear()
+  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
+
   return (
     <>
       {post.status === 'PENDING' && (
@@ -25,22 +75,22 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <TypeBadge type={post.type} />
-          <span className="font-mono text-[13px] text-amber font-medium">{post.courseCode}</span>
+          <span className="font-mono text-[13px] text-amber font-medium">{post.course.code}</span>
         </div>
         <h1 className="text-[28px] font-semibold text-foreground tracking-tight leading-tight mt-2 text-balance">
           {post.title}
         </h1>
         <div className="flex items-center gap-1.5 mt-3 font-mono text-xs text-text-muted flex-wrap">
-          <span>Year {post.yearLevel}</span>
-          <span>{'·'}</span>
-          <span>Semester {post.semester}</span>
-          {post.module && (
+          {post.year != null && <span>Year {post.year}</span>}
+          {post.year != null && post.semester != null && <span>{'·'}</span>}
+          {post.semester != null && <span>Semester {post.semester}</span>}
+          {post.moduleNumber != null && (
             <>
               <span>{'·'}</span>
-              <span>Module {post.module}</span>
+              <span>Module {post.moduleNumber}</span>
             </>
           )}
-          {post.examYear && (
+          {post.examYear != null && (
             <>
               <span>{'·'}</span>
               <span>{post.examYear} Exam</span>
@@ -52,8 +102,9 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
           <div>
             <p className="text-sm font-medium text-foreground">{post.author.name}</p>
             <p className="font-mono text-xs text-text-muted">
-              Year {post.author.yearLevel} student {'·'} {post.author.department} {'·'}{' '}
-              {post.createdAt}
+              {yearLevel != null && `Year ${yearLevel} student · `}
+              {post.author.department?.name && `${post.author.department.name} · `}
+              {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </p>
           </div>
         </div>
@@ -61,19 +112,25 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
 
       <div className="flex items-center gap-2 justify-end mb-6">
         <button
+          onClick={handleSave}
           className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={post.savedByUser ? 'Unsave post' : 'Save post'}
+          aria-label={isSaved ? 'Unsave post' : 'Save post'}
         >
           <Bookmark
-            className={cn('size-4', post.savedByUser ? 'fill-amber text-amber' : 'text-text-muted')}
+            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
             strokeWidth={1.5}
           />
         </button>
         <button
+          onClick={handleShare}
           className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label="Copy link"
+          aria-label={copied ? 'Copied!' : 'Copy share code'}
         >
-          <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
+          {copied ? (
+            <Check className="size-4 text-success" strokeWidth={1.5} />
+          ) : (
+            <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
+          )}
         </button>
         {isOwner && (
           <>

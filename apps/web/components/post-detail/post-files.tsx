@@ -1,21 +1,24 @@
 import { Link2, FileText, FileImage, FileSpreadsheet, Download } from 'lucide-react'
-import type { Post, PostFile } from '@/lib/mock-data'
+import type { ApiPostDetail } from '@/lib/api-types'
 
-function fileIcon(type: PostFile['type']) {
-  switch (type) {
-    case 'PDF':
-      return <FileText className="size-5 text-destructive" strokeWidth={1.5} />
-    case 'DOCX':
-      return <FileText className="size-5 text-info" strokeWidth={1.5} />
-    case 'PPTX':
-      return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
-    case 'PNG':
-      return <FileImage className="size-5 text-success" strokeWidth={1.5} />
-  }
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function fileIcon(mimeType: string) {
+  if (mimeType === 'application/pdf')
+    return <FileText className="size-5 text-destructive" strokeWidth={1.5} />
+  if (mimeType.startsWith('image/'))
+    return <FileImage className="size-5 text-success" strokeWidth={1.5} />
+  if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
+    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+  return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
 interface PostFilesProps {
-  post: Post
+  post: ApiPostDetail
 }
 
 export function PostFiles({ post }: PostFilesProps) {
@@ -51,11 +54,13 @@ export function PostFiles({ post }: PostFilesProps) {
               key={file.id}
               className="flex items-center gap-3 border border-border rounded-[6px] px-4 py-3"
             >
-              {fileIcon(file.type)}
+              {fileIcon(file.mimeType)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
               </div>
-              <span className="font-mono text-xs text-text-muted shrink-0">{file.size}</span>
+              <span className="font-mono text-xs text-text-muted shrink-0">
+                {formatBytes(file.size)}
+              </span>
               <button
                 className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0"
                 aria-label={`Download ${file.name}`}
