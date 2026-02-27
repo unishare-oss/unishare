@@ -1,11 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { ApiPost } from './api-types'
 
 interface UIStore {
   readPostIds: string[]
   markRead: (id: string) => void
-  savedPostIds: string[]
-  toggleSaved: (id: string) => void
+  savedPosts: ApiPost[]
+  toggleSaved: (post: ApiPost) => void
+  isGuestSaved: (id: string) => boolean
 }
 
 export const useUIStore = create<UIStore>()(
@@ -17,13 +19,16 @@ export const useUIStore = create<UIStore>()(
           set((s) => ({ readPostIds: [...s.readPostIds, id] }))
         }
       },
-      savedPostIds: [],
-      toggleSaved: (id) => {
-        const current = get().savedPostIds
+      savedPosts: [],
+      toggleSaved: (post) => {
+        const current = get().savedPosts
         set({
-          savedPostIds: current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+          savedPosts: current.some((p) => p.id === post.id)
+            ? current.filter((p) => p.id !== post.id)
+            : [...current, post],
         })
       },
+      isGuestSaved: (id) => get().savedPosts.some((p) => p.id === id),
     }),
     { name: 'unishare-ui', skipHydration: true },
   ),
