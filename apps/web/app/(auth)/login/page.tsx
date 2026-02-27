@@ -95,7 +95,20 @@ export default function LoginPage() {
             Continue with Microsoft
           </button>
 
-          <p className="text-xs text-text-muted text-center mt-8">
+          <div className="flex items-center gap-4 mt-8">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-text-muted">or</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <a
+            href="/"
+            className="flex items-center justify-center w-full h-[42px] mt-4 text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+          >
+            Continue as guest
+          </a>
+
+          <p className="text-xs text-text-muted text-center mt-4">
             By signing in, you agree to our Terms and Privacy Policy
           </p>
         </div>
