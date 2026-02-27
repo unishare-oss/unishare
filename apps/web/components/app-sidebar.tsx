@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Settings,
   LogOut,
+  LogIn,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -125,28 +126,38 @@ export function AppSidebar() {
       </nav>
 
       <div className="border-t border-border px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
-            <UserAvatar name={user?.name ?? ''} size="md" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user?.name ?? '—'}</p>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                {user?.role ?? ''}
-              </p>
-            </div>
-            <Settings
-              className="size-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-              strokeWidth={1.5}
-            />
-          </Link>
-          <button
-            onClick={handleSignOut}
-            aria-label="Sign out"
-            className="p-1.5 rounded-[6px] text-text-muted hover:text-foreground hover:bg-muted transition-colors duration-150 shrink-0"
+        {user ? (
+          <div className="flex items-center gap-3">
+            <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
+              <UserAvatar name={user.name ?? ''} size="md" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  {user.role}
+                </p>
+              </div>
+              <Settings
+                className="size-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                strokeWidth={1.5}
+              />
+            </Link>
+            <button
+              onClick={handleSignOut}
+              aria-label="Sign out"
+              className="p-1.5 rounded-[6px] text-text-muted hover:text-foreground hover:bg-muted transition-colors duration-150 shrink-0"
+            >
+              <LogOut className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] text-text-muted hover:text-foreground hover:bg-muted transition-all duration-200"
           >
-            <LogOut className="size-4" strokeWidth={1.5} />
-          </button>
-        </div>
+            <LogIn className="size-4" strokeWidth={1.5} />
+            Sign in
+          </Link>
+        )}
       </div>
     </aside>
   )

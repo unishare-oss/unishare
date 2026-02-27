@@ -2,10 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutList, FileText, Bookmark, User } from 'lucide-react'
+import { LayoutList, FileText, Bookmark, User, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { authClient } from '@/src/lib/auth/client'
 
-const tabs = [
+const guestTabs = [
+  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/login', label: 'Sign In', icon: LogIn },
+]
+
+const authTabs = [
   { href: '/', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
@@ -14,6 +20,8 @@ const tabs = [
 
 export function MobileNav() {
   const pathname = usePathname()
+  const { data: session } = authClient.useSession()
+  const tabs = session ? authTabs : guestTabs
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
