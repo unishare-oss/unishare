@@ -60,17 +60,7 @@ export default function LoginPage() {
           </p>
         </blockquote>
 
-        <div className="flex items-center gap-8">
-          <div>
-            <p className="font-mono text-sm text-[#F7F3EE]/60">2,400+ notes</p>
-          </div>
-          <div>
-            <p className="font-mono text-sm text-[#F7F3EE]/60">180 courses</p>
-          </div>
-          <div>
-            <p className="font-mono text-sm text-[#F7F3EE]/60">14 departments</p>
-          </div>
-        </div>
+        <div />
       </div>
 
       {/* Right Panel */}
