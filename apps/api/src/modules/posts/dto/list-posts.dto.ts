@@ -14,4 +14,12 @@ export class ListPostsDto extends PaginationDto {
   @IsOptional()
   @IsEnum(PostStatus)
   status?: PostStatus
+
+  @IsOptional()
+  @IsString()
+  departmentId?: string
+
+  @IsOptional()
+  @IsString()
+  authorId?: string
 }

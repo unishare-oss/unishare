@@ -4,12 +4,44 @@ import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { PrismaService } from '@/prisma/prisma.service'
 
-const POST_INCLUDE = {
-  author: { select: { id: true, name: true, image: true } },
-  course: { select: { id: true, code: true, name: true } },
+const postInclude = (userId?: string): Prisma.PostInclude => ({
+  author: {
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      enrollmentYear: true,
+      department: { select: { id: true, name: true } },
+    },
+  },
+  course: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      department: { select: { id: true, name: true } },
+    },
+  },
   files: true,
   _count: { select: { comments: true, savedBy: true } },
-} satisfies Prisma.PostInclude
+  ...(userId ? { savedBy: { where: { userId }, select: { userId: true } } } : {}),
+})
+
+const detailPostInclude = (userId?: string): Prisma.PostInclude => ({
+  ...postInclude(userId),
+  comments: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'asc' },
+    include: { user: { select: { id: true, name: true, image: true } } },
+  },
+})
+
+function mapPost<T extends { savedBy?: unknown[] }>(
+  post: T,
+): Omit<T, 'savedBy'> & { savedByCurrentUser: boolean } {
+  const { savedBy, ...rest } = post as T & { savedBy?: unknown[] }
+  return { ...rest, savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0 }
+}
 
 @Injectable()
 export class PostsRepository {
@@ -28,30 +60,36 @@ export class PostsRepository {
     year?: number
     semester?: number
   }) {
-    return this.prisma.post.create({ data, include: POST_INCLUDE })
+    return this.prisma.post.create({ data, include: postInclude() })
   }
 
-  findAll(where: Prisma.PostWhereInput, pagination: PaginationDto) {
-    return paginate(
+  async findAll(where: Prisma.PostWhereInput, pagination: PaginationDto, userId?: string) {
+    const result = await paginate(
       this.prisma.post,
-      { where, orderBy: { createdAt: 'desc' }, include: POST_INCLUDE },
+      { where, orderBy: { createdAt: 'desc' }, include: postInclude(userId) },
       pagination,
     )
+    return { ...result, items: result.items.map((p) => mapPost(p as { savedBy?: unknown[] })) }
   }
 
-  findById(id: string) {
-    return this.prisma.post.findUnique({ where: { id, deletedAt: null }, include: POST_INCLUDE })
-  }
-
-  findByShortCode(shortCode: string) {
-    return this.prisma.post.findUnique({
-      where: { shortCode, deletedAt: null },
-      include: POST_INCLUDE,
+  async findById(id: string, userId?: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id, deletedAt: null },
+      include: detailPostInclude(userId),
     })
+    return post ? mapPost(post as { savedBy?: unknown[] }) : null
+  }
+
+  async findByShortCode(shortCode: string, userId?: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { shortCode, deletedAt: null },
+      include: detailPostInclude(userId),
+    })
+    return post ? mapPost(post as { savedBy?: unknown[] }) : null
   }
 
   update(id: string, data: Prisma.PostUpdateInput) {
-    return this.prisma.post.update({ where: { id }, data, include: POST_INCLUDE })
+    return this.prisma.post.update({ where: { id }, data, include: postInclude() })
   }
 
   softDelete(id: string) {
@@ -59,6 +97,33 @@ export class PostsRepository {
   }
 
   updateStatus(id: string, status: PostStatus) {
-    return this.prisma.post.update({ where: { id }, data: { status }, include: POST_INCLUDE })
+    return this.prisma.post.update({ where: { id }, data: { status }, include: postInclude() })
+  }
+
+  savePost(postId: string, userId: string) {
+    return this.prisma.savedPost.upsert({
+      where: { userId_postId: { userId, postId } },
+      create: { userId, postId },
+      update: {},
+    })
+  }
+
+  unsavePost(postId: string, userId: string) {
+    return this.prisma.savedPost.delete({
+      where: { userId_postId: { userId, postId } },
+    })
+  }
+
+  async findSaved(userId: string, pagination: PaginationDto) {
+    const result = await paginate(
+      this.prisma.post,
+      {
+        where: { savedBy: { some: { userId } }, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
+        include: postInclude(userId),
+      },
+      pagination,
+    )
+    return { ...result, items: result.items.map((p) => mapPost(p as { savedBy?: unknown[] })) }
   }
 }
