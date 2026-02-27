@@ -8,6 +8,7 @@ import { authClient } from '@/src/lib/auth/client'
 
 const guestTabs = [
   { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/login', label: 'Sign In', icon: LogIn },
 ]
 

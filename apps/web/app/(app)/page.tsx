@@ -10,6 +10,13 @@ import { PostFeed } from '@/components/feed/post-feed'
 export default function FeedPage() {
   const [activeFilter, setActiveFilter] = useState<TypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDept, setSelectedDept] = useState('')
+  const [selectedCourse, setSelectedCourse] = useState('')
+
+  function handleDeptChange(dept: string) {
+    setSelectedDept(dept)
+    setSelectedCourse('')
+  }
 
   const filteredPosts = posts.filter((post) => {
     if (post.status !== 'APPROVED') return false
@@ -21,13 +28,22 @@ export default function FeedPage() {
       searchQuery === '' ||
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.courseCode.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesType && matchesSearch
+    const matchesDept = selectedDept === '' || post.department === selectedDept
+    const matchesCourse = selectedCourse === '' || post.courseCode === selectedCourse
+    return matchesType && matchesSearch && matchesDept && matchesCourse
   })
 
   return (
     <div className="flex flex-col min-h-screen">
       <FeedHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-      <FilterStrip activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+      <FilterStrip
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+        selectedDept={selectedDept}
+        onDeptChange={handleDeptChange}
+        selectedCourse={selectedCourse}
+        onCourseChange={setSelectedCourse}
+      />
 
       {/* Mobile search */}
       <div className="sm:hidden px-4 py-3 bg-card">

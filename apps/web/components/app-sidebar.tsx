@@ -16,7 +16,13 @@ import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient, type SessionUser } from '@/src/lib/auth/client'
 
-const navItems = [
+const publicNavItems = [
+  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/departments', label: 'Departments', icon: Building2 },
+]
+
+const authNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
@@ -35,6 +41,7 @@ export function AppSidebar() {
   const user = session?.user as SessionUser | undefined
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
+  const navItems = user ? authNavItems : publicNavItems
 
   async function handleSignOut() {
     await authClient.signOut()
