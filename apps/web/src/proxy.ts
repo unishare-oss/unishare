@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 const SESSION_COOKIE = 'better-auth.session_token'
 
-const PROTECTED_PATHS = ['/my-posts', '/saved', '/profile', '/posts/new', '/admin']
+const PROTECTED_PATHS = ['/my-posts', '/profile', '/posts/new', '/admin']
 
 function isProtected(pathname: string) {
   return PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
