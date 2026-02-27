@@ -22,8 +22,6 @@ export function TypeBadge({ type }: { type: Post['type'] }) {
 
 export function PostCard({ post }: { post: Post }) {
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
-  const isSaved = useUIStore((s) => s.savedPostIds.includes(post.id))
-  const toggleSaved = useUIStore((s) => s.toggleSaved)
   const markRead = useUIStore((s) => s.markRead)
 
   return (
@@ -66,12 +64,11 @@ export function PostCard({ post }: { post: Post }) {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            toggleSaved(post.id)
           }}
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
+          aria-label={post.savedByUser ? 'Unsave post' : 'Save post'}
         >
           <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+            className={cn('size-4', post.savedByUser ? 'fill-amber text-amber' : 'text-text-muted')}
             strokeWidth={1.5}
           />
         </button>

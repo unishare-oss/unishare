@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { currentUser, posts } from '@/lib/mock-data'
-import { useUIStore } from '@/lib/store'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
@@ -14,9 +13,8 @@ export default function ProfilePage() {
   const [department, setDepartment] = useState('d1')
   const [enrollmentYear, setEnrollmentYear] = useState(String(currentUser.enrollmentYear))
 
-  const savedPostIds = useUIStore((s) => s.savedPostIds)
   const myPosts = posts.filter((p) => p.author.id === currentUser.id)
-  const savedPosts = posts.filter((p) => savedPostIds.includes(p.id))
+  const savedPosts = posts.filter((p) => p.savedByUser)
 
   return (
     <div className="flex flex-col min-h-screen">

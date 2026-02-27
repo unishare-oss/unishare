@@ -4,7 +4,6 @@ import { Bookmark, Link2, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { useUIStore } from '@/lib/store'
 import type { Post } from '@/lib/mock-data'
 
 interface PostHeaderProps {
@@ -13,9 +12,6 @@ interface PostHeaderProps {
 }
 
 export function PostHeader({ post, isOwner }: PostHeaderProps) {
-  const isSaved = useUIStore((s) => s.savedPostIds.includes(post.id))
-  const toggleSaved = useUIStore((s) => s.toggleSaved)
-
   return (
     <>
       {post.status === 'PENDING' && (
@@ -66,11 +62,10 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
       <div className="flex items-center gap-2 justify-end mb-6">
         <button
           className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
-          onClick={() => toggleSaved(post.id)}
+          aria-label={post.savedByUser ? 'Unsave post' : 'Save post'}
         >
           <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+            className={cn('size-4', post.savedByUser ? 'fill-amber text-amber' : 'text-text-muted')}
             strokeWidth={1.5}
           />
         </button>
