@@ -1,6 +1,6 @@
 import { Camera } from 'lucide-react'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import type { UserProfileEntity } from '@/lib/api/generated/unishareAPI.schemas'
+import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 interface ProfileHeaderCardProps {
   user: UserProfileEntity

@@ -38,7 +38,7 @@ function MicrosoftIcon() {
 
 export default function LoginPage() {
   function signInWith(provider: 'google' | 'microsoft') {
-    authClient.signIn.social({ provider, callbackURL: '/' })
+    authClient.signIn.social({ provider, callbackURL: `${window.location.origin}/` })
   }
 
   return (

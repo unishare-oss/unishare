@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { posts } from '@/lib/mock-data'
-import { useUsersControllerGetMe } from '@/lib/api/generated/users/users'
-import type { UserProfileEntity } from '@/lib/api/generated/unishareAPI.schemas'
+import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
+import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
