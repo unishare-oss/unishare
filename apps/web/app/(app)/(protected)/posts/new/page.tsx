@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import {
+  PresignedUploadDtoPurpose,
+  type PresignedUploadEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
 import { PageHeader } from '@/components/shared/page-header'
 import { StepIndicator } from '@/components/posts/step-indicator'
@@ -67,9 +71,9 @@ export default function CreatePostPage() {
         const presignedRes = await storageControllerGetPresignedUploadUrl({
           mimeType: file.type,
           uploadType: uploadType as unknown as Record<string, unknown>,
+          purpose: PresignedUploadDtoPurpose['post-attachment'],
         })
-        const { url, key } = (presignedRes as unknown as { data: { url: string; key: string } })
-          .data
+        const { url, key } = presignedRes.data as PresignedUploadEntity
 
         await fetch(url, {
           method: 'PUT',

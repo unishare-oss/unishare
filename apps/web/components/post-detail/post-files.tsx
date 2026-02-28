@@ -1,5 +1,6 @@
 import { Link2, FileText, FileImage, FileSpreadsheet, Download } from 'lucide-react'
 import type { ApiPostDetail } from '@/lib/api-types'
+import { filesControllerGetDownloadUrl } from '@/src/lib/api/generated/files/files'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -15,6 +16,17 @@ function fileIcon(mimeType: string) {
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
     return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
+}
+
+async function handleDownload(postId: string, fileId: string, fileName: string) {
+  const res = await filesControllerGetDownloadUrl(postId, fileId)
+  const { url } = res.data
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.target = '_blank'
+  a.rel = 'noopener noreferrer'
+  a.click()
 }
 
 interface PostFilesProps {
@@ -62,6 +74,7 @@ export function PostFiles({ post }: PostFilesProps) {
                 {formatBytes(file.size)}
               </span>
               <button
+                onClick={() => handleDownload(post.id, file.id, file.name)}
                 className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0"
                 aria-label={`Download ${file.name}`}
               >
