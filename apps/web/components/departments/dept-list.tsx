@@ -1,10 +1,11 @@
 'use client'
 
 import { Building2, ChevronRight } from 'lucide-react'
-import type { Department } from '@/lib/mock-data'
+
+export type ApiDept = { id: string; name: string; courseCount: number }
 
 interface DeptListProps {
-  departments: Department[]
+  departments: ApiDept[]
   onSelect: (id: string) => void
 }
 

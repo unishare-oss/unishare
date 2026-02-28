@@ -1,14 +1,14 @@
 'use client'
 
-import type { Department, Course } from '@/lib/mock-data'
+export type ApiCourse = { id: string; code: string; name: string }
 
 interface CourseListProps {
-  selectedDept: Department
-  courses: Course[]
+  deptName: string
+  courses: ApiCourse[]
   onBack: () => void
 }
 
-export function CourseList({ selectedDept, courses, onBack }: CourseListProps) {
+export function CourseList({ deptName, courses, onBack }: CourseListProps) {
   return (
     <div className="max-w-[700px] mx-auto px-6 py-6">
       <button
@@ -17,7 +17,7 @@ export function CourseList({ selectedDept, courses, onBack }: CourseListProps) {
       >
         {'< Back to departments'}
       </button>
-      <h2 className="text-xl font-semibold text-foreground mb-4">{selectedDept.name}</h2>
+      <h2 className="text-xl font-semibold text-foreground mb-4">{deptName}</h2>
       <div className="flex flex-col gap-2">
         {courses.map((course) => (
           <div
@@ -28,9 +28,6 @@ export function CourseList({ selectedDept, courses, onBack }: CourseListProps) {
               {course.code}
             </span>
             <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>
-            <span className="font-mono text-xs text-text-muted shrink-0">
-              {course.postCount} posts
-            </span>
           </div>
         ))}
         {courses.length === 0 && (
