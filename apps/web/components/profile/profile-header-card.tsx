@@ -1,20 +1,71 @@
+'use client'
+
+import { useRef, useState } from 'react'
 import { Camera } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import {
+  PresignedUploadDtoPurpose,
+  type PresignedUploadEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
+import {
+  useUsersControllerUpdateMe,
+  getUsersControllerGetMeQueryKey,
+} from '@/src/lib/api/generated/users/users'
 
 interface ProfileHeaderCardProps {
   user: UserProfileEntity
 }
 
 export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
+  const { mutateAsync: updateMe } = useUsersControllerUpdateMe()
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const res = await storageControllerGetPresignedUploadUrl({
+        mimeType: file.type,
+        uploadType: 'image' as unknown as Record<string, unknown>,
+        purpose: PresignedUploadDtoPurpose['profile-picture'],
+      })
+      const { url, publicUrl } = res.data as PresignedUploadEntity
+      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      await updateMe({ data: { image: publicUrl } })
+      await queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="border border-border rounded-[6px] p-6 bg-card mb-6">
       <div className="flex items-start gap-5">
         <div className="relative group shrink-0">
-          <UserAvatar name={user.name} size="lg" />
-          <div className="absolute inset-0 rounded-[6px] bg-surface-dark/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150 cursor-pointer">
+          <UserAvatar name={user.name} image={user.image} size="lg" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute inset-0 rounded-[6px] bg-surface-dark/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150 disabled:cursor-wait"
+            aria-label="Change profile picture"
+          >
             <Camera className="size-5 text-card" strokeWidth={1.5} />
-          </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>

@@ -9,11 +9,12 @@ const sizeClasses = {
 
 interface UserAvatarProps {
   name: string
+  image?: string | null
   size: 'xs' | 'sm' | 'md' | 'lg'
   className?: string
 }
 
-export function UserAvatar({ name, size, className }: UserAvatarProps) {
+export function UserAvatar({ name, image, size, className }: UserAvatarProps) {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -22,11 +23,16 @@ export function UserAvatar({ name, size, className }: UserAvatarProps) {
     <div
       className={cn(
         sizeClasses[size],
-        'bg-border flex items-center justify-center font-mono font-medium text-foreground',
+        'bg-border flex items-center justify-center font-mono font-medium text-foreground overflow-hidden',
         className,
       )}
     >
-      {initials}
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   )
 }
