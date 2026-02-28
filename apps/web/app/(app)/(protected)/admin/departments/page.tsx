@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useDepartmentsControllerFindAll,
@@ -34,9 +34,7 @@ export default function AdminDepartmentsPage() {
     query: { select: (r) => r.data as unknown as ApiDept[] },
   })
 
-  useEffect(() => {
-    if (!selectedDeptId && depts && depts.length > 0) setSelectedDeptId(depts[0].id)
-  }, [depts, selectedDeptId])
+  const effectiveDeptId = selectedDeptId || depts?.[0]?.id || ''
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
@@ -58,8 +56,8 @@ export default function AdminDepartmentsPage() {
   })
 
   const allCourses = coursesData?.items ?? []
-  const deptCourses = allCourses.filter((c) => c.departmentId === selectedDeptId)
-  const selectedDept = depts?.find((d) => d.id === selectedDeptId)
+  const deptCourses = allCourses.filter((c) => c.departmentId === effectiveDeptId)
+  const selectedDept = depts?.find((d) => d.id === effectiveDeptId)
 
   const deptsWithCount = (depts ?? []).map((d) => ({
     ...d,
@@ -73,7 +71,7 @@ export default function AdminDepartmentsPage() {
       <div className="flex-1 flex flex-col md:flex-row bg-card">
         <DeptPanel
           depts={deptsWithCount}
-          selectedDeptId={selectedDeptId}
+          selectedDeptId={effectiveDeptId}
           onSelect={setSelectedDeptId}
           onAddClick={() => {
             setNewDeptName('')
@@ -108,7 +106,7 @@ export default function AdminDepartmentsPage() {
           onNameChange={setNewCourseName}
           onClose={() => setShowAddCourse(false)}
           onSubmit={(code, name) =>
-            createCourse({ data: { code, name, departmentId: selectedDeptId } })
+            createCourse({ data: { code, name, departmentId: effectiveDeptId } })
           }
         />
       )}

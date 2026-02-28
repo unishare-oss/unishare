@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { authClient } from '@/src/lib/auth/client'
 
 function GoogleIcon() {
@@ -101,12 +102,12 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <a
+          <Link
             href="/"
             className="flex items-center justify-center w-full h-[42px] mt-4 text-sm text-text-muted hover:text-foreground transition-colors duration-150"
           >
             Continue as guest
-          </a>
+          </Link>
 
           <p className="text-xs text-text-muted text-center mt-4">
             By signing in, you agree to our Terms and Privacy Policy

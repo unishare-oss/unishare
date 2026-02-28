@@ -26,7 +26,7 @@ export default function SavedPage() {
       {!session && (
         <div className="flex items-center justify-between gap-4 px-6 py-3 bg-muted border-b border-border">
           <p className="text-sm text-text-muted">
-            Saved posts are stored locally and won't sync across devices.
+            Saved posts are stored locally and won&apos;t sync across devices.
           </p>
           <Link
             href="/login"

@@ -19,7 +19,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     if (post) markRead(post.id)
-  }, [post?.id, markRead])
+  }, [post, markRead])
 
   if (!post) {
     return (
