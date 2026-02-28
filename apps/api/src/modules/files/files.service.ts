@@ -32,6 +32,14 @@ export class FilesService {
     return this.filesRepository.create(postId, dto)
   }
 
+  async getDownloadUrl(postId: string, fileId: string) {
+    const file = await this.filesRepository.findById(fileId)
+    if (!file) throw new NotFoundException('File not found')
+    if (file.postId !== postId) throw new NotFoundException('File not found')
+    const url = await this.storageService.generatePresignedDownloadUrl(file.key)
+    return { url }
+  }
+
   async remove(postId: string, fileId: string, userId: string, userRole: UserRole) {
     const file = await this.filesRepository.findById(fileId)
     if (!file) throw new NotFoundException('File not found')
