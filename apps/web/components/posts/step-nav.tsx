@@ -6,19 +6,30 @@ interface StepNavProps {
   currentStep: number
   totalSteps: number
   canProceed: boolean
+  loading?: boolean
   onBack: () => void
   onNext: () => void
 }
 
-export function StepNav({ currentStep, totalSteps, canProceed, onBack, onNext }: StepNavProps) {
+export function StepNav({
+  currentStep,
+  totalSteps,
+  canProceed,
+  loading,
+  onBack,
+  onNext,
+}: StepNavProps) {
+  const isLastStep = currentStep === totalSteps - 1
+  const disabled = !canProceed || loading
+
   return (
     <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
       <button
         onClick={onBack}
-        disabled={currentStep === 0}
+        disabled={currentStep === 0 || loading}
         className={cn(
           'h-9 px-4 text-sm font-medium rounded-[6px] transition-colors duration-150',
-          currentStep === 0
+          currentStep === 0 || loading
             ? 'text-text-muted cursor-not-allowed'
             : 'text-foreground hover:bg-muted',
         )}
@@ -27,15 +38,15 @@ export function StepNav({ currentStep, totalSteps, canProceed, onBack, onNext }:
       </button>
       <button
         onClick={onNext}
-        disabled={!canProceed}
+        disabled={disabled}
         className={cn(
           'h-9 px-6 text-sm font-medium rounded-[6px] transition-colors duration-150',
-          canProceed
-            ? 'bg-amber text-primary-foreground hover:bg-amber-hover'
-            : 'bg-muted text-text-muted cursor-not-allowed',
+          disabled
+            ? 'bg-muted text-text-muted cursor-not-allowed'
+            : 'bg-amber text-primary-foreground hover:bg-amber-hover',
         )}
       >
-        {currentStep === totalSteps - 1 ? 'Submit' : 'Next'}
+        {loading ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
       </button>
     </div>
   )

@@ -3,9 +3,11 @@
 import { FileText, GraduationCap, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+export type PostType = 'NOTE' | 'OLD_QUESTION'
+
 interface TypeStepProps {
-  postType: 'NOTE' | 'PAST EXAM' | null
-  onSelect: (type: 'NOTE' | 'PAST EXAM') => void
+  postType: PostType | null
+  onSelect: (type: PostType) => void
 }
 
 export function TypeStep({ postType, onSelect }: TypeStepProps) {
@@ -46,15 +48,15 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           </div>
         </button>
         <button
-          onClick={() => onSelect('PAST EXAM')}
+          onClick={() => onSelect('OLD_QUESTION')}
           className={cn(
             'relative flex items-center gap-4 w-full border rounded-[6px] p-5 text-left transition-all duration-150',
-            postType === 'PAST EXAM'
+            postType === 'OLD_QUESTION'
               ? 'border-amber border-[1.5px] bg-amber-subtle'
               : 'border-border hover:bg-muted',
           )}
         >
-          {postType === 'PAST EXAM' && (
+          {postType === 'OLD_QUESTION' && (
             <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber flex items-center justify-center">
               <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
             </span>
@@ -62,11 +64,14 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           <div
             className={cn(
               'w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0',
-              postType === 'PAST EXAM' ? 'bg-amber/20' : 'bg-muted',
+              postType === 'OLD_QUESTION' ? 'bg-amber/20' : 'bg-muted',
             )}
           >
             <GraduationCap
-              className={cn('size-5', postType === 'PAST EXAM' ? 'text-amber' : 'text-text-muted')}
+              className={cn(
+                'size-5',
+                postType === 'OLD_QUESTION' ? 'text-amber' : 'text-text-muted',
+              )}
               strokeWidth={1.5}
             />
           </div>

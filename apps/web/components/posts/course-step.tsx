@@ -1,6 +1,10 @@
 'use client'
 
-import { departments, courses } from '@/lib/mock-data'
+import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
+
+type ApiDept = { id: string; name: string }
+type ApiCourse = { id: string; code: string; name: string; departmentId: string }
 
 interface CourseStepProps {
   selectedDept: string
@@ -15,7 +19,19 @@ export function CourseStep({
   onDeptChange,
   onCourseChange,
 }: CourseStepProps) {
-  const filteredCourses = courses.filter((c) => c.departmentId === selectedDept)
+  const { data: depts } = useDepartmentsControllerFindAll({
+    query: { select: (r) => r.data as unknown as ApiDept[] },
+  })
+
+  const { data: coursesData } = useCoursesControllerFindAll(
+    { limit: 100 },
+    { query: { select: (r) => r.data as unknown as { items: ApiCourse[] } } },
+  )
+
+  const allCourses = coursesData?.items ?? []
+  const filteredCourses = selectedDept
+    ? allCourses.filter((c) => c.departmentId === selectedDept)
+    : []
 
   return (
     <div>
@@ -34,7 +50,7 @@ export function CourseStep({
             className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
           >
             <option value="">Select department...</option>
-            {departments.map((dept) => (
+            {(depts ?? []).map((dept) => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
               </option>

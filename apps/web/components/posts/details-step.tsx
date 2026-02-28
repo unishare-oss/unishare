@@ -1,6 +1,6 @@
 'use client'
 
-import type { PostType } from '@/lib/mock-data'
+import type { PostType } from './type-step'
 
 interface DetailsStepProps {
   postType: PostType | null
@@ -115,7 +115,7 @@ export function DetailsStep({
             />
           </div>
         )}
-        {postType === 'PAST EXAM' && (
+        {postType === 'OLD_QUESTION' && (
           <div>
             <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
               Exam Year

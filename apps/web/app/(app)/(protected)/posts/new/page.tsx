@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { PostType } from '@/lib/mock-data'
+import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
+import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
 import { PageHeader } from '@/components/shared/page-header'
 import { StepIndicator } from '@/components/posts/step-indicator'
-import { TypeStep } from '@/components/posts/type-step'
+import { TypeStep, type PostType } from '@/components/posts/type-step'
 import { CourseStep } from '@/components/posts/course-step'
 import { DetailsStep } from '@/components/posts/details-step'
 import { FilesStep } from '@/components/posts/files-step'
@@ -26,7 +28,10 @@ export default function CreatePostPage() {
   const [moduleNum, setModuleNum] = useState('')
   const [examYear, setExamYear] = useState('')
   const [externalUrl, setExternalUrl] = useState('')
-  const [files, setFiles] = useState<{ id: string; name: string; size: string }[]>([])
+  const [files, setFiles] = useState<File[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const { mutateAsync: createPost } = usePostsControllerCreate()
 
   const canProceed =
     currentStep === 0
@@ -37,27 +42,65 @@ export default function CreatePostPage() {
           ? title.trim() !== ''
           : true
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      router.push('/')
+  async function handleSubmit() {
+    if (!postType) return
+    setSubmitting(true)
+    try {
+      const res = await createPost({
+        data: {
+          type: postType as unknown as Record<string, unknown>,
+          courseId: selectedCourse,
+          title: title.trim() || undefined,
+          description: description.trim() || undefined,
+          externalUrl: externalUrl.trim() || undefined,
+          year: year ? Number(year) : undefined,
+          semester: semester ? Number(semester) : undefined,
+          moduleNumber: moduleNum ? Number(moduleNum) : undefined,
+          examYear: examYear ? Number(examYear) : undefined,
+        },
+      })
+
+      const post = (res as unknown as { data: { id: string } }).data
+
+      for (const file of files) {
+        const uploadType = file.type.startsWith('image/') ? 'image' : 'document'
+        const presignedRes = await storageControllerGetPresignedUploadUrl({
+          mimeType: file.type,
+          uploadType: uploadType as unknown as Record<string, unknown>,
+        })
+        const { url, key } = (presignedRes as unknown as { data: { url: string; key: string } })
+          .data
+
+        await fetch(url, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type },
+        })
+
+        await filesControllerConfirmUpload(post.id, {
+          key,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type,
+        })
+      }
+
+      router.push(`/posts/${post.id}`)
+    } catch {
+      setSubmitting(false)
     }
   }
 
-  const handleBack = () => {
-    if (currentStep > 0) setCurrentStep(currentStep - 1)
+  function handleNext() {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1)
+    } else {
+      handleSubmit()
+    }
   }
 
-  const handleFileDrop = () => {
-    setFiles((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name: `Document_${prev.length + 1}.pdf`,
-        size: `${(Math.random() * 5 + 0.5).toFixed(1)} MB`,
-      },
-    ])
+  function handleBack() {
+    if (currentStep > 0) setCurrentStep(currentStep - 1)
   }
 
   return (
@@ -102,7 +145,7 @@ export default function CreatePostPage() {
           {currentStep === 3 && (
             <FilesStep
               files={files}
-              onAdd={handleFileDrop}
+              onAddFiles={(picked) => setFiles((prev) => [...prev, ...picked])}
               onRemove={(i) => setFiles((prev) => prev.filter((_, j) => j !== i))}
             />
           )}
@@ -111,6 +154,7 @@ export default function CreatePostPage() {
             currentStep={currentStep}
             totalSteps={steps.length}
             canProceed={canProceed}
+            loading={submitting}
             onBack={handleBack}
             onNext={handleNext}
           />
