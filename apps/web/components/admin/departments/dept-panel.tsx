@@ -2,10 +2,11 @@
 
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Department } from '@/lib/mock-data'
+
+export type ApiDept = { id: string; name: string; courseCount: number }
 
 interface DeptPanelProps {
-  depts: Department[]
+  depts: ApiDept[]
   selectedDeptId: string
   onSelect: (id: string) => void
   onAddClick: () => void

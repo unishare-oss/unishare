@@ -6,9 +6,10 @@ interface AddDeptModalProps {
   value: string
   onChange: (value: string) => void
   onClose: () => void
+  onSubmit: (name: string) => void
 }
 
-export function AddDeptModal({ value, onChange, onClose }: AddDeptModalProps) {
+export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-surface-dark/30" />
@@ -44,7 +45,16 @@ export function AddDeptModal({ value, onChange, onClose }: AddDeptModalProps) {
           >
             Cancel
           </button>
-          <button className="h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150">
+          <button
+            onClick={() => {
+              if (value.trim()) {
+                onSubmit(value.trim())
+                onClose()
+              }
+            }}
+            disabled={!value.trim()}
+            className="h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             Create
           </button>
         </div>

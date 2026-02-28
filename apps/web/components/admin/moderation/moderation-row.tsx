@@ -1,18 +1,24 @@
 'use client'
 
 import { ChevronDown, ChevronUp, Link2, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
-import type { Post, PostStatus } from '@/lib/mock-data'
+import type { ApiPost } from '@/lib/api-types'
+import type { PostStatus } from './moderation-header'
 
-function StatusIcon({ status }: { status: Post['status'] }) {
-  const iconMap = {
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function StatusIcon({ status }: { status: string }) {
+  const iconMap: Record<string, React.ReactNode> = {
     APPROVED: <CheckCircle2 className="size-4 text-success" strokeWidth={1.5} />,
     PENDING: <Clock className="size-4 text-amber" strokeWidth={1.5} />,
     REJECTED: <XCircle className="size-4 text-destructive" strokeWidth={1.5} />,
   }
-
-  return <div className="absolute left-4 top-5">{iconMap[status]}</div>
+  return <div className="absolute left-4 top-5">{iconMap[status] ?? null}</div>
 }
 
 export function ModerationRow({
@@ -23,13 +29,16 @@ export function ModerationRow({
   onApprove,
   onReject,
 }: {
-  post: Post
+  post: ApiPost
   status: PostStatus
   expanded: boolean
   onToggle: () => void
   onApprove: () => void
   onReject: () => void
 }) {
+  const currentYear = new Date().getFullYear()
+  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
+
   return (
     <div className="border-b border-border">
       <div
@@ -41,7 +50,6 @@ export function ModerationRow({
       >
         <StatusIcon status={status} />
 
-        {/* Type + Title */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <TypeBadge type={post.type} />
@@ -49,23 +57,23 @@ export function ModerationRow({
           <p className="text-sm font-medium text-foreground truncate mt-1">{post.title}</p>
         </div>
 
-        {/* Course */}
         <div className="hidden sm:block shrink-0 w-20">
-          <p className="font-mono text-xs text-text-muted">{post.courseCode}</p>
+          <p className="font-mono text-xs text-text-muted">{post.course.code}</p>
         </div>
 
-        {/* Author */}
         <div className="hidden md:block shrink-0 w-32">
           <p className="font-mono text-xs text-foreground">{post.author.name}</p>
-          <p className="font-mono text-[11px] text-text-muted">Year {post.author.yearLevel}</p>
+          {yearLevel != null && (
+            <p className="font-mono text-[11px] text-text-muted">Year {yearLevel}</p>
+          )}
         </div>
 
-        {/* Time */}
         <div className="hidden sm:block shrink-0 w-16">
-          <p className="font-mono text-xs text-text-muted">{post.createdAt}</p>
+          <p className="font-mono text-xs text-text-muted">
+            {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+          </p>
         </div>
 
-        {/* Hover Actions */}
         {status === 'PENDING' && (
           <div className="hidden group-hover:flex items-center gap-2 shrink-0">
             <button
@@ -98,11 +106,12 @@ export function ModerationRow({
         </div>
       </div>
 
-      {/* Expanded Content */}
       {expanded && (
         <div className="bg-muted px-6 py-5 border-t border-border">
           <div className="max-w-[640px]">
-            <p className="text-sm text-foreground leading-relaxed mb-4">{post.description}</p>
+            {post.description && (
+              <p className="text-sm text-foreground leading-relaxed mb-4">{post.description}</p>
+            )}
 
             {post.externalUrl && (
               <a
@@ -125,7 +134,9 @@ export function ModerationRow({
                   >
                     <FileText className="size-4 text-destructive" strokeWidth={1.5} />
                     <span className="text-sm text-foreground truncate flex-1">{file.name}</span>
-                    <span className="font-mono text-xs text-text-muted">{file.size}</span>
+                    <span className="font-mono text-xs text-text-muted">
+                      {formatBytes(file.size)}
+                    </span>
                   </div>
                 ))}
               </div>

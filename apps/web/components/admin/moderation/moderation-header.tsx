@@ -1,7 +1,8 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { PostStatus } from '@/lib/mock-data'
+
+export type PostStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 const statusFilters: PostStatus[] = ['PENDING', 'APPROVED', 'REJECTED']
 

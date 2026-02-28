@@ -8,6 +8,7 @@ interface AddCourseModalProps {
   onCodeChange: (value: string) => void
   onNameChange: (value: string) => void
   onClose: () => void
+  onSubmit: (code: string, name: string) => void
 }
 
 export function AddCourseModal({
@@ -16,6 +17,7 @@ export function AddCourseModal({
   onCodeChange,
   onNameChange,
   onClose,
+  onSubmit,
 }: AddCourseModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -66,7 +68,16 @@ export function AddCourseModal({
           >
             Cancel
           </button>
-          <button className="h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150">
+          <button
+            onClick={() => {
+              if (code.trim() && name.trim()) {
+                onSubmit(code.trim(), name.trim())
+                onClose()
+              }
+            }}
+            disabled={!code.trim() || !name.trim()}
+            className="h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             Create
           </button>
         </div>
