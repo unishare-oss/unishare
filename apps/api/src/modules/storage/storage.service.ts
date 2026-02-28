@@ -64,7 +64,7 @@ export class StorageService implements OnModuleInit {
     mimeType: string,
     uploadType: UploadType = 'document',
     expiresIn = 3600,
-  ): Promise<{ url: string; key: string }> {
+  ): Promise<{ url: string; key: string; publicUrl: string }> {
     const typeConfig = FILE_TYPE_CONFIG[uploadType]
 
     if (!typeConfig.allowedMimeTypes.includes(mimeType)) {
