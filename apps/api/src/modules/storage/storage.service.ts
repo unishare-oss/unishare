@@ -77,7 +77,7 @@ export class StorageService implements OnModuleInit {
     const command = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: mimeType })
     const url = await getSignedUrl(this.s3Client, command, { expiresIn })
 
-    return { url, key }
+    return { url, key, publicUrl: this.getPublicUrl(key) }
   }
 
   async generatePresignedDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
