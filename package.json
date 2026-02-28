@@ -6,7 +6,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "turbo run format",
-    "prepare": "husky"
+    "prepare": "husky",
+    "api:sync": "curl -sf http://localhost:3001/api-json > apps/web/openapi.json && pnpm --filter web api:generate"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.2",

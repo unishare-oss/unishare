@@ -3,7 +3,7 @@ import { defineConfig } from 'orval'
 export default defineConfig({
   unishare: {
     input: {
-      target: 'http://localhost:3001/api-json',
+      target: './openapi.json',
     },
     output: {
       mode: 'tags-split',

@@ -34,6 +34,9 @@ jobs:
         run: |
           echo "export default async (): Promise<Record<string, any>> => ({});" > apps/api/src/metadata.ts
 
+      - name: Generate API client
+        run: pnpm --filter web api:generate
+
       - name: Lint
         run: pnpm lint
 
