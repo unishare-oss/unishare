@@ -36,10 +36,8 @@ const detailPostInclude = (userId?: string): Prisma.PostInclude => ({
   },
 })
 
-function mapPost<T extends { savedBy?: unknown[] }>(
-  post: T,
-): Omit<T, 'savedBy'> & { savedByCurrentUser: boolean } {
-  const { savedBy, ...rest } = post as T & { savedBy?: unknown[] }
+function mapPost<T>(post: T): Omit<T, 'savedBy'> & { savedByCurrentUser: boolean } {
+  const { savedBy, ...rest } = post as any
   return { ...rest, savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0 }
 }
 
@@ -69,7 +67,7 @@ export class PostsRepository {
       { where, orderBy: { createdAt: 'desc' }, include: postInclude(userId) },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p as { savedBy?: unknown[] })) }
+    return { ...result, items: result.items.map((p) => mapPost(p)) }
   }
 
   async findById(id: string, userId?: string) {
@@ -77,7 +75,7 @@ export class PostsRepository {
       where: { id, deletedAt: null },
       include: detailPostInclude(userId),
     })
-    return post ? mapPost(post as { savedBy?: unknown[] }) : null
+    return post ? mapPost(post) : null
   }
 
   async findByShortCode(shortCode: string, userId?: string) {
@@ -85,7 +83,7 @@ export class PostsRepository {
       where: { shortCode, deletedAt: null },
       include: detailPostInclude(userId),
     })
-    return post ? mapPost(post as { savedBy?: unknown[] }) : null
+    return post ? mapPost(post) : null
   }
 
   update(id: string, data: Prisma.PostUpdateInput) {
@@ -124,6 +122,6 @@ export class PostsRepository {
       },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p as { savedBy?: unknown[] })) }
+    return { ...result, items: result.items.map((p) => mapPost(p)) }
   }
 }
