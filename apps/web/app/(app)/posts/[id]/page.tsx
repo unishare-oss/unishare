@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { use, useEffect } from 'react'
 import { usePostsControllerFindOne } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
@@ -14,7 +14,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const { data: session } = authClient.useSession()
-  const [commentText, setCommentText] = useState('')
   const markRead = useUIStore((s) => s.markRead)
 
   useEffect(() => {
@@ -48,11 +47,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <PostHeader post={post} isOwner={isOwner} />
           <PostFiles post={post} />
           <div className="border-t border-border" />
-          <CommentSection
-            postId={post.id}
-            commentText={commentText}
-            onCommentChange={setCommentText}
-          />
+          <CommentSection postId={post.id} postAuthorId={post.authorId} />
         </div>
       </div>
     </div>

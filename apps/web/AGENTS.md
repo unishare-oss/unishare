@@ -144,6 +144,35 @@ Without `select`, you will keep reading `result.data?.data`.
 - Put app-specific logic outside generated files.
 - If you need composition, create a small feature wrapper hook or controller component around generated hooks instead of editing generated output.
 
+## Hook Organization with Orval/TanStack
+
+When a component uses both local React state and generated Orval hooks, keep them visually separated so a reader can immediately tell which lines are local UI state and which lines are backend/server-state wiring.
+
+- Group local `useState` hooks together first.
+- Keep auth/session hooks in their own small block if present.
+- Group Orval-generated hooks and TanStack Query utilities together in a clearly separate block.
+- Do not interleave generated hooks between unrelated local state declarations.
+- If the file starts to look mixed, add a short note such as `// Orval/TanStack server state` above the generated-hook block.
+
+Preferred shape:
+
+```ts
+const [error, setError] = useState<string | null>(null)
+const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+const [editText, setEditText] = useState('')
+
+const { data: session } = authClient.useSession()
+
+// Orval/TanStack server state
+const queryClient = useQueryClient()
+const { data: comments = [], isLoading } = useCommentsControllerFindAll(postId, {
+  query: { select: (response) => response.data },
+})
+const { mutateAsync: createComment, isPending } = useCommentsControllerCreate()
+const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
+const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
+```
+
 ## How To Add or Change an API
 
 ### Backend requirements
@@ -227,6 +256,7 @@ Add a thin wrapper only when:
 
 - Prefer generated Orval hooks over ad hoc fetch calls.
 - Prefer TanStack Query for remote data.
+- Keep generated Orval/TanStack hook blocks clearly separated from local component state.
 - Keep server response transformations small and explicit.
 - Do not persist large backend DTOs to local storage unless necessary.
 - Do not edit generated files to fix types; fix the backend Swagger metadata and regenerate.
