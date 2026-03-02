@@ -13,6 +13,10 @@ export function getFolderForPurpose(purpose: UploadPurpose, userId: string): str
 }
 
 export class PresignedUploadDto {
+  @ApiProperty({
+    maxLength: 255,
+    pattern: '^[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_]*\\/[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_.+]*$',
+  })
   @IsString()
   @MaxLength(255)
   @Matches(/^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_.+]*$/, {
@@ -20,6 +24,7 @@ export class PresignedUploadDto {
   })
   mimeType: string
 
+  @ApiProperty({ enum: ['document', 'image'] })
   @IsIn(['document', 'image'])
   uploadType: 'document' | 'image'
 
