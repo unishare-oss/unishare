@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Bookmark, FileText, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
@@ -56,12 +57,34 @@ export function PostCard({ post }: { post: ApiPost }) {
   function handleSave(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+
     if (!session) {
       toggleSaved(post)
+      toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {
-      unsavePost({ id: post.id })
+      unsavePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Removed from saved posts')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     } else {
-      savePost({ id: post.id })
+      savePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Saved post')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     }
   }
 

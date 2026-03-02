@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -13,6 +14,7 @@ import {
   usePostsControllerSavePost,
   usePostsControllerUnsavePost,
   getPostsControllerFindAllQueryKey,
+  getPostsControllerFindOneQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
 import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
 
@@ -32,24 +34,50 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
 
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        ;(queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }))
+      },
     },
   })
+
   const { mutate: unsavePost } = usePostsControllerUnsavePost({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        ;(queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }))
+      },
     },
   })
 
   function handleSave() {
     if (!session) {
       toggleSaved(post as unknown as ApiPost)
+      toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {
-      unsavePost({ id: post.id })
+      unsavePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Removed from saved posts')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     } else {
-      savePost({ id: post.id })
+      savePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Saved post')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     }
   }
 
