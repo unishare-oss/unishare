@@ -16,6 +16,7 @@ import { StepIndicator } from '@/components/posts/step-indicator'
 import { TypeStep, type PostType } from '@/components/posts/type-step'
 import { CourseStep } from '@/components/posts/course-step'
 import { DetailsStep } from '@/components/posts/details-step'
+import type { CreatePostFormValues } from '@/components/posts/create-post-form.types'
 import { FilesStep } from '@/components/posts/files-step'
 import { StepNav } from '@/components/posts/step-nav'
 
@@ -102,8 +103,6 @@ const createPostFormSchema = z
     }
   })
 
-type CreatePostFormValues = z.input<typeof createPostFormSchema>
-
 const defaultValues: CreatePostFormValues = {
   postType: null,
   selectedDept: '',
@@ -139,7 +138,7 @@ export default function CreatePostPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
-  const form = useForm<CreatePostFormValues>({ defaultValues })
+  const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
   const { mutateAsync: createPost } = usePostsControllerCreate()
   const values = form.watch()
 
@@ -262,17 +261,7 @@ export default function CreatePostPage() {
           )}
 
           {currentStep === 2 && (
-            <DetailsStep
-              postType={values.postType as PostType | null}
-              title={values.title}
-              description={values.description}
-              year={values.year}
-              semester={values.semester}
-              moduleNum={values.moduleNum}
-              examYear={values.examYear}
-              externalUrl={values.externalUrl}
-              onFieldChange={updateField}
-            />
+            <DetailsStep form={form} postType={values.postType as PostType | null} />
           )}
 
           {currentStep === 3 && (
