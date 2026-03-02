@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { NestFactory, Reflector } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
+import { Logger, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import metadata from './metadata'
@@ -8,7 +8,11 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false })
+  const logger = new Logger('Bootstrap')
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    bufferLogs: true,
+  })
   const reflector = app.get(Reflector)
 
   app.enableCors({
@@ -32,6 +36,8 @@ async function bootstrap() {
     SwaggerModule.setup('api', app, document)
   }
 
-  await app.listen(process.env.PORT ?? 3001)
+  const port = process.env.PORT ?? 3001
+  await app.listen(port)
+  logger.log(`API listening on http://localhost:${port}`)
 }
 bootstrap()
