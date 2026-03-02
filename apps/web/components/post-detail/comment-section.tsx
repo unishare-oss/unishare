@@ -164,7 +164,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
                 <>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <UserAvatar name={comment.user.name} size="sm" />
+                      <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
                       <span className="text-sm font-medium text-foreground">
                         {comment.user.name}
                       </span>

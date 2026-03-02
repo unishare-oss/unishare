@@ -136,7 +136,7 @@ export function AppSidebar() {
         {user ? (
           <div className="flex items-center gap-3">
             <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
-              <UserAvatar name={user.name ?? ''} size="md" />
+              <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                 <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">

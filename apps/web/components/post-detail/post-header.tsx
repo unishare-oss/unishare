@@ -98,7 +98,7 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
           )}
         </div>
         <div className="flex items-center gap-3 mt-4">
-          <UserAvatar name={post.author.name} size="md" />
+          <UserAvatar name={post.author.name} image={post.author.image} size="md" />
           <div>
             <p className="text-sm font-medium text-foreground">{post.author.name}</p>
             <p className="font-mono text-xs text-text-muted">

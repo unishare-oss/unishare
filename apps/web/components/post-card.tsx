@@ -88,7 +88,12 @@ export function PostCard({ post }: { post: ApiPost }) {
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="flex items-center gap-1">
-              <UserAvatar name={post.author.name} size="xs" className="shrink-0" />
+              <UserAvatar
+                name={post.author.name}
+                image={post.author.image}
+                size="xs"
+                className="shrink-0"
+              />
               <span className="font-mono text-xs text-foreground">{post.author.name}</span>
             </span>
             {yearLevel != null && (
