@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
 import {
@@ -23,6 +24,17 @@ interface PostHeaderProps {
   isOwner: boolean
 }
 
+function ActionHint({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <HoverCard openDelay={120} closeDelay={80}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent side="top" className="w-auto px-3 py-2">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-foreground">{label}</p>
+      </HoverCardContent>
+    </HoverCard>
+  )
+}
+
 export function PostHeader({ post, isOwner }: PostHeaderProps) {
   const [copied, setCopied] = useState(false)
   const { data: session } = authClient.useSession()
@@ -35,8 +47,8 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
       onSuccess: () => {
-        ;(queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
-          queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }))
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
       },
     },
   })
@@ -44,8 +56,8 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
   const { mutate: unsavePost } = usePostsControllerUnsavePost({
     mutation: {
       onSuccess: () => {
-        ;(queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
-          queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }))
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
       },
     },
   })
@@ -139,41 +151,50 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 justify-end mb-6">
-        <button
-          onClick={handleSave}
-          className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
-        >
-          <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-            strokeWidth={1.5}
-          />
-        </button>
-        <button
-          onClick={handleShare}
-          className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={copied ? 'Copied!' : 'Copy share code'}
-        >
-          {copied ? (
-            <Check className="size-4 text-success" strokeWidth={1.5} />
-          ) : (
-            <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
-          )}
-        </button>
+        <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
+          <button
+            onClick={handleSave}
+            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+            aria-label={isSaved ? 'Unsave post' : 'Save post'}
+          >
+            <Bookmark
+              className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+              strokeWidth={1.5}
+            />
+          </button>
+        </ActionHint>
+
+        <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
+          <button
+            onClick={handleShare}
+            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+            aria-label={copied ? 'Copied!' : 'Copy share code'}
+          >
+            {copied ? (
+              <Check className="size-4 text-success" strokeWidth={1.5} />
+            ) : (
+              <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
+            )}
+          </button>
+        </ActionHint>
         {isOwner && (
           <>
-            <button
-              className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-              aria-label="Edit"
-            >
-              <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
-            </button>
-            <button
-              className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150"
-              aria-label="Delete"
-            >
-              <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
-            </button>
+            <ActionHint label="Edit Post">
+              <button
+                className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+                aria-label="Edit"
+              >
+                <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
+              </button>
+            </ActionHint>
+            <ActionHint label="Delete Post">
+              <button
+                className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150"
+                aria-label="Delete"
+              >
+                <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
+              </button>
+            </ActionHint>
           </>
         )}
       </div>
