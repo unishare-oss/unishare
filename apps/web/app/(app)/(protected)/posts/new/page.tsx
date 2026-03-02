@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { type FieldPath, type FieldPathValue, useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import {
@@ -19,54 +21,175 @@ import { StepNav } from '@/components/posts/step-nav'
 
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
+const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION'])
+
+const yearSchema = z.string().refine((value) => {
+  const yearNumber = Number(value)
+  return value !== '' && !Number.isNaN(yearNumber) && yearNumber >= 1 && yearNumber <= 6
+}, 'Year must be between 1 and 6')
+
+const semesterSchema = z.string().refine((value) => {
+  const semesterNumber = Number(value)
+  return value !== '' && !Number.isNaN(semesterNumber) && semesterNumber >= 1 && semesterNumber <= 3
+}, 'Semester must be between 1 and 3')
+
+const moduleNumberSchema = z.string().refine((value) => {
+  const moduleNumber = Number(value)
+  return value !== '' && !Number.isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 20
+}, 'Module number must be between 1 and 20')
+
+const examYearSchema = z.string().refine((value) => {
+  const parsedExamYear = Number(value)
+  return (
+    value !== '' &&
+    !Number.isNaN(parsedExamYear) &&
+    parsedExamYear >= 1900 &&
+    parsedExamYear <= 2100
+  )
+}, 'Exam year must be between 1900 and 2100')
+
+const externalUrlSchema = z
+  .union([
+    z.literal(''),
+    z
+      .string()
+      .trim()
+      .url('External URL must be a valid URL')
+      .refine((value) => {
+        return value.startsWith('https://')
+      }, 'External URL must be a valid URL'),
+  ])
+  .optional()
+
+const createPostFormSchema = z
+  .object({
+    postType: postTypeSchema.nullable().refine((value) => value !== null, 'Post type is required'),
+    selectedDept: z.string().min(1, 'Department is required'),
+    selectedCourse: z.string().min(1, 'Course is required'),
+    title: z.string().trim().min(3, 'Title must be at least 3 characters'),
+    description: z.string().trim().min(1, 'Description is required'),
+    year: yearSchema,
+    semester: semesterSchema,
+    moduleNum: z.string(),
+    examYear: z.string(),
+    externalUrl: externalUrlSchema,
+    files: z.array(z.custom<File>((value) => value instanceof File)),
+  })
+  .superRefine((values, ctx) => {
+    // Keep type-specific errors attached to the matching field after merging step validation into one schema.
+    if (values.postType === 'NOTE') {
+      const moduleResult = moduleNumberSchema.safeParse(values.moduleNum)
+      if (!moduleResult.success) {
+        for (const issue of moduleResult.error.issues) {
+          ctx.addIssue({
+            ...issue,
+            path: ['moduleNum'],
+          })
+        }
+      }
+    }
+
+    if (values.postType === 'OLD_QUESTION') {
+      const examYearResult = examYearSchema.safeParse(values.examYear)
+      if (!examYearResult.success) {
+        for (const issue of examYearResult.error.issues) {
+          ctx.addIssue({
+            ...issue,
+            path: ['examYear'],
+          })
+        }
+      }
+    }
+  })
+
+type CreatePostFormValues = z.input<typeof createPostFormSchema>
+
+const defaultValues: CreatePostFormValues = {
+  postType: null,
+  selectedDept: '',
+  selectedCourse: '',
+  title: '',
+  description: '',
+  year: '',
+  semester: '',
+  moduleNum: '',
+  examYear: '',
+  externalUrl: '',
+  files: [],
+}
+
+function getInvalidStep(values: CreatePostFormValues) {
+  if (!postTypeSchema.nullable().safeParse(values.postType).success || !values.postType) {
+    return 0
+  }
+
+  if (!values.selectedDept || !values.selectedCourse) {
+    return 1
+  }
+
+  if (!createPostFormSchema.safeParse(values).success) {
+    return 2
+  }
+
+  return null
+}
+
 export default function CreatePostPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
-  const [postType, setPostType] = useState<PostType | null>(null)
-  const [selectedDept, setSelectedDept] = useState('')
-  const [selectedCourse, setSelectedCourse] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [year, setYear] = useState('')
-  const [semester, setSemester] = useState('')
-  const [moduleNum, setModuleNum] = useState('')
-  const [examYear, setExamYear] = useState('')
-  const [externalUrl, setExternalUrl] = useState('')
-  const [files, setFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
 
+  const form = useForm<CreatePostFormValues>({ defaultValues })
   const { mutateAsync: createPost } = usePostsControllerCreate()
+  const values = form.watch()
+
+  function updateField<K extends FieldPath<CreatePostFormValues>>(
+    field: K,
+    value: FieldPathValue<CreatePostFormValues, K>,
+  ) {
+    form.setValue(field, value)
+  }
 
   const canProceed =
     currentStep === 0
-      ? postType !== null
+      ? !!values.postType
       : currentStep === 1
-        ? selectedDept !== '' && selectedCourse !== ''
+        ? !!values.selectedDept && !!values.selectedCourse
         : currentStep === 2
-          ? title.trim() !== ''
+          ? createPostFormSchema.safeParse(values).success
           : true
 
   async function handleSubmit() {
-    if (!postType) return
+    const formValues = form.getValues()
+
+    const invalidStep = getInvalidStep(formValues)
+
+    if (invalidStep !== null) {
+      setCurrentStep(invalidStep)
+      return
+    }
+
+    if (!formValues.postType) return
+
     setSubmitting(true)
     try {
       const res = await createPost({
         data: {
-          type: postType as unknown as Record<string, unknown>,
-          courseId: selectedCourse,
-          title: title.trim() || undefined,
-          description: description.trim() || undefined,
-          externalUrl: externalUrl.trim() || undefined,
-          year: year ? Number(year) : undefined,
-          semester: semester ? Number(semester) : undefined,
-          moduleNumber: moduleNum ? Number(moduleNum) : undefined,
-          examYear: examYear ? Number(examYear) : undefined,
+          type: formValues.postType as unknown as Record<string, unknown>,
+          courseId: formValues.selectedCourse,
+          title: formValues.title.trim() || undefined,
+          description: formValues.description.trim() || undefined,
+          externalUrl: formValues.externalUrl?.trim() || undefined,
+          year: formValues.year ? Number(formValues.year) : undefined,
+          semester: formValues.semester ? Number(formValues.semester) : undefined,
+          moduleNumber: formValues.moduleNum ? Number(formValues.moduleNum) : undefined,
+          examYear: formValues.examYear ? Number(formValues.examYear) : undefined,
         },
       })
 
       const post = (res as unknown as { data: { id: string } }).data
 
-      for (const file of files) {
+      for (const file of formValues.files) {
         const uploadType = file.type.startsWith('image/') ? 'image' : 'document'
         const presignedRes = await storageControllerGetPresignedUploadUrl({
           mimeType: file.type,
@@ -99,7 +222,7 @@ export default function CreatePostPage() {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     } else {
-      handleSubmit()
+      void handleSubmit()
     }
   }
 
@@ -115,42 +238,55 @@ export default function CreatePostPage() {
         <div className="max-w-[640px] mx-auto px-6 py-8">
           <StepIndicator steps={steps} currentStep={currentStep} />
 
-          {currentStep === 0 && <TypeStep postType={postType} onSelect={setPostType} />}
+          {currentStep === 0 && (
+            <TypeStep
+              postType={values.postType as PostType | null}
+              onSelect={(type) => {
+                updateField('postType', type)
+              }}
+            />
+          )}
 
           {currentStep === 1 && (
             <CourseStep
-              selectedDept={selectedDept}
-              selectedCourse={selectedCourse}
-              onDeptChange={setSelectedDept}
-              onCourseChange={setSelectedCourse}
+              selectedDept={values.selectedDept}
+              selectedCourse={values.selectedCourse}
+              onDeptChange={(dept) => {
+                updateField('selectedDept', dept)
+                updateField('selectedCourse', '')
+              }}
+              onCourseChange={(course) => {
+                updateField('selectedCourse', course)
+              }}
             />
           )}
 
           {currentStep === 2 && (
             <DetailsStep
-              postType={postType}
-              title={title}
-              description={description}
-              year={year}
-              semester={semester}
-              moduleNum={moduleNum}
-              examYear={examYear}
-              externalUrl={externalUrl}
-              onTitleChange={setTitle}
-              onDescriptionChange={setDescription}
-              onYearChange={setYear}
-              onSemesterChange={setSemester}
-              onModuleNumChange={setModuleNum}
-              onExamYearChange={setExamYear}
-              onExternalUrlChange={setExternalUrl}
+              postType={values.postType as PostType | null}
+              title={values.title}
+              description={values.description}
+              year={values.year}
+              semester={values.semester}
+              moduleNum={values.moduleNum}
+              examYear={values.examYear}
+              externalUrl={values.externalUrl}
+              onFieldChange={updateField}
             />
           )}
 
           {currentStep === 3 && (
             <FilesStep
-              files={files}
-              onAddFiles={(picked) => setFiles((prev) => [...prev, ...picked])}
-              onRemove={(i) => setFiles((prev) => prev.filter((_, j) => j !== i))}
+              files={values.files}
+              onAddFiles={(picked) => {
+                updateField('files', [...form.getValues('files'), ...picked])
+              }}
+              onRemove={(index) => {
+                updateField(
+                  'files',
+                  form.getValues('files').filter((_, currentIndex) => currentIndex !== index),
+                )
+              }}
             />
           )}
 
