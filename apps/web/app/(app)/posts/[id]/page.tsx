@@ -48,7 +48,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <PostHeader post={post} isOwner={isOwner} />
           <PostFiles post={post} />
           <div className="border-t border-border" />
-          <CommentSection post={post} commentText={commentText} onCommentChange={setCommentText} />
+          <CommentSection
+            postId={post.id}
+            commentText={commentText}
+            onCommentChange={setCommentText}
+          />
         </div>
       </div>
     </div>
