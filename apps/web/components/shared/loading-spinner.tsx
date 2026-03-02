@@ -12,7 +12,7 @@ export function LoadingSpinner({ className }: LoadingSpinnerProps) {
       className={cn('relative inline-flex size-16 items-center justify-center', className)}
       aria-hidden="true"
     >
-      <div className="absolute inset-[8%] rounded-[26px] bg-[radial-gradient(circle_at_center,rgba(254,243,199,0.55),rgba(247,243,238,0)_72%)]" />
+      <div className="absolute inset-[4%] rounded-[28px] bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.18),rgba(254,243,199,0.42),rgba(247,243,238,0)_76%)]" />
       <div className="note-sheet note-sheet-back absolute inset-[20%] z-0 translate-x-[-12%] translate-y-[10%] rotate-[-8deg]">
         <div className="note-accent" />
         <div className="note-line top-[28%]" />
