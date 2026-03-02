@@ -64,7 +64,7 @@ model Post {
   updatedAt    DateTime    @updatedAt
   deletedAt    DateTime?
   moduleNumber Int?
-  status       PostStatus  @default(PENDING)
+  status       PostStatus  @default(APPROVED)
   description  String?
   externalUrl  String?
   shortCode    String      @unique
