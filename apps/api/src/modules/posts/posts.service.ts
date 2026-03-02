@@ -45,6 +45,11 @@ export class PostsService {
     return post
   }
 
+  async assertCommentTargetExists(id: string) {
+    const post = await this.postsRepository.findCommentTarget(id)
+    if (!post) throw new NotFoundException('Post not found')
+  }
+
   async update(id: string, dto: UpdatePostDto, userId: string) {
     const post = await this.findOne(id)
     if (post.authorId !== userId) throw new ForbiddenException('You do not own this post')

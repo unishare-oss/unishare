@@ -23,17 +23,13 @@ const postInclude = (userId?: string): Prisma.PostInclude => ({
     },
   },
   files: true,
-  _count: { select: { comments: true, savedBy: true } },
-  ...(userId ? { savedBy: { where: { userId }, select: { userId: true } } } : {}),
-})
-
-const detailPostInclude = (userId?: string): Prisma.PostInclude => ({
-  ...postInclude(userId),
-  comments: {
-    where: { deletedAt: null },
-    orderBy: { createdAt: 'asc' },
-    include: { user: { select: { id: true, name: true, image: true } } },
+  _count: {
+    select: {
+      comments: { where: { deletedAt: null } },
+      savedBy: true,
+    },
   },
+  ...(userId ? { savedBy: { where: { userId }, select: { userId: true } } } : {}),
 })
 
 function mapPost<T>(post: T): Omit<T, 'savedBy'> & { savedByCurrentUser: boolean } {
@@ -73,7 +69,7 @@ export class PostsRepository {
   async findById(id: string, userId?: string) {
     const post = await this.prisma.post.findUnique({
       where: { id, deletedAt: null },
-      include: detailPostInclude(userId),
+      include: postInclude(userId),
     })
     return post ? mapPost(post) : null
   }
@@ -81,9 +77,16 @@ export class PostsRepository {
   async findByShortCode(shortCode: string, userId?: string) {
     const post = await this.prisma.post.findUnique({
       where: { shortCode, deletedAt: null },
-      include: detailPostInclude(userId),
+      include: postInclude(userId),
     })
     return post ? mapPost(post) : null
+  }
+
+  findCommentTarget(id: string) {
+    return this.prisma.post.findUnique({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    })
   }
 
   update(id: string, data: Prisma.PostUpdateInput) {
