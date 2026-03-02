@@ -9,6 +9,7 @@ import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
 import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
+import { LoadingSpinner } from '@/components/shared/loading-spinner'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -25,7 +26,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Post" />
         <div className="flex-1 bg-card flex items-center justify-center">
-          <p className="font-mono text-sm text-text-muted">Loading...</p>
+          <LoadingSpinner className="size-20" />
         </div>
       </div>
     )

@@ -106,3 +106,102 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes note-sheet-front {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  30% {
+    transform: translate3d(12%, -8%, 0) rotate(4deg);
+  }
+  55% {
+    transform: translate3d(18%, -2%, 0) rotate(7deg);
+  }
+  75% {
+    transform: translate3d(6%, 3%, 0) rotate(2deg);
+  }
+}
+
+@keyframes note-sheet-middle {
+  0%,
+  100% {
+    transform: translate3d(8%, 4%, 0) rotate(5deg);
+  }
+  35% {
+    transform: translate3d(2%, 7%, 0) rotate(1deg);
+  }
+  60% {
+    transform: translate3d(10%, 0, 0) rotate(6deg);
+  }
+}
+
+@keyframes note-sheet-back {
+  0%,
+  100% {
+    transform: translate3d(-12%, 10%, 0) rotate(-8deg);
+  }
+  40% {
+    transform: translate3d(-6%, 6%, 0) rotate(-4deg);
+  }
+  70% {
+    transform: translate3d(-14%, 11%, 0) rotate(-9deg);
+  }
+}
+
+@layer components {
+  .note-sheet {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.96));
+    box-shadow:
+      0 12px 28px rgba(3, 105, 161, 0.12),
+      0 2px 0 rgba(255, 255, 255, 0.7) inset;
+    transform-origin: center;
+  }
+
+  .note-sheet-front {
+    animation: note-sheet-front 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-sheet-middle {
+    animation: note-sheet-middle 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-sheet-back {
+    animation: note-sheet-back 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-line {
+    position: absolute;
+    left: 18%;
+    height: 2px;
+    width: 56%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(3, 105, 161, 0.4), rgba(14, 165, 233, 0.12));
+  }
+
+  .note-accent {
+    position: absolute;
+    left: 18%;
+    top: 16%;
+    height: 8%;
+    width: 24%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(2, 132, 199, 0.95), rgba(56, 189, 248, 0.6));
+  }
+
+  .note-corner {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 24%;
+    width: 20%;
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+    background: linear-gradient(135deg, rgba(186, 230, 253, 0.92), rgba(255, 255, 255, 0.2));
+    border-left: 1px solid rgba(191, 219, 254, 0.95);
+    border-bottom: 1px solid rgba(191, 219, 254, 0.95);
+  }
+}
