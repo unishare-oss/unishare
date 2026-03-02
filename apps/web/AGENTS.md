@@ -144,6 +144,12 @@ Without `select`, you will keep reading `result.data?.data`.
 - Put app-specific logic outside generated files.
 - If you need composition, create a small feature wrapper hook or controller component around generated hooks instead of editing generated output.
 
+## shadcn/ui Rules
+
+- Treat files in `components/ui` as installed primitives.
+- Do not modify `components/ui` files unless the task is explicitly about updating installed shadcn components.
+- When creating app-specific wrappers or skeleton screens, add new files in `components` or `components/shared` instead of changing `components/ui`.
+
 ## Hook Organization with Orval/TanStack
 
 When a component uses both local React state and generated Orval hooks, keep them visually separated so a reader can immediately tell which lines are local UI state and which lines are backend/server-state wiring.
@@ -258,6 +264,7 @@ Add a thin wrapper only when:
 - Prefer TanStack Query for remote data.
 - Keep generated Orval/TanStack hook blocks clearly separated from local component state.
 - Keep server response transformations small and explicit.
+- Do not modify `components/ui` for feature work; build app-specific composition outside it.
 - Do not persist large backend DTOs to local storage unless necessary.
 - Do not edit generated files to fix types; fix the backend Swagger metadata and regenerate.
 - If generated output looks wrong, inspect the backend controller and entity annotations first.

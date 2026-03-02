@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
+import { CommentListSkeleton } from '@/components/post-detail/comment-list-skeleton'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import {
   getCommentsControllerFindAllQueryKey,
@@ -151,91 +152,102 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       </div>
 
       <div className="flex flex-col">
-        {isLoading && <p className="text-sm text-text-muted font-mono py-4">Loading comments...</p>}
-        {comments.map((comment) => (
-          <div key={comment.id} className="group py-4 border-b border-border last:border-b-0">
-            {comment.deletedAt !== null ? (
-              <p className="text-sm text-text-muted italic">[deleted]</p>
-            ) : (
-              <>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <UserAvatar name={comment.user.name} size="sm" />
-                    <span className="text-sm font-medium text-foreground">{comment.user.name}</span>
-                    <span className="font-mono text-xs text-text-muted">
-                      {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  {currentUserId && (
-                    <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
-                      {comment.userId === currentUserId && (
-                        <button
-                          type="button"
-                          onClick={() => startEditing(comment.id, comment.content)}
-                          disabled={isUpdating || isRemoving}
-                          className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                          aria-label="Edit comment"
-                        >
-                          <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                        </button>
-                      )}
-                      {(comment.userId === currentUserId ||
-                        postAuthorId === currentUserId ||
-                        currentUserRole === 'ADMIN') && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(comment.id)}
-                          disabled={isUpdating || isRemoving}
-                          className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                          aria-label="Delete comment"
-                        >
-                          <Trash2
-                            className="size-3.5 text-text-muted hover:text-destructive"
-                            strokeWidth={1.5}
-                          />
-                        </button>
+        {isLoading && comments.length === 0 && <CommentListSkeleton />}
+        {comments.map((comment) => {
+          const isEdited = comment.updatedAt !== comment.createdAt
+
+          return (
+            <div key={comment.id} className="group py-4 border-b border-border last:border-b-0">
+              {comment.deletedAt !== null ? (
+                <p className="text-sm text-text-muted italic">[deleted]</p>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <UserAvatar name={comment.user.name} size="sm" />
+                      <span className="text-sm font-medium text-foreground">
+                        {comment.user.name}
+                      </span>
+                      <span className="font-mono text-xs text-text-muted">
+                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                      </span>
+                      {isEdited && (
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                          (edited)
+                        </span>
                       )}
                     </div>
+                    {currentUserId && (
+                      <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                        {comment.userId === currentUserId && (
+                          <button
+                            type="button"
+                            onClick={() => startEditing(comment.id, comment.content)}
+                            disabled={isUpdating || isRemoving}
+                            className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                            aria-label="Edit comment"
+                          >
+                            <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                          </button>
+                        )}
+                        {(comment.userId === currentUserId ||
+                          postAuthorId === currentUserId ||
+                          currentUserRole === 'ADMIN') && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(comment.id)}
+                            disabled={isUpdating || isRemoving}
+                            className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                            aria-label="Delete comment"
+                          >
+                            <Trash2
+                              className="size-3.5 text-text-muted hover:text-destructive"
+                              strokeWidth={1.5}
+                            />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {editingCommentId === comment.id ? (
+                    <div className="pl-[34px] space-y-3">
+                      <textarea
+                        value={editText}
+                        onChange={(e) =>
+                          setDrafts((current) => ({ ...current, editText: e.target.value }))
+                        }
+                        rows={3}
+                        className="w-full border border-border rounded-[6px] px-4 py-3 text-sm text-foreground placeholder:text-text-muted bg-card focus:outline-none focus:ring-2 focus:ring-amber resize-none"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={cancelEditing}
+                          disabled={isUpdating}
+                          className="h-8 px-3 border border-border rounded-[6px] text-sm text-text-muted hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdate(comment.id)}
+                          disabled={!editText.trim() || isUpdating}
+                          className="h-8 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {isUpdating ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-foreground leading-relaxed pl-[34px]">
+                      {comment.content}
+                    </p>
                   )}
-                </div>
-                {editingCommentId === comment.id ? (
-                  <div className="pl-[34px] space-y-3">
-                    <textarea
-                      value={editText}
-                      onChange={(e) =>
-                        setDrafts((current) => ({ ...current, editText: e.target.value }))
-                      }
-                      rows={3}
-                      className="w-full border border-border rounded-[6px] px-4 py-3 text-sm text-foreground placeholder:text-text-muted bg-card focus:outline-none focus:ring-2 focus:ring-amber resize-none"
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={cancelEditing}
-                        disabled={isUpdating}
-                        className="h-8 px-3 border border-border rounded-[6px] text-sm text-text-muted hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(comment.id)}
-                        disabled={!editText.trim() || isUpdating}
-                        className="h-8 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {isUpdating ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-foreground leading-relaxed pl-[34px]">
-                    {comment.content}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        ))}
+                </>
+              )}
+            </div>
+          )
+        })}
         {!isLoading && comments.length === 0 && (
           <p className="text-sm text-text-muted font-mono py-4">
             No comments yet. Be the first to comment.
