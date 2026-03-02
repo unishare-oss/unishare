@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
@@ -18,6 +18,7 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
+  @ApiCreatedResponse({ type: PostDetailEntity })
   @ResponseMessage('Post created successfully')
   create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
     return this.postsService.create(dto, session.user.id)

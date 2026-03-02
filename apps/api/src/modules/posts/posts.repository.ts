@@ -54,7 +54,9 @@ export class PostsRepository {
     year?: number
     semester?: number
   }) {
-    return this.prisma.post.create({ data, include: postInclude() })
+    return this.prisma.post
+      .create({ data, include: postInclude() })
+      .then((post) => mapPost({ ...post, savedBy: [] }))
   }
 
   async findAll(where: Prisma.PostWhereInput, pagination: PaginationDto, userId?: string) {
