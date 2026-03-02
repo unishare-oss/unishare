@@ -78,34 +78,6 @@ export class PostCountEntity {
   savedBy: number
 }
 
-export class PostCommentUserEntity {
-  @ApiProperty()
-  id: string
-
-  @ApiProperty()
-  name: string
-
-  @ApiPropertyOptional({ nullable: true, type: String })
-  image: string | null
-}
-
-export class PostCommentEntity {
-  @ApiProperty()
-  id: string
-
-  @ApiProperty()
-  content: string
-
-  @ApiProperty()
-  createdAt: Date
-
-  @ApiPropertyOptional({ nullable: true, type: Date })
-  deletedAt: Date | null
-
-  @ApiProperty({ type: PostCommentUserEntity })
-  user: PostCommentUserEntity
-}
-
 export class PostEntity {
   @ApiProperty()
   id: string
@@ -171,7 +143,4 @@ export class PostEntity {
   savedByCurrentUser: boolean
 }
 
-export class PostDetailEntity extends PostEntity {
-  @ApiProperty({ type: [PostCommentEntity] })
-  comments: PostCommentEntity[]
-}
+export class PostDetailEntity extends PostEntity {}
