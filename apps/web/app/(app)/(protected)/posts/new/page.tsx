@@ -8,6 +8,7 @@ import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import {
   PresignedUploadDtoPurpose,
+  PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
@@ -23,6 +24,7 @@ import { StepNav } from '@/components/posts/step-nav'
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
 const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION'])
+type PostCreateType = z.infer<typeof postTypeSchema>
 
 const yearSchema = z.string().refine((value) => {
   const yearNumber = Number(value)
@@ -174,13 +176,13 @@ export default function CreatePostPage() {
     try {
       const res = await createPost({
         data: {
-          type: formValues.postType as unknown as Record<string, unknown>,
+          type: formValues.postType as PostCreateType,
           courseId: formValues.selectedCourse,
-          title: formValues.title.trim() || undefined,
-          description: formValues.description.trim() || undefined,
+          title: formValues.title.trim(),
+          description: formValues.description.trim(),
           externalUrl: formValues.externalUrl?.trim() || undefined,
-          year: formValues.year ? Number(formValues.year) : undefined,
-          semester: formValues.semester ? Number(formValues.semester) : undefined,
+          year: Number(formValues.year),
+          semester: Number(formValues.semester),
           moduleNumber: formValues.moduleNum ? Number(formValues.moduleNum) : undefined,
           examYear: formValues.examYear ? Number(formValues.examYear) : undefined,
         },
@@ -189,10 +191,12 @@ export default function CreatePostPage() {
       const post = (res as unknown as { data: { id: string } }).data
 
       for (const file of formValues.files) {
-        const uploadType = file.type.startsWith('image/') ? 'image' : 'document'
+        const uploadType = file.type.startsWith('image/')
+          ? PresignedUploadDtoUploadType.image
+          : PresignedUploadDtoUploadType.document
         const presignedRes = await storageControllerGetPresignedUploadUrl({
           mimeType: file.type,
-          uploadType: uploadType as unknown as Record<string, unknown>,
+          uploadType,
           purpose: PresignedUploadDtoPurpose['post-attachment'],
         })
         const { url, key } = presignedRes.data as PresignedUploadEntity

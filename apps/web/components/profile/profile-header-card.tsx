@@ -8,6 +8,7 @@ import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.sche
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import {
   PresignedUploadDtoPurpose,
+  PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import {
@@ -33,7 +34,7 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
     try {
       const res = await storageControllerGetPresignedUploadUrl({
         mimeType: file.type,
-        uploadType: 'image' as unknown as Record<string, unknown>,
+        uploadType: PresignedUploadDtoUploadType.image,
         purpose: PresignedUploadDtoPurpose['profile-picture'],
       })
       const { url, publicUrl } = res.data as PresignedUploadEntity
