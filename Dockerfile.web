@@ -13,6 +13,7 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN pnpm --filter web api:generate
 RUN pnpm --filter web build
 
 # prod
