@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { authClient } from '@/src/lib/auth/client'
 
 export function AuthGuard({ children }: { children: ReactNode }) {
@@ -15,7 +16,15 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     }
   }, [session, isPending, router])
 
-  if (isPending || !session) return null
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingSpinner className="size-16" />
+      </div>
+    )
+  }
+
+  if (!session) return null
 
   return <>{children}</>
 }

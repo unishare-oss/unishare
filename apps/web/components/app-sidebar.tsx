@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { authClient, type SessionUser } from '@/src/lib/auth/client'
+import { authClient } from '@/src/lib/auth/client'
 
 const publicNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
@@ -38,7 +38,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = authClient.useSession()
-  const user = session?.user as SessionUser | undefined
+  const user = session?.user
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const navItems = user ? authNavItems : publicNavItems
@@ -136,7 +136,7 @@ export function AppSidebar() {
         {user ? (
           <div className="flex items-center gap-3">
             <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
-              <UserAvatar name={user.name ?? ''} size="md" />
+              <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                 <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">

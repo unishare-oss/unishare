@@ -4,21 +4,35 @@ import { useState } from 'react'
 import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
 import {
   usePostsControllerSavePost,
   usePostsControllerUnsavePost,
   getPostsControllerFindAllQueryKey,
+  getPostsControllerFindOneQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
 import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
 
 interface PostHeaderProps {
   post: ApiPostDetail
   isOwner: boolean
+}
+
+function ActionHint({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <HoverCard openDelay={120} closeDelay={80}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent side="top" className="w-auto px-3 py-2">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-foreground">{label}</p>
+      </HoverCardContent>
+    </HoverCard>
+  )
 }
 
 export function PostHeader({ post, isOwner }: PostHeaderProps) {
@@ -32,24 +46,50 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
 
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
+      },
     },
   })
+
   const { mutate: unsavePost } = usePostsControllerUnsavePost({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
+      },
     },
   })
 
   function handleSave() {
     if (!session) {
       toggleSaved(post as unknown as ApiPost)
+      toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {
-      unsavePost({ id: post.id })
+      unsavePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Removed from saved posts')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     } else {
-      savePost({ id: post.id })
+      savePost(
+        { id: post.id },
+        {
+          onSuccess: () => {
+            toast.success('Saved post')
+          },
+          onError: () => {
+            toast.error('Could not update saved posts')
+          },
+        },
+      )
     }
   }
 
@@ -98,7 +138,7 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
           )}
         </div>
         <div className="flex items-center gap-3 mt-4">
-          <UserAvatar name={post.author.name} size="md" />
+          <UserAvatar name={post.author.name} image={post.author.image} size="md" />
           <div>
             <p className="text-sm font-medium text-foreground">{post.author.name}</p>
             <p className="font-mono text-xs text-text-muted">
@@ -111,41 +151,50 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 justify-end mb-6">
-        <button
-          onClick={handleSave}
-          className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
-        >
-          <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-            strokeWidth={1.5}
-          />
-        </button>
-        <button
-          onClick={handleShare}
-          className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label={copied ? 'Copied!' : 'Copy share code'}
-        >
-          {copied ? (
-            <Check className="size-4 text-success" strokeWidth={1.5} />
-          ) : (
-            <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
-          )}
-        </button>
+        <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
+          <button
+            onClick={handleSave}
+            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+            aria-label={isSaved ? 'Unsave post' : 'Save post'}
+          >
+            <Bookmark
+              className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+              strokeWidth={1.5}
+            />
+          </button>
+        </ActionHint>
+
+        <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
+          <button
+            onClick={handleShare}
+            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+            aria-label={copied ? 'Copied!' : 'Copy share code'}
+          >
+            {copied ? (
+              <Check className="size-4 text-success" strokeWidth={1.5} />
+            ) : (
+              <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
+            )}
+          </button>
+        </ActionHint>
         {isOwner && (
           <>
-            <button
-              className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-              aria-label="Edit"
-            >
-              <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
-            </button>
-            <button
-              className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150"
-              aria-label="Delete"
-            >
-              <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
-            </button>
+            <ActionHint label="Edit Post">
+              <button
+                className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
+                aria-label="Edit"
+              >
+                <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
+              </button>
+            </ActionHint>
+            <ActionHint label="Delete Post">
+              <button
+                className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150"
+                aria-label="Delete"
+              >
+                <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
+              </button>
+            </ActionHint>
           </>
         )}
       </div>

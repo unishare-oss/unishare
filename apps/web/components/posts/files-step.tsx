@@ -52,6 +52,7 @@ export function FilesStep({ files, onAddFiles, onRemove }: FilesStepProps) {
       />
 
       <button
+        type="button"
         onClick={() => inputRef.current?.click()}
         className="w-full border-2 border-dashed border-border rounded-[6px] py-10 flex flex-col items-center gap-3 hover:border-amber hover:bg-amber-subtle transition-all duration-150 cursor-pointer"
       >
@@ -74,6 +75,7 @@ export function FilesStep({ files, onAddFiles, onRemove }: FilesStepProps) {
                 {formatBytes(file.size)}
               </span>
               <button
+                type="button"
                 onClick={() => onRemove(i)}
                 className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0"
                 aria-label="Remove file"

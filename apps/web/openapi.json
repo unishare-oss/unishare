@@ -427,6 +427,89 @@
         "tags": ["posts"]
       }
     },
+    "/posts/{postId}/comments": {
+      "get": {
+        "operationId": "CommentsController_findAll",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CommentEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["comments"]
+      },
+      "post": {
+        "operationId": "CommentsController_create",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommentDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+            }
+          }
+        },
+        "tags": ["comments"]
+      }
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "patch": {
+        "operationId": "CommentsController_update",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "commentId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCommentDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+            }
+          }
+        },
+        "tags": ["comments"]
+      },
+      "delete": {
+        "operationId": "CommentsController_remove",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "commentId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+            }
+          }
+        },
+        "tags": ["comments"]
+      }
+    },
     "/posts/{postId}/files/{fileId}/url": {
       "get": {
         "operationId": "FilesController_getDownloadUrl",
@@ -698,26 +781,6 @@
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
       },
-      "PostCommentUserEntity": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "image": { "type": "string", "nullable": true }
-        },
-        "required": ["id", "name"]
-      },
-      "PostCommentEntity": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "content": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
-          "user": { "$ref": "#/components/schemas/PostCommentUserEntity" }
-        },
-        "required": ["id", "content", "createdAt", "user"]
-      },
       "PostDetailEntity": {
         "type": "object",
         "properties": {
@@ -741,11 +804,7 @@
           "course": { "$ref": "#/components/schemas/PostCourseEntity" },
           "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
           "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" },
-          "comments": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/PostCommentEntity" }
-          }
+          "savedByCurrentUser": { "type": "boolean" }
         },
         "required": [
           "id",
@@ -760,8 +819,7 @@
           "course",
           "files",
           "_count",
-          "savedByCurrentUser",
-          "comments"
+          "savedByCurrentUser"
         ]
       },
       "UpdatePostStatusDto": {
@@ -780,6 +838,38 @@
           "year": { "type": "number", "minimum": 1, "maximum": 6 },
           "semester": { "type": "number", "minimum": 1, "maximum": 3 }
         }
+      },
+      "CommentUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name"]
+      },
+      "CommentEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "content": { "type": "string" },
+          "userId": { "type": "string" },
+          "postId": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
+          "user": { "$ref": "#/components/schemas/CommentUserEntity" }
+        },
+        "required": ["id", "content", "userId", "postId", "createdAt", "updatedAt", "user"]
+      },
+      "CreateCommentDto": {
+        "type": "object",
+        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+        "required": ["content"]
+      },
+      "UpdateCommentDto": {
+        "type": "object",
+        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } }
       },
       "DownloadUrlEntity": {
         "type": "object",

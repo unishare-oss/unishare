@@ -9,22 +9,22 @@ datasource db {
 }
 
 model User {
-  id            String      @id
-  name          String
-  email         String      @unique
-  emailVerified Boolean     @default(false)
-  image         String?
+  id             String      @id
+  name           String
+  email          String      @unique
+  emailVerified  Boolean     @default(false)
+  image          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  departmentId   String?
+  role           UserRole    @default(STUDENT)
   enrollmentYear Int?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  departmentId  String?
-  role          UserRole    @default(STUDENT)
-  accounts      Account[]
-  comments      Comment[]
-  posts         Post[]      @relation("AuthorPosts")
-  savedPosts    SavedPost[]
-  sessions      Session[]
-  department    Department? @relation(fields: [departmentId], references: [id])
+  accounts       Account[]
+  comments       Comment[]
+  posts          Post[]      @relation("AuthorPosts")
+  savedPosts     SavedPost[]
+  sessions       Session[]
+  department     Department? @relation(fields: [departmentId], references: [id])
 
   @@map("user")
 }
@@ -64,7 +64,7 @@ model Post {
   updatedAt    DateTime    @updatedAt
   deletedAt    DateTime?
   moduleNumber Int?
-  status       PostStatus  @default(PENDING)
+  status       PostStatus  @default(APPROVED)
   description  String?
   externalUrl  String?
   shortCode    String      @unique

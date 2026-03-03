@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { use, useEffect } from 'react'
 import { usePostsControllerFindOne } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
@@ -9,12 +9,12 @@ import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
 import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
+import { LoadingSpinner } from '@/components/shared/loading-spinner'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const { data: session } = authClient.useSession()
-  const [commentText, setCommentText] = useState('')
   const markRead = useUIStore((s) => s.markRead)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Post" />
         <div className="flex-1 bg-card flex items-center justify-center">
-          <p className="font-mono text-sm text-text-muted">Loading...</p>
+          <LoadingSpinner className="size-20" />
         </div>
       </div>
     )
@@ -48,7 +48,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <PostHeader post={post} isOwner={isOwner} />
           <PostFiles post={post} />
           <div className="border-t border-border" />
-          <CommentSection post={post} commentText={commentText} onCommentChange={setCommentText} />
+          <CommentSection postId={post.id} postAuthorId={post.authorId} />
         </div>
       </div>
     </div>

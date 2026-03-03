@@ -106,3 +106,104 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes note-sheet-front {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  30% {
+    transform: translate3d(12%, -8%, 0) rotate(4deg);
+  }
+  55% {
+    transform: translate3d(18%, -2%, 0) rotate(7deg);
+  }
+  75% {
+    transform: translate3d(6%, 3%, 0) rotate(2deg);
+  }
+}
+
+@keyframes note-sheet-middle {
+  0%,
+  100% {
+    transform: translate3d(8%, 4%, 0) rotate(5deg);
+  }
+  35% {
+    transform: translate3d(2%, 7%, 0) rotate(1deg);
+  }
+  60% {
+    transform: translate3d(10%, 0, 0) rotate(6deg);
+  }
+}
+
+@keyframes note-sheet-back {
+  0%,
+  100% {
+    transform: translate3d(-12%, 10%, 0) rotate(-8deg);
+  }
+  40% {
+    transform: translate3d(-6%, 6%, 0) rotate(-4deg);
+  }
+  70% {
+    transform: translate3d(-14%, 11%, 0) rotate(-9deg);
+  }
+}
+
+@layer components {
+  .note-sheet {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(186, 160, 137, 0.85);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(251, 247, 242, 0.98));
+    box-shadow:
+      0 14px 30px rgba(28, 25, 23, 0.14),
+      0 2px 0 rgba(255, 255, 255, 0.82) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+    transform-origin: center;
+  }
+
+  .note-sheet-front {
+    animation: note-sheet-front 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-sheet-middle {
+    animation: note-sheet-middle 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-sheet-back {
+    animation: note-sheet-back 2.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+  }
+
+  .note-line {
+    position: absolute;
+    left: 18%;
+    height: 3px;
+    width: 56%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(180, 83, 9, 0.42), rgba(217, 119, 6, 0.14));
+  }
+
+  .note-accent {
+    position: absolute;
+    left: 18%;
+    top: 16%;
+    height: 8%;
+    width: 24%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(180, 83, 9, 0.98), rgba(245, 158, 11, 0.72));
+    box-shadow: 0 1px 6px rgba(217, 119, 6, 0.24);
+  }
+
+  .note-corner {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 24%;
+    width: 20%;
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+    background: linear-gradient(135deg, rgba(254, 243, 199, 0.98), rgba(247, 243, 238, 0.38));
+    border-left: 1px solid rgba(186, 160, 137, 0.85);
+    border-bottom: 1px solid rgba(186, 160, 137, 0.85);
+  }
+}

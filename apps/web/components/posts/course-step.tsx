@@ -1,10 +1,19 @@
 'use client'
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 
 type ApiDept = { id: string; name: string }
 type ApiCourse = { id: string; code: string; name: string; departmentId: string }
+
+const EMPTY_SELECT_VALUE = '__empty__'
 
 interface CourseStepProps {
   selectedDept: string
@@ -41,39 +50,47 @@ export function CourseStep({
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Department
           </label>
-          <select
-            value={selectedDept}
-            onChange={(e) => {
-              onDeptChange(e.target.value)
+          <Select
+            value={selectedDept || EMPTY_SELECT_VALUE}
+            onValueChange={(value) => {
+              onDeptChange(value === EMPTY_SELECT_VALUE ? '' : value)
               onCourseChange('')
             }}
-            className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
           >
-            <option value="">Select department...</option>
-            {(depts ?? []).map((dept) => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-[42px] bg-card border-border rounded-[6px] text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
+              <SelectValue placeholder="Select department..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={EMPTY_SELECT_VALUE}>Select department...</SelectItem>
+              {(depts ?? []).map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {selectedDept && (
           <div>
             <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
               Course
             </label>
-            <select
-              value={selectedCourse}
-              onChange={(e) => onCourseChange(e.target.value)}
-              className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
+            <Select
+              value={selectedCourse || EMPTY_SELECT_VALUE}
+              onValueChange={(value) => onCourseChange(value === EMPTY_SELECT_VALUE ? '' : value)}
             >
-              <option value="">Select course...</option>
-              {filteredCourses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.code} — {course.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-[42px] bg-card border-border rounded-[6px] text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
+                <SelectValue placeholder="Select course..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={EMPTY_SELECT_VALUE}>Select course...</SelectItem>
+                {filteredCourses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.code} — {course.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
