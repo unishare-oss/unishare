@@ -94,7 +94,7 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
   }
 
   function handleShare() {
-    navigator.clipboard.writeText(post.shortCode)
+    navigator.clipboard.writeText(`${window.location.origin}/s/${post.shortCode}`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
