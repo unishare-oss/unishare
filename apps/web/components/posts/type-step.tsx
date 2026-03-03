@@ -18,10 +18,8 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
         <button
           onClick={() => onSelect('NOTE')}
           className={cn(
-            'relative flex items-center gap-4 w-full border rounded-[6px] p-5 text-left transition-all duration-150',
-            postType === 'NOTE'
-              ? 'border-amber border-[1.5px] bg-amber-subtle'
-              : 'border-border hover:bg-muted',
+            'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
+            postType === 'NOTE' ? 'border-amber bg-amber-subtle' : 'border-border hover:bg-muted',
           )}
         >
           {postType === 'NOTE' && (
@@ -50,9 +48,9 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
         <button
           onClick={() => onSelect('OLD_QUESTION')}
           className={cn(
-            'relative flex items-center gap-4 w-full border rounded-[6px] p-5 text-left transition-all duration-150',
+            'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
             postType === 'OLD_QUESTION'
-              ? 'border-amber border-[1.5px] bg-amber-subtle'
+              ? 'border-amber bg-amber-subtle'
               : 'border-border hover:bg-muted',
           )}
         >
