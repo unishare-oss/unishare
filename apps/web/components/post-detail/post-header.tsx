@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
@@ -180,12 +181,13 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
         {isOwner && (
           <>
             <ActionHint label="Edit Post">
-              <button
+              <Link
+                href={`/posts/${post.id}/edit`}
                 className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
                 aria-label="Edit"
               >
                 <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
-              </button>
+              </Link>
             </ActionHint>
             <ActionHint label="Delete Post">
               <button
