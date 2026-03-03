@@ -1,7 +1,7 @@
 'use client'
 
 import type { UseFormReturn } from 'react-hook-form'
-import type { CreatePostFormValues } from '@/components/posts/create-post-form.types'
+import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import {
   Form,
   FormControl,
@@ -184,32 +184,31 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
               )}
             />
           </div>
-          {postType === 'NOTE' && (
-            <FormField
-              control={form.control}
-              name="moduleNum"
-              rules={{
-                validate: (value) =>
-                  postType !== 'NOTE' || isWholeNumberInRange(value, 1, 20) || MODULE_ERROR,
-              }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                    Module Number {requiredMark}
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="number"
-                      placeholder="e.g. 4"
-                      className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="moduleNum"
+            rules={{
+              validate: (value) =>
+                postType == null || isWholeNumberInRange(value, 1, 20) || MODULE_ERROR,
+            }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  Module Number {requiredMark}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    placeholder="e.g. 4"
+                    className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
           {postType === 'OLD_QUESTION' && (
             <FormField
               control={form.control}

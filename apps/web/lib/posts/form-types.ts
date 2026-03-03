@@ -1,4 +1,4 @@
-import type { PostType } from './type-step'
+export type PostType = 'NOTE' | 'OLD_QUESTION'
 
 export type CreatePostFormValues = {
   postType: PostType | null

@@ -16,14 +16,7 @@ export function PdfViewer({ url, className, style }: PdfViewerProps) {
         config={{
           src: url,
           theme: { preference: 'system' },
-          toolbar: {
-            layout: {
-              default: {
-                showDownload: false,
-                showPrint: true,
-              },
-            },
-          },
+          disabledCategories: ['document-download'],
         }}
         style={{ width: '100%', height: '100%' }}
       />

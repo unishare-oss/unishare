@@ -1,9 +1,10 @@
 'use client'
 
 import { FileText, GraduationCap, Check } from 'lucide-react'
+import type { PostType } from '@/lib/posts/form-types'
 import { cn } from '@/lib/utils'
 
-export type PostType = 'NOTE' | 'OLD_QUESTION'
+export type { PostType } from '@/lib/posts/form-types'
 
 interface TypeStepProps {
   postType: PostType | null

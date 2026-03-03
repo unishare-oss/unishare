@@ -6,6 +6,7 @@ import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { FilesService } from './files.service'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
 import { DownloadUrlEntity } from './entities/download-url.entity'
+import { FileEntity } from './entities/file.entity'
 
 @ApiTags('files')
 @Controller('posts/:postId/files')
@@ -21,6 +22,7 @@ export class FilesController {
   }
 
   @Post()
+  @ApiOkResponse({ type: FileEntity })
   @ResponseMessage('File confirmed successfully')
   confirmUpload(
     @Param('postId') postId: string,

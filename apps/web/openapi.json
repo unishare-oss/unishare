@@ -589,7 +589,38 @@
             }
           }
         },
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FileEntity" } }
+            }
+          }
+        },
+        "tags": ["files"]
+      }
+    },
+    "/posts/{postId}/files/{fileId}/replace": {
+      "post": {
+        "operationId": "FilesController_replace",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ReplaceFileDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FileEntity" } }
+            }
+          }
+        },
         "tags": ["files"]
       }
     },
@@ -774,7 +805,7 @@
           "year": { "type": "number", "minimum": 1, "maximum": 6 },
           "semester": { "type": "number", "minimum": 1, "maximum": 3 }
         },
-        "required": ["type", "courseId", "title", "description", "year", "semester"]
+        "required": ["type", "courseId", "title", "description", "moduleNumber", "year", "semester"]
       },
       "PostAuthorDeptEntity": {
         "type": "object",
@@ -981,6 +1012,29 @@
         "required": ["url"]
       },
       "ConfirmFileUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "name": { "type": "string", "maxLength": 255 },
+          "size": { "type": "number", "minimum": 1 },
+          "mimeType": { "type": "string", "maxLength": 255 }
+        },
+        "required": ["key", "name", "size", "mimeType"]
+      },
+      "FileEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "key": { "type": "string" },
+          "name": { "type": "string" },
+          "size": { "type": "number" },
+          "mimeType": { "type": "string" },
+          "postId": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" }
+        },
+        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
+      },
+      "ReplaceFileDto": {
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },

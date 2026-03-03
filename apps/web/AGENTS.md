@@ -30,6 +30,17 @@ This document explains how the frontend in `apps/web` is structured, which techn
 - `lib`
   Local utilities and lightweight client state such as the Zustand store.
 
+### `lib` vs `src/lib`
+
+This app currently uses both `lib/` and `src/lib/`. Treat them as different ownership zones, not duplicates:
+
+- `lib/`
+  App-local helpers, feature form/schema helpers, lightweight utilities, and local client state.
+- `src/lib/`
+  Shared infrastructure such as auth client setup, API fetchers, and generated API clients.
+
+Do not put feature-specific helpers under `src/lib/api` just because they call the backend. If the logic is app-local and not generated infrastructure, prefer `lib/`.
+
 ## Runtime Architecture
 
 The frontend is mostly client-driven today. Many pages are `'use client'`, fetch data in the browser, and pass server data down into screen components.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useFeedStore } from '@/lib/store'
@@ -10,19 +10,15 @@ import { PostFeed } from '@/components/feed/post-feed'
 
 export default function FeedPage() {
   const consumePendingFilter = useFeedStore((s) => s.consumePendingFilter)
+
+  // Initialize state from pending filter if present to avoid cascading renders in useEffect
+  const [initialFilter] = useState(() => consumePendingFilter())
+
   const [activeFilter, setActiveFilter] = useState<TypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDeptId, setSelectedDeptId] = useState('')
-  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedDeptId, setSelectedDeptId] = useState(initialFilter?.deptId ?? '')
+  const [selectedCourseId, setSelectedCourseId] = useState(initialFilter?.courseId ?? '')
   const [page, setPage] = useState(1)
-
-  useEffect(() => {
-    const filter = consumePendingFilter()
-    if (filter) {
-      setSelectedDeptId(filter.deptId)
-      setSelectedCourseId(filter.courseId)
-    }
-  }, [])
 
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)

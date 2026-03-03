@@ -46,12 +46,11 @@ export class CreatePostDto {
   @Max(2100)
   examYear?: number
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 20 })
-  @ValidateIf((o: CreatePostDto) => o.type === PostType.NOTE || o.moduleNumber !== undefined)
+  @ApiProperty({ minimum: 1, maximum: 20 })
   @IsInt()
   @Min(1)
   @Max(20)
-  moduleNumber?: number
+  moduleNumber: number
 
   @ApiProperty({ minimum: 1, maximum: 6 })
   @IsInt()
