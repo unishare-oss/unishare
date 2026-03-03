@@ -1,10 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
-import { ApiTags } from '@nestjs/swagger'
+import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { DepartmentsService } from './departments.service'
 import { CreateDepartmentDto } from './dto/create-department.dto'
 import { UpdateDepartmentDto } from './dto/update-department.dto'
+import { DepartmentEntity, DepartmentWithCoursesEntity } from './entities/department.entity'
 
 @ApiTags('departments')
 @Controller('departments')
@@ -13,6 +14,7 @@ export class DepartmentsController {
 
   @Post()
   @Roles(['ADMIN'])
+  @ApiCreatedResponse({ type: DepartmentEntity })
   @ResponseMessage('Department created successfully')
   create(@Body() dto: CreateDepartmentDto) {
     return this.departmentsService.create(dto)
@@ -20,6 +22,7 @@ export class DepartmentsController {
 
   @Get()
   @OptionalAuth()
+  @ApiOkResponse({ type: [DepartmentEntity] })
   @ResponseMessage('Departments fetched successfully')
   findAll() {
     return this.departmentsService.findAll()
@@ -27,6 +30,7 @@ export class DepartmentsController {
 
   @Get(':id')
   @OptionalAuth()
+  @ApiOkResponse({ type: DepartmentWithCoursesEntity })
   @ResponseMessage('Department fetched successfully')
   findOne(@Param('id') id: string) {
     return this.departmentsService.findOne(id)
@@ -34,6 +38,7 @@ export class DepartmentsController {
 
   @Patch(':id')
   @Roles(['ADMIN'])
+  @ApiOkResponse({ type: DepartmentEntity })
   @ResponseMessage('Department updated successfully')
   update(@Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
     return this.departmentsService.update(id, dto)
