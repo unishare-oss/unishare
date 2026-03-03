@@ -5,64 +5,28 @@ import { useRouter } from 'next/navigation'
 import { type FieldPath, type FieldPathValue, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
-import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
-import {
-  PresignedUploadDtoPurpose,
-  PresignedUploadDtoUploadType,
-  type PresignedUploadEntity,
-} from '@/src/lib/api/generated/unishareAPI.schemas'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
 import { PageHeader } from '@/components/shared/page-header'
 import { StepIndicator } from '@/components/posts/step-indicator'
 import { TypeStep, type PostType } from '@/components/posts/type-step'
 import { CourseStep } from '@/components/posts/course-step'
 import { DetailsStep } from '@/components/posts/details-step'
-import type { CreatePostFormValues } from '@/components/posts/create-post-form.types'
 import { FilesStep } from '@/components/posts/files-step'
+import type { CreatePostFormValues } from '@/lib/posts/form-types'
+import { uploadPostFile } from '@/lib/posts/upload-post-file'
+import {
+  addExamYearIssueIfPresent,
+  externalUrlSchema,
+  moduleNumberSchema,
+  semesterSchema,
+  yearSchema,
+} from '@/lib/posts/form-schema'
 import { StepNav } from '@/components/posts/step-nav'
 
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
 const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION'])
 type PostCreateType = z.infer<typeof postTypeSchema>
-
-const yearSchema = z.string().refine((value) => {
-  const yearNumber = Number(value)
-  return value !== '' && !Number.isNaN(yearNumber) && yearNumber >= 1 && yearNumber <= 6
-}, 'Year must be between 1 and 6')
-
-const semesterSchema = z.string().refine((value) => {
-  const semesterNumber = Number(value)
-  return value !== '' && !Number.isNaN(semesterNumber) && semesterNumber >= 1 && semesterNumber <= 3
-}, 'Semester must be between 1 and 3')
-
-const moduleNumberSchema = z.string().refine((value) => {
-  const moduleNumber = Number(value)
-  return value !== '' && !Number.isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 20
-}, 'Module number must be between 1 and 20')
-
-const examYearSchema = z.string().refine((value) => {
-  const parsedExamYear = Number(value)
-  return (
-    value !== '' &&
-    !Number.isNaN(parsedExamYear) &&
-    parsedExamYear >= 1900 &&
-    parsedExamYear <= 2100
-  )
-}, 'Exam year must be between 1900 and 2100')
-
-const externalUrlSchema = z
-  .union([
-    z.literal(''),
-    z
-      .string()
-      .trim()
-      .url('External URL must be a valid URL')
-      .refine((value) => {
-        return value.startsWith('https://')
-      }, 'External URL must be a valid URL'),
-  ])
-  .optional()
 
 const createPostFormSchema = z
   .object({
@@ -93,15 +57,7 @@ const createPostFormSchema = z
     }
 
     if (values.postType === 'OLD_QUESTION') {
-      const examYearResult = examYearSchema.safeParse(values.examYear)
-      if (!examYearResult.success) {
-        for (const issue of examYearResult.error.issues) {
-          ctx.addIssue({
-            ...issue,
-            path: ['examYear'],
-          })
-        }
-      }
+      addExamYearIssueIfPresent(values.examYear, ctx)
     }
   })
 
@@ -140,6 +96,7 @@ export default function CreatePostPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
+  // Keep validation live so step gating and field feedback stay in sync as the user fills each stage.
   const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
   const { mutateAsync: createPost } = usePostsControllerCreate()
   const values = form.watch()
@@ -191,28 +148,8 @@ export default function CreatePostPage() {
       const post = res.data
 
       for (const file of formValues.files) {
-        const uploadType = file.type.startsWith('image/')
-          ? PresignedUploadDtoUploadType.image
-          : PresignedUploadDtoUploadType.document
-        const presignedRes = await storageControllerGetPresignedUploadUrl({
-          mimeType: file.type,
-          uploadType,
-          purpose: PresignedUploadDtoPurpose['post-attachment'],
-        })
-        const { url, key } = presignedRes.data as PresignedUploadEntity
-
-        await fetch(url, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type },
-        })
-
-        await filesControllerConfirmUpload(post.id, {
-          key,
-          name: file.name,
-          size: file.size,
-          mimeType: file.type,
-        })
+        const uploadedFile = await uploadPostFile(file)
+        await filesControllerConfirmUpload(post.id, uploadedFile)
       }
 
       router.push(`/posts/${post.id}`)
@@ -270,14 +207,21 @@ export default function CreatePostPage() {
 
           {currentStep === 3 && (
             <FilesStep
-              files={values.files}
+              items={values.files.map((file, index) => ({
+                id: String(index),
+                name: file.name,
+                size: file.size,
+                mimeType: file.type,
+              }))}
               onAddFiles={(picked) => {
                 updateField('files', [...form.getValues('files'), ...picked])
               }}
-              onRemove={(index) => {
+              onRemove={(fileId) => {
                 updateField(
                   'files',
-                  form.getValues('files').filter((_, currentIndex) => currentIndex !== index),
+                  form
+                    .getValues('files')
+                    .filter((_, currentIndex) => String(currentIndex) !== fileId),
                 )
               }}
             />
