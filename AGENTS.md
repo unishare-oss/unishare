@@ -27,6 +27,7 @@ When working inside one of those folders, follow the local guide first.
 - Keep frontend and backend boundaries clean:
   frontend should not patch generated API output by hand, and backend should expose correct Swagger metadata instead.
 - Prefer app-local guidance over duplicating detailed rules here.
+- Before making any file changes, first tell the user the plan, list which files will be modified or added, and wait for permission before proceeding.
 
 ## Common Commands
 
