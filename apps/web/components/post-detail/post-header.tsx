@@ -39,10 +39,10 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
   const [copied, setCopied] = useState(false)
   const { data: session } = authClient.useSession()
   const toggleSaved = useUIStore((s) => s.toggleSaved)
-  const isGuestSaved = useUIStore((s) => s.isGuestSaved)
+  const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
   const queryClient = useQueryClient()
 
-  const isSaved = session ? post.savedByCurrentUser : isGuestSaved(post.id)
+  const isSaved = session ? post.savedByCurrentUser : isGuestSaved
 
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
