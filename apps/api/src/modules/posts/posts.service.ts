@@ -1,6 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { nanoid } from 'nanoid'
-import { PostStatus, UserRole } from '@/generated/prisma/client'
+import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -53,6 +58,11 @@ export class PostsService {
   async update(id: string, dto: UpdatePostDto, userId: string) {
     const post = await this.findOne(id)
     if (post.authorId !== userId) throw new ForbiddenException('You do not own this post')
+
+    if (post.type === PostType.NOTE && dto.examYear !== undefined) {
+      throw new BadRequestException('Exam year can only be updated for old question posts')
+    }
+
     return this.postsRepository.update(id, dto)
   }
 
