@@ -1,6 +1,13 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 
@@ -25,8 +32,7 @@ interface FilterStripProps {
 type ApiDept = { id: string; name: string }
 type ApiCourse = { id: string; code: string; name: string; departmentId: string }
 
-const selectClass =
-  'h-8 px-2 pr-6 bg-card border border-border rounded-[6px] font-mono text-xs text-text-muted appearance-none cursor-pointer hover:border-amber/50 focus:outline-none focus:ring-1 focus:ring-amber transition-colors duration-150'
+const ALL = '__all__'
 
 export function FilterStrip({
   activeFilter,
@@ -50,20 +56,25 @@ export function FilterStrip({
     ? allCourses.filter((c) => c.departmentId === selectedDeptId)
     : allCourses
 
-  function handleDeptChange(deptId: string) {
+  function handleDeptChange(value: string) {
+    const deptId = value === ALL ? '' : value
     onDeptChange(deptId)
     onCourseChange('')
   }
 
+  function handleCourseChange(value: string) {
+    onCourseChange(value === ALL ? '' : value)
+  }
+
   return (
-    <div className="border-b border-border bg-card px-6 py-3 flex items-center gap-6">
-      <div className="flex items-center gap-1">
+    <div className="border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
+      <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto">
         {typeFilters.map((filter) => (
           <button
             key={filter}
             onClick={() => onFilterChange(filter)}
             className={cn(
-              'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2',
+              'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2 shrink-0',
               activeFilter === filter
                 ? 'border-amber text-amber font-medium'
                 : 'border-transparent text-text-muted hover:text-foreground',
@@ -74,36 +85,40 @@ export function FilterStrip({
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <div className="relative">
-          <select
-            value={selectedDeptId}
-            onChange={(e) => handleDeptChange(e.target.value)}
-            className={selectClass}
+      <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:flex lg:p-0 lg:ml-auto">
+        <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
+          <SelectTrigger
+            size="sm"
+            className="font-mono text-xs text-text-muted w-full lg:w-[140px]"
           >
-            <option value="">All departments</option>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All departments</SelectItem>
             {(departments ?? []).map((d) => (
-              <option key={d.id} value={d.id}>
+              <SelectItem key={d.id} value={d.id}>
                 {d.name}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </div>
+          </SelectContent>
+        </Select>
 
-        <div className="relative">
-          <select
-            value={selectedCourseId}
-            onChange={(e) => onCourseChange(e.target.value)}
-            className={selectClass}
+        <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
+          <SelectTrigger
+            size="sm"
+            className="font-mono text-xs text-text-muted w-full lg:w-[140px]"
           >
-            <option value="">All courses</option>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All courses</SelectItem>
             {filteredCourses.map((c) => (
-              <option key={c.id} value={c.id}>
+              <SelectItem key={c.id} value={c.id}>
                 {c.code} — {c.name}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-        </div>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )
