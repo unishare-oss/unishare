@@ -14,21 +14,13 @@ import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import { uploadPostFile } from '@/lib/posts/upload-post-file'
 import {
   addExamYearIssueIfPresent,
-  examYearSchema,
   externalUrlSchema,
   moduleNumberSchema,
   semesterSchema,
   yearSchema,
 } from '@/lib/posts/form-schema'
+import { type PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import {
-  type PostDetailEntity,
-  PresignedUploadDtoPurpose,
-  PresignedUploadDtoUploadType,
-  type PresignedUploadEntity,
-} from '@/src/lib/api/generated/unishareAPI.schemas'
-import {
-  getPostsControllerFindAllQueryKey,
-  getPostsControllerFindOneQueryKey,
   usePostsControllerFindOne,
   usePostsControllerUpdate,
 } from '@/src/lib/api/generated/posts/posts'
@@ -89,7 +81,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
   // Keep validation live so "Save changes" only enables when the current edited values are valid.
   const form = useForm<CreatePostFormValues>({ defaultValues: emptyValues, mode: 'onChange' })
-  const { isDirty } = form.formState
+  const { isDirty, isValid } = form.formState
 
   const { data: post, isLoading } = usePostsControllerFindOne(id, {
     query: {
@@ -110,9 +102,11 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       setNewFiles([])
       setRemovedFileIds(new Set())
     }
-  }, [form, post])
+    // Only reset when post.id changes (first load)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id])
 
-  const canSubmit = baseEditPostSchema.safeParse(form.watch()).success
+  const canSubmit = isValid
   const hasFileChanges = newFiles.length > 0 || removedFileIds.size > 0
   const hasChanges = isDirty || hasFileChanges
   const isSubmitting = isUpdatingPost || isConfirmingFile || isRemovingFile

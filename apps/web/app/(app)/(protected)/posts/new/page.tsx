@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { type FieldPath, type FieldPathValue, useForm } from 'react-hook-form'
+import { type FieldPath, type FieldPathValue, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
@@ -99,7 +99,10 @@ export default function CreatePostPage() {
   // Keep validation live so step gating and field feedback stay in sync as the user fills each stage.
   const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
   const { mutateAsync: createPost } = usePostsControllerCreate()
-  const values = form.watch()
+  const values = useWatch({
+    control: form.control,
+    defaultValue: defaultValues,
+  }) as CreatePostFormValues
 
   function updateField<K extends FieldPath<CreatePostFormValues>>(
     field: K,
