@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { Upload, FileText, X } from 'lucide-react'
+import { FileImage, FileSpreadsheet, FileText, Upload, X } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -22,13 +22,31 @@ const ACCEPTED_MIME_TYPES = [
   'image/webp',
 ].join(',')
 
-interface FilesStepProps {
-  files: File[]
-  onAddFiles: (files: File[]) => void
-  onRemove: (index: number) => void
+export interface FilesStepItem {
+  id: string
+  name: string
+  size: number
+  mimeType: string
 }
 
-export function FilesStep({ files, onAddFiles, onRemove }: FilesStepProps) {
+function fileIcon(mimeType: string) {
+  if (mimeType === 'application/pdf')
+    return <FileText className="size-5 text-destructive" strokeWidth={1.5} />
+  if (mimeType.startsWith('image/'))
+    return <FileImage className="size-5 text-success" strokeWidth={1.5} />
+  if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
+    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+  return <FileText className="size-5 text-info" strokeWidth={1.5} />
+}
+
+interface FilesStepProps {
+  items: FilesStepItem[]
+  onAddFiles: (files: File[]) => void
+  onRemove: (id: string) => void
+  disabled?: boolean
+}
+
+export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -48,36 +66,39 @@ export function FilesStep({ files, onAddFiles, onRemove }: FilesStepProps) {
         multiple
         accept={ACCEPTED_MIME_TYPES}
         className="hidden"
+        disabled={disabled}
         onChange={handleChange}
       />
 
       <button
         type="button"
+        disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className="w-full border-2 border-dashed border-border rounded-[6px] py-10 flex flex-col items-center gap-3 hover:border-amber hover:bg-amber-subtle transition-all duration-150 cursor-pointer"
+        className="w-full border-2 border-dashed border-border rounded-[6px] py-10 flex flex-col items-center gap-3 hover:border-amber hover:bg-amber-subtle transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent"
       >
         <Upload className="size-6 text-text-muted" strokeWidth={1.5} />
         <p className="text-sm text-text-muted">Drop files here or click to browse</p>
       </button>
 
-      {files.length > 0 && (
+      {items.length > 0 && (
         <div className="flex flex-col gap-2 mt-4">
-          {files.map((file, i) => (
+          {items.map((item) => (
             <div
-              key={i}
+              key={item.id}
               className="flex items-center gap-3 border border-border rounded-[6px] px-4 py-3"
             >
-              <FileText className="size-5 text-destructive" strokeWidth={1.5} />
+              {fileIcon(item.mimeType)}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
               </div>
               <span className="font-mono text-xs text-text-muted shrink-0">
-                {formatBytes(file.size)}
+                {formatBytes(item.size)}
               </span>
               <button
                 type="button"
-                onClick={() => onRemove(i)}
-                className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0"
+                disabled={disabled}
+                onClick={() => onRemove(item.id)}
+                className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0 disabled:cursor-not-allowed"
                 aria-label="Remove file"
               >
                 <X className="size-4 text-text-muted" strokeWidth={1.5} />

@@ -1,7 +1,7 @@
 'use client'
 
 import type { UseFormReturn } from 'react-hook-form'
-import type { CreatePostFormValues } from '@/components/posts/create-post-form.types'
+import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import {
   Form,
   FormControl,
