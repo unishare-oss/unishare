@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { FeedHeader } from '@/components/feed/feed-header'
@@ -8,10 +9,11 @@ import { FilterStrip, type TypeFilter } from '@/components/feed/filter-strip'
 import { PostFeed } from '@/components/feed/post-feed'
 
 export default function FeedPage() {
+  const searchParams = useSearchParams()
   const [activeFilter, setActiveFilter] = useState<TypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDeptId, setSelectedDeptId] = useState('')
-  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedDeptId, setSelectedDeptId] = useState(searchParams.get('deptId') ?? '')
+  const [selectedCourseId, setSelectedCourseId] = useState(searchParams.get('courseId') ?? '')
   const [page, setPage] = useState(1)
 
   function handleDeptChange(deptId: string) {

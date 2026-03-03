@@ -41,6 +41,7 @@ export default function DepartmentsPage() {
         ) : (
           <CourseList
             deptName={selectedDept?.name ?? ''}
+            deptId={selectedDeptId}
             courses={deptCourses}
             onBack={() => setSelectedDeptId(null)}
           />
