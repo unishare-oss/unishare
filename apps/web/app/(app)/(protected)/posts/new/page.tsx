@@ -80,7 +80,7 @@ const createPostFormSchema = z
   })
   .superRefine((values, ctx) => {
     // Keep type-specific errors attached to the matching field after merging step validation into one schema.
-    if (values.postType === 'NOTE') {
+    if (values.postType === 'NOTE' || values.postType === 'OLD_QUESTION') {
       const moduleResult = moduleNumberSchema.safeParse(values.moduleNum)
       if (!moduleResult.success) {
         for (const issue of moduleResult.error.issues) {
@@ -183,7 +183,7 @@ export default function CreatePostPage() {
           externalUrl: formValues.externalUrl?.trim() || undefined,
           year: Number(formValues.year),
           semester: Number(formValues.semester),
-          moduleNumber: formValues.moduleNum ? Number(formValues.moduleNum) : undefined,
+          moduleNumber: Number(formValues.moduleNum),
           examYear: formValues.examYear ? Number(formValues.examYear) : undefined,
         },
       })
