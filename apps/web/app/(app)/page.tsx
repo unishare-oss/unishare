@@ -42,10 +42,7 @@ export default function FeedPage() {
 
   const { data } = usePostsControllerFindAll(
     {
-      type: (activeFilter !== 'ALL' ? activeFilter : undefined) as unknown as Record<
-        string,
-        unknown
-      >,
+      type: activeFilter !== 'ALL' ? activeFilter : undefined,
       courseId: selectedCourseId || undefined,
       departmentId: selectedDeptId || undefined,
       page,

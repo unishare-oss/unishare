@@ -18,9 +18,6 @@ import { CoursePanel } from '@/components/admin/departments/course-panel'
 import { AddDeptModal } from '@/components/admin/departments/add-dept-modal'
 import { AddCourseModal } from '@/components/admin/departments/add-course-modal'
 
-type ApiDept = { id: string; name: string }
-type ApiCourse = { id: string; code: string; name: string; departmentId: string }
-
 export default function AdminDepartmentsPage() {
   const [selectedDeptId, setSelectedDeptId] = useState('')
   const [showAddDept, setShowAddDept] = useState(false)
@@ -31,14 +28,14 @@ export default function AdminDepartmentsPage() {
   const queryClient = useQueryClient()
 
   const { data: depts } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data as unknown as ApiDept[] },
+    query: { select: (r) => r.data },
   })
 
   const effectiveDeptId = selectedDeptId || depts?.[0]?.id || ''
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
-    { query: { select: (r) => r.data as unknown as { items: ApiCourse[] } } },
+    { query: { select: (r) => r.data } },
   )
 
   const { mutate: createDept } = useDepartmentsControllerCreate({

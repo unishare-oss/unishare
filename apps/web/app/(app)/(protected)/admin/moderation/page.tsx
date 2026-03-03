@@ -7,6 +7,7 @@ import {
   usePostsControllerUpdateStatus,
   getPostsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
+import { UpdateablePostStatus } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ModerationHeader, type PostStatus } from '@/components/admin/moderation/moderation-header'
 import { ModerationRow } from '@/components/admin/moderation/moderation-row'
@@ -17,12 +18,12 @@ export default function ModerationPage() {
   const queryClient = useQueryClient()
 
   const { data } = usePostsControllerFindAll(
-    { status: activeFilter as unknown as Record<string, unknown>, limit: 50 },
+    { status: activeFilter, limit: 50 },
     { query: { select: (r) => r.data } },
   )
 
   const { data: pendingData } = usePostsControllerFindAll(
-    { status: 'PENDING' as unknown as Record<string, unknown>, limit: 1 },
+    { status: 'PENDING', limit: 1 },
     { query: { select: (r) => r.data } },
   )
 
@@ -39,11 +40,11 @@ export default function ModerationPage() {
   const pendingCount = pendingData?.total ?? 0
 
   function handleApprove(postId: string) {
-    updateStatus({ id: postId, data: { status: 'APPROVED' as unknown as Record<string, unknown> } })
+    updateStatus({ id: postId, data: { status: UpdateablePostStatus.APPROVED } })
   }
 
   function handleReject(postId: string) {
-    updateStatus({ id: postId, data: { status: 'REJECTED' as unknown as Record<string, unknown> } })
+    updateStatus({ id: postId, data: { status: UpdateablePostStatus.REJECTED } })
   }
 
   return (

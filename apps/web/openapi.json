@@ -5,12 +5,7 @@
       "get": {
         "operationId": "AppController_getHello",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": { "application/json": { "schema": { "type": "string" } } }
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "tags": ["App"]
       }
     },
@@ -50,7 +45,9 @@
         "responses": {
           "201": {
             "description": "",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+            }
           }
         },
         "tags": ["courses"]
@@ -71,7 +68,16 @@
             "schema": { "minimum": 1, "type": "number" }
           }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedCourseEntity" }
+              }
+            }
+          }
+        },
         "tags": ["courses"]
       }
     },
@@ -84,7 +90,9 @@
         "responses": {
           "200": {
             "description": "",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+            }
           }
         },
         "tags": ["courses"]
@@ -103,7 +111,9 @@
         "responses": {
           "200": {
             "description": "",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+            }
           }
         },
         "tags": ["courses"]
@@ -184,13 +194,32 @@
             "application/json": { "schema": { "$ref": "#/components/schemas/CreateDepartmentDto" } }
           }
         },
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentEntity" } }
+            }
+          }
+        },
         "tags": ["departments"]
       },
       "get": {
         "operationId": "DepartmentsController_findAll",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DepartmentEntity" }
+                }
+              }
+            }
+          }
+        },
         "tags": ["departments"]
       }
     },
@@ -203,7 +232,11 @@
         "responses": {
           "200": {
             "description": "",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DepartmentWithCoursesEntity" }
+              }
+            }
           }
         },
         "tags": ["departments"]
@@ -219,7 +252,14 @@
             "application/json": { "schema": { "$ref": "#/components/schemas/UpdateDepartmentDto" } }
           }
         },
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentEntity" } }
+            }
+          }
+        },
         "tags": ["departments"]
       },
       "delete": {
@@ -271,13 +311,13 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/Object" }
+            "schema": { "$ref": "#/components/schemas/PostType" }
           },
           {
             "name": "status",
             "required": false,
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/Object" }
+            "schema": { "$ref": "#/components/schemas/PostStatus" }
           },
           {
             "name": "departmentId",
@@ -607,6 +647,37 @@
         },
         "required": ["code", "name", "departmentId"]
       },
+      "CourseDeptEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "code": { "type": "string" }
+        },
+        "required": ["id", "name", "code"]
+      },
+      "CourseEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "code": { "type": "string" },
+          "name": { "type": "string" },
+          "departmentId": { "type": "string" },
+          "department": { "$ref": "#/components/schemas/CourseDeptEntity" }
+        },
+        "required": ["id", "code", "name", "departmentId", "department"]
+      },
+      "PaginatedCourseEntity": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CourseEntity" } },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" },
+          "totalPages": { "type": "number" }
+        },
+        "required": ["items", "total", "page", "limit", "totalPages"]
+      },
       "UpdateCourseDto": {
         "type": "object",
         "properties": {
@@ -664,6 +735,28 @@
         "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 100 } },
         "required": ["name"]
       },
+      "DeptCourseEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "code": { "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "code", "name"]
+      },
+      "DepartmentWithCoursesEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "code": { "type": "string" },
+          "courses": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DeptCourseEntity" }
+          }
+        },
+        "required": ["id", "name", "code", "courses"]
+      },
       "UpdateDepartmentDto": {
         "type": "object",
         "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 100 } }
@@ -675,7 +768,7 @@
           "courseId": { "type": "string" },
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
-          "externalUrl": { "type": "string", "maxLength": 500, "format": "uri" },
+          "externalUrl": { "type": "string", "maxLength": 500 },
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
           "year": { "type": "number", "minimum": 1, "maximum": 6 },
@@ -776,7 +869,8 @@
           "savedByCurrentUser"
         ]
       },
-      "Object": { "type": "object", "properties": {} },
+      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+      "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
       "PostEntity": {
         "type": "object",
         "properties": {
@@ -829,9 +923,12 @@
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
       },
+      "UpdateablePostStatus": { "type": "string", "enum": ["APPROVED", "REJECTED"] },
       "UpdatePostStatusDto": {
         "type": "object",
-        "properties": { "status": { "type": "object" } },
+        "properties": {
+          "status": { "allOf": [{ "$ref": "#/components/schemas/UpdateablePostStatus" }] }
+        },
         "required": ["status"]
       },
       "UpdatePostDto": {
@@ -839,7 +936,7 @@
         "properties": {
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
-          "externalUrl": { "type": "string", "maxLength": 500, "format": "uri" },
+          "externalUrl": { "type": "string", "maxLength": 500 },
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
           "year": { "type": "number", "minimum": 1, "maximum": 6 },

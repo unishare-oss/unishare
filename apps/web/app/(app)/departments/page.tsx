@@ -7,19 +7,16 @@ import { PageHeader } from '@/components/shared/page-header'
 import { DeptList } from '@/components/departments/dept-list'
 import { CourseList } from '@/components/departments/course-list'
 
-type ApiDept = { id: string; name: string }
-type ApiCourse = { id: string; code: string; name: string; departmentId: string }
-
 export default function DepartmentsPage() {
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null)
 
   const { data: depts } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data as unknown as ApiDept[] },
+    query: { select: (r) => r.data },
   })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
-    { query: { select: (r) => r.data as unknown as { items: ApiCourse[] } } },
+    { query: { select: (r) => r.data } },
   )
 
   const allCourses = coursesData?.items ?? []

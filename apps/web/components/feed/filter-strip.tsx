@@ -29,9 +29,6 @@ interface FilterStripProps {
   onCourseChange: (courseId: string) => void
 }
 
-type ApiDept = { id: string; name: string }
-type ApiCourse = { id: string; code: string; name: string; departmentId: string }
-
 const ALL = '__all__'
 
 export function FilterStrip({
@@ -43,12 +40,12 @@ export function FilterStrip({
   onCourseChange,
 }: FilterStripProps) {
   const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data as unknown as ApiDept[] },
+    query: { select: (r) => r.data },
   })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
-    { query: { select: (r) => r.data as unknown as { items: ApiCourse[] } } },
+    { query: { select: (r) => r.data } },
   )
   const allCourses = coursesData?.items ?? []
 

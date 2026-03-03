@@ -64,7 +64,7 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
 
   function handleSave() {
     if (!session) {
-      toggleSaved(post as unknown as ApiPost)
+      toggleSaved(post as ApiPost)
       toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {
       unsavePost(

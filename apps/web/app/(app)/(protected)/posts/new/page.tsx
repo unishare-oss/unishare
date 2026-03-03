@@ -188,7 +188,7 @@ export default function CreatePostPage() {
         },
       })
 
-      const post = (res as unknown as { data: { id: string } }).data
+      const post = res.data
 
       for (const file of formValues.files) {
         const uploadType = file.type.startsWith('image/')

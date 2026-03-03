@@ -9,8 +9,6 @@ import {
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
 
-type ApiDept = { id: string; name: string }
-
 interface EditProfileFormProps {
   displayName: string
   department: string
@@ -32,7 +30,7 @@ export function EditProfileForm({
   const queryClient = useQueryClient()
 
   const { data: depts } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data as unknown as ApiDept[] },
+    query: { select: (r) => r.data },
   })
 
   const { mutateAsync: updateMe } = useUsersControllerUpdateMe()

@@ -10,9 +10,6 @@ import {
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 
-type ApiDept = { id: string; name: string }
-type ApiCourse = { id: string; code: string; name: string; departmentId: string }
-
 const EMPTY_SELECT_VALUE = '__empty__'
 
 interface CourseStepProps {
@@ -29,12 +26,12 @@ export function CourseStep({
   onCourseChange,
 }: CourseStepProps) {
   const { data: depts } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data as unknown as ApiDept[] },
+    query: { select: (r) => r.data },
   })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
-    { query: { select: (r) => r.data as unknown as { items: ApiCourse[] } } },
+    { query: { select: (r) => r.data } },
   )
 
   const allCourses = coursesData?.items ?? []
