@@ -39,7 +39,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <PageHeader title="Post" />
 
       <div className="flex-1 bg-card">
-        <div className="max-w-[800px] mx-auto px-6 py-6">
+        {/* g change later */}
+        <div className="max-w-240 mx-auto px-6 py-6">
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}
