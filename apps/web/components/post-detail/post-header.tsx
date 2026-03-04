@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { TypeBadge } from '@/components/post-card'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useUIStore } from '@/lib/store'
@@ -23,6 +24,8 @@ import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
 interface PostHeaderProps {
   post: ApiPostDetail
   isOwner: boolean
+  onDelete?: () => void
+  isDeleting?: boolean
 }
 
 function ActionHint({ label, children }: { label: string; children: React.ReactNode }) {
@@ -36,8 +39,9 @@ function ActionHint({ label, children }: { label: string; children: React.ReactN
   )
 }
 
-export function PostHeader({ post, isOwner }: PostHeaderProps) {
+export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: PostHeaderProps) {
   const [copied, setCopied] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { data: session } = authClient.useSession()
   const toggleSaved = useUIStore((s) => s.toggleSaved)
   const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
@@ -105,6 +109,19 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
 
   return (
     <>
+      {isOwner && onDelete && (
+        <ConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Delete this post?"
+          description="This will remove the post and all attached files. This action cannot be undone."
+          confirmLabel="Delete post"
+          cancelLabel="Keep post"
+          onConfirm={onDelete}
+          isPending={isDeleting}
+        />
+      )}
+
       {post.status === 'PENDING' && (
         <div className="mb-6 bg-amber-subtle border border-amber/50 px-4 py-3 rounded-[6px]">
           <p className="text-sm text-amber font-medium">
@@ -191,7 +208,9 @@ export function PostHeader({ post, isOwner }: PostHeaderProps) {
             </ActionHint>
             <ActionHint label="Delete Post">
               <button
-                className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isDeleting}
+                className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Delete"
               >
                 <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
