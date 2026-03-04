@@ -37,7 +37,7 @@ COPY packages ./packages
 COPY apps/api/prisma ./apps/api/prisma
 
 ENV NODE_ENV=production
-ENV HUSKY=0
+ENV npm_config_ignore_scripts=true
 RUN pnpm install --prod --frozen-lockfile
 
 WORKDIR /app/apps/api
