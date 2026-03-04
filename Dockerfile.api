@@ -31,8 +31,9 @@ COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 # Build output
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Prisma schema
+# Prisma schema and config
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 
 # Shared workspace packages
