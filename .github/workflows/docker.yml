@@ -3,6 +3,16 @@ name: Build & Push Docker Images
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_api:
+        description: Force build API
+        type: boolean
+        default: false
+      force_web:
+        description: Force build Web
+        type: boolean
+        default: false
 
 env:
   OWNER: ${{ github.repository_owner }}
@@ -39,7 +49,7 @@ jobs:
   build-api:
     name: Build API image
     needs: changes
-    if: needs.changes.outputs.api == 'true'
+    if: needs.changes.outputs.api == 'true' || inputs.force_api
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,7 +86,7 @@ jobs:
   build-web:
     name: Build Web image
     needs: changes
-    if: needs.changes.outputs.web == 'true'
+    if: needs.changes.outputs.web == 'true' || inputs.force_web
     runs-on: ubuntu-latest
     permissions:
       contents: read
