@@ -45,4 +45,4 @@ COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 WORKDIR /app/apps/api
 EXPOSE 3001
 
-CMD ["sh", "-c", "../../node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
