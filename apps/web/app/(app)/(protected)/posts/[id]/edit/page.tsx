@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -10,6 +11,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { DetailsStep } from '@/components/posts/details-step'
 import { FilesStep } from '@/components/posts/files-step'
+import { Button } from '@/components/ui/button'
 import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import { uploadPostFile } from '@/lib/posts/upload-post-file'
 import {
@@ -252,24 +254,21 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           />
 
           <div className="mt-10 flex items-center justify-end gap-3 border-t border-border pt-6">
-            <Link
-              href={`/posts/${id}`}
-              className="inline-flex h-9 items-center rounded-[6px] px-4 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted"
-            >
-              Cancel
-            </Link>
-            <button
+            <Button variant="ghost" asChild>
+              <Link href={`/posts/${id}`}>Cancel</Link>
+            </Button>
+            <Button
               type="button"
               disabled={!canSubmit || !hasChanges || isSubmitting}
               onClick={() => void handleSubmit()}
-              className={`inline-flex h-9 items-center rounded-[6px] px-4 text-sm font-medium transition-colors duration-150 ${
+              className={cn(
                 !canSubmit || !hasChanges || isSubmitting
-                  ? 'cursor-not-allowed bg-muted text-text-muted'
-                  : 'bg-amber text-primary-foreground hover:bg-amber-hover'
-              }`}
+                  ? 'bg-muted text-text-muted hover:bg-muted'
+                  : 'bg-amber text-primary-foreground hover:bg-amber-hover',
+              )}
             >
               {isSubmitting ? 'Saving...' : 'Save changes'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

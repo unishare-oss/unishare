@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
+import { Button } from '@/components/ui/button'
 
 const publicNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
@@ -148,13 +149,15 @@ export function AppSidebar() {
                 strokeWidth={1.5}
               />
             </Link>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={handleSignOut}
               aria-label="Sign out"
-              className="p-1.5 rounded-[6px] text-text-muted hover:text-foreground hover:bg-muted transition-colors duration-150 shrink-0"
+              className="shrink-0 text-text-muted hover:bg-red-100 rounded-2xl"
             >
               <LogOut className="size-4" strokeWidth={1.5} />
-            </button>
+            </Button>
           </div>
         ) : (
           <Link

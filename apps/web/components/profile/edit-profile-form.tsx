@@ -8,6 +8,7 @@ import {
   useUsersControllerUpdateAcademicProfile,
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
+import { Button } from '@/components/ui/button'
 
 interface EditProfileFormProps {
   displayName: string
@@ -101,13 +102,13 @@ export function EditProfileForm({
           <p className="text-xs text-text-muted mt-1.5">Used to calculate your year level</p>
         </div>
         <div className="flex justify-end">
-          <button
+          <Button
             onClick={handleSave}
             disabled={saving}
-            className="h-9 px-5 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
             {saving ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

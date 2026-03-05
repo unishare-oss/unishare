@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { FileImage, FileSpreadsheet, FileText, Upload, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -94,15 +95,17 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
               <span className="font-mono text-xs text-text-muted shrink-0">
                 {formatBytes(item.size)}
               </span>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 disabled={disabled}
                 onClick={() => onRemove(item.id)}
-                className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0 disabled:cursor-not-allowed"
+                className="shrink-0"
                 aria-label="Remove file"
               >
                 <X className="size-4 text-text-muted" strokeWidth={1.5} />
-              </button>
+              </Button>
             </div>
           ))}
         </div>

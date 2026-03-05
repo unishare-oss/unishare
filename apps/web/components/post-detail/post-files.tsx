@@ -5,6 +5,7 @@ import { Link2, FileText, FileImage, FileSpreadsheet, Download, Eye, X } from 'l
 import type { ApiPostDetail } from '@/lib/api-types'
 import { filesControllerGetDownloadUrl } from '@/src/lib/api/generated/files/files'
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
+import { Button } from '@/components/ui/button'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -126,13 +127,14 @@ export function PostFiles({ post }: PostFilesProps) {
                 {previewFile.name}
               </span>
             </h2>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setPreviewFile(null)}
-              className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150"
               aria-label="Close preview"
             >
               <X className="size-4 text-text-muted" strokeWidth={1.5} />
-            </button>
+            </Button>
           </div>
           <div className="bg-card-dark rounded-lg overflow-hidden border border-border">
             {previewFile.mimeType === 'application/pdf' ? (
@@ -174,12 +176,14 @@ export function PostFiles({ post }: PostFilesProps) {
               </span>
               <div className="flex items-center gap-1">
                 {isPreviewable(file.mimeType) && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => handlePreview(file)}
-                    className={`p-1.5 rounded-[6px] transition-colors duration-150 shrink-0 ${
+                    className={`shrink-0 ${
                       previewFile?.id === file.id
-                        ? 'bg-amber text-white'
-                        : 'hover:bg-muted text-text-muted'
+                        ? 'bg-amber text-white hover:bg-amber'
+                        : 'text-text-muted'
                     }`}
                     disabled={loadingPreviewId === file.id}
                     aria-label={`Preview ${file.name}`}
@@ -189,15 +193,17 @@ export function PostFiles({ post }: PostFilesProps) {
                     ) : (
                       <Eye className="size-4" strokeWidth={1.5} />
                     )}
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => handleDownload(post.id, file.id, file.name)}
-                  className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 shrink-0"
+                  className="shrink-0"
                   aria-label={`Download ${file.name}`}
                 >
                   <Download className="size-4 text-text-muted" strokeWidth={1.5} />
-                </button>
+                </Button>
               </div>
             </div>
           ))}

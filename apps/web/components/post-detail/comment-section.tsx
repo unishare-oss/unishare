@@ -14,6 +14,8 @@ import {
   useCommentsControllerUpdate,
 } from '@/src/lib/api/generated/comments/comments'
 import { authClient } from '@/src/lib/auth/client'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 interface CommentSectionProps {
   postId: string
@@ -131,21 +133,22 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       </h2>
 
       <div className="mb-6">
-        <textarea
+        <Textarea
           value={commentText}
           onChange={(e) => setDrafts((current) => ({ ...current, commentText: e.target.value }))}
           placeholder="Write a comment..."
           rows={3}
-          className="w-full border border-border rounded-[6px] px-4 py-3 text-sm text-foreground placeholder:text-text-muted bg-card focus:outline-none focus:ring-2 focus:ring-amber resize-none"
+          className="resize-none"
         />
         <div className="flex justify-end mt-2">
-          <button
+          <Button
+            size="sm"
             onClick={handleSubmit}
             disabled={!session || !commentText.trim() || isPending}
-            className="h-8 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
             {isPending ? 'Posting...' : 'Post'}
-          </button>
+          </Button>
         </div>
         {!session && <p className="text-xs text-text-muted mt-2">Sign in to post a comment.</p>}
         {error && <p className="text-xs text-destructive mt-2">{error}</p>}
@@ -180,62 +183,63 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
                     {currentUserId && (
                       <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                         {comment.userId === currentUserId && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon-xs"
                             onClick={() => startEditing(comment.id, comment.content)}
                             disabled={isUpdating || isRemoving}
-                            className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                             aria-label="Edit comment"
                           >
                             <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                          </button>
+                          </Button>
                         )}
                         {(comment.userId === currentUserId ||
                           postAuthorId === currentUserId ||
                           currentUserRole === 'ADMIN') && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon-xs"
                             onClick={() => handleDelete(comment.id)}
                             disabled={isUpdating || isRemoving}
-                            className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                             aria-label="Delete comment"
                           >
-                            <Trash2
-                              className="size-3.5 text-text-muted hover:text-destructive"
-                              strokeWidth={1.5}
-                            />
-                          </button>
+                            <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                          </Button>
                         )}
                       </div>
                     )}
                   </div>
                   {editingCommentId === comment.id ? (
                     <div className="pl-[34px] space-y-3">
-                      <textarea
+                      <Textarea
                         value={editText}
                         onChange={(e) =>
                           setDrafts((current) => ({ ...current, editText: e.target.value }))
                         }
                         rows={3}
-                        className="w-full border border-border rounded-[6px] px-4 py-3 text-sm text-foreground placeholder:text-text-muted bg-card focus:outline-none focus:ring-2 focus:ring-amber resize-none"
+                        className="resize-none"
                       />
                       <div className="flex items-center justify-end gap-2">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={cancelEditing}
                           disabled={isUpdating}
-                          className="h-8 px-3 border border-border rounded-[6px] text-sm text-text-muted hover:bg-muted transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
+                          size="sm"
                           onClick={() => handleUpdate(comment.id)}
                           disabled={!editText.trim() || isUpdating}
-                          className="h-8 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="bg-amber text-primary-foreground hover:bg-amber-hover"
                         >
                           {isUpdating ? 'Saving...' : 'Save'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (

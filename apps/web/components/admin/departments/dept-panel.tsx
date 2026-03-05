@@ -2,6 +2,7 @@
 
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 export type ApiDept = { id: string; name: string; courseCount: number }
 
@@ -24,13 +25,9 @@ export function DeptPanel({ depts, selectedDeptId, onSelect, onAddClick }: DeptP
             {depts.length}
           </span>
         </div>
-        <button
-          onClick={onAddClick}
-          className="p-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          aria-label="Add department"
-        >
+        <Button variant="ghost" size="icon-sm" onClick={onAddClick} aria-label="Add department">
           <Plus className="size-4 text-text-muted" strokeWidth={1.5} />
-        </button>
+        </Button>
       </div>
       <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible">
         {depts.map((dept) => (

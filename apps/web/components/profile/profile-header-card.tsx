@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { Camera } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { Button } from '@/components/ui/button'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import {
@@ -52,14 +53,15 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
       <div className="flex items-start gap-5">
         <div className="relative group shrink-0">
           <UserAvatar name={user.name} image={user.image} size="lg" />
-          <button
+          <Button
+            variant="ghost"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="absolute inset-0 rounded-[6px] bg-surface-dark/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150 disabled:cursor-wait"
+            className="absolute inset-0 rounded-[6px] bg-surface-dark/50 opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-surface-dark/50 disabled:cursor-wait disabled:opacity-0 group-hover:disabled:opacity-100"
             aria-label="Change profile picture"
           >
             <Camera className="size-5 text-card" strokeWidth={1.5} />
-          </button>
+          </Button>
           <input
             ref={fileInputRef}
             type="file"

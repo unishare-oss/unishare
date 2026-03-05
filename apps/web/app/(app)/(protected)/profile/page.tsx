@@ -13,6 +13,7 @@ import { authClient } from '@/src/lib/auth/client'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
+import { Button } from '@/components/ui/button'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 
 function ProfileContent({ user }: { user: UserProfileEntity }) {
@@ -64,13 +65,14 @@ function SignOutButton() {
   }
 
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={handleSignOut}
-      className="md:hidden flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-foreground hover:bg-muted rounded-[6px] transition-colors duration-150"
+      className="md:hidden text-text-muted hover:text-foreground"
     >
       <LogOut className="size-4" strokeWidth={1.5} />
       Sign out
-    </button>
+    </Button>
   )
 }
 

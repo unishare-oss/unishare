@@ -2,10 +2,12 @@
 
 import { ChevronDown, ChevronUp, Link2, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn, calcYearLevel } from '@/lib/utils'
+import { useAcademicYear } from '@/hooks/use-academic-year'
 import { TypeBadge } from '@/components/post-card'
 import type { ApiPost } from '@/lib/api-types'
 import type { PostStatus } from './moderation-header'
+import { Button } from '@/components/ui/button'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -36,8 +38,11 @@ export function ModerationRow({
   onApprove: () => void
   onReject: () => void
 }) {
-  const currentYear = new Date().getFullYear()
-  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
+  const academicYear = useAcademicYear()
+  const yearLevel =
+    post.author.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+      : null
 
   return (
     <div className="border-b border-border">
@@ -76,24 +81,28 @@ export function ModerationRow({
 
         {status === 'PENDING' && (
           <div className="hidden group-hover:flex items-center gap-2 shrink-0">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation()
                 onApprove()
               }}
-              className="text-xs font-medium text-success hover:bg-success/10 px-3 py-1.5 rounded-[6px] transition-colors duration-150"
+              className="text-success hover:bg-success/10 hover:text-success font-mono text-xs uppercase tracking-wider"
             >
               Approve
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation()
                 onReject()
               }}
-              className="text-xs font-medium text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-[6px] transition-colors duration-150"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive font-mono text-xs uppercase tracking-wider"
             >
               Reject
-            </button>
+            </Button>
           </div>
         )}
 
@@ -144,18 +153,15 @@ export function ModerationRow({
 
             {status === 'PENDING' && (
               <div className="flex items-center gap-3 pt-4 border-t border-border">
-                <button
+                <Button
                   onClick={onApprove}
-                  className="h-9 px-5 bg-success text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-success/90 transition-colors duration-150"
+                  className="bg-success text-primary-foreground hover:bg-success/90"
                 >
                   Approve
-                </button>
-                <button
-                  onClick={onReject}
-                  className="h-9 px-5 bg-destructive text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-destructive/90 transition-colors duration-150"
-                >
+                </Button>
+                <Button variant="destructive" onClick={onReject}>
                   Reject
-                </button>
+                </Button>
               </div>
             )}
           </div>

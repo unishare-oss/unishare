@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useFeedStore } from '@/lib/store'
+import { Button } from '@/components/ui/button'
 
 export type ApiCourse = { id: string; code: string; name: string }
 
@@ -23,12 +24,14 @@ export function CourseList({ deptName, deptId, courses, onBack }: CourseListProp
 
   return (
     <div className="max-w-[700px] mx-auto px-6 py-6">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onBack}
-        className="font-mono text-xs text-text-muted hover:text-foreground transition-colors duration-150 mb-4"
+        className="font-mono text-xs text-text-muted mb-4"
       >
         {'< Back to departments'}
-      </button>
+      </Button>
       <h2 className="text-xl font-semibold text-foreground mb-4">{deptName}</h2>
       <div className="flex flex-col gap-2">
         {courses.map((course) => (

@@ -6,8 +6,10 @@ import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, calcYearLevel } from '@/lib/utils'
+import { useAcademicYear } from '@/hooks/use-academic-year'
 import { TypeBadge } from '@/components/post-card'
+import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
@@ -104,8 +106,11 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const currentYear = new Date().getFullYear()
-  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
+  const academicYear = useAcademicYear()
+  const yearLevel =
+    post.author.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+      : null
 
   return (
     <>
@@ -170,22 +175,24 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
 
       <div className="flex items-center gap-2 justify-end mb-6">
         <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleSave}
-            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
             aria-label={isSaved ? 'Unsave post' : 'Save post'}
           >
             <Bookmark
               className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
               strokeWidth={1.5}
             />
-          </button>
+          </Button>
         </ActionHint>
 
         <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleShare}
-            className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
             aria-label={copied ? 'Copied!' : 'Copy share code'}
           >
             {copied ? (
@@ -193,7 +200,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             ) : (
               <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
             )}
-          </button>
+          </Button>
         </ActionHint>
         {isOwner && (
           <>
@@ -207,14 +214,15 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               </Link>
             </ActionHint>
             <ActionHint label="Delete Post">
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isDeleting}
-                className="p-2 rounded-[6px] hover:bg-muted hover:text-destructive transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="Delete"
               >
                 <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
-              </button>
+              </Button>
             </ActionHint>
           </>
         )}

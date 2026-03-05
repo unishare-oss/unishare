@@ -1,6 +1,8 @@
 'use client'
 
 import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface AddDeptModalProps {
   value: string
@@ -19,33 +21,27 @@ export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModa
       >
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-mono text-sm font-medium text-foreground">Add Department</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-[6px] hover:bg-muted transition-colors duration-150"
-          >
+          <Button variant="ghost" size="icon-xs" onClick={onClose}>
             <X className="size-4 text-text-muted" strokeWidth={1.5} />
-          </button>
+          </Button>
         </div>
         <div>
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Name
           </label>
-          <input
+          <Input
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="e.g. Computer Science"
-            className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
+            className="h-[42px]"
           />
         </div>
         <div className="flex items-center gap-3 justify-end mt-5">
-          <button
-            onClick={onClose}
-            className="h-9 px-4 text-sm text-foreground hover:bg-muted rounded-[6px] transition-colors duration-150"
-          >
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               if (value.trim()) {
                 onSubmit(value.trim())
@@ -53,10 +49,10 @@ export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModa
               }
             }}
             disabled={!value.trim()}
-            className="h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
             Create
-          </button>
+          </Button>
         </div>
       </div>
     </div>

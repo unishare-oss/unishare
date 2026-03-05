@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 interface StepNavProps {
   currentStep: number
@@ -24,30 +25,25 @@ export function StepNav({
 
   return (
     <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
-      <button
+      <Button
+        variant="ghost"
         onClick={onBack}
         disabled={currentStep === 0 || loading}
-        className={cn(
-          'h-9 px-4 text-sm font-medium rounded-[6px] transition-colors duration-150',
-          currentStep === 0 || loading
-            ? 'text-text-muted cursor-not-allowed'
-            : 'text-foreground hover:bg-muted',
-        )}
+        className="text-text-muted disabled:text-text-muted disabled:opacity-100"
       >
         Back
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={onNext}
         disabled={disabled}
         className={cn(
-          'h-9 px-6 text-sm font-medium rounded-[6px] transition-colors duration-150',
           disabled
-            ? 'bg-muted text-text-muted cursor-not-allowed'
+            ? 'bg-muted text-text-muted hover:bg-muted'
             : 'bg-amber text-primary-foreground hover:bg-amber-hover',
         )}
       >
         {loading ? 'Submitting...' : isLastStep ? 'Submit' : 'Next'}
-      </button>
+      </Button>
     </div>
   )
 }

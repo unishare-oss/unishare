@@ -46,8 +46,10 @@ function BookmarkItem({ bookmark, depth, onNavigate }: BookmarkItemProps) {
         onClick={handleClick}
       >
         {hasChildren ? (
-          <button
-            className="shrink-0 p-0.5 rounded hover:bg-accent-foreground/10"
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="shrink-0"
             onClick={(e) => {
               e.stopPropagation()
               setExpanded((v) => !v)
@@ -57,7 +59,7 @@ function BookmarkItem({ bookmark, depth, onNavigate }: BookmarkItemProps) {
               className={cn('size-3 transition-transform', expanded && 'rotate-90')}
               strokeWidth={2}
             />
-          </button>
+          </Button>
         ) : (
           <span className="size-4 shrink-0" />
         )}

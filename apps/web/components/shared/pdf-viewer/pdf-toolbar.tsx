@@ -163,13 +163,14 @@ export function PdfToolbar({
       >
         <ZoomOut className="size-4" strokeWidth={1.5} />
       </Button>
-      <button
-        className="px-2 h-7 rounded-md text-xs font-mono tabular-nums hover:bg-accent transition-colors"
+      <Button
+        variant="ghost"
+        className="px-2 h-7 text-xs font-mono tabular-nums"
         title="Reset zoom to fit width"
         onClick={() => zoomProvides?.requestZoom(ZoomMode.FitWidth)}
       >
         {zoomPercent}%
-      </button>
+      </Button>
       <Button variant="ghost" size="icon-sm" title="Zoom in" onClick={() => zoomProvides?.zoomIn()}>
         <ZoomIn className="size-4" strokeWidth={1.5} />
       </Button>
@@ -202,8 +203,9 @@ export function PdfToolbar({
           className="w-10 h-7 text-center text-xs font-mono tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       ) : (
-        <button
-          className="px-2 h-7 rounded-md text-xs font-mono tabular-nums text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
+        <Button
+          variant="ghost"
+          className="px-2 h-7 text-xs font-mono tabular-nums whitespace-nowrap"
           title="Jump to page"
           onClick={() => {
             setPageInput(String(currentPage))
@@ -212,7 +214,7 @@ export function PdfToolbar({
           }}
         >
           {currentPage} / {totalPages}
-        </button>
+        </Button>
       )}
       <Button
         variant="ghost"

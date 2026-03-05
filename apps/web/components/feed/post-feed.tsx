@@ -2,6 +2,7 @@ import { PostCard } from '@/components/post-card'
 import { EmptyState } from '@/components/shared/empty-state'
 import { cn } from '@/lib/utils'
 import type { ApiPost } from '@/lib/api-types'
+import { Button } from '@/components/ui/button'
 
 interface PostFeedProps {
   posts: ApiPost[]
@@ -28,34 +29,40 @@ export function PostFeed({ posts, page, totalPages, onPageChange }: PostFeedProp
 
       {totalPages > 1 && (
         <div className="bg-card px-6 py-4 flex items-center justify-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="font-mono text-xs text-text-muted hover:text-foreground px-3 py-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none"
+            className="font-mono text-xs text-text-muted"
           >
             Prev
-          </button>
+          </Button>
           {pages.map((p) => (
-            <button
+            <Button
               key={p}
+              variant="ghost"
+              size="sm"
               onClick={() => onPageChange(p)}
               className={cn(
-                'font-mono text-xs px-3 py-1.5 rounded-[6px] transition-colors duration-150',
+                'font-mono text-xs',
                 p === page
-                  ? 'text-amber font-medium bg-amber-subtle'
-                  : 'text-text-muted hover:text-foreground hover:bg-muted',
+                  ? 'text-amber font-medium bg-amber-subtle hover:bg-amber-subtle'
+                  : 'text-text-muted',
               )}
             >
               {p}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            className="font-mono text-xs text-text-muted hover:text-foreground px-3 py-1.5 rounded-[6px] hover:bg-muted transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none"
+            className="font-mono text-xs text-text-muted"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
     </>

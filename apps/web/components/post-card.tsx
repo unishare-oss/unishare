@@ -5,9 +5,11 @@ import { Bookmark, FileText, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, calcYearLevel } from '@/lib/utils'
+import { useAcademicYear } from '@/hooks/use-academic-year'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
+import { Button } from '@/components/ui/button'
 import { authClient } from '@/src/lib/auth/client'
 import {
   usePostsControllerSavePost,
@@ -88,8 +90,11 @@ export function PostCard({ post }: { post: ApiPost }) {
     }
   }
 
-  const currentYear = new Date().getFullYear()
-  const yearLevel = post.author.enrollmentYear ? currentYear - post.author.enrollmentYear + 1 : null
+  const academicYear = useAcademicYear()
+  const yearLevel =
+    post.author.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+      : null
 
   return (
     <Link href={`/posts/${post.id}`} className="block" onClick={() => markRead(post.id)}>
@@ -145,8 +150,10 @@ export function PostCard({ post }: { post: ApiPost }) {
             </span>
           </div>
         </div>
-        <button
-          className="p-2 rounded-[6px] hover:bg-background transition-colors duration-150 shrink-0 mt-1"
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 mt-1 hover:bg-background"
           onClick={handleSave}
           aria-label={isSaved ? 'Unsave post' : 'Save post'}
         >
@@ -154,7 +161,7 @@ export function PostCard({ post }: { post: ApiPost }) {
             className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
             strokeWidth={1.5}
           />
-        </button>
+        </Button>
       </article>
     </Link>
   )
