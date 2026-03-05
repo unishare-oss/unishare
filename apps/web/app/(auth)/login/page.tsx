@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { authClient } from '@/src/lib/auth/client'
+import { Button } from '@/components/ui/button'
 
 function GoogleIcon() {
   return (
@@ -80,21 +81,23 @@ export default function LoginPage() {
             Use your university account to continue
           </p>
 
-          <button
+          <Button
+            variant="outline"
             onClick={() => signInWith('google')}
-            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150 cursor-pointer"
+            className="gap-3 w-full h-10.5 bg-card rounded-[6px] cursor-pointer"
           >
             <GoogleIcon />
             Continue with Google
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="outline"
             onClick={() => signInWith('microsoft')}
-            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150 mt-3 cursor-pointer"
+            className="gap-3 w-full h-10.5 bg-card rounded-[6px] mt-3 cursor-pointer"
           >
             <MicrosoftIcon />
             Continue with Microsoft
-          </button>
+          </Button>
 
           <div className="flex items-center gap-4 mt-8">
             <div className="flex-1 h-px bg-border" />
@@ -104,7 +107,7 @@ export default function LoginPage() {
 
           <Link
             href="/"
-            className="flex items-center justify-center w-full h-[42px] mt-4 text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+            className="flex items-center justify-center w-full h-10.5 mt-4 text-sm text-text-muted hover:text-foreground transition-colors duration-150"
           >
             Continue as guest
           </Link>
