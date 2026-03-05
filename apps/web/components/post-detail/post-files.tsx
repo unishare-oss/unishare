@@ -136,7 +136,7 @@ export function PostFiles({ post }: PostFilesProps) {
           </div>
           <div className="bg-card-dark rounded-lg overflow-hidden border border-border">
             {previewFile.mimeType === 'application/pdf' ? (
-              <PdfViewer key={previewFile.url} url={previewFile.url} />
+              <PdfViewer key={previewFile.url} url={previewFile.url} storageKey={previewFile.id} />
             ) : (
               <div className="flex justify-center p-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

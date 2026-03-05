@@ -2,6 +2,24 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ApiPost } from './api-types'
 
+interface PdfAnnotationStore {
+  annotationsByKey: Record<string, object[]>
+  save: (key: string, annotations: object[]) => void
+  get: (key: string) => object[]
+}
+
+export const usePdfAnnotationStore = create<PdfAnnotationStore>()(
+  persist(
+    (set, get) => ({
+      annotationsByKey: {},
+      save: (key, annotations) =>
+        set((s) => ({ annotationsByKey: { ...s.annotationsByKey, [key]: annotations } })),
+      get: (key) => get().annotationsByKey[key] ?? [],
+    }),
+    { name: 'unishare-pdf-annotations' },
+  ),
+)
+
 interface FeedStore {
   pendingFilter: { deptId: string; courseId: string } | null
   setPendingFilter: (deptId: string, courseId: string) => void

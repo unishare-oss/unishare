@@ -2,9 +2,11 @@
 
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { usePostsControllerFindOne } from '@/src/lib/api/generated/posts/posts'
+import {
+  usePostsControllerFindOne,
+  usePostsControllerRemove,
+} from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
 import { PageHeader } from '@/components/shared/page-header'
@@ -13,18 +15,11 @@ import { PostHeader } from '@/components/post-detail/post-header'
 import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
-import {
-  getPostsControllerFindAllQueryKey,
-  getPostsControllerFindOneQueryKey,
-  getPostsControllerGetSavedPostsQueryKey,
-  usePostsControllerRemove,
-} from '@/src/lib/api/generated/posts/posts'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const { data: session } = authClient.useSession()
   const markRead = useUIStore((s) => s.markRead)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import {
   MousePointer2,
   Highlighter,
@@ -17,6 +17,7 @@ import {
   Minimize,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useZoom } from '@embedpdf/plugin-zoom/react'
 import { useScroll } from '@embedpdf/plugin-scroll/react'
 import { useAnnotation } from '@embedpdf/plugin-annotation/react'
@@ -59,8 +60,23 @@ export function PdfToolbar({
   const zoomPercent = Math.round((zoomState?.currentZoomLevel ?? 1) * 100)
   const currentPage = scrollState?.currentPage ?? 1
   const totalPages = scrollState?.totalPages ?? 0
+
+  const [pageInput, setPageInput] = useState('')
+  const [isEditingPage, setIsEditingPage] = useState(false)
+  const pageInputRef = useRef<React.ComponentRef<typeof Input>>(null)
+
+  const commitPageJump = useCallback(() => {
+    const n = parseInt(pageInput, 10)
+    if (!isNaN(n) && n >= 1 && n <= totalPages) {
+      scrollProvides?.scrollToPage({ pageNumber: n })
+    }
+    setIsEditingPage(false)
+  }, [pageInput, totalPages, scrollProvides])
   const activeToolId = annotationState?.activeToolId ?? null
-  const selectedUids = annotationState?.selectedUids ?? []
+  const selectedUids = useMemo(
+    () => annotationState?.selectedUids ?? [],
+    [annotationState?.selectedUids],
+  )
   const isFullscreen = fullscreenState?.isFullscreen ?? false
 
   const handleDelete = useCallback(() => {
@@ -170,9 +186,34 @@ export function PdfToolbar({
       >
         <ChevronLeft className="size-4" strokeWidth={1.5} />
       </Button>
-      <span className="text-xs tabular-nums text-muted-foreground px-1 whitespace-nowrap">
-        {currentPage} / {totalPages}
-      </span>
+      {isEditingPage ? (
+        <Input
+          ref={pageInputRef}
+          type="number"
+          min={1}
+          max={totalPages}
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitPageJump()
+            if (e.key === 'Escape') setIsEditingPage(false)
+          }}
+          onBlur={commitPageJump}
+          className="w-10 h-7 text-center text-xs font-mono tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      ) : (
+        <button
+          className="px-2 h-7 rounded-md text-xs font-mono tabular-nums text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors whitespace-nowrap"
+          title="Jump to page"
+          onClick={() => {
+            setPageInput(String(currentPage))
+            setIsEditingPage(true)
+            setTimeout(() => pageInputRef.current?.select(), 0)
+          }}
+        >
+          {currentPage} / {totalPages}
+        </button>
+      )}
       <Button
         variant="ghost"
         size="icon-sm"
