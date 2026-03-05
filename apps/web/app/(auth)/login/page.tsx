@@ -82,7 +82,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => signInWith('google')}
-            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150"
+            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150 cursor-pointer"
           >
             <GoogleIcon />
             Continue with Google
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => signInWith('microsoft')}
-            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150 mt-3"
+            className="flex items-center justify-center gap-3 w-full h-[42px] bg-card border border-border rounded-[6px] text-sm font-medium text-foreground hover:bg-muted transition-colors duration-150 mt-3 cursor-pointer"
           >
             <MicrosoftIcon />
             Continue with Microsoft
