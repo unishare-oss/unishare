@@ -4,7 +4,7 @@ import { AppShell } from '@/components/app-shell'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Feed | Unishare',
+    absolute: 'Feed | Unishare',
     template: '%s | Unishare',
   },
 }
