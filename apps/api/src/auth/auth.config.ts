@@ -32,6 +32,17 @@ export const auth = betterAuth({
   },
   plugins: process.env.NODE_ENV !== 'production' ? [openAPI()] : [],
   trustedOrigins: [process.env.FRONTEND_URL ?? 'http://localhost:3000'],
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === 'production',
+    cookies: {
+      session_token: {
+        attributes: {
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        },
+      },
+    },
+  },
   user: {
     additionalFields: {
       role: {
