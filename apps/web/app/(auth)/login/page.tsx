@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { authClient } from '@/src/lib/auth/client'
 import { Button } from '@/components/ui/button'
@@ -48,9 +49,13 @@ export default function LoginPage() {
       {/* Left Panel */}
       <div className="hidden lg:flex flex-col justify-between w-[55%] bg-surface-dark p-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-7 h-7 rounded-[6px] bg-amber text-card font-mono text-xs font-bold">
-            U
-          </div>
+          <Image
+            src="/icon.svg"
+            alt="Unishare logo"
+            width={28}
+            height={28}
+            className="rounded-[6px]"
+          />
           <span className="font-mono text-lg font-bold text-[#F7F3EE]">Unishare</span>
         </div>
 
@@ -69,9 +74,13 @@ export default function LoginPage() {
       <div className="flex flex-col items-center justify-center flex-1 bg-background px-6">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2.5 mb-10">
-          <div className="flex items-center justify-center w-8 h-8 rounded-[6px] bg-amber text-primary-foreground font-mono text-sm font-bold">
-            U
-          </div>
+          <Image
+            src="/icon.svg"
+            alt="Unishare logo"
+            width={32}
+            height={32}
+            className="rounded-[6px]"
+          />
           <span className="font-mono text-lg font-bold text-foreground">Unishare</span>
         </div>
 

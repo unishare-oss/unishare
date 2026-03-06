@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -52,9 +53,13 @@ export function AppSidebar() {
   return (
     <aside className="hidden md:flex flex-col w-60 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30">
       <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex items-center justify-center w-7 h-7 rounded-[6px] bg-amber text-primary-foreground font-mono text-xs font-bold">
-          U
-        </div>
+        <Image
+          src="/icon.svg"
+          alt="Unishare logo"
+          width={28}
+          height={28}
+          className="rounded-[6px]"
+        />
         <span className="font-mono text-[15px] font-bold tracking-tight text-foreground">
           Unishare
         </span>
