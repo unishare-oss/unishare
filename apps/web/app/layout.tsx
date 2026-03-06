@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   },
   description:
     "Every lecture note, past paper, and study guide — shared by students who've been there.",
+  manifest: '/site.webmanifest',
 }
 
 export const viewport: Viewport = {
