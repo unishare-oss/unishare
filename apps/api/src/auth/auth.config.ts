@@ -31,16 +31,22 @@ export const auth = betterAuth({
     },
   },
   plugins: process.env.NODE_ENV !== 'production' ? [openAPI()] : [],
-  trustedOrigins: [process.env.FRONTEND_URL ?? 'http://localhost:3000'],
+  trustedOrigins: [
+    'http://localhost:3000',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ],
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === 'production',
-    cookies: {
-      session_token: {
-        attributes: {
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-          secure: process.env.NODE_ENV === 'production',
-        },
-      },
+    crossSubDomainCookies: {
+      enabled: process.env.NODE_ENV === 'production',
+      domain: process.env.COOKIE_DOMAIN,
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAgeUnitInMilliseconds: 60 * 60 * 1000,
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
     },
   },
   user: {
