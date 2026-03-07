@@ -15,6 +15,7 @@ import {
   useUsersControllerUpdateMe,
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
+import { pluralize } from '@/lib/utils'
 
 interface ProfileHeaderCardProps {
   user: UserProfileEntity
@@ -109,9 +110,15 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
       </div>
 
       <div className="flex gap-6 mt-5 pt-5 border-t border-border">
-        <StatItem label="Posts" value={user.postCount ?? 0} />
-        <StatItem label="Comments" value={user.commentCount ?? 0} />
-        <StatItem label="Saved" value={user.savedCount ?? 0} />
+        <StatItem label={pluralize(user.postCount ?? 0, 'Post')} value={user.postCount ?? 0} />
+        <StatItem
+          label={pluralize(user.commentCount ?? 0, 'Comment')}
+          value={user.commentCount ?? 0}
+        />
+        <StatItem
+          label={pluralize(user.savedCount ?? 0, 'Saved', 'Saved')}
+          value={user.savedCount ?? 0}
+        />
       </div>
     </div>
   )

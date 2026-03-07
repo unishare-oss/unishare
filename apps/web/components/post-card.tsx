@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Bookmark, FileText, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { cn, calcYearLevel } from '@/lib/utils'
+import { cn, calcYearLevel, pluralize } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
@@ -34,6 +35,7 @@ export function TypeBadge({ type }: { type: string }) {
 }
 
 export function PostCard({ post }: { post: ApiPost }) {
+  const router = useRouter()
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
   const toggleSaved = useUIStore((s) => s.toggleSaved)
@@ -115,10 +117,16 @@ export function PostCard({ post }: { post: ApiPost }) {
             {post.title}
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Link
-              href={`/users/${post.author.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 hover:underline"
+            <span
+              role="link"
+              tabIndex={0}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(`/users/${post.author.id}`)
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && router.push(`/users/${post.author.id}`)}
+              className="flex items-center gap-1 hover:underline cursor-pointer"
             >
               <UserAvatar
                 name={post.author.name}
@@ -127,7 +135,7 @@ export function PostCard({ post }: { post: ApiPost }) {
                 className="shrink-0"
               />
               <span className="font-mono text-xs text-foreground">{post.author.name}</span>
-            </Link>
+            </span>
             {yearLevel != null && (
               <>
                 <span className="text-text-muted text-xs">{'·'}</span>
@@ -145,7 +153,7 @@ export function PostCard({ post }: { post: ApiPost }) {
             <span className="flex items-center gap-1">
               <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />
               <span className="font-mono text-xs text-text-muted">
-                {post._count.comments} comments
+                {post._count.comments} {pluralize(post._count.comments, 'comment')}
               </span>
             </span>
             <span className="text-text-muted text-xs">{'·'}</span>

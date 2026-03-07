@@ -16,6 +16,7 @@ import {
 import { authClient } from '@/src/lib/auth/client'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { pluralize } from '@/lib/utils'
 
 interface CommentSectionProps {
   postId: string
@@ -129,7 +130,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   return (
     <section className="py-6">
       <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-4">
-        Comments ({comments.length})
+        {comments.length} {pluralize(comments.length, 'Comment')}
       </h2>
 
       <div className="mb-6">
