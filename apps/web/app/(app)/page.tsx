@@ -90,6 +90,7 @@ export default function FeedPage() {
         page={data?.page ?? 1}
         totalPages={data?.totalPages ?? 1}
         onPageChange={setPage}
+        emptyDescription="Try adjusting your filters or search query."
       />
     </div>
   )

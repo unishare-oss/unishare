@@ -1,11 +1,11 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { PageHeader } from '@/components/shared/page-header'
-import { PostCard } from '@/components/post-card'
+import { PostFeed } from '@/components/feed/post-feed'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { pluralize } from '@/lib/utils'
 
@@ -67,23 +67,25 @@ function PublicProfileHeader({ user }: { user: UserProfileEntity }) {
 }
 
 function UserPosts({ userId }: { userId: string }) {
-  const { data: posts } = usePostsControllerFindAll(
-    { authorId: userId, limit: 100 },
+  const [page, setPage] = useState(1)
+
+  const { data } = usePostsControllerFindAll(
+    { authorId: userId, page, limit: 20 },
     { query: { select: (r) => r.data } },
   )
-
-  const items = posts?.items ?? []
 
   return (
     <div className="border border-border rounded-[6px] bg-card overflow-hidden">
       <div className="px-6 py-3 border-b border-border">
         <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Posts</h3>
       </div>
-      {items.length === 0 ? (
-        <p className="font-mono text-sm text-text-muted text-center py-16">No posts yet.</p>
-      ) : (
-        items.map((post) => <PostCard key={post.id} post={post} />)
-      )}
+      <PostFeed
+        posts={data?.items ?? []}
+        page={data?.page ?? 1}
+        totalPages={data?.totalPages ?? 1}
+        onPageChange={setPage}
+        emptyMessage="No posts yet."
+      />
     </div>
   )
 }

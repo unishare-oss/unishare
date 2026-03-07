@@ -14,6 +14,7 @@ import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
 import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
+import { RelatedPosts } from '@/components/post-detail/related-posts'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
@@ -84,7 +85,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             isDeleting={isDeleting}
           />
           <PostFiles post={post} />
-          <div className="border-t border-border" />
+          <RelatedPosts courseId={post.courseId} currentPostId={post.id} />
+          <div className="border-t border-border mt-4" />
           <CommentSection postId={post.id} postAuthorId={post.authorId} />
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { PostCard } from '@/components/post-card'
+import { EmptyState } from '@/components/shared/empty-state'
 import type { ApiPost } from '@/lib/api-types'
 
 export const tabs = ['MY POSTS', 'SAVED POSTS'] as const
@@ -35,13 +36,11 @@ export function ProfileTabs({ activeTab, onTabChange, posts }: ProfileTabsProps)
 
       <div>
         {posts.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="font-mono text-sm text-text-muted">
-              {activeTab === 'MY POSTS'
-                ? "You haven't posted anything yet."
-                : 'No saved posts yet.'}
-            </p>
-          </div>
+          <EmptyState
+            message={
+              activeTab === 'MY POSTS' ? "You haven't posted anything yet." : 'No saved posts yet.'
+            }
+          />
         ) : (
           posts.map((post) => <PostCard key={post.id} post={post} />)
         )}

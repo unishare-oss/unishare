@@ -1,24 +1,25 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { LogIn } from 'lucide-react'
 import { usePostsControllerGetSavedPosts } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
 import { authClient } from '@/src/lib/auth/client'
-import { PostCard } from '@/components/post-card'
 import { PageHeader } from '@/components/shared/page-header'
+import { PostFeed } from '@/components/feed/post-feed'
+import { PostCard } from '@/components/post-card'
 import { EmptyState } from '@/components/shared/empty-state'
 
 export default function SavedPage() {
   const { data: session } = authClient.useSession()
   const guestSavedPosts = useUIStore((s) => s.savedPosts)
+  const [page, setPage] = useState(1)
 
   const { data: apiSavedData } = usePostsControllerGetSavedPosts(
-    {},
+    { page, limit: 20 },
     { query: { select: (r) => r.data, enabled: !!session } },
   )
-
-  const savedPosts = session ? (apiSavedData?.items ?? []) : guestSavedPosts
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -38,10 +39,18 @@ export default function SavedPage() {
         </div>
       )}
       <div className="flex-1 bg-card">
-        {savedPosts.length === 0 ? (
+        {session ? (
+          <PostFeed
+            posts={apiSavedData?.items ?? []}
+            page={apiSavedData?.page ?? 1}
+            totalPages={apiSavedData?.totalPages ?? 1}
+            onPageChange={setPage}
+            emptyMessage="No saved posts yet."
+          />
+        ) : guestSavedPosts.length === 0 ? (
           <EmptyState message="No saved posts yet." />
         ) : (
-          savedPosts.map((post) => <PostCard key={post.id} post={post} />)
+          guestSavedPosts.map((post) => <PostCard key={post.id} post={post} />)
         )}
       </div>
     </div>

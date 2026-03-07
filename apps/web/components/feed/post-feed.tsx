@@ -9,19 +9,25 @@ interface PostFeedProps {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  emptyMessage?: string
+  emptyDescription?: string
 }
 
-export function PostFeed({ posts, page, totalPages, onPageChange }: PostFeedProps) {
+export function PostFeed({
+  posts,
+  page,
+  totalPages,
+  onPageChange,
+  emptyMessage = 'No posts found',
+  emptyDescription,
+}: PostFeedProps) {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
 
   return (
     <>
       <div className="flex-1 bg-card">
         {posts.length === 0 ? (
-          <EmptyState
-            message="No posts found"
-            description="Try adjusting your filters or search query."
-          />
+          <EmptyState message={emptyMessage} description={emptyDescription} />
         ) : (
           posts.map((post) => <PostCard key={post.id} post={post} />)
         )}
