@@ -9,6 +9,14 @@
         "tags": ["App"]
       }
     },
+    "/health": {
+      "get": {
+        "operationId": "AppController_health",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["App"]
+      }
+    },
     "/storage/presigned-upload": {
       "post": {
         "operationId": "StorageController_getPresignedUploadUrl",
@@ -600,30 +608,6 @@
         "tags": ["files"]
       }
     },
-    "/posts/{postId}/files/{fileId}/replace": {
-      "post": {
-        "operationId": "FilesController_replace",
-        "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
-          { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/ReplaceFileDto" } }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/FileEntity" } }
-            }
-          }
-        },
-        "tags": ["files"]
-      }
-    },
     "/posts/{postId}/files/{fileId}": {
       "delete": {
         "operationId": "FilesController_remove",
@@ -734,6 +718,7 @@
           "email": { "type": "string" },
           "emailVerified": { "type": "boolean" },
           "image": { "type": "string", "nullable": true },
+          "bio": { "type": "string", "nullable": true },
           "role": { "type": "string", "enum": ["STUDENT", "MODERATOR", "ADMIN"] },
           "departmentId": { "type": "string", "nullable": true },
           "department": {
@@ -742,15 +727,31 @@
           },
           "enrollmentYear": { "type": "number", "nullable": true },
           "yearLevel": { "type": "number", "nullable": true },
-          "shouldShowUpdateMajorPopup": { "type": "boolean" }
+          "shouldShowUpdateMajorPopup": { "type": "boolean" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "postCount": { "type": "number" },
+          "commentCount": { "type": "number" },
+          "savedCount": { "type": "number" }
         },
-        "required": ["id", "name", "email", "emailVerified", "role", "shouldShowUpdateMajorPopup"]
+        "required": [
+          "id",
+          "name",
+          "email",
+          "emailVerified",
+          "role",
+          "shouldShowUpdateMajorPopup",
+          "createdAt",
+          "postCount",
+          "commentCount",
+          "savedCount"
+        ]
       },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
           "name": { "type": "string", "maxLength": 100 },
           "image": { "type": "string", "maxLength": 500, "format": "uri" },
+          "bio": { "type": "string", "maxLength": 300 },
           "enrollmentYear": { "type": "number", "minimum": 1950, "maximum": 2100 }
         }
       },
@@ -1033,16 +1034,6 @@
           "createdAt": { "format": "date-time", "type": "string" }
         },
         "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
-      },
-      "ReplaceFileDto": {
-        "type": "object",
-        "properties": {
-          "key": { "type": "string", "maxLength": 500 },
-          "name": { "type": "string", "maxLength": 255 },
-          "size": { "type": "number", "minimum": 1 },
-          "mimeType": { "type": "string", "maxLength": 255 }
-        },
-        "required": ["key", "name", "size", "mimeType"]
       }
     }
   }
