@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { Geist, Geist_Mono } from 'next/font/google'
+import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import './globals.css'
@@ -42,6 +43,11 @@ export default function RootLayout({
           {children}
           <Toaster richColors />
         </Providers>
+        <Script
+          defer
+          src="https://analytics.psstee.dev/script.js"
+          data-website-id="ab4d7758-1c52-4fc4-943b-0c7bf7a374f5"
+        />
       </body>
     </html>
   )
