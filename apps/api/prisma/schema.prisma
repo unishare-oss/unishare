@@ -18,8 +18,11 @@ model User {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   departmentId   String?
-  role           UserRole    @default(STUDENT)
   enrollmentYear Int?
+  banExpires     DateTime?
+  banReason      String?
+  banned         Boolean?    @default(false)
+  role           UserRole    @default(STUDENT)
   accounts       Account[]
   comments       Comment[]
   posts          Post[]         @relation("AuthorPosts")
@@ -133,15 +136,16 @@ model SavedPost {
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id
+  expiresAt      DateTime
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  impersonatedBy String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   impersonatedBy String?
 

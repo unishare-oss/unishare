@@ -51,16 +51,6 @@ export const auth = betterAuth({
       domain: process.env.COOKIE_DOMAIN,
     },
   },
-  user: {
-    additionalFields: {
-      role: {
-        type: 'string',
-        defaultValue: UserRole.STUDENT,
-        input: false,
-        returned: true,
-      },
-    },
-  },
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAgeUnitInMilliseconds: 60 * 60 * 1000,
@@ -69,6 +59,23 @@ export const auth = betterAuth({
       maxAge: 5 * 60,
     },
   },
+  user: {
+    additionalFields: {
+      role: {
+        type: 'string',
+        defaultValue: 'STUDENT',
+        input: false,
+        returned: true,
+      },
+      departmentId: {
+        type: 'string',
+        required: false,
+        input: false,
+        returned: true,
+      },
+    },
+  },
 })
 
 export type Auth = typeof auth
+export type UserSession = typeof auth.$Infer.Session

@@ -21,22 +21,50 @@ export class PostsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  create(dto: CreatePostDto, userId: string) {
+  private static isGlobalRole(role?: UserRole) {
+    return role === UserRole.ADMIN
+  }
+
+  async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
+    if (!departmentId) {
+      throw new BadRequestException('Please set your department before creating a post')
+    }
+
+    const course = await this.postsRepository.findCourseDepartmentById(dto.courseId)
+    if (!course) throw new NotFoundException('Course not found')
+
+    if (course.departmentId !== departmentId) {
+      throw new ForbiddenException('You can only create posts in your department')
+    }
+
     const shortCode = nanoid(8)
     return this.postsRepository.create({ shortCode, authorId: userId, ...dto })
   }
 
-  findAll(query: ListPostsDto, userRole?: UserRole, userId?: string) {
-    const canSeeAll = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
-    const { courseId, type, status, departmentId, authorId, ...pagination } = query
+  async findAll(
+    query: ListPostsDto,
+    user?: { role?: UserRole; id?: string; departmentId?: string | null },
+  ) {
+    const userRole = user?.role
+    const userId = user?.id
+
+    //check
+    const effectiveDepartmentId = PostsService.isGlobalRole(userRole)
+      ? undefined
+      : user?.departmentId
+
+    //Role
+    const canSeeAllStatuses = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
+
+    const { courseId, type, status, authorId, ...pagination } = query
 
     const where = {
       deletedAt: null,
       ...(courseId && { courseId }),
       ...(type && { type }),
-      ...(departmentId && { course: { departmentId } }),
+      ...(effectiveDepartmentId && { course: { departmentId: effectiveDepartmentId } }),
       ...(authorId && { authorId }),
-      status: canSeeAll && status ? status : PostStatus.APPROVED,
+      status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
     return this.postsRepository.findAll(where, pagination, userId)

@@ -22,10 +22,5 @@ export class ListPostsDto extends PaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  departmentId?: string
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
   authorId?: string
 }
