@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { NotificationsModule } from '../notifications/notifications.module'
 import { CommentsController } from './comments/comments.controller'
 import { CommentsRepository } from './comments/comments.repository'
 import { CommentsService } from './comments/comments.service'
@@ -7,6 +8,7 @@ import { PostsRepository } from './posts.repository'
 import { PostsService } from './posts.service'
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [PostsController, CommentsController],
   providers: [PostsService, PostsRepository, CommentsService, CommentsRepository],
   exports: [PostsService],

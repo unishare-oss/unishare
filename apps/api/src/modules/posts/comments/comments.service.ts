@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
+import { NotificationsService } from '../../notifications/notifications.service'
 import { PostsService } from '../posts.service'
 import { CommentsRepository } from './comments.repository'
 import { CreateCommentDto } from './dto/create-comment.dto'
@@ -10,6 +11,7 @@ export class CommentsService {
   constructor(
     private readonly commentsRepository: CommentsRepository,
     private readonly postsService: PostsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(postId: string) {
@@ -18,8 +20,10 @@ export class CommentsService {
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
-    await this.postsService.assertCommentTargetExists(postId)
-    return this.commentsRepository.create(postId, userId, dto)
+    const post = await this.postsService.findOne(postId)
+    const comment = await this.commentsRepository.create(postId, userId, dto)
+    void this.notificationsService.notifyComment(postId, post.authorId, userId, post.title)
+    return comment
   }
 
   async update(postId: string, commentId: string, dto: UpdateCommentDto, userId: string) {

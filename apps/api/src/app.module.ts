@@ -12,6 +12,7 @@ import { UsersModule } from './modules/users/users.module'
 import { DepartmentsModule } from './modules/departments/departments.module'
 import { PostsModule } from './modules/posts/posts.module'
 import { FilesModule } from './modules/files/files.module'
+import { NotificationsModule } from './modules/notifications/notifications.module'
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FilesModule } from './modules/files/files.module'
     DepartmentsModule,
     PostsModule,
     FilesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

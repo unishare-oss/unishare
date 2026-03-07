@@ -22,10 +22,11 @@ model User {
   enrollmentYear Int?
   accounts       Account[]
   comments       Comment[]
-  posts          Post[]      @relation("AuthorPosts")
+  posts          Post[]         @relation("AuthorPosts")
   savedPosts     SavedPost[]
   sessions       Session[]
-  department     Department? @relation(fields: [departmentId], references: [id])
+  notifications  Notification[]
+  department     Department?    @relation(fields: [departmentId], references: [id])
 
   bio        String?
 
@@ -75,11 +76,12 @@ model Post {
   description  String?
   externalUrl  String?
   shortCode    String      @unique
-  comments     Comment[]
-  files        File[]
-  author       User        @relation("AuthorPosts", fields: [authorId], references: [id])
-  course       Course      @relation(fields: [courseId], references: [id])
-  savedBy      SavedPost[]
+  comments      Comment[]
+  files         File[]
+  notifications Notification[]
+  author        User        @relation("AuthorPosts", fields: [authorId], references: [id])
+  course        Course      @relation(fields: [courseId], references: [id])
+  savedBy       SavedPost[]
 
   @@index([authorId])
   @@index([courseId])
@@ -177,6 +179,27 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  postId    String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification")
+}
+
+enum NotificationType {
+  POST_APPROVED
+  POST_REJECTED
+  COMMENT_ADDED
 }
 
 enum UserRole {

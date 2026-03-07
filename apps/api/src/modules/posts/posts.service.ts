@@ -7,6 +7,7 @@ import {
 import { nanoid } from 'nanoid'
 import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
+import { NotificationsService } from '../notifications/notifications.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
@@ -15,7 +16,10 @@ import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly postsRepository: PostsRepository) {}
+  constructor(
+    private readonly postsRepository: PostsRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   create(dto: CreatePostDto, userId: string) {
     const shortCode = nanoid(8)
@@ -75,8 +79,10 @@ export class PostsService {
   }
 
   async updateStatus(id: string, dto: UpdatePostStatusDto) {
-    await this.findOne(id)
-    return this.postsRepository.updateStatus(id, dto.status)
+    const post = await this.findOne(id)
+    const updated = await this.postsRepository.updateStatus(id, dto.status)
+    void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
+    return updated
   }
 
   savePost(postId: string, userId: string) {
