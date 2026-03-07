@@ -1,5 +1,6 @@
 import { createAuthClient } from 'better-auth/react'
-import { inferAdditionalFields } from 'better-auth/client/plugins'
+import { inferAdditionalFields, adminClient } from 'better-auth/client/plugins'
+import { ac, roles } from '../permissions'
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001',
@@ -14,5 +15,6 @@ export const authClient = createAuthClient({
         },
       },
     }),
+    adminClient({ ac, roles }),
   ],
 })
