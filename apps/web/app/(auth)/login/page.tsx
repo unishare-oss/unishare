@@ -4,6 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { authClient } from '@/src/lib/auth/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,41 +45,59 @@ function MicrosoftIcon() {
   )
 }
 
+const signInSchema = z.object({
+  email: z.email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+})
+
+const signUpSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+})
+
+type SignInValues = z.infer<typeof signInSchema>
+type SignUpValues = z.infer<typeof signUpSchema>
+
 export default function LoginPage() {
   const router = useRouter()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState('')
+
+  const signInForm = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: '', password: '' },
+  })
+
+  const signUpForm = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  })
+
+  const activeForm = mode === 'signin' ? signInForm : signUpForm
+  const loading = activeForm.formState.isSubmitting
 
   function signInWith(provider: 'google' | 'microsoft') {
     authClient.signIn.social({ provider, callbackURL: `${window.location.origin}/` })
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  function switchMode() {
+    setServerError('')
+    setMode(mode === 'signin' ? 'signup' : 'signin')
+  }
 
-    if (mode === 'signin') {
-      const { error } = await authClient.signIn.email({ email, password })
-      if (error) {
-        setError(error.message ?? 'Invalid email or password')
-      } else {
-        router.replace('/')
-      }
-    } else {
-      const { error } = await authClient.signUp.email({ email, password, name })
-      if (error) {
-        setError(error.message ?? 'Failed to create account')
-      } else {
-        router.replace('/')
-      }
-    }
+  async function onSignIn(values: SignInValues) {
+    setServerError('')
+    const { error } = await authClient.signIn.email(values)
+    if (error) setServerError(error.message ?? 'Invalid email or password')
+    else router.replace('/')
+  }
 
-    setLoading(false)
+  async function onSignUp(values: SignUpValues) {
+    setServerError('')
+    const { error } = await authClient.signUp.email(values)
+    if (error) setServerError(error.message ?? 'Failed to create account')
+    else router.replace('/')
   }
 
   return (
@@ -151,52 +172,90 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {mode === 'signup' && (
-              <>
+          {mode === 'signin' ? (
+            <form onSubmit={signInForm.handleSubmit(onSignIn)} className="flex flex-col gap-3">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  className="bg-card"
+                  {...signInForm.register('email')}
+                />
+                {signInForm.formState.errors.email && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signInForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  className="bg-card"
+                  {...signInForm.register('password')}
+                />
+                {signInForm.formState.errors.password && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signInForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              {serverError && <p className="text-xs text-destructive">{serverError}</p>}
+              <Button type="submit" disabled={loading} className="w-full h-10.5 mt-1">
+                {loading ? 'Please wait...' : 'Sign in'}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="flex flex-col gap-3">
+              <div>
                 <Input
                   type="text"
                   placeholder="Full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
                   className="bg-card"
+                  {...signUpForm.register('name')}
                 />
-              </>
-            )}
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="bg-card"
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="bg-card"
-            />
-
-            {error && <p className="text-xs text-destructive">{error}</p>}
-
-            <Button type="submit" disabled={loading} className="w-full h-10.5 mt-1">
-              {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Create account'}
-            </Button>
-          </form>
+                {signUpForm.formState.errors.name && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signUpForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  className="bg-card"
+                  {...signUpForm.register('email')}
+                />
+                {signUpForm.formState.errors.email && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signUpForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  className="bg-card"
+                  {...signUpForm.register('password')}
+                />
+                {signUpForm.formState.errors.password && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signUpForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              {serverError && <p className="text-xs text-destructive">{serverError}</p>}
+              <Button type="submit" disabled={loading} className="w-full h-10.5 mt-1">
+                {loading ? 'Please wait...' : 'Create account'}
+              </Button>
+            </form>
+          )}
 
           <p className="text-sm text-text-muted text-center mt-4">
             {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => {
-                setMode(mode === 'signin' ? 'signup' : 'signin')
-                setError('')
-              }}
-              className="text-foreground hover:underline"
-            >
+            <button onClick={switchMode} className="text-foreground hover:underline">
               {mode === 'signin' ? 'Sign up' : 'Sign in'}
             </button>
           </p>
