@@ -11,7 +11,7 @@ export class UsersRepository {
     department: true,
     _count: {
       select: {
-        posts: { where: { deletedAt: null } },
+        posts: { where: { deletedAt: null, status: 'APPROVED' } },
         comments: { where: { deletedAt: null } },
         savedPosts: true,
       },

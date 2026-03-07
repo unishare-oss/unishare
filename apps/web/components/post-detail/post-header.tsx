@@ -160,17 +160,22 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             </>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-4">
+        <Link
+          href={`/users/${post.author.id}`}
+          className="flex items-center gap-3 mt-4 group w-fit"
+        >
           <UserAvatar name={post.author.name} image={post.author.image} size="md" />
           <div>
-            <p className="text-sm font-medium text-foreground">{post.author.name}</p>
+            <p className="text-sm font-medium text-foreground group-hover:underline">
+              {post.author.name}
+            </p>
             <p className="font-mono text-xs text-text-muted">
               {yearLevel != null && `Year ${yearLevel} student · `}
               {post.author.department?.name && `${post.author.department.name} · `}
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="flex items-center gap-2 justify-end mb-6">

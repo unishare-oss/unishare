@@ -115,7 +115,11 @@ export function PostCard({ post }: { post: ApiPost }) {
             {post.title}
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="flex items-center gap-1">
+            <Link
+              href={`/users/${post.author.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 hover:underline"
+            >
               <UserAvatar
                 name={post.author.name}
                 image={post.author.image}
@@ -123,7 +127,7 @@ export function PostCard({ post }: { post: ApiPost }) {
                 className="shrink-0"
               />
               <span className="font-mono text-xs text-foreground">{post.author.name}</span>
-            </span>
+            </Link>
             {yearLevel != null && (
               <>
                 <span className="text-text-muted text-xs">{'·'}</span>
