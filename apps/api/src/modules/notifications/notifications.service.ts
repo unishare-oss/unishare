@@ -54,14 +54,16 @@ export class NotificationsService {
     postAuthorId: string,
     commenterId: string,
     postTitle?: string | null,
+    commenterName?: string,
   ) {
     if (postAuthorId === commenterId) return
 
+    const who = commenterName ?? 'Someone'
     const title = postTitle ? `"${postTitle}"` : 'your post'
     const notification = await this.notificationsRepository.create({
       userId: postAuthorId,
       type: NotificationType.COMMENT_ADDED,
-      message: `Someone commented on ${title}.`,
+      message: `${who} commented on ${title}.`,
       postId,
     })
     this.events$.next({ userId: postAuthorId, data: notification })

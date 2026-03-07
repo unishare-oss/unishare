@@ -22,7 +22,13 @@ export class CommentsService {
   async create(postId: string, dto: CreateCommentDto, userId: string) {
     const post = await this.postsService.findOne(postId)
     const comment = await this.commentsRepository.create(postId, userId, dto)
-    void this.notificationsService.notifyComment(postId, post.authorId, userId, post.title)
+    void this.notificationsService.notifyComment(
+      postId,
+      post.authorId,
+      userId,
+      post.title,
+      comment.user.name,
+    )
     return comment
   }
 
