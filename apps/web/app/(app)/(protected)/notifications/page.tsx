@@ -2,11 +2,13 @@
 
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck, Trash2, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useNotificationsControllerFindAll,
   useNotificationsControllerMarkAllRead,
+  useNotificationsControllerDeleteAll,
+  useNotificationsControllerDeleteOne,
   getNotificationsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/notifications/notifications'
 import type { NotificationEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -21,13 +23,36 @@ export default function NotificationsPage() {
     query: { select: (r) => r.data },
   })
 
-  const { mutate: markAllRead, isPending } = useNotificationsControllerMarkAllRead({
+  const { mutate: markAllRead, isPending: markingRead } = useNotificationsControllerMarkAllRead({
     mutation: {
       onSuccess: () => {
         queryClient.setQueryData(
           getNotificationsControllerFindAllQueryKey(),
           (old: { data: NotificationEntity[] } | undefined) =>
             old ? { ...old, data: old.data.map((n) => ({ ...n, read: true })) } : old,
+        )
+      },
+    },
+  })
+
+  const { mutate: clearAll, isPending: clearing } = useNotificationsControllerDeleteAll({
+    mutation: {
+      onSuccess: () => {
+        queryClient.setQueryData(
+          getNotificationsControllerFindAllQueryKey(),
+          (old: { data: NotificationEntity[] } | undefined) => (old ? { ...old, data: [] } : old),
+        )
+      },
+    },
+  })
+
+  const { mutate: deleteOne } = useNotificationsControllerDeleteOne({
+    mutation: {
+      onSuccess: (_, { id }) => {
+        queryClient.setQueryData(
+          getNotificationsControllerFindAllQueryKey(),
+          (old: { data: NotificationEntity[] } | undefined) =>
+            old ? { ...old, data: old.data.filter((n) => n.id !== id) } : old,
         )
       },
     },
@@ -52,16 +77,28 @@ export default function NotificationsPage() {
             <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </h2>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllRead()}
-                disabled={isPending}
-                className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-foreground transition-colors duration-150 disabled:opacity-50"
-              >
-                <CheckCheck className="size-3.5" strokeWidth={1.5} />
-                Mark all read
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => markAllRead()}
+                  disabled={markingRead}
+                  className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-foreground transition-colors duration-150 disabled:opacity-50"
+                >
+                  <CheckCheck className="size-3.5" strokeWidth={1.5} />
+                  Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={() => clearAll()}
+                  disabled={clearing}
+                  className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-red-400 transition-colors duration-150 disabled:opacity-50"
+                >
+                  <Trash2 className="size-3.5" strokeWidth={1.5} />
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
 
           {notifications.length === 0 ? (
@@ -72,17 +109,19 @@ export default function NotificationsPage() {
           ) : (
             <div className="flex flex-col border border-border rounded-[6px] overflow-hidden">
               {notifications.map((n, i) => (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => handleClick(n)}
                   className={cn(
-                    'text-left px-5 py-4 transition-colors duration-150 hover:bg-muted',
+                    'group flex items-start gap-3 px-5 py-4 transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
-                    !n.read && 'bg-amber/4',
-                    !n.postId && 'cursor-default',
+                    !n.read && 'bg-amber/[0.04]',
                   )}
                 >
-                  <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => handleClick(n)}
+                    disabled={!n.postId}
+                    className="flex items-start gap-3 flex-1 text-left disabled:cursor-default"
+                  >
                     <span
                       className={cn(
                         'mt-1.5 shrink-0 size-1.5 rounded-full',
@@ -111,8 +150,18 @@ export default function NotificationsPage() {
                           ? 'Rejected'
                           : 'Comment'}
                     </span>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteOne({ id: n.id })
+                    }}
+                    className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 text-text-muted hover:text-red-400 transition-all duration-150"
+                    aria-label="Delete notification"
+                  >
+                    <X className="size-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
               ))}
             </div>
           )}

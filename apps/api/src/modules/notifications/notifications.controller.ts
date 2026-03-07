@@ -1,4 +1,4 @@
-import { Controller, Get, MessageEvent, Patch, Sse } from '@nestjs/common'
+import { Controller, Delete, Get, MessageEvent, Param, Patch, Sse } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { Observable } from 'rxjs'
@@ -27,5 +27,17 @@ export class NotificationsController {
   @ResponseMessage('Notifications marked as read')
   async markAllRead(@Session() session: UserSession) {
     await this.notificationsService.markAllRead(session.user.id)
+  }
+
+  @Delete(':id')
+  @ResponseMessage('Notification deleted')
+  async deleteOne(@Session() session: UserSession, @Param('id') id: string) {
+    await this.notificationsService.deleteOne(id, session.user.id)
+  }
+
+  @Delete()
+  @ResponseMessage('Notifications cleared')
+  async deleteAll(@Session() session: UserSession) {
+    await this.notificationsService.deleteAll(session.user.id)
   }
 }

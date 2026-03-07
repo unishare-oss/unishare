@@ -77,6 +77,14 @@ export class NotificationsService {
     await this.notificationsRepository.markAllRead(userId)
   }
 
+  async deleteOne(id: string, userId: string) {
+    await this.notificationsRepository.deleteOne(id, userId)
+  }
+
+  async deleteAll(userId: string) {
+    await this.notificationsRepository.deleteAll(userId)
+  }
+
   countUnread(userId: string) {
     return this.notificationsRepository.countUnread(userId)
   }
