@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   LogIn,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -36,6 +37,8 @@ const adminItems = [
   { href: '/admin/departments', label: 'Manage Depts', icon: Building2 },
 ]
 
+const adminOnlyItems = [{ href: '/admin/users', label: 'Users', icon: Users }]
+
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -43,6 +46,7 @@ export function AppSidebar() {
   const user = session?.user
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
+  const isSuperAdmin = user?.role === 'ADMIN'
   const navItems = user ? authNavItems : publicNavItems
 
   async function handleSignOut() {
@@ -104,7 +108,7 @@ export function AppSidebar() {
                 Admin
               </span>
             </div>
-            {adminItems.map((item) => {
+            {[...adminItems, ...(isSuperAdmin ? adminOnlyItems : [])].map((item) => {
               const isActive = pathname.startsWith(item.href)
               return (
                 <Link
