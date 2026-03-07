@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 const sizeClasses = {
@@ -23,16 +24,11 @@ export function UserAvatar({ name, image, size, className }: UserAvatarProps) {
     <div
       className={cn(
         sizeClasses[size],
-        'bg-border flex items-center justify-center font-mono font-medium text-foreground overflow-hidden',
+        'relative bg-border flex items-center justify-center font-mono font-medium text-foreground overflow-hidden',
         className,
       )}
     >
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt={name} className="w-full h-full object-cover" />
-      ) : (
-        initials
-      )}
+      {image ? <Image src={image} alt={name} fill className="object-cover" /> : initials}
     </div>
   )
 }
