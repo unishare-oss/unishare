@@ -9,6 +9,14 @@ import {
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface EditProfileFormProps {
   displayName: string
@@ -65,39 +73,45 @@ export function EditProfileForm({
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Display Name
           </label>
-          <input
+          <Input
             type="text"
             value={displayName}
             onChange={(e) => onDisplayNameChange(e.target.value)}
-            className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
           />
         </div>
         <div>
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Department
           </label>
-          <select
-            value={department}
-            onChange={(e) => onDepartmentChange(e.target.value)}
-            className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
+          <Select
+            value={department || '_none'}
+            onValueChange={(v) => onDepartmentChange(v === '_none' ? '' : v)}
           >
-            <option value="">None</option>
-            {(depts ?? []).map((dept) => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_none" className="text-text-muted">
+                None
+              </SelectItem>
+              {(depts ?? []).map((dept) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Enrollment Year
           </label>
-          <input
+          <Input
             type="number"
+            placeholder="e.g. 2024"
             value={enrollmentYear}
             onChange={(e) => onEnrollmentYearChange(e.target.value)}
-            className="w-full h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-amber"
+            className="placeholder:text-text-muted/50"
           />
           <p className="text-xs text-text-muted mt-1.5">Used to calculate your year level</p>
         </div>
