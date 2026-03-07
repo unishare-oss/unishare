@@ -11,6 +11,11 @@ export class DepartmentEntity {
   code: string
 }
 
+export class OnboardingRequiredEntity {
+  @ApiProperty()
+  department: boolean
+}
+
 export class UserProfileEntity {
   @ApiProperty()
   id: string
@@ -44,6 +49,9 @@ export class UserProfileEntity {
 
   @ApiPropertyOptional({ nullable: true, type: Number })
   yearLevel: number | null
+
+  @ApiProperty({ type: OnboardingRequiredEntity })
+  onboardingRequired: OnboardingRequiredEntity
 
   @ApiProperty()
   shouldShowUpdateMajorPopup: boolean
