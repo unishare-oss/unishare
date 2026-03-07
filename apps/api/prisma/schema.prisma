@@ -27,6 +27,8 @@ model User {
   sessions       Session[]
   department     Department? @relation(fields: [departmentId], references: [id])
 
+  bio        String?
+
   banned     Boolean?  @default(false)
   banReason  String?
   banExpires DateTime?

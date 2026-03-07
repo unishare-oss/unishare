@@ -14,6 +14,12 @@ export class UpdateProfileDto {
   @MaxLength(500)
   image?: string
 
+  @ApiPropertyOptional({ maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  bio?: string
+
   @ApiPropertyOptional({ minimum: 1950, maximum: 2100 })
   @IsOptional()
   @IsInt()

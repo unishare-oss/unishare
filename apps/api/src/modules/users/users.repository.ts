@@ -7,10 +7,21 @@ import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly countInclude = {
+    department: true,
+    _count: {
+      select: {
+        posts: { where: { deletedAt: null } },
+        comments: { where: { deletedAt: null } },
+        savedPosts: true,
+      },
+    },
+  } as const
+
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { department: true },
+      include: this.countInclude,
     })
   }
 
@@ -18,7 +29,7 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id },
       data: dto,
-      include: { department: true },
+      include: this.countInclude,
     })
   }
 
@@ -33,7 +44,7 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id },
       data: dto,
-      include: { department: true },
+      include: this.countInclude,
     })
   }
 }

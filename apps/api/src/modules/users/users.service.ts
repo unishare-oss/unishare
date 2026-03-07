@@ -41,11 +41,21 @@ export class UsersService {
   private toProfileView(user: {
     enrollmentYear: number | null
     departmentId?: string | null
+    _count?: { posts: number; comments: number; savedPosts: number }
     [key: string]: unknown
   }) {
+    const { _count, ...rest } = user
     const shouldShowUpdateMajorPopup = !user.departmentId || user.enrollmentYear === null
+    const base = {
+      ...rest,
+      shouldShowUpdateMajorPopup,
+      postCount: _count?.posts ?? 0,
+      commentCount: _count?.comments ?? 0,
+      savedCount: _count?.savedPosts ?? 0,
+    }
+
     if (user.enrollmentYear === null) {
-      return { ...user, yearLevel: null, shouldShowUpdateMajorPopup }
+      return { ...base, yearLevel: null }
     }
 
     const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
@@ -54,6 +64,6 @@ export class UsersService {
       now.getMonth() + 1 >= academicStartMonth ? now.getFullYear() : now.getFullYear() - 1
     const yearLevel = Math.max(1, currentAcademicYear - user.enrollmentYear + 1)
 
-    return { ...user, yearLevel, shouldShowUpdateMajorPopup }
+    return { ...base, yearLevel }
   }
 }

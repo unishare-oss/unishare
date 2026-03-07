@@ -27,6 +27,9 @@ export class UserProfileEntity {
   @ApiPropertyOptional({ nullable: true, type: String })
   image: string | null
 
+  @ApiPropertyOptional({ nullable: true, type: String })
+  bio: string | null
+
   @ApiProperty({ enum: ['STUDENT', 'MODERATOR', 'ADMIN'] })
   role: string
 
@@ -44,4 +47,16 @@ export class UserProfileEntity {
 
   @ApiProperty()
   shouldShowUpdateMajorPopup: boolean
+
+  @ApiProperty()
+  createdAt: Date
+
+  @ApiProperty()
+  postCount: number
+
+  @ApiProperty()
+  commentCount: number
+
+  @ApiProperty()
+  savedCount: number
 }
