@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { authClient } from '@/src/lib/auth/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 function GoogleIcon() {
   return (
@@ -40,8 +43,40 @@ function MicrosoftIcon() {
 }
 
 export default function LoginPage() {
+  const router = useRouter()
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
   function signInWith(provider: 'google' | 'microsoft') {
     authClient.signIn.social({ provider, callbackURL: `${window.location.origin}/` })
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    if (mode === 'signin') {
+      const { error } = await authClient.signIn.email({ email, password })
+      if (error) {
+        setError(error.message ?? 'Invalid email or password')
+      } else {
+        router.replace('/')
+      }
+    } else {
+      const { error } = await authClient.signUp.email({ email, password, name })
+      if (error) {
+        setError(error.message ?? 'Failed to create account')
+      } else {
+        router.replace('/')
+      }
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -85,7 +120,9 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-semibold text-foreground text-center">Sign in</h1>
+          <h1 className="text-2xl font-semibold text-foreground text-center">
+            {mode === 'signin' ? 'Sign in' : 'Create account'}
+          </h1>
           <p className="text-sm text-text-secondary text-center mt-2 mb-8">
             Use your university account to continue
           </p>
@@ -108,21 +145,84 @@ export default function LoginPage() {
             Continue with Microsoft
           </Button>
 
-          <div className="flex items-center gap-4 mt-8">
+          <div className="flex items-center gap-4 mt-6 mb-6">
             <div className="flex-1 h-px bg-border" />
             <span className="text-xs text-text-muted">or</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <Link
-            href="/"
-            className="flex items-center justify-center w-full h-10.5 mt-4 text-sm text-text-muted hover:text-foreground transition-colors duration-150"
-          >
-            Continue as guest
-          </Link>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {mode === 'signup' && (
+              <>
+                <Input
+                  type="text"
+                  placeholder="Full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="bg-card"
+                />
+              </>
+            )}
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-card"
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="bg-card"
+            />
+
+            {error && <p className="text-xs text-destructive">{error}</p>}
+
+            <Button type="submit" disabled={loading} className="w-full h-10.5 mt-1">
+              {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Create account'}
+            </Button>
+          </form>
+
+          <p className="text-sm text-text-muted text-center mt-4">
+            {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+            <button
+              onClick={() => {
+                setMode(mode === 'signin' ? 'signup' : 'signin')
+                setError('')
+              }}
+              className="text-foreground hover:underline"
+            >
+              {mode === 'signin' ? 'Sign up' : 'Sign in'}
+            </button>
+          </p>
+
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          <div className="flex justify-center mt-4">
+            <Link
+              href="/"
+              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+            >
+              Continue as guest
+            </Link>
+          </div>
 
           <p className="text-xs text-text-muted text-center mt-4">
-            By signing in, you agree to our Terms and Privacy Policy
+            By signing in, you agree to our{' '}
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
           </p>
         </div>
       </div>
