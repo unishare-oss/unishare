@@ -4,10 +4,16 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
+import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { authClient } from '@/src/lib/auth/client'
+import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { isPending } = authClient.useSession()
+  const { data: session, isPending } = authClient.useSession()
+  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
+  const { data: profile } = useUsersControllerGetMe({
+    query: { select: (r) => r.data, enabled: !!session?.user },
+  })
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
 
   useEffect(() => {
@@ -38,6 +44,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
         <MobileNav />
       </div>
+
+      {!showLoader && profile?.shouldShowUpdateMajorPopup && !profileModalDismissed && (
+        <AcademicProfileModal onDismiss={() => setProfileModalDismissed(true)} />
+      )}
 
       {showLoader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
