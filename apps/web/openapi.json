@@ -582,6 +582,42 @@
         "tags": ["comments"]
       }
     },
+    "/notifications/stream": {
+      "get": {
+        "operationId": "NotificationsController_stream",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["notifications"]
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "NotificationsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/NotificationEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["notifications"]
+      }
+    },
+    "/notifications/read-all": {
+      "patch": {
+        "operationId": "NotificationsController_markAllRead",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["notifications"]
+      }
+    },
     "/posts/{postId}/files/{fileId}/url": {
       "get": {
         "operationId": "FilesController_getDownloadUrl",
@@ -1023,6 +1059,19 @@
       "UpdateCommentDto": {
         "type": "object",
         "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+      },
+      "NotificationEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string" },
+          "type": { "type": "string" },
+          "message": { "type": "string" },
+          "read": { "type": "boolean" },
+          "postId": { "type": "string", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" }
+        },
+        "required": ["id", "userId", "type", "message", "read", "postId", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",

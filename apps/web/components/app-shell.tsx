@@ -7,9 +7,11 @@ import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { authClient } from '@/src/lib/auth/client'
 import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
+import { useNotificationStream } from '@/hooks/use-notifications'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
+  useNotificationStream(!!session?.user)
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
   const { data: profile } = useUsersControllerGetMe({
     query: { select: (r) => r.data, enabled: !!session?.user },

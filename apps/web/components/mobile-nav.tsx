@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutList, FileText, Bookmark, User, LogIn } from 'lucide-react'
+import { LayoutList, FileText, Bookmark, User, LogIn, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { authClient } from '@/src/lib/auth/client'
+import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 
 const guestTabs = [
   { href: '/', label: 'Feed', icon: LayoutList },
@@ -14,8 +15,9 @@ const guestTabs = [
 
 const authTabs = [
   { href: '/', label: 'Feed', icon: LayoutList },
-  { href: '/my-posts', label: 'My Posts', icon: FileText },
+  { href: '/my-posts', label: 'Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/notifications', label: 'Notifs', icon: Bell },
   { href: '/profile', label: 'Profile', icon: User },
 ]
 
@@ -24,11 +26,17 @@ export function MobileNav() {
   const { data: session } = authClient.useSession()
   const tabs = session ? authTabs : guestTabs
 
+  const { data: notifications } = useNotificationsControllerFindAll({
+    query: { select: (r) => r.data, enabled: !!session?.user, staleTime: 1000 * 60 },
+  })
+  const unreadCount = (notifications ?? []).filter((n) => !n.read).length
+
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
       <div className="flex items-center justify-around h-14">
         {tabs.map((tab) => {
           const isActive = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
+          const showBadge = tab.href === '/notifications' && unreadCount > 0
           return (
             <Link
               key={tab.href}
@@ -44,7 +52,12 @@ export function MobileNav() {
                   isActive ? 'w-8 opacity-100' : 'w-0 opacity-0',
                 )}
               />
-              <tab.icon className="size-5" strokeWidth={1.5} />
+              <span className="relative">
+                <tab.icon className="size-5" strokeWidth={1.5} />
+                {showBadge && (
+                  <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber" />
+                )}
+              </span>
               <span className="text-[10px] font-mono uppercase tracking-wider">{tab.label}</span>
             </Link>
           )

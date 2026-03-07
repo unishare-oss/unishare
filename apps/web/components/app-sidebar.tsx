@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
 import { Button } from '@/components/ui/button'
+import { NotificationsBell } from '@/components/notifications/notifications-bell'
 
 const publicNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
@@ -100,6 +101,8 @@ export function AppSidebar() {
             </Link>
           )
         })}
+
+        {user && <NotificationsBell className="w-full" />}
 
         {isAdmin && (
           <>
