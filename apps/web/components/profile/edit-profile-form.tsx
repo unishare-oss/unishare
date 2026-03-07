@@ -10,6 +10,7 @@ import {
 } from '@/src/lib/api/generated/users/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -20,22 +21,27 @@ import {
 
 interface EditProfileFormProps {
   displayName: string
+  bio: string
   department: string
   enrollmentYear: string
   onDisplayNameChange: (value: string) => void
+  onBioChange: (value: string) => void
   onDepartmentChange: (value: string) => void
   onEnrollmentYearChange: (value: string) => void
 }
 
 export function EditProfileForm({
   displayName,
+  bio,
   department,
   enrollmentYear,
   onDisplayNameChange,
+  onBioChange,
   onDepartmentChange,
   onEnrollmentYearChange,
 }: EditProfileFormProps) {
   const [saving, setSaving] = useState(false)
+  const [success, setSuccess] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: depts } = useDepartmentsControllerFindAll({
@@ -47,17 +53,20 @@ export function EditProfileForm({
 
   async function handleSave() {
     setSaving(true)
+    setSuccess(false)
     try {
       await Promise.all([
         updateMe({
           data: {
             name: displayName,
+            bio: bio || undefined,
             enrollmentYear: enrollmentYear ? Number(enrollmentYear) : undefined,
           },
         }),
         updateAcademic({ data: { departmentId: department || null } }),
       ])
       await queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
+      setSuccess(true)
     } finally {
       setSaving(false)
     }
@@ -78,6 +87,20 @@ export function EditProfileForm({
             value={displayName}
             onChange={(e) => onDisplayNameChange(e.target.value)}
           />
+        </div>
+        <div>
+          <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+            Bio
+          </label>
+          <Textarea
+            value={bio}
+            onChange={(e) => onBioChange(e.target.value)}
+            placeholder="Tell others a bit about yourself..."
+            className="resize-none placeholder:text-text-muted/50"
+            rows={3}
+            maxLength={300}
+          />
+          <p className="text-xs text-text-muted mt-1.5">{bio.length}/300</p>
         </div>
         <div>
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
@@ -115,7 +138,8 @@ export function EditProfileForm({
           />
           <p className="text-xs text-text-muted mt-1.5">Used to calculate your year level</p>
         </div>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-3">
+          {success && <p className="text-xs text-green-500">Profile saved successfully</p>}
           <Button
             onClick={handleSave}
             disabled={saving}

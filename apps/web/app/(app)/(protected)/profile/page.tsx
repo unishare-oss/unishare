@@ -13,12 +13,16 @@ import { authClient } from '@/src/lib/auth/client'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
+import { ChangePasswordForm } from '@/components/profile/change-password-form'
+import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
+import { DangerZoneCard } from '@/components/profile/danger-zone-card'
 import { Button } from '@/components/ui/button'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 
 function ProfileContent({ user }: { user: UserProfileEntity }) {
   const [activeTab, setActiveTab] = useState<Tab>('MY POSTS')
   const [displayName, setDisplayName] = useState(user.name)
+  const [bio, setBio] = useState(user.bio ?? '')
   const [department, setDepartment] = useState(user.departmentId ?? '')
   const [enrollmentYear, setEnrollmentYear] = useState(
     user.enrollmentYear != null ? String(user.enrollmentYear) : '',
@@ -41,12 +45,17 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
       <ProfileHeaderCard user={user} />
       <EditProfileForm
         displayName={displayName}
+        bio={bio}
         department={department}
         enrollmentYear={enrollmentYear}
         onDisplayNameChange={setDisplayName}
+        onBioChange={setBio}
         onDepartmentChange={setDepartment}
         onEnrollmentYearChange={setEnrollmentYear}
       />
+      <ChangePasswordForm />
+      <ConnectedAccountsCard />
+      <DangerZoneCard />
       <ProfileTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
