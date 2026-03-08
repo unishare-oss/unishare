@@ -210,13 +210,11 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
         {isOwner && (
           <>
             <ActionHint label="Edit Post">
-              <Link
-                href={`/posts/${post.id}/edit`}
-                className="p-2 rounded-[6px] hover:bg-muted transition-colors duration-150"
-                aria-label="Edit"
-              >
-                <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
-              </Link>
+              <Button variant="ghost" size="icon-sm" aria-label="Edit" asChild>
+                <Link href={`/posts/${post.id}/edit`}>
+                  <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
+                </Link>
+              </Button>
             </ActionHint>
             <ActionHint label="Delete Post">
               <Button
