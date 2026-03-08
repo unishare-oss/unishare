@@ -1,5 +1,3 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
 interface ApiResponse<T> {
   success: boolean
   message: string
@@ -7,7 +5,7 @@ interface ApiResponse<T> {
 }
 
 export const customFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
-  const response = await fetch(`${API_URL}${url}`, {
+  const response = await fetch(url, {
     credentials: 'include',
     ...options,
     headers: {

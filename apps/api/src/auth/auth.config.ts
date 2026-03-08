@@ -9,13 +9,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 const isProduction = process.env.NODE_ENV === 'production'
 
 if (isProduction) {
-  const required = [
-    'DATABASE_URL',
-    'BETTER_AUTH_SECRET',
-    'BETTER_AUTH_URL',
-    'FRONTEND_URL',
-    'COOKIE_DOMAIN',
-  ]
+  const required = ['DATABASE_URL', 'BETTER_AUTH_SECRET', 'BETTER_AUTH_URL', 'FRONTEND_URL']
   for (const key of required) {
     if (!process.env[key]) {
       throw new Error(`Missing required environment variable in production: ${key}`)
@@ -64,12 +58,6 @@ export const auth = betterAuth({
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,
-  advanced: {
-    crossSubDomainCookies: {
-      enabled: isProduction,
-      domain: process.env.COOKIE_DOMAIN,
-    },
-  },
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAgeUnitInMilliseconds: 60 * 60 * 1000,
