@@ -6,10 +6,17 @@ import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { authClient } from '@/src/lib/auth/client'
+import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
 import { useNotificationStream } from '@/hooks/use-notifications'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { data: session, isPending, refetch } = authClient.useSession()
+  const { data: session, isPending } = authClient.useSession()
+  const { data: me, isPending: isMePending } = useUsersControllerGetMe({
+    query: {
+      enabled: !!session?.user,
+      select: (res) => res.data,
+    },
+  })
 
   useNotificationStream(!!session?.user)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
@@ -22,9 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timeout)
   }, [])
 
-  const showLoader = isPending || !minimumLoaderElapsed
+  const showLoader = isPending || (!!session?.user && isMePending) || !minimumLoaderElapsed
 
-  const requiresDepartmentOnboarding = !!session?.user && !session.user.departmentId
+  const requiresDepartmentOnboarding = !!me && !me.departmentId
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,14 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileNav />
       </div>
 
-      {!showLoader && requiresDepartmentOnboarding && (
-        <AcademicProfileModal
-          requireDepartment
-          onDismiss={() => {
-            void refetch()
-          }}
-        />
-      )}
+      {!showLoader && requiresDepartmentOnboarding && <AcademicProfileModal requireDepartment />}
 
       {showLoader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">

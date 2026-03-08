@@ -29,7 +29,6 @@ import {
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 
 interface AcademicProfileModalProps {
-  onDismiss?: () => void
   requireDepartment?: boolean
 }
 
@@ -48,10 +47,7 @@ const baseAcademicProfileSchema = z.object({
 
 type AcademicProfileFormValues = z.infer<typeof baseAcademicProfileSchema>
 
-export function AcademicProfileModal({
-  onDismiss,
-  requireDepartment = false,
-}: AcademicProfileModalProps) {
+export function AcademicProfileModal({ requireDepartment = false }: AcademicProfileModalProps) {
   const queryClient = useQueryClient()
 
   const form = useForm<AcademicProfileFormValues>({
@@ -71,7 +67,6 @@ export function AcademicProfileModal({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
-        onDismiss?.()
       },
     },
   })
@@ -175,7 +170,6 @@ export function AcademicProfileModal({
                   variant="ghost"
                   className="flex-1 text-text-muted"
                   disabled={isPending}
-                  onClick={() => onDismiss?.()}
                 >
                   Skip
                 </Button>
