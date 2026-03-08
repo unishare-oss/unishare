@@ -476,6 +476,29 @@
         "tags": ["posts"]
       }
     },
+    "/posts/{id}/react": {
+      "post": {
+        "operationId": "PostsController_react",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ReactToPostDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
     "/posts/{id}/status": {
       "patch": {
         "operationId": "PostsController_updateStatus",
@@ -952,7 +975,10 @@
           "course": { "$ref": "#/components/schemas/PostCourseEntity" },
           "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
           "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" }
+          "savedByCurrentUser": { "type": "boolean" },
+          "views": { "type": "number" },
+          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
+          "userReaction": { "type": "string", "nullable": true }
         },
         "required": [
           "id",
@@ -967,7 +993,9 @@
           "course",
           "files",
           "_count",
-          "savedByCurrentUser"
+          "savedByCurrentUser",
+          "views",
+          "reactionCounts"
         ]
       },
       "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
@@ -995,7 +1023,10 @@
           "course": { "$ref": "#/components/schemas/PostCourseEntity" },
           "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
           "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" }
+          "savedByCurrentUser": { "type": "boolean" },
+          "views": { "type": "number" },
+          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
+          "userReaction": { "type": "string", "nullable": true }
         },
         "required": [
           "id",
@@ -1010,7 +1041,9 @@
           "course",
           "files",
           "_count",
-          "savedByCurrentUser"
+          "savedByCurrentUser",
+          "views",
+          "reactionCounts"
         ]
       },
       "PaginatedPostEntity": {
@@ -1023,6 +1056,16 @@
           "totalPages": { "type": "number" }
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
+      },
+      "ReactToPostDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["HELPFUL", "LOVE", "FIRE", "WOW", "SALUTE", "FUNNY"]
+          }
+        },
+        "required": ["type"]
       },
       "UpdateablePostStatus": { "type": "string", "enum": ["APPROVED", "REJECTED"] },
       "UpdatePostStatusDto": {
