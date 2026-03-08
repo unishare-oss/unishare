@@ -74,6 +74,12 @@
             "required": false,
             "in": "query",
             "schema": { "minimum": 1, "type": "number" }
+          },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -1156,9 +1162,10 @@
           "size": { "type": "number" },
           "mimeType": { "type": "string" },
           "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" }
+          "createdAt": { "format": "date-time", "type": "string" },
+          "downloads": { "type": "number" }
         },
-        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
+        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
       }
     }
   }
