@@ -58,9 +58,8 @@ export class UsersService {
       return { ...base, yearLevel: null }
     }
 
-    const onboardingRequired = { department: !user.departmentId }
     if (user.enrollmentYear === null) {
-      return { ...user, yearLevel: null, onboardingRequired, shouldShowUpdateMajorPopup }
+      return { ...user, yearLevel: null, shouldShowUpdateMajorPopup }
     }
 
     const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
@@ -69,6 +68,6 @@ export class UsersService {
       now.getMonth() + 1 >= academicStartMonth ? now.getFullYear() : now.getFullYear() - 1
     const yearLevel = Math.max(1, currentAcademicYear - user.enrollmentYear + 1)
 
-    return { ...user, yearLevel, onboardingRequired, shouldShowUpdateMajorPopup }
+    return { ...user, yearLevel, shouldShowUpdateMajorPopup }
   }
 }
