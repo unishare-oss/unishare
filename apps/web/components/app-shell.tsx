@@ -6,16 +6,12 @@ import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { authClient } from '@/src/lib/auth/client'
-import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
 import { useNotificationStream } from '@/hooks/use-notifications'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending, refetch } = authClient.useSession()
+
   useNotificationStream(!!session?.user)
-  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
-  const { data: profile } = useUsersControllerGetMe({
-    query: { select: (r) => r.data, enabled: !!session?.user },
-  })
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
 
   useEffect(() => {
@@ -27,6 +23,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [])
 
   const showLoader = isPending || !minimumLoaderElapsed
+
+  const requiresDepartmentOnboarding = !!session?.user && !session.user.departmentId
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,8 +45,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileNav />
       </div>
 
-      {!showLoader && profile?.shouldShowUpdateMajorPopup && !profileModalDismissed && (
-        <AcademicProfileModal onDismiss={() => setProfileModalDismissed(true)} />
+      {!showLoader && requiresDepartmentOnboarding && (
+        <AcademicProfileModal
+          requireDepartment
+          onDismiss={() => {
+            void refetch()
+          }}
+        />
       )}
 
       {showLoader && (

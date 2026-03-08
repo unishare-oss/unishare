@@ -74,12 +74,6 @@
             "required": false,
             "in": "query",
             "schema": { "minimum": 1, "type": "number" }
-          },
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -350,12 +344,6 @@
             "in": "query",
             "schema": { "$ref": "#/components/schemas/PostStatus" }
           },
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "schema": { "type": "string" }
-          },
           { "name": "authorId", "required": false, "in": "query", "schema": { "type": "string" } }
         ],
         "responses": {
@@ -479,29 +467,6 @@
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
         "responses": { "200": { "description": "" } },
-        "tags": ["posts"]
-      }
-    },
-    "/posts/{id}/react": {
-      "post": {
-        "operationId": "PostsController_react",
-        "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/ReactToPostDto" } }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
-            }
-          }
-        },
         "tags": ["posts"]
       }
     },
@@ -808,6 +773,11 @@
         },
         "required": ["id", "name", "code"]
       },
+      "OnboardingRequiredEntity": {
+        "type": "object",
+        "properties": { "department": { "type": "boolean" } },
+        "required": ["department"]
+      },
       "UserProfileEntity": {
         "type": "object",
         "properties": {
@@ -825,6 +795,7 @@
           },
           "enrollmentYear": { "type": "number", "nullable": true },
           "yearLevel": { "type": "number", "nullable": true },
+          "onboardingRequired": { "$ref": "#/components/schemas/OnboardingRequiredEntity" },
           "shouldShowUpdateMajorPopup": { "type": "boolean" },
           "createdAt": { "format": "date-time", "type": "string" },
           "postCount": { "type": "number" },
@@ -837,6 +808,7 @@
           "email",
           "emailVerified",
           "role",
+          "onboardingRequired",
           "shouldShowUpdateMajorPopup",
           "createdAt",
           "postCount",
@@ -895,7 +867,10 @@
         "type": "object",
         "properties": {
           "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
-          "courseId": { "type": "string" },
+          "courseId": {
+            "type": "string",
+            "description": "Course ID. Must belong to the authenticated user department."
+          },
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
           "externalUrl": { "type": "string", "maxLength": 500 },
@@ -981,10 +956,7 @@
           "course": { "$ref": "#/components/schemas/PostCourseEntity" },
           "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
           "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" },
-          "views": { "type": "number" },
-          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "savedByCurrentUser": { "type": "boolean" }
         },
         "required": [
           "id",
@@ -999,9 +971,7 @@
           "course",
           "files",
           "_count",
-          "savedByCurrentUser",
-          "views",
-          "reactionCounts"
+          "savedByCurrentUser"
         ]
       },
       "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
@@ -1029,10 +999,7 @@
           "course": { "$ref": "#/components/schemas/PostCourseEntity" },
           "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
           "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" },
-          "views": { "type": "number" },
-          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "savedByCurrentUser": { "type": "boolean" }
         },
         "required": [
           "id",
@@ -1047,9 +1014,7 @@
           "course",
           "files",
           "_count",
-          "savedByCurrentUser",
-          "views",
-          "reactionCounts"
+          "savedByCurrentUser"
         ]
       },
       "PaginatedPostEntity": {
@@ -1062,16 +1027,6 @@
           "totalPages": { "type": "number" }
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
-      },
-      "ReactToPostDto": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["HELPFUL", "LOVE", "FIRE", "WOW", "SALUTE", "FUNNY"]
-          }
-        },
-        "required": ["type"]
       },
       "UpdateablePostStatus": { "type": "string", "enum": ["APPROVED", "REJECTED"] },
       "UpdatePostStatusDto": {
@@ -1162,10 +1117,9 @@
           "size": { "type": "number" },
           "mimeType": { "type": "string" },
           "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "downloads": { "type": "number" }
+          "createdAt": { "format": "date-time", "type": "string" }
         },
-        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
+        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
       }
     }
   }

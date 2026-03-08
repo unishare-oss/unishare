@@ -31,7 +31,7 @@ type PostCreateType = z.infer<typeof postTypeSchema>
 const createPostFormSchema = z
   .object({
     postType: postTypeSchema.nullable().refine((value) => value !== null, 'Post type is required'),
-    selectedDept: z.string().min(1, 'Department is required'),
+    selectedDept: z.string(),
     selectedCourse: z.string().min(1, 'Course is required'),
     title: z.string().trim().min(3, 'Title must be at least 3 characters'),
     description: z.string().trim().min(1, 'Description is required'),
@@ -80,7 +80,7 @@ function getInvalidStep(values: CreatePostFormValues) {
     return 0
   }
 
-  if (!values.selectedDept || !values.selectedCourse) {
+  if (!values.selectedCourse) {
     return 1
   }
 
@@ -115,7 +115,7 @@ export default function CreatePostPage() {
     currentStep === 0
       ? !!values.postType
       : currentStep === 1
-        ? !!values.selectedDept && !!values.selectedCourse
+        ? !!values.selectedCourse
         : currentStep === 2
           ? createPostFormSchema.safeParse(values).success
           : true
@@ -192,12 +192,7 @@ export default function CreatePostPage() {
 
           {currentStep === 1 && (
             <CourseStep
-              selectedDept={values.selectedDept}
               selectedCourse={values.selectedCourse}
-              onDeptChange={(dept) => {
-                updateField('selectedDept', dept)
-                updateField('selectedCourse', '')
-              }}
               onCourseChange={(course) => {
                 updateField('selectedCourse', course)
               }}
