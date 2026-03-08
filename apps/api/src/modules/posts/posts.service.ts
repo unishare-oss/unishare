@@ -13,6 +13,7 @@ import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
+import { ReactToPostDto } from './dto/react-to-post.dto'
 
 @Injectable()
 export class PostsService {
@@ -73,6 +74,7 @@ export class PostsService {
   async findOne(id: string, userId?: string) {
     const post = await this.postsRepository.findById(id, userId)
     if (!post) throw new NotFoundException('Post not found')
+    if (userId) void this.postsRepository.recordView(id, userId)
     return post
   }
 
@@ -123,5 +125,9 @@ export class PostsService {
 
   getSavedPosts(userId: string, query: PaginationDto) {
     return this.postsRepository.findSaved(userId, query)
+  }
+
+  toggleReaction(id: string, dto: ReactToPostDto, userId: string) {
+    return this.postsRepository.toggleReaction(id, userId, dto.type)
   }
 }

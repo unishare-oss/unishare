@@ -141,6 +141,15 @@ export class PostEntity {
 
   @ApiProperty()
   savedByCurrentUser: boolean
+
+  @ApiProperty()
+  views: number
+
+  @ApiProperty({ type: Object, description: 'Map of ReactionType to count' })
+  reactionCounts: Record<string, number>
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  userReaction: string | null
 }
 
 export class PostDetailEntity extends PostEntity {}

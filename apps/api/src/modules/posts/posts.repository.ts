@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { PostStatus, PostType, Prisma } from '@/generated/prisma/client'
+import { PostStatus, PostType, Prisma, ReactionType } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { PrismaService } from '@/prisma/prisma.service'
@@ -23,6 +23,7 @@ const postInclude = (userId?: string): Prisma.PostInclude => ({
     },
   },
   files: true,
+  reactions: { select: { type: true, userId: true } },
   _count: {
     select: {
       comments: { where: { deletedAt: null } },
@@ -32,9 +33,27 @@ const postInclude = (userId?: string): Prisma.PostInclude => ({
   ...(userId ? { savedBy: { where: { userId }, select: { userId: true } } } : {}),
 })
 
-function mapPost<T>(post: T): Omit<T, 'savedBy'> & { savedByCurrentUser: boolean } {
-  const { savedBy, ...rest } = post as any
-  return { ...rest, savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0 }
+function mapPost<T>(
+  post: T,
+  userId?: string,
+): Omit<T, 'savedBy' | 'reactions'> & {
+  savedByCurrentUser: boolean
+  reactionCounts: Record<string, number>
+  userReaction: string | null
+} {
+  const { savedBy, reactions, ...rest } = post as any
+  const reactionCounts: Record<string, number> = {}
+  let userReaction: string | null = null
+  for (const r of reactions ?? []) {
+    reactionCounts[r.type] = (reactionCounts[r.type] ?? 0) + 1
+    if (userId && r.userId === userId) userReaction = r.type
+  }
+  return {
+    ...rest,
+    savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
+    reactionCounts,
+    userReaction,
+  }
 }
 
 @Injectable()
@@ -65,7 +84,7 @@ export class PostsRepository {
       { where, orderBy: { createdAt: 'desc' }, include: postInclude(userId) },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p)) }
+    return { ...result, items: result.items.map((p) => mapPost(p, userId)) }
   }
 
   async findById(id: string, userId?: string) {
@@ -73,7 +92,7 @@ export class PostsRepository {
       where: { id, deletedAt: null },
       include: postInclude(userId),
     })
-    return post ? mapPost(post) : null
+    return post ? mapPost(post, userId) : null
   }
 
   async findByShortCode(shortCode: string, userId?: string) {
@@ -81,7 +100,7 @@ export class PostsRepository {
       where: { shortCode, deletedAt: null },
       include: postInclude(userId),
     })
-    return post ? mapPost(post) : null
+    return post ? mapPost(post, userId) : null
   }
 
   findCourseDepartmentById(courseId: string) {
@@ -99,7 +118,35 @@ export class PostsRepository {
   }
 
   update(id: string, data: Prisma.PostUpdateInput) {
-    return this.prisma.post.update({ where: { id }, data, include: postInclude() })
+    return this.prisma.post
+      .update({ where: { id }, data, include: postInclude() })
+      .then((p) => mapPost(p))
+  }
+
+  async recordView(postId: string, userId: string) {
+    const existing = await this.prisma.postView.findUnique({
+      where: { userId_postId: { userId, postId } },
+    })
+    if (!existing) {
+      await this.prisma.postView.create({ data: { userId, postId } })
+      await this.prisma.post.update({ where: { id: postId }, data: { views: { increment: 1 } } })
+    }
+  }
+
+  async toggleReaction(postId: string, userId: string, type: ReactionType) {
+    const existing = await this.prisma.reaction.findUnique({
+      where: { userId_postId: { userId, postId } },
+    })
+    if (existing?.type === type) {
+      await this.prisma.reaction.delete({ where: { userId_postId: { userId, postId } } })
+    } else {
+      await this.prisma.reaction.upsert({
+        where: { userId_postId: { userId, postId } },
+        create: { userId, postId, type },
+        update: { type },
+      })
+    }
+    return this.findById(postId, userId)
   }
 
   softDelete(id: string) {
@@ -107,7 +154,9 @@ export class PostsRepository {
   }
 
   updateStatus(id: string, status: PostStatus) {
-    return this.prisma.post.update({ where: { id }, data: { status }, include: postInclude() })
+    return this.prisma.post
+      .update({ where: { id }, data: { status }, include: postInclude() })
+      .then((p) => mapPost(p))
   }
 
   savePost(postId: string, userId: string) {
@@ -134,6 +183,6 @@ export class PostsRepository {
       },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p)) }
+    return { ...result, items: result.items.map((p) => mapPost(p, userId)) }
   }
 }
