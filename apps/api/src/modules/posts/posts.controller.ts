@@ -9,6 +9,7 @@ import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
+import { ReactToPostDto } from './dto/react-to-post.dto'
 import { PostDetailEntity } from './entities/post.entity'
 import { PaginatedPostEntity } from './entities/paginated-post.entity'
 
@@ -69,6 +70,13 @@ export class PostsController {
   @ResponseMessage('Post unsaved successfully')
   unsavePost(@Param('id') id: string, @Session() session: UserSession) {
     return this.postsService.unsavePost(id, session.user.id)
+  }
+
+  @Post(':id/react')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Reaction updated')
+  react(@Param('id') id: string, @Body() dto: ReactToPostDto, @Session() session: UserSession) {
+    return this.postsService.toggleReaction(id, dto, session.user.id)
   }
 
   @Patch(':id/status')

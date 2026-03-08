@@ -26,6 +26,8 @@ model User {
   savedPosts     SavedPost[]
   sessions       Session[]
   notifications  Notification[]
+  reactions      Reaction[]
+  postViews      PostView[]
   department     Department?    @relation(fields: [departmentId], references: [id])
 
   bio        String?
@@ -76,9 +78,12 @@ model Post {
   description  String?
   externalUrl  String?
   shortCode    String      @unique
+  views         Int            @default(0)
   comments      Comment[]
   files         File[]
   notifications Notification[]
+  reactions     Reaction[]
+  postViews     PostView[]
   author        User        @relation("AuthorPosts", fields: [authorId], references: [id])
   course        Course      @relation(fields: [courseId], references: [id])
   savedBy       SavedPost[]
@@ -88,6 +93,29 @@ model Post {
   @@index([type])
   @@index([status])
   @@map("post")
+}
+
+model PostView {
+  userId String
+  postId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+  @@map("post_view")
+}
+
+model Reaction {
+  userId String
+  postId String
+  type   ReactionType
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post   Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+  @@map("reaction")
 }
 
 model File {
@@ -217,4 +245,13 @@ enum PostStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ReactionType {
+  HELPFUL
+  LOVE
+  FIRE
+  WOW
+  SALUTE
+  FUNNY
 }
