@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link2, FileText, FileImage, FileSpreadsheet, Download, Eye, X } from 'lucide-react'
 import type { ApiPostDetail } from '@/lib/api-types'
+import type { PostFileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+
+type PostFile = PostFileEntity & { downloads?: number }
 import { filesControllerGetDownloadUrl } from '@/src/lib/api/generated/files/files'
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Button } from '@/components/ui/button'
@@ -160,7 +163,7 @@ export function PostFiles({ post }: PostFilesProps) {
           Attachments
         </h2>
         <div className="flex flex-col gap-2">
-          {post.files.map((file) => (
+          {(post.files as PostFile[]).map((file) => (
             <div
               key={file.id}
               className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
@@ -174,6 +177,12 @@ export function PostFiles({ post }: PostFilesProps) {
               <span className="font-mono text-xs text-text-muted shrink-0">
                 {formatBytes(file.size)}
               </span>
+              {(file.downloads ?? 0) > 0 && (
+                <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs text-text-muted shrink-0">
+                  <Download className="size-3" strokeWidth={1.5} />
+                  {file.downloads}
+                </span>
+              )}
               <div className="flex items-center gap-1">
                 {isPreviewable(file.mimeType) && (
                   <Button

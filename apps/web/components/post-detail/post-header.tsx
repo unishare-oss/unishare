@@ -173,68 +173,68 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               {yearLevel != null && `Year ${yearLevel} student · `}
               {post.author.department?.name && `${post.author.department.name} · `}
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-              {post.views > 0 && (
-                <span className="inline-flex items-center gap-1 ml-2">
-                  <Eye className="size-3" strokeWidth={1.5} />
-                  {post.views.toLocaleString()}
-                </span>
-              )}
             </p>
           </div>
         </Link>
       </div>
 
-      <div className="flex items-center gap-2 justify-end mb-6">
-        <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleSave}
-            aria-label={isSaved ? 'Unsave post' : 'Save post'}
-          >
-            <Bookmark
-              className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-              strokeWidth={1.5}
-            />
-          </Button>
-        </ActionHint>
+      <div className="flex items-center gap-2 justify-between mb-6">
+        <span className="inline-flex items-center gap-1.5 font-mono text-xs text-text-muted">
+          <Eye className="size-3.5" strokeWidth={1.5} />
+          {(post.views || 0).toLocaleString()} views
+        </span>
+        <div className="flex items-center gap-2">
+          <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleSave}
+              aria-label={isSaved ? 'Unsave post' : 'Save post'}
+            >
+              <Bookmark
+                className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+                strokeWidth={1.5}
+              />
+            </Button>
+          </ActionHint>
 
-        <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleShare}
-            aria-label={copied ? 'Copied!' : 'Copy share code'}
-          >
-            {copied ? (
-              <Check className="size-4 text-success" strokeWidth={1.5} />
-            ) : (
-              <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
-            )}
-          </Button>
-        </ActionHint>
-        {isOwner && (
-          <>
-            <ActionHint label="Edit Post">
-              <Button variant="ghost" size="icon-sm" aria-label="Edit" asChild>
-                <Link href={`/posts/${post.id}/edit`}>
-                  <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
-                </Link>
-              </Button>
-            </ActionHint>
-            <ActionHint label="Delete Post">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={isDeleting}
-                aria-label="Delete"
-              >
-                <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
-              </Button>
-            </ActionHint>
-          </>
-        )}
+          <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleShare}
+              aria-label={copied ? 'Copied!' : 'Copy share code'}
+            >
+              {copied ? (
+                <Check className="size-4 text-success" strokeWidth={1.5} />
+              ) : (
+                <Link2 className="size-4 text-text-muted" strokeWidth={1.5} />
+              )}
+            </Button>
+          </ActionHint>
+          {isOwner && (
+            <>
+              <ActionHint label="Edit Post">
+                <Button variant="ghost" size="icon-sm" aria-label="Edit" asChild>
+                  <Link href={`/posts/${post.id}/edit`}>
+                    <Pencil className="size-4 text-text-muted" strokeWidth={1.5} />
+                  </Link>
+                </Button>
+              </ActionHint>
+              <ActionHint label="Delete Post">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting}
+                  aria-label="Delete"
+                >
+                  <Trash2 className="size-4 text-text-muted" strokeWidth={1.5} />
+                </Button>
+              </ActionHint>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="border-t border-border" />
