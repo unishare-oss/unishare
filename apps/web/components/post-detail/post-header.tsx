@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, Link2, Pencil, Trash2, Check } from 'lucide-react'
+import { Bookmark, Link2, Pencil, Trash2, Check, Eye } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -173,6 +173,12 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               {yearLevel != null && `Year ${yearLevel} student · `}
               {post.author.department?.name && `${post.author.department.name} · `}
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              {post.views > 0 && (
+                <span className="inline-flex items-center gap-1 ml-2">
+                  <Eye className="size-3" strokeWidth={1.5} />
+                  {post.views.toLocaleString()}
+                </span>
+              )}
             </p>
           </div>
         </Link>
