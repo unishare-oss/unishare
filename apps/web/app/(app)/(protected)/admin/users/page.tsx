@@ -43,7 +43,7 @@ export default function AdminUsersPage() {
     },
   })
 
-  const allUsers = data?.users ?? []
+  const allUsers = useMemo(() => data?.users ?? [], [data?.users])
   const total = data?.total ?? allUsers.length
 
   const bannedCount = useMemo(() => allUsers.filter((u) => u.banned).length, [allUsers])

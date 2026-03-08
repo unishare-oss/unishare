@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import {
   Dialog,
@@ -71,7 +70,7 @@ export function AcademicProfileModal({ requireDepartment = false }: AcademicProf
     },
   })
 
-  const departmentId = form.watch('departmentId')
+  const departmentId = useWatch({ control: form.control, name: 'departmentId' })
   const saveDisabled = isPending || (requireDepartment && !departmentId)
 
   function handleSubmit(values: AcademicProfileFormValues) {
