@@ -34,7 +34,6 @@ export class PostsController {
     return this.postsService.findAll(query, {
       role: session?.user?.role as UserRole | undefined,
       id: session?.user?.id,
-      departmentId: session?.user?.departmentId,
     })
   }
 

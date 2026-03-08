@@ -22,10 +22,6 @@ export class PostsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private static isGlobalRole(role?: UserRole) {
-    return role === UserRole.ADMIN
-  }
-
   async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
     if (!departmentId) {
       throw new BadRequestException('Please set your department before creating a post')
@@ -42,28 +38,20 @@ export class PostsService {
     return this.postsRepository.create({ shortCode, authorId: userId, ...dto })
   }
 
-  async findAll(
-    query: ListPostsDto,
-    user?: { role?: UserRole; id?: string; departmentId?: string | null },
-  ) {
+  async findAll(query: ListPostsDto, user?: { role?: UserRole; id?: string }) {
     const userRole = user?.role
     const userId = user?.id
-
-    //check
-    const effectiveDepartmentId = PostsService.isGlobalRole(userRole)
-      ? undefined
-      : user?.departmentId
 
     //Role
     const canSeeAllStatuses = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
 
-    const { courseId, type, status, authorId, ...pagination } = query
+    const { courseId, departmentId, type, status, authorId, ...pagination } = query
 
     const where = {
       deletedAt: null,
       ...(courseId && { courseId }),
       ...(type && { type }),
-      ...(effectiveDepartmentId && { course: { departmentId: effectiveDepartmentId } }),
+      ...(departmentId && { course: { departmentId } }),
       ...(authorId && { authorId }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
