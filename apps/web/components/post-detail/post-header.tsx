@@ -6,7 +6,7 @@ import { Bookmark, Link2, Pencil, Trash2, Check, Eye } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { cn, calcYearLevel } from '@/lib/utils'
+import { cn, calcYearLevel, pluralize } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { TypeBadge } from '@/components/post-card'
 import { Button } from '@/components/ui/button'
@@ -179,10 +179,18 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
       </div>
 
       <div className="flex items-center gap-2 justify-between mb-6">
-        <span className="inline-flex items-center gap-1.5 font-mono text-xs text-text-muted">
-          <Eye className="size-3.5" strokeWidth={1.5} />
-          {(post.views || 0).toLocaleString()} views
-        </span>
+        <div className="flex items-center gap-3 font-mono text-xs text-text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <Eye className="size-3.5" strokeWidth={1.5} />
+            {(post.views || 0).toLocaleString()} {pluralize(post.views || 0, 'view')}
+          </span>
+          {post._count.savedBy > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Bookmark className="size-3.5" strokeWidth={1.5} />
+              {post._count.savedBy.toLocaleString()} {pluralize(post._count.savedBy, 'save')}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
             <Button
