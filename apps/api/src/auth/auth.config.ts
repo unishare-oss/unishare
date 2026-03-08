@@ -6,11 +6,33 @@ import { UserRole } from '../generated/prisma/client'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
+if (isProduction) {
+  const required = [
+    'DATABASE_URL',
+    'BETTER_AUTH_SECRET',
+    'BETTER_AUTH_URL',
+    'FRONTEND_URL',
+    'COOKIE_DOMAIN',
+  ]
+  for (const key of required) {
+    if (!process.env[key]) {
+      throw new Error(`Missing required environment variable in production: ${key}`)
+    }
+  }
+}
+
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL as string,
 })
 
 const prisma = new PrismaClient({ adapter })
+
+const trustedOrigins = [
+  'http://localhost:3000',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -39,15 +61,12 @@ export const auth = betterAuth({
       defaultRole: UserRole.STUDENT,
       adminRoles: [UserRole.ADMIN],
     }),
-    ...(process.env.NODE_ENV !== 'production' ? [openAPI()] : []),
+    ...(isProduction ? [] : [openAPI()]),
   ],
-  trustedOrigins: [
-    'http://localhost:3000',
-    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
-  ],
+  trustedOrigins,
   advanced: {
     crossSubDomainCookies: {
-      enabled: process.env.NODE_ENV === 'production',
+      enabled: isProduction,
       domain: process.env.COOKIE_DOMAIN,
     },
   },

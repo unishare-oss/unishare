@@ -14,10 +14,21 @@ async function bootstrap() {
   })
   const reflector = app.get(Reflector)
 
+  const allowedOrigins = [
+    'http://localhost:3000',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+  ]
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin) return callback(null, true)
+      if (allowedOrigins.includes(requestOrigin)) return callback(null, true)
+      callback(new Error(`CORS: origin '${requestOrigin}' not allowed`))
+    },
     credentials: true,
   })
+
+  logger.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`)
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
   app.useGlobalFilters(new HttpExceptionFilter())
   app.useGlobalInterceptors(new ResponseInterceptor(reflector))
