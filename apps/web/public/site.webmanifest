@@ -1,19 +1,27 @@
 {
   "name": "Unishare",
   "short_name": "Unishare",
+  "description": "Every lecture note, past paper, and study guide — shared by students who've been there.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "orientation": "portrait",
+  "theme_color": "#F7F3EE",
+  "background_color": "#F7F3EE",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "theme_color": "#F7F3EE",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  ]
 }
