@@ -23,12 +23,25 @@ export const metadata: Metadata = {
   description:
     "Every lecture note, past paper, and study guide — shared by students who've been there.",
   manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Unishare',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    apple: '/android-chrome-192x192.png',
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: '#F7F3EE',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
+  minimumScale: 1,
 }
 
 export default function RootLayout({
