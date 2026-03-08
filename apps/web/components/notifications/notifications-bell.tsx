@@ -1,35 +1,43 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Bell } from 'lucide-react'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 import { cn } from '@/lib/utils'
 
-interface NotificationsBellProps {
-  className?: string
-}
+export function NotificationsBell() {
+  const pathname = usePathname()
+  const isActive = pathname.startsWith('/notifications')
 
-export function NotificationsBell({ className }: NotificationsBellProps) {
   const { data } = useNotificationsControllerFindAll({
     query: { select: (r) => r.data, staleTime: 1000 * 60 },
   })
 
-  const notifications = data ?? []
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = (data ?? []).filter((n) => !n.read).length
 
   return (
     <Link
       href="/notifications"
-      aria-label="Notifications"
       className={cn(
-        'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200 text-text-muted hover:text-foreground hover:bg-muted',
-        className,
+        'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+        isActive
+          ? 'bg-gradient-to-r from-amber/[0.12] to-transparent text-amber font-medium'
+          : 'text-text-muted hover:text-foreground hover:bg-muted',
       )}
     >
-      <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-gradient-to-b from-amber/0 via-amber to-amber/0 opacity-0 group-hover:opacity-25 transition-opacity duration-200" />
+      <span
+        className={cn(
+          'absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-gradient-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
+        )}
+      />
       <span className="relative">
         <Bell
-          className="size-4 text-text-muted group-hover:text-foreground transition-colors duration-200"
+          className={cn(
+            'size-4 transition-colors duration-200',
+            isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+          )}
           strokeWidth={1.5}
         />
         {unreadCount > 0 && (
