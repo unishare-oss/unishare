@@ -1,11 +1,15 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/": {
+    "/api/": {
       "get": {
         "operationId": "AppController_getHello",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["App"]
       }
     },
@@ -13,18 +17,26 @@
       "get": {
         "operationId": "AppController_health",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["App"]
       }
     },
-    "/storage/presigned-upload": {
+    "/api/storage/presigned-upload": {
       "post": {
         "operationId": "StorageController_getPresignedUploadUrl",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/PresignedUploadDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignedUploadDto"
+              }
+            }
           }
         },
         "responses": {
@@ -32,7 +44,9 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PresignedUploadEntity" }
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedUploadEntity"
+                }
               }
             }
           }
@@ -40,21 +54,29 @@
         "tags": ["storage"]
       }
     },
-    "/courses": {
+    "/api/courses": {
       "post": {
         "operationId": "CoursesController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCourseDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourseDto"
+              }
+            }
           }
         },
         "responses": {
           "201": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseEntity"
+                }
+              }
             }
           }
         },
@@ -67,19 +89,28 @@
             "name": "page",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "default": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
           },
           {
             "name": "limit",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
           },
           {
             "name": "departmentId",
             "required": false,
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -87,7 +118,9 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedCourseEntity" }
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCourseEntity"
+                }
               }
             }
           }
@@ -95,17 +128,28 @@
         "tags": ["courses"]
       }
     },
-    "/courses/{id}": {
+    "/api/courses/{id}": {
       "get": {
         "operationId": "CoursesController_findOne",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseEntity"
+                }
+              }
             }
           }
         },
@@ -114,19 +158,34 @@
       "patch": {
         "operationId": "CoursesController_update",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCourseDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCourseDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CourseEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseEntity"
+                }
+              }
             }
           }
         },
@@ -135,13 +194,24 @@
       "delete": {
         "operationId": "CoursesController_remove",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["courses"]
       }
     },
-    "/users/me": {
+    "/api/users/me": {
       "get": {
         "operationId": "UsersController_getMe",
         "parameters": [],
@@ -149,7 +219,11 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileEntity"
+                }
+              }
             }
           }
         },
@@ -161,38 +235,57 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProfileDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileEntity"
+                }
+              }
             }
           }
         },
         "tags": ["users"]
       }
     },
-    "/users/{id}": {
+    "/api/users/{id}": {
       "get": {
         "operationId": "UsersController_getById",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileEntity"
+                }
+              }
             }
           }
         },
         "tags": ["users"]
       }
     },
-    "/users/me/academic-profile": {
+    "/api/users/me/academic-profile": {
       "patch": {
         "operationId": "UsersController_updateAcademicProfile",
         "parameters": [],
@@ -200,7 +293,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateAcademicProfileDto" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicProfileDto"
+              }
             }
           }
         },
@@ -208,28 +303,40 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileEntity"
+                }
+              }
             }
           }
         },
         "tags": ["users"]
       }
     },
-    "/departments": {
+    "/api/departments": {
       "post": {
         "operationId": "DepartmentsController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateDepartmentDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDepartmentDto"
+              }
+            }
           }
         },
         "responses": {
           "201": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentEntity"
+                }
+              }
             }
           }
         },
@@ -245,7 +352,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/DepartmentEntity" }
+                  "items": {
+                    "$ref": "#/components/schemas/DepartmentEntity"
+                  }
                 }
               }
             }
@@ -254,18 +363,27 @@
         "tags": ["departments"]
       }
     },
-    "/departments/{id}": {
+    "/api/departments/{id}": {
       "get": {
         "operationId": "DepartmentsController_findOne",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/DepartmentWithCoursesEntity" }
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentWithCoursesEntity"
+                }
               }
             }
           }
@@ -275,19 +393,34 @@
       "patch": {
         "operationId": "DepartmentsController_update",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateDepartmentDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDepartmentDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentEntity"
+                }
+              }
             }
           }
         },
@@ -296,27 +429,46 @@
       "delete": {
         "operationId": "DepartmentsController_remove",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["departments"]
       }
     },
-    "/posts": {
+    "/api/posts": {
       "post": {
         "operationId": "PostsController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreatePostDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostDto"
+              }
+            }
           }
         },
         "responses": {
           "201": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
@@ -329,41 +481,70 @@
             "name": "page",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "default": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
           },
           {
             "name": "limit",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
           },
-          { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "courseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "departmentId",
             "required": false,
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "type",
             "required": false,
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/PostType" }
+            "schema": {
+              "$ref": "#/components/schemas/PostType"
+            }
           },
           {
             "name": "status",
             "required": false,
             "in": "query",
-            "schema": { "$ref": "#/components/schemas/PostStatus" }
+            "schema": {
+              "$ref": "#/components/schemas/PostStatus"
+            }
           },
-          { "name": "authorId", "required": false, "in": "query", "schema": { "type": "string" } }
+          {
+            "name": "authorId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedPostEntity" }
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPostEntity"
+                }
               }
             }
           }
@@ -371,7 +552,7 @@
         "tags": ["posts"]
       }
     },
-    "/posts/saved": {
+    "/api/posts/saved": {
       "get": {
         "operationId": "PostsController_getSavedPosts",
         "parameters": [
@@ -379,13 +560,20 @@
             "name": "page",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "default": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
           },
           {
             "name": "limit",
             "required": false,
             "in": "query",
-            "schema": { "minimum": 1, "type": "number" }
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
           }
         ],
         "responses": {
@@ -393,7 +581,9 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PaginatedPostEntity" }
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPostEntity"
+                }
               }
             }
           }
@@ -401,34 +591,56 @@
         "tags": ["posts"]
       }
     },
-    "/posts/s/{shortCode}": {
+    "/api/posts/s/{shortCode}": {
       "get": {
         "operationId": "PostsController_findByShortCode",
         "parameters": [
-          { "name": "shortCode", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "shortCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
         "tags": ["posts"]
       }
     },
-    "/posts/{id}": {
+    "/api/posts/{id}": {
       "get": {
         "operationId": "PostsController_findOne",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
@@ -437,19 +649,34 @@
       "patch": {
         "operationId": "PostsController_update",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePostDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePostDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
@@ -458,81 +685,151 @@
       "delete": {
         "operationId": "PostsController_remove",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["posts"]
       }
     },
-    "/posts/{id}/save": {
+    "/api/posts/{id}/save": {
       "post": {
         "operationId": "PostsController_savePost",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "201": { "description": "" } },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
         "tags": ["posts"]
       },
       "delete": {
         "operationId": "PostsController_unsavePost",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["posts"]
       }
     },
-    "/posts/{id}/react": {
+    "/api/posts/{id}/react": {
       "post": {
         "operationId": "PostsController_react",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/ReactToPostDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactToPostDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
         "tags": ["posts"]
       }
     },
-    "/posts/{id}/status": {
+    "/api/posts/{id}/status": {
       "patch": {
         "operationId": "PostsController_updateStatus",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePostStatusDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePostStatusDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailEntity"
+                }
+              }
             }
           }
         },
         "tags": ["posts"]
       }
     },
-    "/posts/{postId}/comments": {
+    "/api/posts/{postId}/comments": {
       "get": {
         "operationId": "CommentsController_findAll",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -541,7 +838,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/CommentEntity" }
+                  "items": {
+                    "$ref": "#/components/schemas/CommentEntity"
+                  }
                 }
               }
             }
@@ -552,43 +851,80 @@
       "post": {
         "operationId": "CommentsController_create",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommentDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommentDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentEntity"
+                }
+              }
             }
           }
         },
         "tags": ["comments"]
       }
     },
-    "/posts/{postId}/comments/{commentId}": {
+    "/api/posts/{postId}/comments/{commentId}": {
       "patch": {
         "operationId": "CommentsController_update",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
-          { "name": "commentId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "commentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCommentDto" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommentDto"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentEntity"
+                }
+              }
             }
           }
         },
@@ -597,29 +933,51 @@
       "delete": {
         "operationId": "CommentsController_remove",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
-          { "name": "commentId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "commentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentEntity"
+                }
+              }
             }
           }
         },
         "tags": ["comments"]
       }
     },
-    "/notifications/stream": {
+    "/api/notifications/stream": {
       "get": {
         "operationId": "NotificationsController_stream",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["notifications"]
       }
     },
-    "/notifications": {
+    "/api/notifications": {
       "get": {
         "operationId": "NotificationsController_findAll",
         "parameters": [],
@@ -630,7 +988,9 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/NotificationEntity" }
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationEntity"
+                  }
                 }
               }
             }
@@ -641,57 +1001,103 @@
       "delete": {
         "operationId": "NotificationsController_deleteAll",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["notifications"]
       }
     },
-    "/notifications/read-all": {
+    "/api/notifications/read-all": {
       "patch": {
         "operationId": "NotificationsController_markAllRead",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["notifications"]
       }
     },
-    "/notifications/{id}": {
+    "/api/notifications/{id}": {
       "delete": {
         "operationId": "NotificationsController_deleteOne",
         "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["notifications"]
       }
     },
-    "/posts/{postId}/files/{fileId}/url": {
+    "/api/posts/{postId}/files/{fileId}/url": {
       "get": {
         "operationId": "FilesController_getDownloadUrl",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
-          { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/DownloadUrlEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlEntity"
+                }
+              }
             }
           }
         },
         "tags": ["files"]
       }
     },
-    "/posts/{postId}/files": {
+    "/api/posts/{postId}/files": {
       "post": {
         "operationId": "FilesController_confirmUpload",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ConfirmFileUploadDto" }
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmFileUploadDto"
+              }
             }
           }
         },
@@ -699,21 +1105,43 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/FileEntity" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileEntity"
+                }
+              }
             }
           }
         },
         "tags": ["files"]
       }
     },
-    "/posts/{postId}/files/{fileId}": {
+    "/api/posts/{postId}/files/{fileId}": {
       "delete": {
         "operationId": "FilesController_remove",
         "parameters": [
-          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
-          { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
+          {
+            "name": "postId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
         "tags": ["files"]
       }
     }
@@ -727,7 +1155,13 @@
   "tags": [],
   "servers": [],
   "components": {
-    "securitySchemes": { "bearer": { "scheme": "bearer", "bearerFormat": "JWT", "type": "http" } },
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
     "schemas": {
       "PresignedUploadDto": {
         "type": "object",
@@ -737,99 +1171,207 @@
             "maxLength": 255,
             "pattern": "^[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_]*\\/[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_.+]*$"
           },
-          "uploadType": { "type": "string", "enum": ["document", "image"] },
-          "purpose": { "type": "string", "enum": ["profile-picture", "post-attachment"] }
+          "uploadType": {
+            "type": "string",
+            "enum": ["document", "image"]
+          },
+          "purpose": {
+            "type": "string",
+            "enum": ["profile-picture", "post-attachment"]
+          }
         },
         "required": ["mimeType", "uploadType", "purpose"]
       },
       "PresignedUploadEntity": {
         "type": "object",
         "properties": {
-          "url": { "type": "string" },
-          "key": { "type": "string" },
-          "publicUrl": { "type": "string" }
+          "url": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "publicUrl": {
+            "type": "string"
+          }
         },
         "required": ["url", "key", "publicUrl"]
       },
       "CreateCourseDto": {
         "type": "object",
         "properties": {
-          "code": { "type": "string", "minLength": 2, "maxLength": 20 },
-          "name": { "type": "string", "minLength": 2, "maxLength": 100 },
-          "departmentId": { "type": "string" }
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "departmentId": {
+            "type": "string"
+          }
         },
         "required": ["code", "name", "departmentId"]
       },
       "CourseDeptEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "code": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
         },
         "required": ["id", "name", "code"]
       },
       "CourseEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "departmentId": { "type": "string" },
-          "department": { "$ref": "#/components/schemas/CourseDeptEntity" }
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "departmentId": {
+            "type": "string"
+          },
+          "department": {
+            "$ref": "#/components/schemas/CourseDeptEntity"
+          }
         },
         "required": ["id", "code", "name", "departmentId", "department"]
       },
       "PaginatedCourseEntity": {
         "type": "object",
         "properties": {
-          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CourseEntity" } },
-          "total": { "type": "number" },
-          "page": { "type": "number" },
-          "limit": { "type": "number" },
-          "totalPages": { "type": "number" }
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseEntity"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
       },
       "UpdateCourseDto": {
         "type": "object",
         "properties": {
-          "code": { "type": "string", "minLength": 2, "maxLength": 20 },
-          "name": { "type": "string", "minLength": 2, "maxLength": 100 },
-          "departmentId": { "type": "string" }
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "departmentId": {
+            "type": "string"
+          }
         }
       },
       "DepartmentEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "code": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
         },
         "required": ["id", "name", "code"]
       },
       "UserProfileEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "email": { "type": "string" },
-          "emailVerified": { "type": "boolean" },
-          "image": { "type": "string", "nullable": true },
-          "bio": { "type": "string", "nullable": true },
-          "role": { "type": "string", "enum": ["STUDENT", "MODERATOR", "ADMIN"] },
-          "departmentId": { "type": "string", "nullable": true },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": ["STUDENT", "MODERATOR", "ADMIN"]
+          },
+          "departmentId": {
+            "type": "string",
+            "nullable": true
+          },
           "department": {
             "nullable": true,
-            "allOf": [{ "$ref": "#/components/schemas/DepartmentEntity" }]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepartmentEntity"
+              }
+            ]
           },
-          "enrollmentYear": { "type": "number", "nullable": true },
-          "yearLevel": { "type": "number", "nullable": true },
-          "shouldShowUpdateMajorPopup": { "type": "boolean" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "postCount": { "type": "number" },
-          "commentCount": { "type": "number" },
-          "savedCount": { "type": "number" }
+          "enrollmentYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "yearLevel": {
+            "type": "number",
+            "nullable": true
+          },
+          "shouldShowUpdateMajorPopup": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "commentCount": {
+            "type": "number"
+          },
+          "savedCount": {
+            "type": "number"
+          }
         },
         "required": [
           "id",
@@ -847,146 +1389,344 @@
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "maxLength": 100 },
-          "image": { "type": "string", "maxLength": 500, "format": "uri" },
-          "bio": { "type": "string", "maxLength": 300 }
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "image": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 300
+          }
         }
       },
       "UpdateAcademicProfileDto": {
         "type": "object",
         "properties": {
-          "departmentId": { "type": "string", "nullable": true, "maxLength": 50 },
-          "enrollmentYear": { "type": "number", "nullable": true, "minimum": 1950, "maximum": 2100 }
+          "departmentId": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 50
+          },
+          "enrollmentYear": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1950,
+            "maximum": 2100
+          }
         }
       },
       "CreateDepartmentDto": {
         "type": "object",
-        "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 100 } },
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          }
+        },
         "required": ["name"]
       },
       "DeptCourseEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "code": { "type": "string" },
-          "name": { "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
         },
         "required": ["id", "code", "name"]
       },
       "DepartmentWithCoursesEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "code": { "type": "string" },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
           "courses": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/DeptCourseEntity" }
+            "items": {
+              "$ref": "#/components/schemas/DeptCourseEntity"
+            }
           }
         },
         "required": ["id", "name", "code", "courses"]
       },
       "UpdateDepartmentDto": {
         "type": "object",
-        "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 100 } }
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          }
+        }
       },
       "CreatePostDto": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+          "type": {
+            "type": "string",
+            "enum": ["NOTE", "OLD_QUESTION"]
+          },
           "courseId": {
             "type": "string",
             "description": "Course ID. Must belong to the authenticated user department."
           },
-          "title": { "type": "string", "minLength": 3, "maxLength": 200 },
-          "description": { "type": "string", "maxLength": 2000 },
-          "externalUrl": { "type": "string", "maxLength": 500 },
-          "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
-          "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
-          "year": { "type": "number", "minimum": 1, "maximum": 6 },
-          "semester": { "type": "number", "minimum": 1, "maximum": 3 }
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "externalUrl": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "examYear": {
+            "type": "number",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "moduleNumber": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "year": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "semester": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          }
         },
         "required": ["type", "courseId", "title", "description", "moduleNumber", "year", "semester"]
       },
       "PostAuthorDeptEntity": {
         "type": "object",
-        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
         "required": ["id", "name"]
       },
       "PostAuthorEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "image": { "type": "string", "nullable": true },
-          "enrollmentYear": { "type": "number", "nullable": true },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "enrollmentYear": {
+            "type": "number",
+            "nullable": true
+          },
           "department": {
             "nullable": true,
-            "allOf": [{ "$ref": "#/components/schemas/PostAuthorDeptEntity" }]
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostAuthorDeptEntity"
+              }
+            ]
           }
         },
         "required": ["id", "name"]
       },
       "PostCourseDeptEntity": {
         "type": "object",
-        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
         "required": ["id", "name"]
       },
       "PostCourseEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "code": { "type": "string" },
-          "name": { "type": "string" },
-          "department": { "$ref": "#/components/schemas/PostCourseDeptEntity" }
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "department": {
+            "$ref": "#/components/schemas/PostCourseDeptEntity"
+          }
         },
         "required": ["id", "code", "name", "department"]
       },
       "PostFileEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "key": { "type": "string" },
-          "name": { "type": "string" },
-          "size": { "type": "number" },
-          "mimeType": { "type": "string" },
-          "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "postId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
         },
         "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
       },
       "PostCountEntity": {
         "type": "object",
-        "properties": { "comments": { "type": "number" }, "savedBy": { "type": "number" } },
+        "properties": {
+          "comments": {
+            "type": "number"
+          },
+          "savedBy": {
+            "type": "number"
+          }
+        },
         "required": ["comments", "savedBy"]
       },
       "PostDetailEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
-          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
-          "title": { "type": "string", "nullable": true },
-          "description": { "type": "string", "nullable": true },
-          "externalUrl": { "type": "string", "nullable": true },
-          "examYear": { "type": "number", "nullable": true },
-          "moduleNumber": { "type": "number", "nullable": true },
-          "year": { "type": "number", "nullable": true },
-          "semester": { "type": "number", "nullable": true },
-          "shortCode": { "type": "string" },
-          "authorId": { "type": "string" },
-          "courseId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
-          "author": { "$ref": "#/components/schemas/PostAuthorEntity" },
-          "course": { "$ref": "#/components/schemas/PostCourseEntity" },
-          "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
-          "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" },
-          "views": { "type": "number" },
-          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["NOTE", "OLD_QUESTION"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED"]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "externalUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "examYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "moduleNumber": {
+            "type": "number",
+            "nullable": true
+          },
+          "year": {
+            "type": "number",
+            "nullable": true
+          },
+          "semester": {
+            "type": "number",
+            "nullable": true
+          },
+          "shortCode": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "author": {
+            "$ref": "#/components/schemas/PostAuthorEntity"
+          },
+          "course": {
+            "$ref": "#/components/schemas/PostCourseEntity"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostFileEntity"
+            }
+          },
+          "_count": {
+            "$ref": "#/components/schemas/PostCountEntity"
+          },
+          "savedByCurrentUser": {
+            "type": "boolean"
+          },
+          "views": {
+            "type": "number"
+          },
+          "reactionCounts": {
+            "type": "object",
+            "description": "Map of ReactionType to count"
+          },
+          "userReaction": {
+            "type": "string",
+            "nullable": true
+          }
         },
         "required": [
           "id",
@@ -1006,35 +1746,107 @@
           "reactionCounts"
         ]
       },
-      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
-      "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+      "PostType": {
+        "type": "string",
+        "enum": ["NOTE", "OLD_QUESTION"]
+      },
+      "PostStatus": {
+        "type": "string",
+        "enum": ["PENDING", "APPROVED", "REJECTED"]
+      },
       "PostEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
-          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
-          "title": { "type": "string", "nullable": true },
-          "description": { "type": "string", "nullable": true },
-          "externalUrl": { "type": "string", "nullable": true },
-          "examYear": { "type": "number", "nullable": true },
-          "moduleNumber": { "type": "number", "nullable": true },
-          "year": { "type": "number", "nullable": true },
-          "semester": { "type": "number", "nullable": true },
-          "shortCode": { "type": "string" },
-          "authorId": { "type": "string" },
-          "courseId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
-          "author": { "$ref": "#/components/schemas/PostAuthorEntity" },
-          "course": { "$ref": "#/components/schemas/PostCourseEntity" },
-          "files": { "type": "array", "items": { "$ref": "#/components/schemas/PostFileEntity" } },
-          "_count": { "$ref": "#/components/schemas/PostCountEntity" },
-          "savedByCurrentUser": { "type": "boolean" },
-          "views": { "type": "number" },
-          "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["NOTE", "OLD_QUESTION"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED"]
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "externalUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "examYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "moduleNumber": {
+            "type": "number",
+            "nullable": true
+          },
+          "year": {
+            "type": "number",
+            "nullable": true
+          },
+          "semester": {
+            "type": "number",
+            "nullable": true
+          },
+          "shortCode": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "author": {
+            "$ref": "#/components/schemas/PostAuthorEntity"
+          },
+          "course": {
+            "$ref": "#/components/schemas/PostCourseEntity"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostFileEntity"
+            }
+          },
+          "_count": {
+            "$ref": "#/components/schemas/PostCountEntity"
+          },
+          "savedByCurrentUser": {
+            "type": "boolean"
+          },
+          "views": {
+            "type": "number"
+          },
+          "reactionCounts": {
+            "type": "object",
+            "description": "Map of ReactionType to count"
+          },
+          "userReaction": {
+            "type": "string",
+            "nullable": true
+          }
         },
         "required": [
           "id",
@@ -1057,11 +1869,24 @@
       "PaginatedPostEntity": {
         "type": "object",
         "properties": {
-          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PostEntity" } },
-          "total": { "type": "number" },
-          "page": { "type": "number" },
-          "limit": { "type": "number" },
-          "totalPages": { "type": "number" }
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostEntity"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
       },
@@ -1075,97 +1900,220 @@
         },
         "required": ["type"]
       },
-      "UpdateablePostStatus": { "type": "string", "enum": ["APPROVED", "REJECTED"] },
+      "UpdateablePostStatus": {
+        "type": "string",
+        "enum": ["APPROVED", "REJECTED"]
+      },
       "UpdatePostStatusDto": {
         "type": "object",
         "properties": {
-          "status": { "allOf": [{ "$ref": "#/components/schemas/UpdateablePostStatus" }] }
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UpdateablePostStatus"
+              }
+            ]
+          }
         },
         "required": ["status"]
       },
       "UpdatePostDto": {
         "type": "object",
         "properties": {
-          "title": { "type": "string", "minLength": 3, "maxLength": 200 },
-          "description": { "type": "string", "maxLength": 2000 },
-          "externalUrl": { "type": "string", "maxLength": 500 },
-          "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
-          "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
-          "year": { "type": "number", "minimum": 1, "maximum": 6 },
-          "semester": { "type": "number", "minimum": 1, "maximum": 3 }
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "externalUrl": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "examYear": {
+            "type": "number",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "moduleNumber": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "year": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "semester": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          }
         }
       },
       "CommentUserEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "image": { "type": "string", "nullable": true }
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          }
         },
         "required": ["id", "name"]
       },
       "CommentEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "content": { "type": "string" },
-          "userId": { "type": "string" },
-          "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
-          "user": { "$ref": "#/components/schemas/CommentUserEntity" }
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "postId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/CommentUserEntity"
+          }
         },
         "required": ["id", "content", "userId", "postId", "createdAt", "updatedAt", "user"]
       },
       "CreateCommentDto": {
         "type": "object",
-        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
         "required": ["content"]
       },
       "UpdateCommentDto": {
         "type": "object",
-        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
       },
       "NotificationEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "userId": { "type": "string" },
-          "type": { "type": "string" },
-          "message": { "type": "string" },
-          "read": { "type": "boolean" },
-          "postId": { "type": "string", "nullable": true },
-          "createdAt": { "format": "date-time", "type": "string" }
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "postId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
         },
         "required": ["id", "userId", "type", "message", "read", "postId", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",
-        "properties": { "url": { "type": "string" } },
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
         "required": ["url"]
       },
       "ConfirmFileUploadDto": {
         "type": "object",
         "properties": {
-          "key": { "type": "string", "maxLength": 500 },
-          "name": { "type": "string", "maxLength": 255 },
-          "size": { "type": "number", "minimum": 1 },
-          "mimeType": { "type": "string", "maxLength": 255 }
+          "key": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "size": {
+            "type": "number",
+            "minimum": 1
+          },
+          "mimeType": {
+            "type": "string",
+            "maxLength": 255
+          }
         },
         "required": ["key", "name", "size", "mimeType"]
       },
       "FileEntity": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "key": { "type": "string" },
-          "name": { "type": "string" },
-          "size": { "type": "number" },
-          "mimeType": { "type": "string" },
-          "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "downloads": { "type": "number" }
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "postId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "downloads": {
+            "type": "number"
+          }
         },
         "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
       }

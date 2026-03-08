@@ -5,8 +5,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { getNotificationsControllerFindAllQueryKey } from '@/src/lib/api/generated/notifications/notifications'
 import type { NotificationEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
 export function useNotificationStream(enabled: boolean) {
   const queryClient = useQueryClient()
 
@@ -24,7 +22,7 @@ export function useNotificationStream(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
 
-    const es = new EventSource(`${API_URL}/notifications/stream`, { withCredentials: true })
+    const es = new EventSource('/api/notifications/stream', { withCredentials: true })
 
     es.onmessage = (e) => {
       try {

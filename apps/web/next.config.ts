@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 
+const API_URL = process.env.API_URL ?? 'http://localhost:3001'
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   images: {
@@ -11,6 +13,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
       { protocol: 'https', hostname: '*.r2.dev' },
     ],
+  },
+  async rewrites() {
+    return [{ source: '/api/:slug*', destination: `${API_URL}/api/:slug*` }]
   },
 }
 
