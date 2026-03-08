@@ -19,14 +19,7 @@ async function bootstrap() {
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
-  app.enableCors({
-    origin: (requestOrigin, callback) => {
-      if (!requestOrigin) return callback(null, true)
-      if (allowedOrigins.includes(requestOrigin)) return callback(null, true)
-      callback(new Error(`CORS: origin '${requestOrigin}' not allowed`))
-    },
-    credentials: true,
-  })
+  app.enableCors({ origin: allowedOrigins, credentials: true })
 
   logger.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`)
 
