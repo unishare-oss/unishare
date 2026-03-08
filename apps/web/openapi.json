@@ -339,6 +339,12 @@
           },
           { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
           {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "type",
             "required": false,
             "in": "query",
@@ -843,8 +849,7 @@
         "properties": {
           "name": { "type": "string", "maxLength": 100 },
           "image": { "type": "string", "maxLength": 500, "format": "uri" },
-          "bio": { "type": "string", "maxLength": 300 },
-          "enrollmentYear": { "type": "number", "minimum": 1950, "maximum": 2100 }
+          "bio": { "type": "string", "maxLength": 300 }
         }
       },
       "UpdateAcademicProfileDto": {
