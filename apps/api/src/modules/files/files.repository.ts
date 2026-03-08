@@ -17,6 +17,10 @@ export class FilesRepository {
     })
   }
 
+  incrementDownloads(id: string) {
+    return this.prisma.file.update({ where: { id }, data: { downloads: { increment: 1 } } })
+  }
+
   delete(id: string) {
     return this.prisma.file.delete({ where: { id } })
   }

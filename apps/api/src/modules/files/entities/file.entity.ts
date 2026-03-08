@@ -21,4 +21,7 @@ export class FileEntity {
 
   @ApiProperty()
   createdAt: Date
+
+  @ApiProperty()
+  downloads: number
 }
