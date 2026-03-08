@@ -9,6 +9,11 @@ export class LoggerMiddleware implements NestMiddleware {
     const { method, originalUrl } = request
     const startedAt = Date.now()
 
+    // prevent Cloudflare and browsers from caching API responses
+    if (!originalUrl.includes('/stream')) {
+      response.setHeader('Cache-Control', 'no-store')
+    }
+
     response.on('finish', () => {
       const responseTime = Date.now() - startedAt
       this.logger.log(`${method} ${originalUrl} ${response.statusCode} +${responseTime}ms`)
