@@ -13,10 +13,14 @@ export class CoursesRepository {
     return this.prisma.course.create({ data: dto, include: { department: true } })
   }
 
-  findAll(pagination: PaginationDto) {
+  findAll(pagination: PaginationDto, departmentId?: string) {
     return paginate(
       this.prisma.course,
-      { orderBy: { createdAt: 'desc' }, include: { department: true } },
+      {
+        where: departmentId ? { departmentId } : undefined,
+        orderBy: { createdAt: 'desc' },
+        include: { department: true },
+      },
       pagination,
     )
   }

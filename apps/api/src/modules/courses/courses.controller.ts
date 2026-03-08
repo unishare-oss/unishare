@@ -2,9 +2,9 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestj
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
-import { PaginationDto } from '@/common/dto/pagination.dto'
 import { CoursesService } from './courses.service'
 import { CreateCourseDto } from './dto/create-course.dto'
+import { ListCoursesDto } from './dto/list-courses.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 import { CourseEntity, PaginatedCourseEntity } from './entities/course.entity'
 
@@ -25,8 +25,9 @@ export class CoursesController {
   @OptionalAuth()
   @ApiOkResponse({ type: PaginatedCourseEntity })
   @ResponseMessage('Courses fetched successfully')
-  findAll(@Query() pagination: PaginationDto) {
-    return this.coursesService.findAll(pagination)
+  findAll(@Query() query: ListCoursesDto) {
+    const { departmentId, ...pagination } = query
+    return this.coursesService.findAll(pagination, departmentId)
   }
 
   @Get(':id')
