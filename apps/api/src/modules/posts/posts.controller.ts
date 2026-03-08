@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Roles, Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UserSession } from '@/auth/auth.config'
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
@@ -22,7 +23,7 @@ export class PostsController {
   @ApiCreatedResponse({ type: PostDetailEntity })
   @ResponseMessage('Post created successfully')
   create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
-    return this.postsService.create(dto, session.user.id)
+    return this.postsService.create(dto, session.user.id, session.user.departmentId)
   }
 
   @Get()
@@ -30,11 +31,10 @@ export class PostsController {
   @ApiOkResponse({ type: PaginatedPostEntity })
   @ResponseMessage('Posts fetched successfully')
   findAll(@Query() query: ListPostsDto, @Session() session: UserSession) {
-    return this.postsService.findAll(
-      query,
-      session?.user?.role as UserRole | undefined,
-      session?.user?.id,
-    )
+    return this.postsService.findAll(query, {
+      role: session?.user?.role as UserRole | undefined,
+      id: session?.user?.id,
+    })
   }
 
   @Get('saved')

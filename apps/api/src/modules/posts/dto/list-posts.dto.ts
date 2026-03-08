@@ -9,6 +9,11 @@ export class ListPostsDto extends PaginationDto {
   @IsString()
   courseId?: string
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  departmentId?: string
+
   @ApiPropertyOptional({ enum: PostType, enumName: 'PostType' })
   @IsOptional()
   @IsEnum(PostType)
@@ -18,11 +23,6 @@ export class ListPostsDto extends PaginationDto {
   @IsOptional()
   @IsEnum(PostStatus)
   status?: PostStatus
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  departmentId?: string
 
   @ApiPropertyOptional()
   @IsOptional()

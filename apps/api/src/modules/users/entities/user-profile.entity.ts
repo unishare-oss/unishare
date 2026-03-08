@@ -11,6 +11,11 @@ export class DepartmentEntity {
   code: string
 }
 
+export class OnboardingRequiredEntity {
+  @ApiProperty()
+  department: boolean
+}
+
 export class UserProfileEntity {
   @ApiProperty()
   id: string

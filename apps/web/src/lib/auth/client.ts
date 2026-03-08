@@ -11,6 +11,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields({
       user: {
         role: { type: 'string', input: false },
+        departmentId: { type: 'string', input: false },
       },
     }),
     adminClient({ ac, roles }),

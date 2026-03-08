@@ -103,6 +103,13 @@ export class PostsRepository {
     return post ? mapPost(post, userId) : null
   }
 
+  findCourseDepartmentById(courseId: string) {
+    return this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, departmentId: true },
+    })
+  }
+
   findCommentTarget(id: string) {
     return this.prisma.post.findUnique({
       where: { id, deletedAt: null },

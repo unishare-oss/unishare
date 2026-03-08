@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
+import { authClient } from '@/src/lib/auth/client'
 import { useFeedStore } from '@/lib/store'
 import { FeedHeader } from '@/components/feed/feed-header'
 import { FilterStrip, type TypeFilter } from '@/components/feed/filter-strip'
@@ -13,12 +14,14 @@ export default function FeedPage() {
 
   // Initialize state from pending filter if present to avoid cascading renders in useEffect
   const [initialFilter] = useState(() => consumePendingFilter())
+  const { data: session } = authClient.useSession()
 
   const [activeFilter, setActiveFilter] = useState<TypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDeptId, setSelectedDeptId] = useState(initialFilter?.deptId ?? '')
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(initialFilter?.deptId ?? null)
   const [selectedCourseId, setSelectedCourseId] = useState(initialFilter?.courseId ?? '')
   const [page, setPage] = useState(1)
+  const effectiveDeptId = selectedDeptId ?? session?.user?.departmentId ?? ''
 
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)
@@ -40,7 +43,7 @@ export default function FeedPage() {
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
       courseId: selectedCourseId || undefined,
-      departmentId: selectedDeptId || undefined,
+      departmentId: effectiveDeptId || undefined,
       page,
       limit: 20,
     },
@@ -62,7 +65,7 @@ export default function FeedPage() {
       <FilterStrip
         activeFilter={activeFilter}
         onFilterChange={handleFilterChange}
-        selectedDeptId={selectedDeptId}
+        selectedDeptId={effectiveDeptId}
         onDeptChange={handleDeptChange}
         selectedCourseId={selectedCourseId}
         onCourseChange={handleCourseChange}

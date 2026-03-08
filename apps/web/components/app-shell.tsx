@@ -11,11 +11,14 @@ import { useNotificationStream } from '@/hooks/use-notifications'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
-  useNotificationStream(!!session?.user)
-  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
-  const { data: profile } = useUsersControllerGetMe({
-    query: { select: (r) => r.data, enabled: !!session?.user },
+  const { data: me, isPending: isMePending } = useUsersControllerGetMe({
+    query: {
+      enabled: !!session?.user,
+      select: (res) => res.data,
+    },
   })
+
+  useNotificationStream(!!session?.user)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
 
   useEffect(() => {
@@ -26,7 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timeout)
   }, [])
 
-  const showLoader = isPending || !minimumLoaderElapsed
+  const showLoader = isPending || (!!session?.user && isMePending) || !minimumLoaderElapsed
+
+  const requiresDepartmentOnboarding = !!me && !me.departmentId
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,9 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileNav />
       </div>
 
-      {!showLoader && profile?.shouldShowUpdateMajorPopup && !profileModalDismissed && (
-        <AcademicProfileModal onDismiss={() => setProfileModalDismissed(true)} />
-      )}
+      {!showLoader && requiresDepartmentOnboarding && <AcademicProfileModal requireDepartment />}
 
       {showLoader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">

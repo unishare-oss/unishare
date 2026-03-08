@@ -52,3 +52,4 @@ Use this exact structure:
 - Do not think out loud.
 - Do not restate obvious context from the prompt.
 - If something is acceptable, say nothing and focus on the problems.
+- If the user asks for your opinion or point of view, start the response with `Yes` or `No` on the first line, then continue with the required format.

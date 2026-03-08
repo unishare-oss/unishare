@@ -18,7 +18,9 @@ export class CreatePostDto {
   @IsEnum(PostType)
   type: PostType
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Course ID. Must belong to the authenticated user department.',
+  })
   @IsString()
   courseId: string
 

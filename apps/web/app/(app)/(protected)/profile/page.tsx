@@ -21,12 +21,6 @@ import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 
 function ProfileContent({ user }: { user: UserProfileEntity }) {
   const [activeTab, setActiveTab] = useState<Tab>('MY POSTS')
-  const [displayName, setDisplayName] = useState(user.name)
-  const [bio, setBio] = useState(user.bio ?? '')
-  const [department, setDepartment] = useState(user.departmentId ?? '')
-  const [enrollmentYear, setEnrollmentYear] = useState(
-    user.enrollmentYear != null ? String(user.enrollmentYear) : '',
-  )
 
   const { data: myPostsData } = usePostsControllerFindAll(
     { authorId: user.id, limit: 100 },
@@ -43,16 +37,7 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
   return (
     <>
       <ProfileHeaderCard user={user} />
-      <EditProfileForm
-        displayName={displayName}
-        bio={bio}
-        department={department}
-        enrollmentYear={enrollmentYear}
-        onDisplayNameChange={setDisplayName}
-        onBioChange={setBio}
-        onDepartmentChange={setDepartment}
-        onEnrollmentYearChange={setEnrollmentYear}
-      />
+      <EditProfileForm user={user} />
       <ChangePasswordForm />
       <ConnectedAccountsCard />
       <DangerZoneCard />

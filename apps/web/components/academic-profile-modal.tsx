@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -24,10 +28,36 @@ import {
 } from '@/src/lib/api/generated/users/users'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 
-export function AcademicProfileModal({ onDismiss }: { onDismiss?: () => void }) {
+interface AcademicProfileModalProps {
+  requireDepartment?: boolean
+}
+
+const baseAcademicProfileSchema = z.object({
+  departmentId: z.string(),
+  enrollmentYear: z
+    .string()
+    .refine(
+      (value) =>
+        value === '' || (/^\d+$/.test(value) && Number(value) >= 1950 && Number(value) <= 2100),
+      {
+        message: 'Enrollment year must be between 1950 and 2100',
+      },
+    ),
+})
+
+type AcademicProfileFormValues = z.infer<typeof baseAcademicProfileSchema>
+
+export function AcademicProfileModal({ requireDepartment = false }: AcademicProfileModalProps) {
   const queryClient = useQueryClient()
-  const [departmentId, setDepartmentId] = useState('')
-  const [enrollmentYear, setEnrollmentYear] = useState('')
+
+  const form = useForm<AcademicProfileFormValues>({
+    resolver: zodResolver(baseAcademicProfileSchema),
+    defaultValues: {
+      departmentId: '',
+      enrollmentYear: '',
+    },
+    mode: 'onChange',
+  })
 
   const { data: departments } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
@@ -37,24 +67,39 @@ export function AcademicProfileModal({ onDismiss }: { onDismiss?: () => void }) 
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
-        onDismiss?.()
       },
     },
   })
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const departmentId = form.watch('departmentId')
+  const saveDisabled = isPending || (requireDepartment && !departmentId)
+
+  function handleSubmit(values: AcademicProfileFormValues) {
     mutate({
       data: {
-        ...(departmentId && { departmentId }),
-        ...(enrollmentYear && { enrollmentYear: parseInt(enrollmentYear) }),
+        ...(values.departmentId && { departmentId: values.departmentId }),
+        ...(values.enrollmentYear && { enrollmentYear: Number(values.enrollmentYear) }),
       },
     })
   }
 
   return (
-    <Dialog open>
-      <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && requireDepartment) return
+      }}
+    >
+      <DialogContent
+        className="sm:max-w-sm"
+        showCloseButton={!requireDepartment}
+        onEscapeKeyDown={(e) => {
+          if (requireDepartment) e.preventDefault()
+        }}
+        onInteractOutside={(e) => {
+          if (requireDepartment) e.preventDefault()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Complete your profile</DialogTitle>
           <DialogDescription>
@@ -62,50 +107,79 @@ export function AcademicProfileModal({ onDismiss }: { onDismiss?: () => void }) 
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-2">
-          <Select
-            value={departmentId || '_none'}
-            onValueChange={(v) => setDepartmentId(v === '_none' ? '' : v)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Department (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_none" className="text-text-muted">
-                Department (optional)
-              </SelectItem>
-              {(departments ?? []).map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-3 mt-2">
+            <FormField
+              control={form.control}
+              name="departmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Select
+                      value={field.value || '_none'}
+                      onValueChange={(value) => field.onChange(value === '_none' ? '' : value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            requireDepartment ? 'Select your department' : 'Department (optional)'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none" className="text-text-muted">
+                          {requireDepartment ? 'Select your department' : 'Department (optional)'}
+                        </SelectItem>
+                        {(departments ?? []).map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
-          <Input
-            type="number"
-            placeholder="Enrollment year (e.g. 2023)"
-            value={enrollmentYear}
-            onChange={(e) => setEnrollmentYear(e.target.value)}
-            min={1950}
-            max={2100}
-          />
+            <FormField
+              control={form.control}
+              name="enrollmentYear"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Enrollment year (e.g. 2023)"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      min={1950}
+                      max={2100}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
 
-          <div className="flex gap-2 mt-1">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex-1 text-text-muted"
-              disabled={isPending}
-              onClick={() => onDismiss?.()}
-            >
-              Skip
-            </Button>
-            <Button type="submit" className="flex-1" disabled={isPending}>
-              Save
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2 mt-1">
+              {!requireDepartment && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 text-text-muted"
+                  disabled={isPending}
+                >
+                  Skip
+                </Button>
+              )}
+              <Button type="submit" className="flex-1" disabled={saveDisabled}>
+                {requireDepartment ? 'Continue' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

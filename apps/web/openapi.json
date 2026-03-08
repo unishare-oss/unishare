@@ -339,6 +339,12 @@
           },
           { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
           {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
             "name": "type",
             "required": false,
             "in": "query",
@@ -349,12 +355,6 @@
             "required": false,
             "in": "query",
             "schema": { "$ref": "#/components/schemas/PostStatus" }
-          },
-          {
-            "name": "departmentId",
-            "required": false,
-            "in": "query",
-            "schema": { "type": "string" }
           },
           { "name": "authorId", "required": false, "in": "query", "schema": { "type": "string" } }
         ],
@@ -849,8 +849,7 @@
         "properties": {
           "name": { "type": "string", "maxLength": 100 },
           "image": { "type": "string", "maxLength": 500, "format": "uri" },
-          "bio": { "type": "string", "maxLength": 300 },
-          "enrollmentYear": { "type": "number", "minimum": 1950, "maximum": 2100 }
+          "bio": { "type": "string", "maxLength": 300 }
         }
       },
       "UpdateAcademicProfileDto": {
@@ -895,7 +894,10 @@
         "type": "object",
         "properties": {
           "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
-          "courseId": { "type": "string" },
+          "courseId": {
+            "type": "string",
+            "description": "Course ID. Must belong to the authenticated user department."
+          },
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
           "externalUrl": { "type": "string", "maxLength": 500 },

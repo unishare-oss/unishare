@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { Camera } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { authClient } from '@/src/lib/auth/client'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import {
