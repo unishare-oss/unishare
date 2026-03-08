@@ -127,9 +127,10 @@ model File {
   name      String
   size      Int
   mimeType  String
-  postId    String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String
+  createdAt  DateTime @default(now())
+  downloads  Int      @default(0)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@map("file")

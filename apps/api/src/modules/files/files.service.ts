@@ -37,6 +37,7 @@ export class FilesService {
     if (!file) throw new NotFoundException('File not found')
     if (file.postId !== postId) throw new NotFoundException('File not found')
     const url = await this.storageService.generatePresignedDownloadUrl(file.key)
+    void this.filesRepository.incrementDownloads(fileId)
     return { url }
   }
 
