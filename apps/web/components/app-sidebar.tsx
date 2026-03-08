@@ -102,7 +102,7 @@ export function AppSidebar() {
           )
         })}
 
-        {user && <NotificationsBell className="w-full" />}
+        {user && <NotificationsBell />}
 
         {isAdmin && (
           <>
