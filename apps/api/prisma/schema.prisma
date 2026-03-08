@@ -35,10 +35,6 @@ model User {
 
   bio        String?
 
-  banned     Boolean?  @default(false)
-  banReason  String?
-  banExpires DateTime?
-
   @@map("user")
 }
 
@@ -176,7 +172,6 @@ model Session {
   impersonatedBy String?
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  impersonatedBy String?
 
   @@index([userId])
   @@map("session")
