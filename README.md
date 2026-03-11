@@ -69,8 +69,9 @@ BETTER_AUTH_SECRET=your-secret
 ### 3. Run database migrations & seed
 
 ```bash
-pnpm --filter api db:migrate
-pnpm --filter api db:seed
+cd apps/api
+pnpm prisma migrate dev
+pnpm prisma db seed
 ```
 
 ### 4. Start development servers
