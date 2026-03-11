@@ -240,6 +240,7 @@ enum UserRole {
 enum PostType {
   NOTE
   OLD_QUESTION
+  ASSIGNMENT
 }
 
 enum PostStatus {

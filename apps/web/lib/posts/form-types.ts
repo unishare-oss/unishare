@@ -1,4 +1,6 @@
-export type PostType = 'NOTE' | 'OLD_QUESTION'
+import type { PostType as _GeneratedPostType } from '@/src/lib/api/generated/unishareAPI.schemas'
+
+export type PostType = `${_GeneratedPostType}`
 
 export type CreatePostFormValues = {
   postType: PostType | null

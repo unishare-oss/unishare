@@ -26,7 +26,7 @@ import { StepNav } from '@/components/posts/step-nav'
 
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
-const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION'])
+const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION', 'ASSIGNMENT'])
 type PostCreateType = z.infer<typeof postTypeSchema>
 
 const createPostFormSchema = z
@@ -45,7 +45,11 @@ const createPostFormSchema = z
   })
   .superRefine((values, ctx) => {
     // Keep type-specific errors attached to the matching field after merging step validation into one schema.
-    if (values.postType === 'NOTE' || values.postType === 'OLD_QUESTION') {
+    if (
+      values.postType === 'NOTE' ||
+      values.postType === 'OLD_QUESTION' ||
+      values.postType === 'ASSIGNMENT'
+    ) {
       const moduleResult = moduleNumberSchema.safeParse(values.moduleNum)
       if (!moduleResult.success) {
         for (const issue of moduleResult.error.issues) {

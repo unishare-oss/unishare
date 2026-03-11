@@ -19,14 +19,24 @@ import {
 } from '@/src/lib/api/generated/posts/posts'
 import type { ApiPost } from '@/lib/api-types'
 
-const typeLabel: Record<string, string> = { NOTE: 'NOTE', OLD_QUESTION: 'PAST EXAM' }
+const typeLabel: Record<string, string> = {
+  NOTE: 'NOTE',
+  OLD_QUESTION: 'PAST EXAM',
+  ASSIGNMENT: 'ASSIGNMENT',
+}
 
 export function TypeBadge({ type }: { type: string }) {
+  const colorClass =
+    type === 'NOTE'
+      ? 'border-info text-info'
+      : type === 'ASSIGNMENT'
+        ? 'border-green-500 text-green-500'
+        : 'border-amber text-amber'
   return (
     <span
       className={cn(
         'font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border rounded-[4px]',
-        type === 'NOTE' ? 'border-info text-info' : 'border-amber text-amber',
+        colorClass,
       )}
     >
       {typeLabel[type] ?? type}

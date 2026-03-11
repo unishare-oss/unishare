@@ -908,7 +908,7 @@
       "CreatePostDto": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
           "courseId": {
             "type": "string",
             "description": "Course ID. Must belong to the authenticated user department."
@@ -979,7 +979,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
           "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
@@ -1021,13 +1021,13 @@
           "reactionCounts"
         ]
       },
-      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
       "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
       "PostEntity": {
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION"] },
+          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
           "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },

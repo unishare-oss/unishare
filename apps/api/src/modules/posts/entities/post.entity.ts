@@ -82,7 +82,7 @@ export class PostEntity {
   @ApiProperty()
   id: string
 
-  @ApiProperty({ enum: ['NOTE', 'OLD_QUESTION'] })
+  @ApiProperty({ enum: ['NOTE', 'OLD_QUESTION', 'ASSIGNMENT'] })
   type: string
 
   @ApiProperty({ enum: ['PENDING', 'APPROVED', 'REJECTED'] })

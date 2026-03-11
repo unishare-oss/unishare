@@ -11,13 +11,15 @@ import {
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { type TypeFilter } from '@/lib/store'
+import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-export const typeFilters: TypeFilter[] = ['ALL', 'NOTE', 'OLD_QUESTION']
+export const typeFilters: TypeFilter[] = ['ALL', ...Object.values(PostType)]
 
 const typeFilterLabel: Record<TypeFilter, string> = {
   ALL: 'ALL',
   NOTE: 'NOTES',
   OLD_QUESTION: 'PAST EXAMS',
+  ASSIGNMENT: 'ASSIGNMENTS',
 }
 
 interface FilterStripProps {

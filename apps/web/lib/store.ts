@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ApiPost } from './api-types'
+import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-export type TypeFilter = 'ALL' | 'NOTE' | 'OLD_QUESTION'
+export type TypeFilter = 'ALL' | PostType
 
 interface PdfAnnotationStore {
   annotationsByKey: Record<string, object[]>
