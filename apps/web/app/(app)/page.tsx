@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { useFeedStore } from '@/lib/store'
 import { FeedHeader } from '@/components/feed/feed-header'
 import { FilterStrip, type TypeFilter } from '@/components/feed/filter-strip'
@@ -14,14 +14,14 @@ export default function FeedPage() {
 
   // Initialize state from pending filter if present to avoid cascading renders in useEffect
   const [initialFilter] = useState(() => consumePendingFilter())
-  const { data: session } = authClient.useSession()
+  const { user } = useAuth()
 
   const [activeFilter, setActiveFilter] = useState<TypeFilter>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(initialFilter?.deptId ?? null)
   const [selectedCourseId, setSelectedCourseId] = useState(initialFilter?.courseId ?? '')
   const [page, setPage] = useState(1)
-  const effectiveDeptId = selectedDeptId ?? session?.user?.departmentId ?? ''
+  const effectiveDeptId = selectedDeptId ?? user?.departmentId ?? ''
 
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)

@@ -5,20 +5,13 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
-import { authClient } from '@/src/lib/auth/client'
-import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
+import { useAuth } from '@/contexts/auth-context'
 import { useNotificationStream } from '@/hooks/use-notifications'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { data: session, isPending } = authClient.useSession()
-  const { data: me, isPending: isMePending } = useUsersControllerGetMe({
-    query: {
-      enabled: !!session?.user,
-      select: (res) => res.data,
-    },
-  })
+  const { user, isLoading, isAuthenticated } = useAuth()
 
-  useNotificationStream(!!session?.user)
+  useNotificationStream(isAuthenticated)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
 
   useEffect(() => {
@@ -29,9 +22,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timeout)
   }, [])
 
-  const showLoader = isPending || (!!session?.user && isMePending) || !minimumLoaderElapsed
+  const showLoader = isLoading || !minimumLoaderElapsed
 
-  const requiresDepartmentOnboarding = !!me && !me.departmentId
+  const requiresDepartmentOnboarding = !!user && !user.departmentId
 
   return (
     <div className="min-h-screen bg-background">

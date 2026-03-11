@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { type FieldPath, type FieldPathValue, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
-import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
+import { useAuth } from '@/contexts/auth-context'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
 import { PageHeader } from '@/components/shared/page-header'
@@ -100,9 +100,7 @@ export default function CreatePostPage() {
   // Keep validation live so step gating and field feedback stay in sync as the user fills each stage.
   const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
   const { mutateAsync: createPost } = usePostsControllerCreate()
-  const { data: me, isPending: mePending } = useUsersControllerGetMe({
-    query: { select: (r) => r.data },
-  })
+  const { user: me, isLoading: mePending } = useAuth()
   const values = useWatch({
     control: form.control,
     defaultValue: defaultValues,

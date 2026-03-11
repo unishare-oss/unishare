@@ -11,7 +11,7 @@ import { useAcademicYear } from '@/hooks/use-academic-year'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import {
   usePostsControllerSavePost,
   usePostsControllerUnsavePost,
@@ -40,10 +40,10 @@ export function PostCard({ post }: { post: ApiPost }) {
   const markRead = useUIStore((s) => s.markRead)
   const toggleSaved = useUIStore((s) => s.toggleSaved)
   const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
-  const { data: session } = authClient.useSession()
+  const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
 
-  const isSaved = session ? post.savedByCurrentUser : isGuestSaved
+  const isSaved = isAuthenticated ? post.savedByCurrentUser : isGuestSaved
 
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
@@ -62,7 +62,7 @@ export function PostCard({ post }: { post: ApiPost }) {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!session) {
+    if (!isAuthenticated) {
       toggleSaved(post)
       toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {

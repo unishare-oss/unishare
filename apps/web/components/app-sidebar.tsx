@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
 
@@ -47,7 +48,7 @@ const adminOnlyItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { data: session } = authClient.useSession()
+  const { session } = useAuth()
   const user = session?.user
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'

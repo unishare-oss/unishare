@@ -2,17 +2,17 @@
 
 import { useState } from 'react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
 
 export default function MyPostsPage() {
-  const { data: session } = authClient.useSession()
+  const { user } = useAuth()
   const [page, setPage] = useState(1)
 
   const { data } = usePostsControllerFindAll(
-    { authorId: session?.user?.id, page, limit: 20 },
-    { query: { select: (r) => r.data, enabled: !!session?.user?.id } },
+    { authorId: user?.id, page, limit: 20 },
+    { query: { select: (r) => r.data, enabled: !!user?.id } },
   )
 
   return (

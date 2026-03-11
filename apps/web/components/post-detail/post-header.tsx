@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useUIStore } from '@/lib/store'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import {
   usePostsControllerSavePost,
   usePostsControllerUnsavePost,
@@ -44,12 +44,12 @@ function ActionHint({ label, children }: { label: string; children: React.ReactN
 export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: PostHeaderProps) {
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const { data: session } = authClient.useSession()
+  const { isAuthenticated } = useAuth()
   const toggleSaved = useUIStore((s) => s.toggleSaved)
   const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
   const queryClient = useQueryClient()
 
-  const isSaved = session ? post.savedByCurrentUser : isGuestSaved
+  const isSaved = isAuthenticated ? post.savedByCurrentUser : isGuestSaved
 
   const { mutate: savePost } = usePostsControllerSavePost({
     mutation: {
@@ -70,7 +70,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
   })
 
   function handleSave() {
-    if (!session) {
+    if (!isAuthenticated) {
       toggleSaved(post as ApiPost)
       toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
     } else if (isSaved) {

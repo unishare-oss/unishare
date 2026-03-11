@@ -4,19 +4,19 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const { data: session, isPending } = authClient.useSession()
+  const { isLoading, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    if (!isPending && !session) {
+    if (!isLoading && !isAuthenticated) {
       router.replace('/login')
     }
-  }, [session, isPending, router])
+  }, [isAuthenticated, isLoading, router])
 
-  if (isPending) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <LoadingSpinner className="size-16" />
@@ -24,7 +24,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!session) return null
+  if (!isAuthenticated) return null
 
   return <>{children}</>
 }

@@ -8,7 +8,7 @@ import {
   usePostsControllerRemove,
 } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
@@ -23,7 +23,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const router = useRouter()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
-  const { data: session } = authClient.useSession()
+  const { user } = useAuth()
   const markRead = useUIStore((s) => s.markRead)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -65,7 +65,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  const isOwner = session?.user?.id === post.authorId
+  const isOwner = user?.id === post.authorId
 
   return (
     <div className="flex flex-col min-h-screen">

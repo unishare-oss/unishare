@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutList, FileText, Bookmark, User, LogIn, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 
 const guestTabs = [
@@ -23,11 +23,11 @@ const authTabs = [
 
 export function MobileNav() {
   const pathname = usePathname()
-  const { data: session } = authClient.useSession()
-  const tabs = session ? authTabs : guestTabs
+  const { isAuthenticated } = useAuth()
+  const tabs = isAuthenticated ? authTabs : guestTabs
 
   const { data: notifications } = useNotificationsControllerFindAll({
-    query: { select: (r) => r.data, enabled: !!session?.user, staleTime: 1000 * 60 },
+    query: { select: (r) => r.data, enabled: isAuthenticated, staleTime: 1000 * 60 },
   })
   const unreadCount = (notifications ?? []).filter((n) => !n.read).length
 

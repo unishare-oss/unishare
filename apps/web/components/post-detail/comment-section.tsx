@@ -13,7 +13,7 @@ import {
   useCommentsControllerRemove,
   useCommentsControllerUpdate,
 } from '@/src/lib/api/generated/comments/comments'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { pluralize } from '@/lib/utils'
@@ -39,7 +39,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const [error, setError] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<DraftState>(INITIAL_DRAFT_STATE)
 
-  const { data: session } = authClient.useSession()
+  const { user, isAuthenticated } = useAuth()
 
   // Orval/TanStack server state
   const queryClient = useQueryClient()
@@ -50,14 +50,14 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
   const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
 
-  const currentUserId = session?.user?.id ?? null
-  const currentUserRole = session?.user?.role
+  const currentUserId = user?.id ?? null
+  const currentUserRole = user?.role
   const { commentText, editingCommentId, editText } = drafts
 
   async function handleSubmit() {
     const content = commentText.trim()
 
-    if (!content || !session) return
+    if (!content || !isAuthenticated) return
 
     setError(null)
 
@@ -145,13 +145,15 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={!session || !commentText.trim() || isPending}
+            disabled={!isAuthenticated || !commentText.trim() || isPending}
             className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
             {isPending ? 'Posting...' : 'Post'}
           </Button>
         </div>
-        {!session && <p className="text-xs text-text-muted mt-2">Sign in to post a comment.</p>}
+        {!isAuthenticated && (
+          <p className="text-xs text-text-muted mt-2">Sign in to post a comment.</p>
+        )}
         {error && <p className="text-xs text-destructive mt-2">{error}</p>}
       </div>
 

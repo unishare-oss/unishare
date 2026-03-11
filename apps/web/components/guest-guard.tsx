@@ -3,19 +3,19 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 
 export function GuestGuard({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const { data: session, isPending } = authClient.useSession()
+  const { isLoading, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    if (!isPending && session) {
+    if (!isLoading && isAuthenticated) {
       router.replace('/')
     }
-  }, [session, isPending, router])
+  }, [isAuthenticated, isLoading, router])
 
-  if (isPending || session) return null
+  if (isLoading || isAuthenticated) return null
 
   return <>{children}</>
 }

@@ -7,7 +7,7 @@ import {
   usePostsControllerReact,
   getPostsControllerFindOneQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
-import { authClient } from '@/src/lib/auth/client'
+import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
 import { REACTIONS } from '@/lib/constants'
 import type { ApiPostDetail } from '@/lib/api-types'
@@ -19,7 +19,7 @@ interface PostReactionsProps {
 }
 
 export function PostReactions({ post }: PostReactionsProps) {
-  const { data: session } = authClient.useSession()
+  const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
 
   const [optimisticReaction, setOptimisticReaction] = useState<string | null | undefined>(undefined)
@@ -51,7 +51,7 @@ export function PostReactions({ post }: PostReactionsProps) {
   })
 
   function handleReact(type: string) {
-    if (!session) {
+    if (!isAuthenticated) {
       toast.error('Sign in to react')
       return
     }
