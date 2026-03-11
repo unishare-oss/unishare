@@ -55,7 +55,7 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
                 {course.code}
               </span>
               <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>
-              <div className="hidden group-hover:flex items-center gap-2 shrink-0">
+              <div className="invisible group-hover:visible flex items-center gap-2 shrink-0">
                 <Button variant="ghost" size="icon-xs" aria-label="Edit course">
                   <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
                 </Button>
