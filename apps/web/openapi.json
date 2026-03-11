@@ -716,6 +716,21 @@
         "responses": { "200": { "description": "" } },
         "tags": ["files"]
       }
+    },
+    "/api/stats": {
+      "get": {
+        "operationId": "StatsController_getStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/StatsEntity" } }
+            }
+          }
+        },
+        "tags": ["stats"]
+      }
     }
   },
   "info": {
@@ -1168,6 +1183,56 @@
           "downloads": { "type": "number" }
         },
         "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
+      },
+      "StatsOverviewEntity": {
+        "type": "object",
+        "properties": {
+          "totalUsers": { "type": "number" },
+          "totalPosts": { "type": "number" },
+          "pendingPosts": { "type": "number" },
+          "totalComments": { "type": "number" },
+          "totalReactions": { "type": "number" }
+        },
+        "required": ["totalUsers", "totalPosts", "pendingPosts", "totalComments", "totalReactions"]
+      },
+      "TopPostEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "shortCode": { "type": "string" },
+          "views": { "type": "number" },
+          "reactionCount": { "type": "number" },
+          "authorName": { "type": "string" }
+        },
+        "required": ["id", "title", "shortCode", "views", "reactionCount", "authorName"]
+      },
+      "TopUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true },
+          "postCount": { "type": "number" },
+          "departmentName": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name", "image", "postCount", "departmentName"]
+      },
+      "StatsEntity": {
+        "type": "object",
+        "properties": {
+          "overview": { "$ref": "#/components/schemas/StatsOverviewEntity" },
+          "topPostsByViews": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TopPostEntity" }
+          },
+          "topPostsByReactions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TopPostEntity" }
+          },
+          "topUsers": { "type": "array", "items": { "$ref": "#/components/schemas/TopUserEntity" } }
+        },
+        "required": ["overview", "topPostsByViews", "topPostsByReactions", "topUsers"]
       }
     }
   }

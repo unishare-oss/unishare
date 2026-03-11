@@ -13,6 +13,7 @@ import {
   LogOut,
   LogIn,
   Users,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -38,7 +39,10 @@ const adminItems = [
   { href: '/admin/departments', label: 'Manage Depts', icon: Building2 },
 ]
 
-const adminOnlyItems = [{ href: '/admin/users', label: 'Users', icon: Users }]
+const adminOnlyItems = [
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
+]
 
 export function AppSidebar() {
   const pathname = usePathname()
