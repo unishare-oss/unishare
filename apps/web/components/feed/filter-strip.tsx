@@ -87,7 +87,7 @@ export function FilterStrip({
           <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent position="popper">
             <SelectItem value={ALL}>All departments</SelectItem>
             {(departments ?? []).map((d) => (
               <SelectItem key={d.id} value={d.id}>
@@ -101,7 +101,7 @@ export function FilterStrip({
           <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent position="popper">
             <SelectItem value={ALL}>All courses</SelectItem>
             {filteredCourses.map((c) => (
               <SelectItem key={c.id} value={c.id}>

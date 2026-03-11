@@ -58,7 +58,7 @@ export function CourseStep({
               <SelectTrigger className="w-full h-[42px] bg-card border-border rounded-[6px] text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
                 <SelectValue placeholder="Select course..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 <SelectItem value={EMPTY_SELECT_VALUE}>Select course...</SelectItem>
                 {allCourses.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
