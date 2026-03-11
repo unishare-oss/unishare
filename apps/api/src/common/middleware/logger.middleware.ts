@@ -14,7 +14,7 @@ export class LoggerMiddleware implements NestMiddleware {
       response.setHeader('Cache-Control', 'no-store')
     }
 
-    response.on('finish', () => {
+    response.once('finish', () => {
       const responseTime = Date.now() - startedAt
       this.logger.log(`${method} ${originalUrl} ${response.statusCode} +${responseTime}ms`)
     })

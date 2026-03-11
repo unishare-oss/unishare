@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+import { LoggerMiddleware } from './common/middleware'
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap')
@@ -20,6 +21,8 @@ async function bootstrap() {
   ]
 
   app.enableCors({ origin: allowedOrigins, credentials: true })
+  const loggerMiddleware = new LoggerMiddleware()
+  app.use(loggerMiddleware.use.bind(loggerMiddleware))
 
   logger.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`)
 
