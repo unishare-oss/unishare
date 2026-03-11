@@ -2,10 +2,10 @@
 
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { PageHeader } from '@/components/shared/page-header'
-import { DeptList } from '@/components/departments/dept-list'
+import { DeptList, DeptListSkeleton } from '@/components/departments/dept-list'
 
 export default function DepartmentsPage() {
-  const { data: depts } = useDepartmentsControllerFindAll({
+  const { data: depts, isLoading } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
   })
 
@@ -13,7 +13,7 @@ export default function DepartmentsPage() {
     <div className="flex flex-col min-h-screen">
       <PageHeader title="Departments" />
       <div className="flex-1 bg-card">
-        <DeptList departments={depts ?? []} />
+        {isLoading ? <DeptListSkeleton /> : <DeptList departments={depts ?? []} />}
       </div>
     </div>
   )

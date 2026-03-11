@@ -8,6 +8,23 @@ import { useDepartmentsControllerFindOne } from '@/src/lib/api/generated/departm
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { useFeedStore } from '@/lib/store'
 import { PageHeader } from '@/components/shared/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function CourseListSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px]"
+        >
+          <Skeleton className="h-4 w-16 shrink-0" />
+          <Skeleton className="h-4 flex-1 max-w-xs" />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -18,7 +35,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
     query: { select: (r) => r.data },
   })
 
-  const { data: coursesData } = useCoursesControllerFindAll(
+  const { data: coursesData, isLoading } = useCoursesControllerFindAll(
     { departmentId: id, limit: 100 },
     { query: { select: (r) => r.data } },
   )
@@ -43,27 +60,31 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
             All departments
           </Link>
 
-          <div className="flex flex-col gap-2">
-            {courses.map((course) => (
-              <button
-                key={course.id}
-                onClick={() => handleCourseClick(course.id)}
-                className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full"
-              >
-                <span className="font-mono text-[13px] text-amber font-medium shrink-0">
-                  {course.code}
-                </span>
-                <span className="text-sm text-foreground flex-1 min-w-0 truncate">
-                  {course.name}
-                </span>
-              </button>
-            ))}
-            {courses.length === 0 && (
-              <p className="font-mono text-sm text-text-muted py-8 text-center">
-                No courses in this department.
-              </p>
-            )}
-          </div>
+          {isLoading ? (
+            <CourseListSkeleton />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {courses.map((course) => (
+                <button
+                  key={course.id}
+                  onClick={() => handleCourseClick(course.id)}
+                  className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full"
+                >
+                  <span className="font-mono text-[13px] text-amber font-medium shrink-0">
+                    {course.code}
+                  </span>
+                  <span className="text-sm text-foreground flex-1 min-w-0 truncate">
+                    {course.name}
+                  </span>
+                </button>
+              ))}
+              {courses.length === 0 && (
+                <p className="font-mono text-sm text-text-muted py-8 text-center">
+                  No courses in this department.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

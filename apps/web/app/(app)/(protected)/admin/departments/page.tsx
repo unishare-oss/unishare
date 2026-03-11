@@ -27,13 +27,13 @@ export default function AdminDepartmentsPage() {
   const [newCourseName, setNewCourseName] = useState('')
   const queryClient = useQueryClient()
 
-  const { data: depts } = useDepartmentsControllerFindAll({
+  const { data: depts, isLoading: deptsLoading } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
   })
 
   const effectiveDeptId = selectedDeptId || depts?.[0]?.id || ''
 
-  const { data: coursesData } = useCoursesControllerFindAll(
+  const { data: coursesData, isLoading: coursesLoading } = useCoursesControllerFindAll(
     { departmentId: effectiveDeptId, limit: 100 },
     { query: { enabled: !!effectiveDeptId, select: (r) => r.data } },
   )
@@ -68,6 +68,7 @@ export default function AdminDepartmentsPage() {
             setNewDeptName('')
             setShowAddDept(true)
           }}
+          isLoading={deptsLoading}
         />
         <CoursePanel
           deptName={selectedDept?.name}
@@ -77,6 +78,7 @@ export default function AdminDepartmentsPage() {
             setNewCourseName('')
             setShowAddCourse(true)
           }}
+          isLoading={coursesLoading}
         />
       </div>
 

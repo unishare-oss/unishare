@@ -2,6 +2,7 @@
 
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export type ApiCourse = { id: string; code: string; name: string }
 
@@ -9,13 +10,20 @@ interface CoursePanelProps {
   deptName: string | undefined
   courses: ApiCourse[]
   onAddClick: () => void
+  isLoading?: boolean
 }
 
-export function CoursePanel({ deptName, courses, onAddClick }: CoursePanelProps) {
+export function CoursePanel({ deptName, courses, onAddClick, isLoading }: CoursePanelProps) {
   return (
     <div className="flex-1">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground">{deptName ?? 'Select department'}</h2>
+        {isLoading ? (
+          <Skeleton className="h-6 w-40" />
+        ) : (
+          <h2 className="text-lg font-semibold text-foreground">
+            {deptName ?? 'Select department'}
+          </h2>
+        )}
         <Button
           onClick={onAddClick}
           size="sm"
@@ -26,7 +34,14 @@ export function CoursePanel({ deptName, courses, onAddClick }: CoursePanelProps)
         </Button>
       </div>
       <div>
-        {courses.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-border">
+              <Skeleton className="h-4 w-16 shrink-0" />
+              <Skeleton className="h-4 flex-1 max-w-sm" />
+            </div>
+          ))
+        ) : courses.length === 0 ? (
           <div className="py-16 text-center">
             <p className="font-mono text-sm text-text-muted">No courses in this department.</p>
           </div>
