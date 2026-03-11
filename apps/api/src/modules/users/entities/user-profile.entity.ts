@@ -1,6 +1,7 @@
+import { UserRole } from '@/generated/prisma/enums'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
-export class DepartmentEntity {
+export class UserDepartmentEntity {
   @ApiProperty()
   id: string
 
@@ -35,14 +36,14 @@ export class UserProfileEntity {
   @ApiPropertyOptional({ nullable: true, type: String })
   bio: string | null
 
-  @ApiProperty({ enum: ['STUDENT', 'MODERATOR', 'ADMIN'] })
-  role: string
+  @ApiProperty({ enum: UserRole, enumName: 'UserRole' })
+  role: UserRole
 
   @ApiPropertyOptional({ nullable: true, type: String })
   departmentId: string | null
 
-  @ApiPropertyOptional({ nullable: true, type: DepartmentEntity })
-  department: DepartmentEntity | null
+  @ApiPropertyOptional({ nullable: true, type: UserDepartmentEntity })
+  department: UserDepartmentEntity | null
 
   @ApiPropertyOptional({ nullable: true, type: Number })
   enrollmentYear: number | null
