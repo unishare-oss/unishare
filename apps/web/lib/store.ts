@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ApiPost } from './api-types'
 
+export type TypeFilter = 'ALL' | 'NOTE' | 'OLD_QUESTION'
+
 interface PdfAnnotationStore {
   annotationsByKey: Record<string, object[]>
   save: (key: string, annotations: object[]) => void
@@ -21,20 +23,37 @@ export const usePdfAnnotationStore = create<PdfAnnotationStore>()(
 )
 
 interface FeedStore {
+  activeFilter: TypeFilter
+  selectedDeptId: string | null
+  selectedCourseId: string
   pendingFilter: { deptId: string; courseId: string } | null
+  setActiveFilter: (filter: TypeFilter) => void
+  setSelectedDeptId: (deptId: string | null) => void
+  setSelectedCourseId: (courseId: string) => void
   setPendingFilter: (deptId: string, courseId: string) => void
   consumePendingFilter: () => { deptId: string; courseId: string } | null
 }
 
-export const useFeedStore = create<FeedStore>()((set, get) => ({
-  pendingFilter: null,
-  setPendingFilter: (deptId, courseId) => set({ pendingFilter: { deptId, courseId } }),
-  consumePendingFilter: () => {
-    const filter = get().pendingFilter
-    set({ pendingFilter: null })
-    return filter
-  },
-}))
+export const useFeedStore = create<FeedStore>()(
+  persist(
+    (set, get) => ({
+      activeFilter: 'ALL',
+      selectedDeptId: null,
+      selectedCourseId: '',
+      pendingFilter: null,
+      setActiveFilter: (activeFilter) => set({ activeFilter }),
+      setSelectedDeptId: (selectedDeptId) => set({ selectedDeptId, selectedCourseId: '' }),
+      setSelectedCourseId: (selectedCourseId) => set({ selectedCourseId }),
+      setPendingFilter: (deptId, courseId) => set({ pendingFilter: { deptId, courseId } }),
+      consumePendingFilter: () => {
+        const filter = get().pendingFilter
+        set({ pendingFilter: null })
+        return filter
+      },
+    }),
+    { name: 'unishare-feed' },
+  ),
+)
 
 interface UIStore {
   readPostIds: string[]

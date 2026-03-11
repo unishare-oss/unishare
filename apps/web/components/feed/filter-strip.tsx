@@ -10,9 +10,9 @@ import {
 } from '@/components/ui/select'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
+import { type TypeFilter } from '@/lib/store'
 
-export const typeFilters = ['ALL', 'NOTE', 'OLD_QUESTION'] as const
-export type TypeFilter = (typeof typeFilters)[number]
+export const typeFilters: TypeFilter[] = ['ALL', 'NOTE', 'OLD_QUESTION']
 
 const typeFilterLabel: Record<TypeFilter, string> = {
   ALL: 'ALL',
@@ -84,10 +84,7 @@ export function FilterStrip({
 
       <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:flex lg:p-0 lg:ml-auto">
         <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-          <SelectTrigger
-            size="sm"
-            className="font-mono text-xs text-text-muted w-full lg:w-[140px]"
-          >
+          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -101,10 +98,7 @@ export function FilterStrip({
         </Select>
 
         <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-          <SelectTrigger
-            size="sm"
-            className="font-mono text-xs text-text-muted w-full lg:w-[140px]"
-          >
+          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
