@@ -50,11 +50,17 @@ const signInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
-const signUpSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-})
+const signUpSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
 type SignInValues = z.infer<typeof signInSchema>
 type SignUpValues = z.infer<typeof signUpSchema>
@@ -71,7 +77,7 @@ export default function LoginPage() {
 
   const signUpForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: '', email: '', password: '' },
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   })
 
   const activeForm = mode === 'signin' ? signInForm : signUpForm
@@ -243,6 +249,19 @@ export default function LoginPage() {
                 {signUpForm.formState.errors.password && (
                   <p className="text-xs text-destructive mt-1">
                     {signUpForm.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Confirm password"
+                  className="bg-card"
+                  {...signUpForm.register('confirmPassword')}
+                />
+                {signUpForm.formState.errors.confirmPassword && (
+                  <p className="text-xs text-destructive mt-1">
+                    {signUpForm.formState.errors.confirmPassword.message}
                   </p>
                 )}
               </div>
