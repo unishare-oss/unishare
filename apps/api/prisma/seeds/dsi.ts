@@ -1,6 +1,18 @@
 export const dsi = {
   name: 'Digital Service Innovation',
   courses: [
+    // General Education (Thai)
+    { code: 'GEN101', name: 'พลศึกษา' },
+    { code: 'GEN111', name: 'มนุษย์กับจริยธรรมการดำเนินชีวิต' },
+    { code: 'GEN121', name: 'ทักษะการเรียนรู้และการแก้ปัญหา' },
+    { code: 'GEN231', name: 'ความมหัศจรรย์ของการคิด' },
+    { code: 'GEN241', name: 'ความงดงามของชีวิต' },
+    { code: 'GEN351', name: 'การบริหารจัดการยุคใหม่และภาวะผู้นำ' },
+    { code: 'GEN352', name: 'เทคโนโลยีและนวัตกรรมเพื่อการพัฒนาที่ยั่งยืน' },
+
+    // Language
+    { code: 'LNG323', name: 'English for Digital Service and Innovation' },
+
     // Year 1 - Semester 1
     { code: 'DSI101', name: 'นวัตกรรมบริการดิจิทัลเบื้องต้น' },
     { code: 'DSI102', name: 'เทคโนโลยีดิจิทัลเบื้องต้น' },
@@ -37,7 +49,7 @@ export const dsi = {
     { code: 'DSI113', name: 'การจัดการความรู้' },
     { code: 'DSI211', name: 'กฎหมายดิจิทัล' },
 
-    // Year 4 - Semester 1 & 2
+    // Year 4
     { code: 'DSI301', name: 'การเรียนรู้จากประสบการณ์ 1' },
     { code: 'DSI302', name: 'การเรียนรู้จากประสบการณ์ 2' },
     { code: 'DSI303', name: 'โครงการรวบยอด 1' },

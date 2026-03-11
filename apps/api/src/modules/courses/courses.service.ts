@@ -9,8 +9,8 @@ export class CoursesService {
   constructor(private readonly coursesRepository: CoursesRepository) {}
 
   async create(dto: CreateCourseDto) {
-    const existing = await this.coursesRepository.findByCode(dto.code)
-    if (existing) throw new ConflictException('Course code already exists')
+    const existing = await this.coursesRepository.findByCodeAndDept(dto.code, dto.departmentId)
+    if (existing) throw new ConflictException('Course code already exists in this department')
     return this.coursesRepository.create(dto)
   }
 

@@ -1,6 +1,23 @@
 export const cs = {
   name: 'Computer Science',
   courses: [
+    // General Education
+    { code: 'GEN101', name: 'Physical Education' },
+    { code: 'GEN111', name: 'Man and Ethics of Living' },
+    { code: 'GEN121', name: 'Learning and Problem Solving Skills' },
+    { code: 'GEN231', name: 'Miracle of Thinking' },
+    { code: 'GEN241', name: 'Beauty of Life' },
+    { code: 'GEN351', name: 'Modern Management and Leadership' },
+    { code: 'GEN352', name: 'Technology and Innovation for Sustainable Development' },
+
+    // Mathematics
+    { code: 'MTH101', name: 'Mathematics I' },
+    { code: 'MTH102', name: 'Mathematics II' },
+
+    // Language
+    { code: 'LNG221', name: 'Academic English in International Contexts' },
+    { code: 'LNG222', name: 'Academic Listening and Speaking in International Contexts' },
+
     // Year 1 - Semester 1
     { code: 'CSC111', name: 'Seminar on Professional Ethics in Computer Science' },
     { code: 'CSC102', name: 'Introduction to Programming' },

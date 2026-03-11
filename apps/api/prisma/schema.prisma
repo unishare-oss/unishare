@@ -49,13 +49,14 @@ model Department {
 
 model Course {
   id           String     @id @default(cuid())
-  code         String     @unique
+  code         String
   name         String
   departmentId String
   createdAt    DateTime   @default(now())
   department   Department @relation(fields: [departmentId], references: [id])
   posts        Post[]
 
+  @@unique([code, departmentId])
   @@index([departmentId])
   @@map("course")
 }

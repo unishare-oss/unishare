@@ -1,6 +1,5 @@
 import { PrismaClient } from '../src/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { gen } from './seeds/gen'
 import { cs } from './seeds/cs'
 import { it } from './seeds/it'
 import { dsi } from './seeds/dsi'
@@ -8,7 +7,7 @@ import { dsi } from './seeds/dsi'
 const pool = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter: pool })
 
-const departments = [gen, cs, it, dsi]
+const departments = [cs, it, dsi]
 
 async function main() {
   console.log('Seeding departments and courses...')
@@ -30,8 +29,8 @@ async function main() {
 
     for (const course of dept.courses) {
       await prisma.course.upsert({
-        where: { code: course.code },
-        update: { name: course.name, departmentId: department.id },
+        where: { code_departmentId: { code: course.code, departmentId: department.id } },
+        update: { name: course.name },
         create: { code: course.code, name: course.name, departmentId: department.id },
       })
     }

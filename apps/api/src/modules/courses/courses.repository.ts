@@ -25,8 +25,8 @@ export class CoursesRepository {
     )
   }
 
-  findByCode(code: string) {
-    return this.prisma.course.findUnique({ where: { code } })
+  findByCodeAndDept(code: string, departmentId: string) {
+    return this.prisma.course.findUnique({ where: { code_departmentId: { code, departmentId } } })
   }
 
   findById(id: string) {
