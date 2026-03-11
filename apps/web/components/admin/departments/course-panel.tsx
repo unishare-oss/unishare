@@ -15,8 +15,8 @@ interface CoursePanelProps {
 
 export function CoursePanel({ deptName, courses, onAddClick, isLoading }: CoursePanelProps) {
   return (
-    <div className="flex-1">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         {isLoading ? (
           <Skeleton className="h-6 w-40 bg-amber-subtle" />
         ) : (
@@ -33,7 +33,7 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
           Add Course
         </Button>
       </div>
-      <div>
+      <div className="overflow-y-auto flex-1">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-border">

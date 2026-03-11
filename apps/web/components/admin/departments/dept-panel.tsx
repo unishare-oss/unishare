@@ -23,8 +23,8 @@ export function DeptPanel({
   isLoading,
 }: DeptPanelProps) {
   return (
-    <div className="md:w-80 border-b md:border-b-0 md:border-r border-border shrink-0">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+    <div className="md:w-80 border-b md:border-b-0 md:border-r border-border shrink-0 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs uppercase tracking-wider text-text-muted">
             Departments
@@ -41,7 +41,7 @@ export function DeptPanel({
           <Plus className="size-4 text-text-muted" strokeWidth={1.5} />
         </Button>
       </div>
-      <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible">
+      <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible overflow-y-auto flex-1">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div

@@ -56,10 +56,10 @@ export default function AdminDepartmentsPage() {
   const selectedDept = depts?.find((d) => d.id === effectiveDeptId)
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       <PageHeader title="Departments & Courses" large />
 
-      <div className="flex-1 flex flex-col md:flex-row bg-card">
+      <div className="flex flex-1 flex-col md:flex-row bg-card overflow-hidden">
         <DeptPanel
           depts={depts ?? []}
           selectedDeptId={effectiveDeptId}
