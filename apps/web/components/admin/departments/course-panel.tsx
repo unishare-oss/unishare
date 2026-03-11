@@ -38,7 +38,7 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
           Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-border">
               <Skeleton className="h-4 w-16 shrink-0 bg-amber-subtle" />
-              <Skeleton className="h-4 flex-1 max-w-sm bg-amber-subtle/60" />
+              <Skeleton className="h-4 flex-1 max-w-sm bg-muted" />
             </div>
           ))
         ) : courses.length === 0 ? (

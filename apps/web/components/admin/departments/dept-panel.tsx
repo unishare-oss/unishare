@@ -49,7 +49,7 @@ export function DeptPanel({
                 className="flex items-center justify-between px-5 py-3.5 border-b border-border"
               >
                 <Skeleton className="h-3.5 w-32 bg-amber-subtle" />
-                <Skeleton className="h-3 w-16 bg-amber-subtle/60" />
+                <Skeleton className="h-3 w-16 bg-muted" />
               </div>
             ))
           : depts.map((dept) => (
