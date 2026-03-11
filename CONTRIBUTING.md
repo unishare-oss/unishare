@@ -6,39 +6,64 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 - Node.js >= 20
 - pnpm >= 10
-- PostgreSQL (local or Docker)
+- PostgreSQL (local or [Neon](https://neon.tech))
 
 ## Setup
 
 1. Fork and clone the repository
 2. Install dependencies:
+
    ```bash
    pnpm install
    ```
-3. Copy the environment file and fill in your values:
+
+3. Copy the environment files and fill in your values:
+
    ```bash
-   cp .env.example .env
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env
    ```
-4. Generate the Prisma client and push the database schema:
+
+4. Run database migrations and seed:
+
    ```bash
-   pnpm --filter api db:generate
-   pnpm --filter api db:push
+   cd apps/api
+   pnpm prisma migrate dev
+   pnpm prisma db seed
    ```
+
 5. Start the development servers:
+
    ```bash
    pnpm dev
    ```
+
+Frontend runs at `http://localhost:3000`, backend at `http://localhost:3001`.
+Swagger API docs are available at `http://localhost:3001/docs`.
 
 ## Project Structure
 
 ```
 unishare/
 ├── apps/
-│   ├── api/        # NestJS backend
-│   └── web/        # Next.js frontend
+│   ├── api/        # NestJS backend (modules, Prisma, Swagger)
+│   └── web/        # Next.js frontend (App Router, TanStack Query, Orval)
 ├── packages/
-│   └── tsconfig/   # Shared TypeScript configs
+│   └── types/      # Shared TypeScript types
+└── docs/           # Project documentation
 ```
+
+## API Client Codegen
+
+The frontend uses [Orval](https://orval.dev) to generate typed API hooks from the backend's Swagger spec.
+After changing any backend endpoint, regenerate the client:
+
+```bash
+# Make sure the API dev server is running first
+pnpm api:sync
+```
+
+Never edit files inside `apps/web/src/lib/api/generated/` by hand.
 
 ## Commit Convention
 
@@ -56,8 +81,6 @@ Commit messages are enforced via commitlint on every commit.
 
 ## Branch Naming
 
-Branch names should match the type of change:
-
 | Pattern            | Use for                       |
 | ------------------ | ----------------------------- |
 | `feat/short-name`  | New features                  |
@@ -73,10 +96,6 @@ main
     ├── feat/auth/microsoft
     └── feat/auth/google
 ```
-
-Sub-branches get merged back into their parent branch, which then merges into `main`.
-
-Examples: `feat/file-upload`, `feat/auth/microsoft`, `fix/api/auth-redirect`
 
 ## Submitting a PR
 
