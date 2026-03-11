@@ -18,7 +18,7 @@ export class CoursesRepository {
       this.prisma.course,
       {
         where: departmentId ? { departmentId } : undefined,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { code: 'asc' },
         include: { department: true },
       },
       pagination,
