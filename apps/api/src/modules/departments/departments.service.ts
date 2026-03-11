@@ -13,8 +13,12 @@ export class DepartmentsService {
     return this.departmentsRepository.create(dto)
   }
 
-  findAll() {
-    return this.departmentsRepository.findAll()
+  async findAll() {
+    const departments = await this.departmentsRepository.findAll()
+    return departments.map(({ _count, ...dept }) => ({
+      ...dept,
+      courseCount: _count.courses,
+    }))
   }
 
   async findOne(id: string) {

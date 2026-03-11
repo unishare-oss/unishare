@@ -12,7 +12,10 @@ export class DepartmentsRepository {
   }
 
   findAll() {
-    return this.prisma.department.findMany({ orderBy: { name: 'asc' } })
+    return this.prisma.department.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { courses: true } } },
+    })
   }
 
   findByName(name: string) {

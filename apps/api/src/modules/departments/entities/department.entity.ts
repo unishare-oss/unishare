@@ -19,7 +19,7 @@ export class DepartmentEntity {
   name: string
 
   @ApiProperty()
-  code: string
+  courseCount: number
 }
 
 export class DepartmentWithCoursesEntity extends DepartmentEntity {

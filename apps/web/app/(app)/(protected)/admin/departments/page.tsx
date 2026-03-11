@@ -34,8 +34,8 @@ export default function AdminDepartmentsPage() {
   const effectiveDeptId = selectedDeptId || depts?.[0]?.id || ''
 
   const { data: coursesData } = useCoursesControllerFindAll(
-    { limit: 100 },
-    { query: { select: (r) => r.data } },
+    { departmentId: effectiveDeptId, limit: 100 },
+    { query: { enabled: !!effectiveDeptId, select: (r) => r.data } },
   )
 
   const { mutate: createDept } = useDepartmentsControllerCreate({
@@ -52,14 +52,8 @@ export default function AdminDepartmentsPage() {
     },
   })
 
-  const allCourses = coursesData?.items ?? []
-  const deptCourses = allCourses.filter((c) => c.departmentId === effectiveDeptId)
+  const deptCourses = coursesData?.items ?? []
   const selectedDept = depts?.find((d) => d.id === effectiveDeptId)
-
-  const deptsWithCount = (depts ?? []).map((d) => ({
-    ...d,
-    courseCount: allCourses.filter((c) => c.departmentId === d.id).length,
-  }))
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -67,7 +61,7 @@ export default function AdminDepartmentsPage() {
 
       <div className="flex-1 flex flex-col md:flex-row bg-card">
         <DeptPanel
-          depts={deptsWithCount}
+          depts={depts ?? []}
           selectedDeptId={effectiveDeptId}
           onSelect={setSelectedDeptId}
           onAddClick={() => {
