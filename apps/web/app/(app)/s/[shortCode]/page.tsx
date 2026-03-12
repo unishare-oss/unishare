@@ -1,5 +1,22 @@
 import { redirect, notFound } from 'next/navigation'
-import { postsControllerFindByShortCode } from '@/src/lib/api/generated/posts/posts'
+import { headers } from 'next/headers'
+
+type ApiEnvelope<T> = {
+  success: boolean
+  message: string
+  data: T
+}
+
+function getBaseUrl(requestHeaders: Headers) {
+  const apiUrl = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
+  if (apiUrl) return apiUrl
+
+  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host')
+  const proto = requestHeaders.get('x-forwarded-proto') ?? 'http'
+
+  if (!host) return 'http://localhost:3000'
+  return `${proto}://${host}`
+}
 
 export default async function SharedPostPage({
   params,
@@ -8,14 +25,20 @@ export default async function SharedPostPage({
 }) {
   const { shortCode } = await params
 
-  let id: string
+  const h = await headers()
+  const baseUrl = getBaseUrl(h)
 
-  try {
-    const res = await postsControllerFindByShortCode(shortCode)
-    id = res.data.id
-  } catch {
-    notFound()
-  }
+  const res = await fetch(new URL(`/api/posts/s/${shortCode}`, baseUrl), {
+    cache: 'no-store',
+    headers: {
+      cookie: h.get('cookie') ?? '',
+    },
+  })
 
-  redirect(`/posts/${id!}`)
+  if (!res.ok) notFound()
+
+  const json = (await res.json()) as ApiEnvelope<{ id: string }>
+  if (!json?.data?.id) notFound()
+
+  redirect(`/posts/${json.data.id}`)
 }
