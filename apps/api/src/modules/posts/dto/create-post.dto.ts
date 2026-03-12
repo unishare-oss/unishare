@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -34,6 +35,11 @@ export class CreatePostDto {
   @IsString()
   @MaxLength(2000)
   description: string
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isAnonymous?: boolean
 
   @IsOptional()
   @ApiPropertyOptional({ maxLength: 500 })
