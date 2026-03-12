@@ -77,32 +77,32 @@ export default function AdminAnalyticsPage() {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard
-              label="Users"
+              label={pluralize(stats?.overview.totalUsers ?? 0, 'User')}
               value={stats?.overview.totalUsers}
               icon={Users}
               loading={isLoading}
             />
             <StatCard
-              label="Posts"
+              label={pluralize(stats?.overview.totalPosts ?? 0, 'Post')}
               value={stats?.overview.totalPosts}
               icon={FileText}
               loading={isLoading}
             />
             <StatCard
-              label="Pending"
+              label={pluralize(stats?.overview.pendingPosts ?? 0, 'Pending post', 'Pending posts')}
               value={stats?.overview.pendingPosts}
               icon={FileText}
               loading={isLoading}
               highlight={(stats?.overview.pendingPosts ?? 0) > 0}
             />
             <StatCard
-              label="Comments"
+              label={pluralize(stats?.overview.totalComments ?? 0, 'Comment')}
               value={stats?.overview.totalComments}
               icon={MessageSquare}
               loading={isLoading}
             />
             <StatCard
-              label="Reactions"
+              label={pluralize(stats?.overview.totalReactions ?? 0, 'Reaction')}
               value={stats?.overview.totalReactions}
               icon={SmilePlus}
               loading={isLoading}
