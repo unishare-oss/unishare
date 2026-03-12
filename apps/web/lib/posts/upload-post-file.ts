@@ -5,13 +5,48 @@ import {
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 
+function getFileExtension(name: string): string {
+  const parts = name.toLowerCase().split('.')
+  return parts.length > 1 ? (parts.at(-1) ?? '') : ''
+}
+
+function getUploadMimeType(file: File): string {
+  const ext = getFileExtension(file.name)
+
+  if (ext === 'json') return 'application/json'
+  if (ext === 'md' || ext === 'markdown') return 'text/markdown'
+
+  const codeExts = new Set([
+    'txt',
+    'js',
+    'jsx',
+    'ts',
+    'tsx',
+    'py',
+    'java',
+    'go',
+    'rs',
+    'sql',
+    'sh',
+    'yml',
+    'yaml',
+  ])
+
+  if (codeExts.has(ext)) return 'text/plain'
+
+  return file.type
+}
+
 export async function uploadPostFile(file: File) {
-  const uploadType = file.type.startsWith('image/')
+  const mimeType = getUploadMimeType(file)
+  if (!mimeType) throw new Error('Unsupported file type')
+
+  const uploadType = mimeType.startsWith('image/')
     ? PresignedUploadDtoUploadType.image
     : PresignedUploadDtoUploadType.document
 
   const presignedRes = await storageControllerGetPresignedUploadUrl({
-    mimeType: file.type,
+    mimeType,
     uploadType,
     purpose: PresignedUploadDtoPurpose['post-attachment'],
   })
@@ -21,13 +56,13 @@ export async function uploadPostFile(file: File) {
   await fetch(url, {
     method: 'PUT',
     body: file,
-    headers: { 'Content-Type': file.type },
+    headers: { 'Content-Type': mimeType },
   })
 
   return {
     key,
     name: file.name,
     size: file.size,
-    mimeType: file.type,
+    mimeType,
   }
 }

@@ -61,6 +61,19 @@ export function FilterStrip({
     return deptOk && yearOk
   })
 
+  const selectedDeptLabel = selectedDeptId
+    ? ((departments ?? []).find((d) => d.id === selectedDeptId)?.name ?? '')
+    : 'All departments'
+
+  const selectedYearLabel = selectedYear === null ? 'All years' : `Year ${selectedYear}`
+
+  const selectedCourseLabel = selectedCourseId
+    ? (() => {
+        const c = allCourses.find((x) => x.id === selectedCourseId)
+        return c ? `${c.code} — ${c.name}` : ''
+      })()
+    : 'All courses'
+
   function handleDeptChange(value: string) {
     const deptId = value === ALL ? '' : value
     onDeptChange(deptId)
@@ -79,7 +92,7 @@ export function FilterStrip({
 
   return (
     <div className="border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
-      <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto">
+      <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
         {typeFilters.map((filter) => (
           <button
             key={filter}
@@ -96,42 +109,58 @@ export function FilterStrip({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 px-4 py-3 lg:p-0 lg:ml-auto">
-        <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All departments</SelectItem>
-            {(departments ?? []).map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedYear === null ? ALL : String(selectedYear)}
-          onValueChange={handleYearChange}
-        >
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-32">
-            <SelectValue placeholder="Year" />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All years</SelectItem>
-            {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                Year {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="col-span-2 lg:col-span-1">
-          <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-            <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
+      <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
+        <div className="min-w-0">
+          <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
+            <SelectTrigger
+              size="sm"
+              className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
+              title={selectedDeptLabel}
+            >
               <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value={ALL}>All departments</SelectItem>
+              {(departments ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-w-0">
+          <Select
+            value={selectedYear === null ? ALL : String(selectedYear)}
+            onValueChange={handleYearChange}
+          >
+            <SelectTrigger
+              size="sm"
+              className="font-mono text-xs text-text-muted w-full lg:w-24"
+              title={selectedYearLabel}
+            >
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value={ALL}>All years</SelectItem>
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  Year {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="col-span-2 min-w-0">
+          <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
+            <SelectTrigger
+              size="sm"
+              className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
+              title={selectedCourseLabel}
+            >
+              <SelectValue placeholder="Course" />
             </SelectTrigger>
             <SelectContent position="popper">
               <SelectItem value={ALL}>All courses</SelectItem>

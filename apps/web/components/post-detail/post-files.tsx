@@ -1,19 +1,71 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Link2, FileText, FileImage, FileSpreadsheet, Download, Eye, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-bash'
+import 'prismjs/components/prism-go'
+import 'prismjs/components/prism-java'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/components/prism-jsx'
+import 'prismjs/components/prism-json'
+import 'prismjs/components/prism-markdown'
+import 'prismjs/components/prism-python'
+import 'prismjs/components/prism-rust'
+import 'prismjs/components/prism-sql'
+import 'prismjs/components/prism-tsx'
+import 'prismjs/components/prism-typescript'
+import 'prismjs/components/prism-yaml'
+import {
+  Link2,
+  FileText,
+  FileImage,
+  FileSpreadsheet,
+  Download,
+  Eye,
+  X,
+  Copy,
+  Check,
+} from 'lucide-react'
 import type { ApiPostDetail } from '@/lib/api-types'
 import type { PostFileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-type PostFile = PostFileEntity & { downloads?: number }
 import { filesControllerGetDownloadUrl } from '@/src/lib/api/generated/files/files'
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Button } from '@/components/ui/button'
+
+type PostFile = PostFileEntity & { downloads?: number }
+
+const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function isTextMimeType(mimeType: string) {
+  return mimeType.startsWith('text/') || mimeType === 'application/json'
+}
+
+function inferPrismLanguage(fileName: string, mimeType: string): string {
+  const ext = fileName.toLowerCase().split('.').at(-1) ?? ''
+
+  if (mimeType === 'application/json' || ext === 'json') return 'json'
+  if (mimeType === 'text/markdown' || ext === 'md' || ext === 'markdown') return 'markdown'
+
+  if (ext === 'ts') return 'typescript'
+  if (ext === 'tsx') return 'tsx'
+  if (ext === 'js') return 'javascript'
+  if (ext === 'jsx') return 'jsx'
+  if (ext === 'py') return 'python'
+  if (ext === 'java') return 'java'
+  if (ext === 'go') return 'go'
+  if (ext === 'rs') return 'rust'
+  if (ext === 'sql') return 'sql'
+  if (ext === 'sh') return 'bash'
+  if (ext === 'yml' || ext === 'yaml') return 'yaml'
+
+  return 'none'
 }
 
 function fileIcon(mimeType: string) {
@@ -44,51 +96,107 @@ interface PostFilesProps {
 export function PostFiles({ post }: PostFilesProps) {
   const [previewFile, setPreviewFile] = useState<{
     id: string
-    url: string
     mimeType: string
     name: string
+    size: number
+    url?: string
+    text?: string
+    language?: string
+    tooLarge?: boolean
   } | null>(null)
+  const [copied, setCopied] = useState(false)
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null)
-  const previewCache = useRef<Record<string, string>>({})
+
+  const previewUrlCache = useRef<Record<string, string>>({})
+  const previewTextCache = useRef<Record<string, { text: string; language: string }>>({})
+  const codeElRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setCopied(false)
+  }, [previewFile?.id])
 
   // Cleanup ObjectURLs on unmount to prevent memory leaks
   useEffect(() => {
-    const cache = previewCache.current
+    const cache = previewUrlCache.current
     return () => {
       Object.values(cache).forEach((url) => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url)
-        }
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
       })
     }
   }, [])
 
-  const handlePreview = async (file: { id: string; mimeType: string; name: string }) => {
+  useEffect(() => {
+    if (!previewFile?.text || !codeElRef.current) return
+    if (!previewFile.language || previewFile.language === 'none') return
+
+    Prism.highlightElement(codeElRef.current)
+  }, [previewFile?.id, previewFile?.text, previewFile?.language])
+
+  const handlePreview = async (file: {
+    id: string
+    mimeType: string
+    name: string
+    size: number
+  }) => {
     if (previewFile?.id === file.id) {
       setPreviewFile(null)
       return
     }
 
-    // Use cached ObjectURL if available
-    if (previewCache.current[file.id]) {
-      setPreviewFile({ ...file, url: previewCache.current[file.id] })
+    const textPreviewable = isTextMimeType(file.mimeType)
+    const blobPreviewable =
+      file.mimeType === 'application/pdf' || file.mimeType.startsWith('image/')
+
+    if (textPreviewable) {
+      if (previewTextCache.current[file.id]) {
+        const cached = previewTextCache.current[file.id]
+        setPreviewFile({ ...file, text: cached.text, language: cached.language })
+        return
+      }
+
+      const language = inferPrismLanguage(file.name, file.mimeType)
+      if (file.size > MAX_TEXT_PREVIEW_BYTES) {
+        setPreviewFile({ ...file, text: '', language, tooLarge: true })
+        return
+      }
+
+      try {
+        setLoadingPreviewId(file.id)
+        const res = await filesControllerGetDownloadUrl(post.id, file.id)
+        const signedUrl = res.data.url
+
+        const fileRes = await fetch(signedUrl)
+        const text = await fileRes.text()
+
+        previewTextCache.current[file.id] = { text, language }
+        setPreviewFile({ ...file, text, language })
+      } catch (error) {
+        console.error('Failed to get text preview:', error)
+      } finally {
+        setLoadingPreviewId(null)
+      }
+
+      return
+    }
+
+    if (!blobPreviewable) return
+
+    if (previewUrlCache.current[file.id]) {
+      setPreviewFile({ ...file, url: previewUrlCache.current[file.id] })
       return
     }
 
     try {
       setLoadingPreviewId(file.id)
 
-      // 1. Get the presigned URL from our API
       const res = await filesControllerGetDownloadUrl(post.id, file.id)
       const signedUrl = res.data.url
 
-      // 2. Fetch the actual file data to create a local Blob URL
-      // This "pins" the file in browser memory so R2 isn't hit again
       const fileRes = await fetch(signedUrl)
       const blob = await fileRes.blob()
       const objectUrl = URL.createObjectURL(blob)
 
-      previewCache.current[file.id] = objectUrl
+      previewUrlCache.current[file.id] = objectUrl
       setPreviewFile({ ...file, url: objectUrl })
     } catch (error) {
       console.error('Failed to get preview URL:', error)
@@ -98,7 +206,9 @@ export function PostFiles({ post }: PostFilesProps) {
   }
 
   const isPreviewable = (mimeType: string) => {
-    return mimeType === 'application/pdf' || mimeType.startsWith('image/')
+    return (
+      mimeType === 'application/pdf' || mimeType.startsWith('image/') || isTextMimeType(mimeType)
+    )
   }
 
   return (
@@ -139,10 +249,11 @@ export function PostFiles({ post }: PostFilesProps) {
               <X className="size-4 text-text-muted" strokeWidth={1.5} />
             </Button>
           </div>
+
           <div className="bg-card-dark rounded-lg overflow-hidden border border-border">
-            {previewFile.mimeType === 'application/pdf' ? (
+            {previewFile.mimeType === 'application/pdf' && previewFile.url ? (
               <PdfViewer key={previewFile.url} url={previewFile.url} storageKey={previewFile.id} />
-            ) : (
+            ) : previewFile.mimeType.startsWith('image/') && previewFile.url ? (
               <div className="flex justify-center p-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -150,6 +261,55 @@ export function PostFiles({ post }: PostFilesProps) {
                   alt={previewFile.name}
                   className="max-w-full h-auto rounded-lg shadow-sm"
                 />
+              </div>
+            ) : (
+              <div className="p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="font-mono text-xs text-text-muted truncate">
+                    {previewFile.language && previewFile.language !== 'none'
+                      ? previewFile.language
+                      : 'text'}
+                  </p>
+                  {!previewFile.tooLarge && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(previewFile.text ?? '')
+                          setCopied(true)
+                          setTimeout(() => setCopied(false), 1500)
+                        } catch {
+                          // no-op
+                        }
+                      }}
+                      aria-label={copied ? 'Copied' : 'Copy code'}
+                    >
+                      {copied ? (
+                        <Check className="size-4 text-success" strokeWidth={1.5} />
+                      ) : (
+                        <Copy className="size-4 text-text-muted" strokeWidth={1.5} />
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {previewFile.tooLarge ? (
+                  <div className="text-sm text-text-muted">
+                    This file is too large to preview ({formatBytes(previewFile.size)}). Download to
+                    view.
+                  </div>
+                ) : (
+                  <pre className="bg-card-dark border border-border rounded-[6px] p-4 overflow-x-auto">
+                    <code
+                      ref={codeElRef}
+                      className={`language-${previewFile.language ?? 'none'} font-mono text-[13px] leading-relaxed text-foreground whitespace-pre`}
+                    >
+                      {previewFile.text}
+                    </code>
+                  </pre>
+                )}
               </div>
             )}
           </div>

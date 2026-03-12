@@ -5,6 +5,7 @@ import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import './globals.css'
+import 'prismjs/themes/prism-tomorrow.css'
 
 const geistSans = Geist({
   subsets: ['latin'],

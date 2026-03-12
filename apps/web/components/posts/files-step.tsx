@@ -10,7 +10,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const ACCEPTED_MIME_TYPES = [
+const ACCEPTED_FILE_TYPES = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -21,6 +21,25 @@ const ACCEPTED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
+  // Code/text files
+  'text/plain',
+  'text/markdown',
+  'application/json',
+  '.txt',
+  '.md',
+  '.json',
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.py',
+  '.java',
+  '.go',
+  '.rs',
+  '.sql',
+  '.sh',
+  '.yml',
+  '.yaml',
 ].join(',')
 
 export interface FilesStepItem {
@@ -65,7 +84,7 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
         ref={inputRef}
         type="file"
         multiple
-        accept={ACCEPTED_MIME_TYPES}
+        accept={ACCEPTED_FILE_TYPES}
         className="hidden"
         disabled={disabled}
         onChange={handleChange}
