@@ -39,9 +39,10 @@ export function ModerationRow({
   onReject: () => void
 }) {
   const academicYear = useAcademicYear()
+  const author = post.author
   const yearLevel =
-    post.author.enrollmentYear != null && academicYear != null
-      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+    author?.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(author.enrollmentYear, academicYear)
       : null
 
   return (
@@ -67,7 +68,7 @@ export function ModerationRow({
         </div>
 
         <div className="hidden md:block shrink-0 w-32">
-          <p className="font-mono text-xs text-foreground">{post.author.name}</p>
+          <p className="font-mono text-xs text-foreground">{author?.name ?? 'Anonymous'}</p>
           {yearLevel != null && (
             <p className="font-mono text-[11px] text-text-muted">Year {yearLevel}</p>
           )}

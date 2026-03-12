@@ -65,7 +65,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  const isOwner = user?.id === post.authorId
+  const isOwner = user?.id != null && post.authorId != null && user.id === post.authorId
 
   return (
     <div className="flex flex-col min-h-screen">

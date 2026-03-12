@@ -39,7 +39,7 @@ export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground line-clamp-1">{post.title}</p>
               <p className="font-mono text-xs text-text-muted mt-0.5">
-                {post.author.name} ·{' '}
+                {post.author?.name ?? 'Anonymous'} ·{' '}
                 {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
               </p>
             </div>

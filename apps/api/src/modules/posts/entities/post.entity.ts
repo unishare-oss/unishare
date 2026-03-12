@@ -116,8 +116,8 @@ export class PostEntity {
   @ApiProperty()
   shortCode: string
 
-  @ApiProperty()
-  authorId: string
+  @ApiPropertyOptional({ nullable: true, type: String })
+  authorId?: string | null
 
   @ApiProperty()
   courseId: string
@@ -131,8 +131,8 @@ export class PostEntity {
   @ApiPropertyOptional({ nullable: true, type: Date })
   deletedAt: Date | null
 
-  @ApiProperty({ type: PostAuthorEntity })
-  author: PostAuthorEntity
+  @ApiPropertyOptional({ nullable: true, type: PostAuthorEntity })
+  author?: PostAuthorEntity | null
 
   @ApiProperty({ type: PostCourseEntity })
   course: PostCourseEntity

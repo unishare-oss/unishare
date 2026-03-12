@@ -106,10 +106,12 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const author = post.author
+
   const academicYear = useAcademicYear()
   const yearLevel =
-    post.author.enrollmentYear != null && academicYear != null
-      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+    author?.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(author.enrollmentYear, academicYear)
       : null
 
   return (
@@ -160,22 +162,31 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             </>
           )}
         </div>
-        <Link
-          href={`/users/${post.author.id}`}
-          className="flex items-center gap-3 mt-4 group w-fit"
-        >
-          <UserAvatar name={post.author.name} image={post.author.image} size="md" />
-          <div>
-            <p className="text-sm font-medium text-foreground group-hover:underline">
-              {post.author.name}
-            </p>
-            <p className="font-mono text-xs text-text-muted">
-              {yearLevel != null && `Year ${yearLevel} student · `}
-              {post.author.department?.name && `${post.author.department.name} · `}
-              {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-            </p>
+        {author ? (
+          <Link href={`/users/${author.id}`} className="flex items-center gap-3 mt-4 group w-fit">
+            <UserAvatar name={author.name} image={author.image} size="md" />
+            <div>
+              <p className="text-sm font-medium text-foreground group-hover:underline">
+                {author.name}
+              </p>
+              <p className="font-mono text-xs text-text-muted">
+                {yearLevel != null && `Year ${yearLevel} student · `}
+                {author.department?.name && `${author.department.name} · `}
+                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3 mt-4 w-fit">
+            <UserAvatar name="Anonymous" image={null} size="md" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Anonymous</p>
+              <p className="font-mono text-xs text-text-muted">
+                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              </p>
+            </div>
           </div>
-        </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-2 justify-between mb-6">

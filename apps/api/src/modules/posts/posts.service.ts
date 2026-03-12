@@ -35,7 +35,7 @@ export class PostsService {
     }
 
     const shortCode = nanoid(8)
-    return this.postsRepository.create({ shortCode, authorId: userId, ...dto })
+    return this.postsRepository.create({ shortCode, authorId: userId, ...dto }, { id: userId })
   }
 
   async findAll(query: ListPostsDto, user?: { role?: UserRole; id?: string }) {
@@ -61,18 +61,18 @@ export class PostsService {
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
-    return this.postsRepository.findAll(where, pagination, userId)
+    return this.postsRepository.findAll(where, pagination, { id: userId, role: userRole })
   }
 
-  async findOne(id: string, userId?: string) {
-    const post = await this.postsRepository.findById(id, userId)
+  async findOne(id: string, viewer?: { id?: string; role?: UserRole }) {
+    const post = await this.postsRepository.findById(id, viewer)
     if (!post) throw new NotFoundException('Post not found')
-    if (userId) void this.postsRepository.recordView(id, userId)
+    if (viewer?.id) void this.postsRepository.recordView(id, viewer.id)
     return post
   }
 
-  async findByShortCode(shortCode: string, userId?: string) {
-    const post = await this.postsRepository.findByShortCode(shortCode, userId)
+  async findByShortCode(shortCode: string, viewer?: { id?: string; role?: UserRole }) {
+    const post = await this.postsRepository.findByShortCode(shortCode, viewer)
     if (!post) throw new NotFoundException('Post not found')
     return post
   }
@@ -82,28 +82,41 @@ export class PostsService {
     if (!post) throw new NotFoundException('Post not found')
   }
 
+  async getNotificationTarget(id: string) {
+    const post = await this.postsRepository.findNotificationTarget(id)
+    if (!post) throw new NotFoundException('Post not found')
+    return post
+  }
+
   async update(id: string, dto: UpdatePostDto, userId: string) {
-    const post = await this.findOne(id)
-    if (post.authorId !== userId) throw new ForbiddenException('You do not own this post')
+    const post = await this.findOne(id, { id: userId })
+    if (!post.authorId || post.authorId !== userId) {
+      throw new ForbiddenException('You do not own this post')
+    }
 
     if (post.type === PostType.NOTE && dto.examYear !== undefined) {
       throw new BadRequestException('Exam year can only be updated for old question posts')
     }
 
-    return this.postsRepository.update(id, dto)
+    return this.postsRepository.update(id, dto, { id: userId })
   }
 
   async remove(id: string, userId: string, userRole: UserRole) {
-    const post = await this.findOne(id)
+    const viewer = { id: userId, role: userRole }
+    const post = await this.findOne(id, viewer)
+
     const isOwner = post.authorId === userId
     const isAdmin = userRole === UserRole.ADMIN
     if (!isOwner && !isAdmin) throw new ForbiddenException('You do not own this post')
+
     return this.postsRepository.softDelete(id)
   }
 
-  async updateStatus(id: string, dto: UpdatePostStatusDto) {
-    const post = await this.findOne(id)
-    const updated = await this.postsRepository.updateStatus(id, dto.status)
+  async updateStatus(id: string, dto: UpdatePostStatusDto, viewer: { id: string; role: UserRole }) {
+    const post = await this.findOne(id, viewer)
+    if (!post.authorId) throw new NotFoundException('Post not found')
+
+    const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
     void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
     return updated
   }
@@ -117,10 +130,10 @@ export class PostsService {
   }
 
   getSavedPosts(userId: string, query: PaginationDto) {
-    return this.postsRepository.findSaved(userId, query)
+    return this.postsRepository.findSaved({ id: userId }, query)
   }
 
-  toggleReaction(id: string, dto: ReactToPostDto, userId: string) {
-    return this.postsRepository.toggleReaction(id, userId, dto.type)
+  toggleReaction(id: string, dto: ReactToPostDto, userId: string, role?: UserRole) {
+    return this.postsRepository.toggleReaction(id, { id: userId, role }, dto.type)
   }
 }

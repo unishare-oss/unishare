@@ -102,10 +102,12 @@ export function PostCard({ post }: { post: ApiPost }) {
     }
   }
 
+  const author = post.author
+
   const academicYear = useAcademicYear()
   const yearLevel =
-    post.author.enrollmentYear != null && academicYear != null
-      ? calcYearLevel(post.author.enrollmentYear, academicYear)
+    author?.enrollmentYear != null && academicYear != null
+      ? calcYearLevel(author.enrollmentYear, academicYear)
       : null
 
   return (
@@ -127,25 +129,32 @@ export function PostCard({ post }: { post: ApiPost }) {
             {post.title}
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span
-              role="link"
-              tabIndex={0}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                router.push(`/users/${post.author.id}`)
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && router.push(`/users/${post.author.id}`)}
-              className="flex items-center gap-1 hover:underline cursor-pointer"
-            >
-              <UserAvatar
-                name={post.author.name}
-                image={post.author.image}
-                size="xs"
-                className="shrink-0"
-              />
-              <span className="font-mono text-xs text-foreground">{post.author.name}</span>
-            </span>
+            {author ? (
+              <span
+                role="link"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push(`/users/${author.id}`)
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && router.push(`/users/${author.id}`)}
+                className="flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <UserAvatar
+                  name={author.name}
+                  image={author.image}
+                  size="xs"
+                  className="shrink-0"
+                />
+                <span className="font-mono text-xs text-foreground">{author.name}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 cursor-default">
+                <UserAvatar name="Anonymous" image={null} size="xs" className="shrink-0" />
+                <span className="font-mono text-xs text-foreground">Anonymous</span>
+              </span>
+            )}
             {yearLevel != null && (
               <>
                 <span className="text-text-muted text-xs">{'·'}</span>

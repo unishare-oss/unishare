@@ -20,7 +20,7 @@ import { pluralize } from '@/lib/utils'
 
 interface CommentSectionProps {
   postId: string
-  postAuthorId: string
+  postAuthorId?: string | null
 }
 
 interface DraftState {
@@ -198,7 +198,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
                           </Button>
                         )}
                         {(comment.userId === currentUserId ||
-                          postAuthorId === currentUserId ||
+                          (postAuthorId != null && postAuthorId === currentUserId) ||
                           currentUserRole === 'ADMIN') && (
                           <Button
                             type="button"

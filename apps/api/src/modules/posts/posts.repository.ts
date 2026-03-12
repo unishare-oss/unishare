@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common'
-import { PostStatus, PostType, Prisma, ReactionType } from '@/generated/prisma/client'
+import { PostStatus, PostType, Prisma, ReactionType, UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { PrismaService } from '@/prisma/prisma.service'
 
-const postInclude = (userId?: string): Prisma.PostInclude => ({
+type ViewerContext = {
+  id?: string
+  role?: UserRole
+}
+
+const postInclude = (viewerId?: string): Prisma.PostInclude => ({
   author: {
     select: {
       id: true,
@@ -30,93 +35,99 @@ const postInclude = (userId?: string): Prisma.PostInclude => ({
       savedBy: true,
     },
   },
-  ...(userId ? { savedBy: { where: { userId }, select: { userId: true } } } : {}),
+  ...(viewerId ? { savedBy: { where: { userId: viewerId }, select: { userId: true } } } : {}),
 })
 
 function mapPost<T>(
   post: T,
-  userId?: string,
+  viewer?: ViewerContext,
 ): Omit<T, 'savedBy' | 'reactions'> & {
   savedByCurrentUser: boolean
   reactionCounts: Record<string, number>
   userReaction: string | null
 } {
   const { savedBy, reactions, author, isAnonymous, authorId, ...rest } = post as any
+  const viewerId = viewer?.id
   const isAnonymousValue = isAnonymous ?? false
+
+  const isPrivileged = viewer?.role === UserRole.MODERATOR || viewer?.role === UserRole.ADMIN
+  const isOwner = viewerId != null && authorId === viewerId
+
   const reactionCounts: Record<string, number> = {}
   let userReaction: string | null = null
   for (const r of reactions ?? []) {
     reactionCounts[r.type] = (reactionCounts[r.type] ?? 0) + 1
-    if (userId && r.userId === userId) userReaction = r.type
+    if (viewerId && r.userId === viewerId) userReaction = r.type
   }
 
-  if (isAnonymousValue) {
-    return {
-      ...rest,
-      isAnonymous: isAnonymousValue,
-      savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
-      reactionCounts,
-      userReaction,
-    }
-  }
-
-  return {
+  const base = {
     ...rest,
     isAnonymous: isAnonymousValue,
     savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
     reactionCounts,
     userReaction,
-    author,
-    authorId,
   }
+
+  if (isAnonymousValue) {
+    // For anonymous posts, only moderators/admins can see full author info.
+    // Owners can see `authorId` for edit/delete checks, but not the author profile payload.
+    if (isPrivileged) return { ...base, author, authorId }
+    if (isOwner) return { ...base, authorId }
+    return base
+  }
+
+  return { ...base, author, authorId }
 }
 
 @Injectable()
 export class PostsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    shortCode: string
-    authorId: string
-    courseId: string
-    type: PostType
-    title?: string
-    description?: string
-    externalUrl?: string
-    isAnonymous?: boolean
-    examYear?: number
-    moduleNumber?: number
-    year?: number
-    semester?: number
-  }) {
+  async create(
+    data: {
+      shortCode: string
+      authorId: string
+      courseId: string
+      type: PostType
+      title?: string
+      description?: string
+      externalUrl?: string
+      isAnonymous?: boolean
+      examYear?: number
+      moduleNumber?: number
+      year?: number
+      semester?: number
+    },
+    viewer?: ViewerContext,
+  ) {
     return this.prisma.post
-      .create({ data, include: postInclude() })
-      .then((post) => mapPost({ ...post, savedBy: [] }))
+      .create({ data, include: postInclude(viewer?.id) })
+      .then((post) => mapPost({ ...post, savedBy: [] }, viewer))
   }
 
-  async findAll(where: Prisma.PostWhereInput, pagination: PaginationDto, userId?: string) {
+  async findAll(where: Prisma.PostWhereInput, pagination: PaginationDto, viewer?: ViewerContext) {
     const result = await paginate(
       this.prisma.post,
-      { where, orderBy: { createdAt: 'desc' }, include: postInclude(userId) },
+      { where, orderBy: { createdAt: 'desc' }, include: postInclude(viewer?.id) },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p, userId)) }
+    return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
   }
 
-  async findById(id: string, userId?: string) {
+  async findById(id: string, viewer?: ViewerContext) {
     const post = await this.prisma.post.findUnique({
       where: { id, deletedAt: null },
-      include: postInclude(userId),
+      include: postInclude(viewer?.id),
     })
-    return post ? mapPost(post, userId) : null
+    return post ? mapPost(post, viewer) : null
   }
 
-  async findByShortCode(shortCode: string, userId?: string) {
+  async findByShortCode(shortCode: string, viewer?: ViewerContext) {
     const post = await this.prisma.post.findUnique({
       where: { shortCode, deletedAt: null },
-      include: postInclude(userId),
+      include: postInclude(viewer?.id),
     })
-    return post ? mapPost(post, userId) : null
+    return post ? mapPost(post, viewer) : null
   }
 
   findCourseDepartmentById(courseId: string) {
@@ -133,10 +144,17 @@ export class PostsRepository {
     })
   }
 
-  update(id: string, data: Prisma.PostUpdateInput) {
+  findNotificationTarget(id: string) {
+    return this.prisma.post.findUnique({
+      where: { id, deletedAt: null },
+      select: { id: true, authorId: true, title: true },
+    })
+  }
+
+  update(id: string, data: Prisma.PostUpdateInput, viewer?: ViewerContext) {
     return this.prisma.post
-      .update({ where: { id }, data, include: postInclude() })
-      .then((p) => mapPost(p))
+      .update({ where: { id }, data, include: postInclude(viewer?.id) })
+      .then((p) => mapPost(p, viewer))
   }
 
   async recordView(postId: string, userId: string) {
@@ -149,30 +167,32 @@ export class PostsRepository {
     }
   }
 
-  async toggleReaction(postId: string, userId: string, type: ReactionType) {
+  async toggleReaction(postId: string, viewer: ViewerContext & { id: string }, type: ReactionType) {
     const existing = await this.prisma.reaction.findUnique({
-      where: { userId_postId: { userId, postId } },
+      where: { userId_postId: { userId: viewer.id, postId } },
     })
     if (existing?.type === type) {
-      await this.prisma.reaction.delete({ where: { userId_postId: { userId, postId } } })
+      await this.prisma.reaction.delete({
+        where: { userId_postId: { userId: viewer.id, postId } },
+      })
     } else {
       await this.prisma.reaction.upsert({
-        where: { userId_postId: { userId, postId } },
-        create: { userId, postId, type },
+        where: { userId_postId: { userId: viewer.id, postId } },
+        create: { userId: viewer.id, postId, type },
         update: { type },
       })
     }
-    return this.findById(postId, userId)
+    return this.findById(postId, viewer)
   }
 
   softDelete(id: string) {
     return this.prisma.post.update({ where: { id }, data: { deletedAt: new Date() } })
   }
 
-  updateStatus(id: string, status: PostStatus) {
+  updateStatus(id: string, status: PostStatus, viewer?: ViewerContext) {
     return this.prisma.post
-      .update({ where: { id }, data: { status }, include: postInclude() })
-      .then((p) => mapPost(p))
+      .update({ where: { id }, data: { status }, include: postInclude(viewer?.id) })
+      .then((p) => mapPost(p, viewer))
   }
 
   savePost(postId: string, userId: string) {
@@ -189,16 +209,16 @@ export class PostsRepository {
     })
   }
 
-  async findSaved(userId: string, pagination: PaginationDto) {
+  async findSaved(viewer: ViewerContext & { id: string }, pagination: PaginationDto) {
     const result = await paginate(
       this.prisma.post,
       {
-        where: { savedBy: { some: { userId } }, deletedAt: null },
+        where: { savedBy: { some: { userId: viewer.id } }, deletedAt: null },
         orderBy: { createdAt: 'desc' },
-        include: postInclude(userId),
+        include: postInclude(viewer.id),
       },
       pagination,
     )
-    return { ...result, items: result.items.map((p) => mapPost(p, userId)) }
+    return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
   }
 }

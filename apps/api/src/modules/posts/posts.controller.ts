@@ -49,7 +49,10 @@ export class PostsController {
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
   findByShortCode(@Param('shortCode') shortCode: string, @Session() session: UserSession) {
-    return this.postsService.findByShortCode(shortCode, session?.user?.id)
+    return this.postsService.findByShortCode(shortCode, {
+      role: session?.user?.role as UserRole | undefined,
+      id: session?.user?.id,
+    })
   }
 
   @Get(':id')
@@ -57,7 +60,10 @@ export class PostsController {
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
   findOne(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.findOne(id, session?.user?.id)
+    return this.postsService.findOne(id, {
+      role: session?.user?.role as UserRole | undefined,
+      id: session?.user?.id,
+    })
   }
 
   @Post(':id/save')
@@ -76,15 +82,22 @@ export class PostsController {
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Reaction updated')
   react(@Param('id') id: string, @Body() dto: ReactToPostDto, @Session() session: UserSession) {
-    return this.postsService.toggleReaction(id, dto, session.user.id)
+    return this.postsService.toggleReaction(id, dto, session.user.id, session.user.role as UserRole)
   }
 
   @Patch(':id/status')
   @Roles(['MODERATOR', 'ADMIN'])
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post status updated successfully')
-  updateStatus(@Param('id') id: string, @Body() dto: UpdatePostStatusDto) {
-    return this.postsService.updateStatus(id, dto)
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdatePostStatusDto,
+    @Session() session: UserSession,
+  ) {
+    return this.postsService.updateStatus(id, dto, {
+      id: session.user.id,
+      role: session.user.role as UserRole,
+    })
   }
 
   @Patch(':id')
