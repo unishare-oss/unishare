@@ -3,7 +3,7 @@
 import { useStatsControllerGetStats } from '@/src/lib/api/generated/stats/stats'
 import { PageHeader } from '@/components/shared/page-header'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { cn } from '@/lib/utils'
+import { cn, pluralize } from '@/lib/utils'
 import { Eye, FileText, MessageSquare, SmilePlus, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -139,7 +139,7 @@ export default function AdminAnalyticsPage() {
                       </p>
                     </div>
                     <span className="font-mono text-xs text-text-muted shrink-0">
-                      {post.views.toLocaleString()} views
+                      {post.views.toLocaleString()} {pluralize(post.views, 'view')}
                     </span>
                   </Link>
                 ))}
@@ -174,7 +174,7 @@ export default function AdminAnalyticsPage() {
                       </p>
                     </div>
                     <span className="font-mono text-xs text-text-muted shrink-0">
-                      {post.reactionCount} reactions
+                      {post.reactionCount} {pluralize(post.reactionCount, 'reaction')}
                     </span>
                   </Link>
                 ))}
@@ -217,7 +217,7 @@ export default function AdminAnalyticsPage() {
                       </div>
                     </div>
                     <span className="font-mono text-xs text-text-muted shrink-0">
-                      {user.postCount} posts
+                      {user.postCount} {pluralize(user.postCount, 'post')}
                     </span>
                   </Link>
                 ))}
