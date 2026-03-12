@@ -27,6 +27,8 @@ interface FilterStripProps {
   onFilterChange: (filter: TypeFilter) => void
   selectedDeptId: string
   onDeptChange: (deptId: string) => void
+  selectedYear: number | null
+  onYearChange: (year: number | null) => void
   selectedCourseId: string
   onCourseChange: (courseId: string) => void
 }
@@ -38,6 +40,8 @@ export function FilterStrip({
   onFilterChange,
   selectedDeptId,
   onDeptChange,
+  selectedYear,
+  onYearChange,
   selectedCourseId,
   onCourseChange,
 }: FilterStripProps) {
@@ -51,13 +55,21 @@ export function FilterStrip({
   )
   const allCourses = coursesData?.items ?? []
 
-  const filteredCourses = selectedDeptId
-    ? allCourses.filter((c) => c.departmentId === selectedDeptId)
-    : allCourses
+  const filteredCourses = allCourses.filter((c) => {
+    const deptOk = selectedDeptId ? c.departmentId === selectedDeptId : true
+    const yearOk = selectedYear === null ? true : c.yearLevel === selectedYear
+    return deptOk && yearOk
+  })
 
   function handleDeptChange(value: string) {
     const deptId = value === ALL ? '' : value
     onDeptChange(deptId)
+    onCourseChange('')
+  }
+
+  function handleYearChange(value: string) {
+    const year = value === ALL ? null : Number(value)
+    onYearChange(year)
     onCourseChange('')
   }
 
@@ -84,9 +96,9 @@ export function FilterStrip({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:flex lg:p-0 lg:ml-auto">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 px-4 py-3 lg:p-0 lg:ml-auto">
         <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
+          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper">
@@ -99,19 +111,38 @@ export function FilterStrip({
           </SelectContent>
         </Select>
 
-        <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-35">
-            <SelectValue />
+        <Select
+          value={selectedYear === null ? ALL : String(selectedYear)}
+          onValueChange={handleYearChange}
+        >
+          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
+            <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent position="popper">
-            <SelectItem value={ALL}>All courses</SelectItem>
-            {filteredCourses.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.code} — {c.name}
+            <SelectItem value={ALL}>All years</SelectItem>
+            {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                Year {y}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        <div className="col-span-2 lg:col-span-1">
+          <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
+            <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value={ALL}>All courses</SelectItem>
+              {filteredCourses.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.code} — {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   )

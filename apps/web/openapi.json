@@ -345,6 +345,12 @@
             "schema": { "type": "string" }
           },
           {
+            "name": "yearLevel",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "maximum": 6, "type": "number" }
+          },
+          {
             "name": "type",
             "required": false,
             "in": "query",
@@ -771,6 +777,7 @@
         "properties": {
           "code": { "type": "string", "minLength": 2, "maxLength": 20 },
           "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+          "yearLevel": { "type": "number", "nullable": true, "minimum": 1, "maximum": 6 },
           "departmentId": { "type": "string" }
         },
         "required": ["code", "name", "departmentId"]
@@ -791,6 +798,7 @@
           "code": { "type": "string" },
           "name": { "type": "string" },
           "departmentId": { "type": "string" },
+          "yearLevel": { "type": "number", "nullable": true, "minimum": 1, "maximum": 6 },
           "department": { "$ref": "#/components/schemas/CourseDeptEntity" }
         },
         "required": ["id", "code", "name", "departmentId", "department"]
@@ -811,17 +819,19 @@
         "properties": {
           "code": { "type": "string", "minLength": 2, "maxLength": 20 },
           "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+          "yearLevel": { "type": "number", "nullable": true, "minimum": 1, "maximum": 6 },
           "departmentId": { "type": "string" }
         }
       },
-      "DepartmentEntity": {
+      "UserRole": { "type": "string", "enum": ["STUDENT", "MODERATOR", "ADMIN"] },
+      "UserDepartmentEntity": {
         "type": "object",
         "properties": {
           "id": { "type": "string" },
           "name": { "type": "string" },
-          "courseCount": { "type": "number" }
+          "code": { "type": "string" }
         },
-        "required": ["id", "name", "courseCount"]
+        "required": ["id", "name", "code"]
       },
       "UserProfileEntity": {
         "type": "object",
@@ -832,11 +842,11 @@
           "emailVerified": { "type": "boolean" },
           "image": { "type": "string", "nullable": true },
           "bio": { "type": "string", "nullable": true },
-          "role": { "type": "string", "enum": ["STUDENT", "MODERATOR", "ADMIN"] },
+          "role": { "allOf": [{ "$ref": "#/components/schemas/UserRole" }] },
           "departmentId": { "type": "string", "nullable": true },
           "department": {
             "nullable": true,
-            "allOf": [{ "$ref": "#/components/schemas/DepartmentEntity" }]
+            "allOf": [{ "$ref": "#/components/schemas/UserDepartmentEntity" }]
           },
           "enrollmentYear": { "type": "number", "nullable": true },
           "yearLevel": { "type": "number", "nullable": true },
@@ -879,6 +889,15 @@
         "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 100 } },
         "required": ["name"]
       },
+      "DepartmentEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "courseCount": { "type": "number" }
+        },
+        "required": ["id", "name", "courseCount"]
+      },
       "DeptCourseEntity": {
         "type": "object",
         "properties": {
@@ -915,6 +934,7 @@
           },
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
+          "isAnonymous": { "type": "boolean", "default": false },
           "externalUrl": { "type": "string", "maxLength": 500 },
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
@@ -923,6 +943,8 @@
         },
         "required": ["type", "courseId", "title", "description", "moduleNumber", "year", "semester"]
       },
+      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
+      "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
       "PostAuthorDeptEntity": {
         "type": "object",
         "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
@@ -979,8 +1001,9 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
-          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+          "type": { "allOf": [{ "$ref": "#/components/schemas/PostType" }] },
+          "status": { "allOf": [{ "$ref": "#/components/schemas/PostStatus" }] },
+          "isAnonymous": { "type": "boolean", "default": false },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
           "externalUrl": { "type": "string", "nullable": true },
@@ -1007,6 +1030,7 @@
           "id",
           "type",
           "status",
+          "isAnonymous",
           "shortCode",
           "authorId",
           "courseId",
@@ -1021,14 +1045,13 @@
           "reactionCounts"
         ]
       },
-      "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
-      "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
       "PostEntity": {
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
-          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+          "type": { "allOf": [{ "$ref": "#/components/schemas/PostType" }] },
+          "status": { "allOf": [{ "$ref": "#/components/schemas/PostStatus" }] },
+          "isAnonymous": { "type": "boolean", "default": false },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
           "externalUrl": { "type": "string", "nullable": true },
@@ -1055,6 +1078,7 @@
           "id",
           "type",
           "status",
+          "isAnonymous",
           "shortCode",
           "authorId",
           "courseId",
@@ -1103,6 +1127,7 @@
         "properties": {
           "title": { "type": "string", "minLength": 3, "maxLength": 200 },
           "description": { "type": "string", "maxLength": 2000 },
+          "isAnonymous": { "type": "boolean", "default": false },
           "externalUrl": { "type": "string", "maxLength": 500 },
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },

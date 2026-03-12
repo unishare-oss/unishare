@@ -43,7 +43,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           : 'INTERNAL_SERVER_ERROR'
 
     const stack = exception instanceof Error ? exception.stack : undefined
-    const details = this.getDetails(exceptionResponse)
+    const details = this.getDetails(exception, exceptionResponse)
     const requestDetails = `${request.method} ${request.path} ${status}`
 
     if (details) {
@@ -79,10 +79,38 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return 'Internal server error'
   }
 
-  private getDetails(exceptionResponse?: ExceptionResponseBody) {
-    if (typeof exceptionResponse === 'string' || !exceptionResponse) return undefined
+  private getDetails(exception: unknown, exceptionResponse?: ExceptionResponseBody) {
+    const details: Record<string, unknown> = {}
 
-    const details = { ...exceptionResponse }
+    if (typeof exceptionResponse === 'object' && exceptionResponse) {
+      Object.assign(details, exceptionResponse)
+    }
+
+    if (exception instanceof Error) {
+      details.errorName = exception.name
+
+      const typedException = exception as Error & {
+        cause?: unknown
+        code?: string
+      }
+
+      if (typedException.code) {
+        details.errorCode = typedException.code
+      }
+
+      if (typedException.cause) {
+        details.cause =
+          typedException.cause instanceof Error
+            ? {
+                name: typedException.cause.name,
+                message: typedException.cause.message,
+              }
+            : typedException.cause
+      }
+    } else if (!exceptionResponse && exception !== undefined) {
+      details.exception = exception
+    }
+
     const serialized = JSON.stringify(details)
     return serialized === '{}' ? undefined : serialized
   }

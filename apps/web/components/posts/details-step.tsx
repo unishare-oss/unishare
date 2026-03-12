@@ -5,12 +5,15 @@ import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -25,7 +28,6 @@ const EMPTY_SELECT_VALUE = '__empty__'
 
 const TITLE_ERROR = 'Title must be at least 3 characters'
 const DESCRIPTION_ERROR = 'Description is required'
-const YEAR_ERROR = 'Year must be between 1 and 6'
 const SEMESTER_ERROR = 'Semester must be between 1 and 3'
 const MODULE_ERROR = 'Module number must be between 1 and 20'
 const EXAM_YEAR_ERROR = 'Exam year must be between 1900 and 2100'
@@ -79,7 +81,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     {...field}
                     type="text"
                     placeholder="e.g. Complete Lecture Notes Week 1-6"
-                    className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -111,43 +113,39 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="year"
-              rules={{
-                validate: (value) => isWholeNumberInRange(value, 1, 6) || YEAR_ERROR,
-              }}
-              render={({ field }) => (
-                <FormItem className="w-full">
-                  <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                    Year {requiredMark}
-                  </FormLabel>
-                  <Select
-                    value={field.value || EMPTY_SELECT_VALUE}
-                    onValueChange={(value) =>
-                      field.onChange(value === EMPTY_SELECT_VALUE ? '' : value)
-                    }
+          <FormField
+            control={form.control}
+            name="isAnonymous"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  Posting identity
+                </FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    value={field.value ? 'anonymous' : 'public'}
+                    onValueChange={(value) => field.onChange(value === 'anonymous')}
+                    className="grid gap-3"
                   >
-                    <FormControl>
-                      <SelectTrigger className="w-full h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={EMPTY_SELECT_VALUE}>Select...</SelectItem>
-                      {[1, 2, 3, 4, 5, 6].map((y) => (
-                        <SelectItem key={y} value={String(y)}>
-                          Year {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
+                    <Label className="flex items-start gap-3 rounded-[6px] border border-border bg-card px-3 py-3 text-sm text-foreground">
+                      <RadioGroupItem value="public" className="mt-0.5" />
+                      <span className="leading-5">Post with your profile</span>
+                    </Label>
+                    <Label className="flex items-start gap-3 rounded-[6px] border border-border bg-card px-3 py-3 text-sm text-foreground">
+                      <RadioGroupItem value="anonymous" className="mt-0.5" />
+                      <span className="leading-5">Post anonymously</span>
+                    </Label>
+                  </RadioGroup>
+                </FormControl>
+                <FormDescription className="text-xs text-text-muted">
+                  Moderators can still review the post, but other users will not see your identity.
+                </FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
 
+          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="semester"
@@ -166,7 +164,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     }
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
+                      <SelectTrigger className="w-full h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
                         <SelectValue placeholder="Select..." />
                       </SelectTrigger>
                     </FormControl>
@@ -201,7 +199,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     {...field}
                     type="number"
                     placeholder="e.g. 4"
-                    className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -229,7 +227,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                       {...field}
                       type="number"
                       placeholder="e.g. 2024"
-                      className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                      className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -254,7 +252,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     value={field.value ?? ''}
                     type="url"
                     placeholder="https://..."
-                    className="h-[42px] rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />

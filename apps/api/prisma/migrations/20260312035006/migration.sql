@@ -1,11 +1,17 @@
 -- CreateEnum
+CREATE TYPE "NotificationType" AS ENUM ('POST_APPROVED', 'POST_REJECTED', 'COMMENT_ADDED');
+
+-- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('STUDENT', 'MODERATOR', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "PostType" AS ENUM ('NOTE', 'OLD_QUESTION');
+CREATE TYPE "PostType" AS ENUM ('NOTE', 'OLD_QUESTION', 'ASSIGNMENT');
 
 -- CreateEnum
 CREATE TYPE "PostStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "ReactionType" AS ENUM ('HELPFUL', 'LOVE', 'FIRE', 'WOW', 'SALUTE', 'FUNNY');
 
 -- CreateTable
 CREATE TABLE "user" (
@@ -18,6 +24,11 @@ CREATE TABLE "user" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "departmentId" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'STUDENT',
+    "banExpires" TIMESTAMP(3),
+    "banReason" TEXT,
+    "banned" BOOLEAN DEFAULT false,
+    "bio" TEXT,
+    "enrollmentYear" INTEGER,
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
@@ -49,18 +60,37 @@ CREATE TABLE "post" (
     "examYear" INTEGER,
     "year" INTEGER,
     "semester" INTEGER,
+    "isAnonymous" BOOLEAN NOT NULL DEFAULT false,
     "authorId" TEXT NOT NULL,
     "courseId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
     "moduleNumber" INTEGER,
-    "status" "PostStatus" NOT NULL DEFAULT 'PENDING',
+    "status" "PostStatus" NOT NULL DEFAULT 'APPROVED',
     "description" TEXT,
     "externalUrl" TEXT,
     "shortCode" TEXT NOT NULL,
+    "views" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "post_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "post_view" (
+    "userId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+
+    CONSTRAINT "post_view_pkey" PRIMARY KEY ("userId","postId")
+);
+
+-- CreateTable
+CREATE TABLE "reaction" (
+    "userId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+    "type" "ReactionType" NOT NULL,
+
+    CONSTRAINT "reaction_pkey" PRIMARY KEY ("userId","postId")
 );
 
 -- CreateTable
@@ -72,6 +102,7 @@ CREATE TABLE "file" (
     "mimeType" TEXT NOT NULL,
     "postId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "downloads" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "file_pkey" PRIMARY KEY ("id")
 );
@@ -108,6 +139,7 @@ CREATE TABLE "session" (
     "ipAddress" TEXT,
     "userAgent" TEXT,
     "userId" TEXT NOT NULL,
+    "impersonatedBy" TEXT,
 
     CONSTRAINT "session_pkey" PRIMARY KEY ("id")
 );
@@ -143,6 +175,19 @@ CREATE TABLE "verification" (
     CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "NotificationType" NOT NULL,
+    "message" TEXT NOT NULL,
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "postId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
@@ -150,10 +195,10 @@ CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 CREATE UNIQUE INDEX "department_name_key" ON "department"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "course_code_key" ON "course"("code");
+CREATE INDEX "course_departmentId_idx" ON "course"("departmentId");
 
 -- CreateIndex
-CREATE INDEX "course_departmentId_idx" ON "course"("departmentId");
+CREATE UNIQUE INDEX "course_code_departmentId_key" ON "course"("code", "departmentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "post_shortCode_key" ON "post"("shortCode");
@@ -169,6 +214,12 @@ CREATE INDEX "post_type_idx" ON "post"("type");
 
 -- CreateIndex
 CREATE INDEX "post_status_idx" ON "post"("status");
+
+-- CreateIndex
+CREATE INDEX "post_view_postId_idx" ON "post_view"("postId");
+
+-- CreateIndex
+CREATE INDEX "reaction_postId_idx" ON "reaction"("postId");
 
 -- CreateIndex
 CREATE INDEX "file_postId_idx" ON "file"("postId");
@@ -194,6 +245,9 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
+-- CreateIndex
+CREATE INDEX "notification_userId_idx" ON "notification"("userId");
+
 -- AddForeignKey
 ALTER TABLE "user" ADD CONSTRAINT "user_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "department"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -205,6 +259,18 @@ ALTER TABLE "post" ADD CONSTRAINT "post_authorId_fkey" FOREIGN KEY ("authorId") 
 
 -- AddForeignKey
 ALTER TABLE "post" ADD CONSTRAINT "post_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "post_view" ADD CONSTRAINT "post_view_postId_fkey" FOREIGN KEY ("postId") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "post_view" ADD CONSTRAINT "post_view_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reaction" ADD CONSTRAINT "reaction_postId_fkey" FOREIGN KEY ("postId") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reaction" ADD CONSTRAINT "reaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "file" ADD CONSTRAINT "file_postId_fkey" FOREIGN KEY ("postId") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -226,3 +292,9 @@ ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification" ADD CONSTRAINT "notification_postId_fkey" FOREIGN KEY ("postId") REFERENCES "post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notification" ADD CONSTRAINT "notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

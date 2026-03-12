@@ -26,10 +26,13 @@ export const usePdfAnnotationStore = create<PdfAnnotationStore>()(
 interface FeedStore {
   activeFilter: TypeFilter
   selectedDeptId: string | null
+  selectedYear: number | null
+  hasSelectedYear: boolean
   selectedCourseId: string
   pendingFilter: { deptId: string; courseId: string } | null
   setActiveFilter: (filter: TypeFilter) => void
   setSelectedDeptId: (deptId: string | null) => void
+  setSelectedYear: (year: number | null) => void
   setSelectedCourseId: (courseId: string) => void
   setPendingFilter: (deptId: string, courseId: string) => void
   consumePendingFilter: () => { deptId: string; courseId: string } | null
@@ -40,10 +43,14 @@ export const useFeedStore = create<FeedStore>()(
     (set, get) => ({
       activeFilter: 'ALL',
       selectedDeptId: null,
+      selectedYear: null,
+      hasSelectedYear: false,
       selectedCourseId: '',
       pendingFilter: null,
       setActiveFilter: (activeFilter) => set({ activeFilter }),
       setSelectedDeptId: (selectedDeptId) => set({ selectedDeptId, selectedCourseId: '' }),
+      setSelectedYear: (selectedYear) =>
+        set({ selectedYear, hasSelectedYear: true, selectedCourseId: '' }),
       setSelectedCourseId: (selectedCourseId) => set({ selectedCourseId }),
       setPendingFilter: (deptId, courseId) => set({ pendingFilter: { deptId, courseId } }),
       consumePendingFilter: () => {

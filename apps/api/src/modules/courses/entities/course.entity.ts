@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class CourseDeptEntity {
   @ApiProperty()
@@ -23,6 +23,9 @@ export class CourseEntity {
 
   @ApiProperty()
   departmentId: string
+
+  @ApiPropertyOptional({ nullable: true, type: Number, minimum: 1, maximum: 6 })
+  yearLevel: number | null
 
   @ApiProperty({ type: CourseDeptEntity })
   department: CourseDeptEntity

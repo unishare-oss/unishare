@@ -1,4 +1,3 @@
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -10,30 +9,29 @@ datasource db {
 }
 
 model User {
-  id             String      @id
+  id             String         @id
   name           String
-  email          String      @unique
-  emailVerified  Boolean     @default(false)
+  email          String         @unique
+  emailVerified  Boolean        @default(false)
   image          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   departmentId   String?
-  enrollmentYear Int?
+  role           UserRole       @default(STUDENT)
   banExpires     DateTime?
   banReason      String?
-  banned         Boolean?    @default(false)
-  role           UserRole    @default(STUDENT)
+  banned         Boolean?       @default(false)
+  bio            String?
+  enrollmentYear Int?
   accounts       Account[]
   comments       Comment[]
+  notifications  Notification[]
   posts          Post[]         @relation("AuthorPosts")
+  postViews      PostView[]
+  reactions      Reaction[]
   savedPosts     SavedPost[]
   sessions       Session[]
-  notifications  Notification[]
-  reactions      Reaction[]
-  postViews      PostView[]
   department     Department?    @relation(fields: [departmentId], references: [id])
-
-  bio        String?
 
   @@map("user")
 }
@@ -52,6 +50,7 @@ model Course {
   code         String
   name         String
   departmentId String
+  yearLevel    Int?
   createdAt    DateTime   @default(now())
   department   Department @relation(fields: [departmentId], references: [id])
   posts        Post[]
@@ -62,30 +61,31 @@ model Course {
 }
 
 model Post {
-  id           String      @id @default(cuid())
-  type         PostType
-  title        String?
-  examYear     Int?
-  year         Int?
-  semester     Int?
-  authorId     String
-  courseId     String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  deletedAt    DateTime?
-  moduleNumber Int?
-  status       PostStatus  @default(APPROVED)
-  description  String?
-  externalUrl  String?
-  shortCode    String      @unique
+  id            String         @id @default(cuid())
+  type          PostType
+  title         String?
+  examYear      Int?
+  year          Int?
+  semester      Int?
+  isAnonymous   Boolean?       @default(false)
+  authorId      String
+  courseId      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  moduleNumber  Int?
+  status        PostStatus     @default(APPROVED)
+  description   String?
+  externalUrl   String?
+  shortCode     String         @unique
   views         Int            @default(0)
   comments      Comment[]
   files         File[]
   notifications Notification[]
-  reactions     Reaction[]
+  author        User           @relation("AuthorPosts", fields: [authorId], references: [id])
+  course        Course         @relation(fields: [courseId], references: [id])
   postViews     PostView[]
-  author        User        @relation("AuthorPosts", fields: [authorId], references: [id])
-  course        Course      @relation(fields: [courseId], references: [id])
+  reactions     Reaction[]
   savedBy       SavedPost[]
 
   @@index([authorId])
@@ -98,8 +98,8 @@ model Post {
 model PostView {
   userId String
   postId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([postId])
@@ -110,8 +110,8 @@ model Reaction {
   userId String
   postId String
   type   ReactionType
-  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   post   Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([postId])
@@ -124,10 +124,10 @@ model File {
   name      String
   size      Int
   mimeType  String
-  postId     String
-  createdAt  DateTime @default(now())
-  downloads  Int      @default(0)
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  createdAt DateTime @default(now())
+  downloads Int      @default(0)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@map("file")
@@ -173,7 +173,6 @@ model Session {
   impersonatedBy String?
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-
   @@index([userId])
   @@map("session")
 }
@@ -218,8 +217,8 @@ model Notification {
   read      Boolean          @default(false)
   postId    String?
   createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   post      Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("notification")

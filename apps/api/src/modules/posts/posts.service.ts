@@ -45,13 +45,18 @@ export class PostsService {
     //Role
     const canSeeAllStatuses = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
 
-    const { courseId, departmentId, type, status, authorId, ...pagination } = query
+    const { courseId, departmentId, yearLevel, type, status, authorId, ...pagination } = query
+
+    const courseWhere = {
+      ...(departmentId && { departmentId }),
+      ...(yearLevel && { yearLevel }),
+    }
 
     const where = {
       deletedAt: null,
       ...(courseId && { courseId }),
       ...(type && { type }),
-      ...(departmentId && { course: { departmentId } }),
+      ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }

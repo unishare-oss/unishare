@@ -89,6 +89,9 @@ export class PostEntity {
   @ApiProperty({ enum: PostStatus, enumName: 'PostStatus' })
   status: PostStatus
 
+  @ApiProperty({ default: false })
+  isAnonymous: boolean
+
   @ApiPropertyOptional({ nullable: true, type: String })
   title: string | null
 

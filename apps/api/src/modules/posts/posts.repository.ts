@@ -41,18 +41,33 @@ function mapPost<T>(
   reactionCounts: Record<string, number>
   userReaction: string | null
 } {
-  const { savedBy, reactions, ...rest } = post as any
+  const { savedBy, reactions, author, isAnonymous, authorId, ...rest } = post as any
+  const isAnonymousValue = isAnonymous ?? false
   const reactionCounts: Record<string, number> = {}
   let userReaction: string | null = null
   for (const r of reactions ?? []) {
     reactionCounts[r.type] = (reactionCounts[r.type] ?? 0) + 1
     if (userId && r.userId === userId) userReaction = r.type
   }
+
+  if (isAnonymousValue) {
+    return {
+      ...rest,
+      isAnonymous: isAnonymousValue,
+      savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
+      reactionCounts,
+      userReaction,
+    }
+  }
+
   return {
     ...rest,
+    isAnonymous: isAnonymousValue,
     savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
     reactionCounts,
     userReaction,
+    author,
+    authorId,
   }
 }
 
@@ -60,7 +75,7 @@ function mapPost<T>(
 export class PostsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: {
+  async create(data: {
     shortCode: string
     authorId: string
     courseId: string
@@ -68,6 +83,7 @@ export class PostsRepository {
     title?: string
     description?: string
     externalUrl?: string
+    isAnonymous?: boolean
     examYear?: number
     moduleNumber?: number
     year?: number

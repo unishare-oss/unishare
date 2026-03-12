@@ -30,8 +30,13 @@ async function main() {
     for (const course of dept.courses) {
       await prisma.course.upsert({
         where: { code_departmentId: { code: course.code, departmentId: department.id } },
-        update: { name: course.name },
-        create: { code: course.code, name: course.name, departmentId: department.id },
+        update: { name: course.name, yearLevel: course.yearLevel ?? null },
+        create: {
+          code: course.code,
+          name: course.name,
+          departmentId: department.id,
+          yearLevel: course.yearLevel ?? null,
+        },
       })
     }
 
