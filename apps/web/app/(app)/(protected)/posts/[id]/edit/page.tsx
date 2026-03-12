@@ -51,6 +51,7 @@ const emptyValues: CreatePostFormValues = {
   selectedCourse: '',
   title: '',
   description: '',
+  isAnonymous: false,
   year: '',
   semester: '',
   moduleNum: '',
@@ -66,6 +67,7 @@ function postToFormValues(post: PostDetailEntity): CreatePostFormValues {
     selectedCourse: post.course.id,
     title: post.title ?? '',
     description: post.description ?? '',
+    isAnonymous: post.isAnonymous ?? false,
     year: post.year != null ? String(post.year) : '',
     semester: post.semester != null ? String(post.semester) : '',
     moduleNum: post.moduleNumber != null ? String(post.moduleNumber) : '',
@@ -143,6 +145,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         data: {
           title: formValues.title.trim(),
           description: formValues.description.trim(),
+          isAnonymous: formValues.isAnonymous,
           externalUrl: formValues.externalUrl?.trim() || undefined,
           year: Number(formValues.year),
           semester: Number(formValues.semester),

@@ -8,6 +8,7 @@ export type CreatePostFormValues = {
   selectedCourse: string
   title: string
   description: string
+  isAnonymous: boolean
   year: string
   semester: string
   moduleNum: string

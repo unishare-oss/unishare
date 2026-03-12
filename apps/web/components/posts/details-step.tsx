@@ -5,12 +5,15 @@ import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -106,6 +109,38 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none"
                   />
                 </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="isAnonymous"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  Posting identity
+                </FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    value={field.value ? 'anonymous' : 'public'}
+                    onValueChange={(value) => field.onChange(value === 'anonymous')}
+                    className="grid gap-3"
+                  >
+                    <Label className="flex items-start gap-3 rounded-[6px] border border-border bg-card px-3 py-3 text-sm text-foreground">
+                      <RadioGroupItem value="public" className="mt-0.5" />
+                      <span className="leading-5">Post with your profile</span>
+                    </Label>
+                    <Label className="flex items-start gap-3 rounded-[6px] border border-border bg-card px-3 py-3 text-sm text-foreground">
+                      <RadioGroupItem value="anonymous" className="mt-0.5" />
+                      <span className="leading-5">Post anonymously</span>
+                    </Label>
+                  </RadioGroup>
+                </FormControl>
+                <FormDescription className="text-xs text-text-muted">
+                  Moderators can still review the post, but other users will not see your identity.
+                </FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
