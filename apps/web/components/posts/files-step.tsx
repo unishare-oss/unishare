@@ -1,8 +1,18 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { FileImage, FileSpreadsheet, FileText, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { getSnippetExt, getSnippetMimeType, type SnippetLanguage } from '@/lib/utils'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -68,11 +78,28 @@ interface FilesStepProps {
 
 export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [snippetLanguage, setSnippetLanguage] = useState<SnippetLanguage>('typescript')
+  const [snippetName, setSnippetName] = useState('snippet')
+  const [snippetText, setSnippetText] = useState('')
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? [])
     if (picked.length > 0) onAddFiles(picked)
     e.target.value = ''
+  }
+
+  function handleAttachSnippet() {
+    const text = snippetText
+    if (!text.trim()) return
+
+    const safeBase = (snippetName || 'snippet').trim().replace(/\s+/g, '-')
+    const ext = getSnippetExt(snippetLanguage)
+    const mimeType = getSnippetMimeType(snippetLanguage)
+
+    const file = new File([text], `${safeBase}.${ext}`, { type: mimeType })
+    onAddFiles([file])
+
+    setSnippetText('')
   }
 
   return (
@@ -99,6 +126,79 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
         <Upload className="size-6 text-text-muted" strokeWidth={1.5} />
         <p className="text-sm text-text-muted">Drop files here or click to browse</p>
       </button>
+
+      <div className="mt-4 rounded-[6px] border border-border bg-background p-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+            Paste code snippet
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={disabled || !snippetText.trim()}
+            onClick={handleAttachSnippet}
+          >
+            Attach snippet
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-xs text-text-muted">Language</p>
+            <Select
+              value={snippetLanguage}
+              onValueChange={(value) => setSnippetLanguage(value as SnippetLanguage)}
+            >
+              <SelectTrigger className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="typescript">TypeScript</SelectItem>
+                <SelectItem value="tsx">TSX</SelectItem>
+                <SelectItem value="javascript">JavaScript</SelectItem>
+                <SelectItem value="jsx">JSX</SelectItem>
+                <SelectItem value="python">Python</SelectItem>
+                <SelectItem value="go">Go</SelectItem>
+                <SelectItem value="java">Java</SelectItem>
+                <SelectItem value="rust">Rust</SelectItem>
+                <SelectItem value="sql">SQL</SelectItem>
+                <SelectItem value="bash">Shell</SelectItem>
+                <SelectItem value="yaml">YAML</SelectItem>
+                <SelectItem value="markdown">Markdown</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="text">Plain text</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs text-text-muted">Filename</p>
+            <Input
+              value={snippetName}
+              onChange={(e) => setSnippetName(e.target.value)}
+              placeholder="snippet"
+              disabled={disabled}
+              className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground"
+            />
+            <p className="text-xs text-text-muted">
+              Extension is appended automatically (e.g. <span className="font-mono">snippet</span> →{' '}
+              <span className="font-mono">snippet.ts</span>).
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Textarea
+            value={snippetText}
+            onChange={(e) => setSnippetText(e.target.value)}
+            placeholder="Paste your code here..."
+            rows={6}
+            disabled={disabled}
+            className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none font-mono"
+          />
+        </div>
+      </div>
 
       {items.length > 0 && (
         <div className="flex flex-col gap-2 mt-4">
