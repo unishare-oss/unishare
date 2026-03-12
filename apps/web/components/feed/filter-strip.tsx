@@ -115,7 +115,7 @@ export function FilterStrip({
           value={selectedYear === null ? ALL : String(selectedYear)}
           onValueChange={handleYearChange}
         >
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
+          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-32">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent position="popper">
