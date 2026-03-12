@@ -45,6 +45,7 @@ export class UsersService {
     [key: string]: unknown
   }) {
     const { _count, ...rest } = user
+
     const shouldShowUpdateMajorPopup = !user.departmentId || user.enrollmentYear === null
     const base = {
       ...rest,
@@ -58,16 +59,12 @@ export class UsersService {
       return { ...base, yearLevel: null }
     }
 
-    if (user.enrollmentYear === null) {
-      return { ...user, yearLevel: null, shouldShowUpdateMajorPopup }
-    }
-
     const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
     const now = new Date()
     const currentAcademicYear =
       now.getMonth() + 1 >= academicStartMonth ? now.getFullYear() : now.getFullYear() - 1
     const yearLevel = Math.max(1, currentAcademicYear - user.enrollmentYear + 1)
 
-    return { ...user, yearLevel, shouldShowUpdateMajorPopup }
+    return { ...base, yearLevel }
   }
 }
