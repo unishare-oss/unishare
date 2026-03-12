@@ -42,6 +42,7 @@ function mapPost<T>(
   userReaction: string | null
 } {
   const { savedBy, reactions, author, isAnonymous, authorId, ...rest } = post as any
+  const isAnonymousValue = isAnonymous ?? false
   const reactionCounts: Record<string, number> = {}
   let userReaction: string | null = null
   for (const r of reactions ?? []) {
@@ -49,9 +50,10 @@ function mapPost<T>(
     if (userId && r.userId === userId) userReaction = r.type
   }
 
-  if (isAnonymous) {
+  if (isAnonymousValue) {
     return {
       ...rest,
+      isAnonymous: isAnonymousValue,
       savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
       reactionCounts,
       userReaction,
@@ -60,6 +62,7 @@ function mapPost<T>(
 
   return {
     ...rest,
+    isAnonymous: isAnonymousValue,
     savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
     reactionCounts,
     userReaction,
