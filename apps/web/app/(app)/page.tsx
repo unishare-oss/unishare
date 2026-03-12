@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { keepPreviousData } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
@@ -14,9 +15,12 @@ export default function FeedPage() {
   const {
     activeFilter,
     selectedDeptId,
+    selectedYear,
+    hasSelectedYear,
     selectedCourseId,
     setActiveFilter,
     setSelectedDeptId,
+    setSelectedYear,
     setSelectedCourseId,
     consumePendingFilter,
   } = useFeedStore()
@@ -33,6 +37,12 @@ export default function FeedPage() {
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.departmentId ?? ''
 
+  useEffect(() => {
+    if (!hasSelectedYear && user?.yearLevel) {
+      setSelectedYear(user.yearLevel)
+    }
+  }, [hasSelectedYear, setSelectedYear, user?.yearLevel])
+
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)
     setPage(1)
@@ -40,6 +50,11 @@ export default function FeedPage() {
 
   function handleFilterChange(filter: TypeFilter) {
     setActiveFilter(filter)
+    setPage(1)
+  }
+
+  function handleYearChange(year: number | null) {
+    setSelectedYear(year)
     setPage(1)
   }
 
@@ -53,6 +68,7 @@ export default function FeedPage() {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
       courseId: selectedCourseId || undefined,
       departmentId: effectiveDeptId || undefined,
+      yearLevel: selectedYear ?? undefined,
       page,
       limit: 20,
     },
@@ -76,6 +92,8 @@ export default function FeedPage() {
         onFilterChange={handleFilterChange}
         selectedDeptId={effectiveDeptId}
         onDeptChange={handleDeptChange}
+        selectedYear={selectedYear}
+        onYearChange={handleYearChange}
         selectedCourseId={selectedCourseId}
         onCourseChange={handleCourseChange}
       />

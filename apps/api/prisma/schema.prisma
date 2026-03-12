@@ -50,6 +50,7 @@ model Course {
   code         String
   name         String
   departmentId String
+  yearLevel    Int?
   createdAt    DateTime   @default(now())
   department   Department @relation(fields: [departmentId], references: [id])
   posts        Post[]

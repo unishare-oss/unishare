@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { type FieldPath, type FieldPathValue, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -86,7 +86,8 @@ function getInvalidStep(values: CreatePostFormValues) {
     return 0
   }
 
-  if (!values.selectedCourse) {
+  const yearValid = yearSchema.safeParse(values.year).success
+  if (!yearValid || !values.selectedCourse) {
     return 1
   }
 
@@ -111,6 +112,16 @@ export default function CreatePostPage() {
     defaultValue: defaultValues,
   }) as CreatePostFormValues
 
+  const yearDirty = !!form.formState.dirtyFields.year
+
+  useEffect(() => {
+    if (!me?.yearLevel) return
+    if (values.year) return
+    if (yearDirty) return
+
+    form.setValue('year', String(me.yearLevel), { shouldDirty: false, shouldTouch: false })
+  }, [form, me?.yearLevel, values.year, yearDirty])
+
   function updateField<K extends FieldPath<CreatePostFormValues>>(
     field: K,
     value: FieldPathValue<CreatePostFormValues, K>,
@@ -122,7 +133,7 @@ export default function CreatePostPage() {
     currentStep === 0
       ? !!values.postType
       : currentStep === 1
-        ? !!values.selectedCourse
+        ? yearSchema.safeParse(values.year).success && !!values.selectedCourse
         : currentStep === 2
           ? createPostFormSchema.safeParse(values).success
           : true
@@ -200,6 +211,11 @@ export default function CreatePostPage() {
 
           {currentStep === 1 && (
             <CourseStep
+              selectedYear={values.year}
+              onYearChange={(year) => {
+                updateField('year', year)
+                updateField('selectedCourse', '')
+              }}
               selectedCourse={values.selectedCourse}
               departmentId={me?.departmentId ?? undefined}
               meLoading={mePending}
