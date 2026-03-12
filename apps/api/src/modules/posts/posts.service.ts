@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
-import { PostStatus, PostType, Prisma, UserRole } from '@/generated/prisma/client'
+import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { PostsRepository } from './posts.repository'
