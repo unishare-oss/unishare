@@ -1,4 +1,5 @@
 import { PostCard } from '@/components/post-card'
+import { PostCardSkeletonList } from '@/components/feed/post-card-skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
 import { cn } from '@/lib/utils'
 import type { ApiPost } from '@/lib/api-types'
@@ -9,6 +10,7 @@ interface PostFeedProps {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  loading?: boolean
   emptyMessage?: string
   emptyDescription?: string
 }
@@ -18,6 +20,7 @@ export function PostFeed({
   page,
   totalPages,
   onPageChange,
+  loading = false,
   emptyMessage = 'No posts found',
   emptyDescription,
 }: PostFeedProps) {
@@ -26,7 +29,9 @@ export function PostFeed({
   return (
     <>
       <div className="flex-1 bg-card">
-        {posts.length === 0 ? (
+        {loading && posts.length === 0 ? (
+          <PostCardSkeletonList count={3} />
+        ) : posts.length === 0 ? (
           <EmptyState message={emptyMessage} description={emptyDescription} />
         ) : (
           posts.map((post) => <PostCard key={post.id} post={post} />)

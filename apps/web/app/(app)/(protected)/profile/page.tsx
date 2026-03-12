@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { keepPreviousData } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
@@ -22,13 +23,13 @@ import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 function ProfileContent({ user }: { user: UserProfileEntity }) {
   const [activeTab, setActiveTab] = useState<Tab>('MY POSTS')
 
-  const { data: myPostsData } = usePostsControllerFindAll(
+  const { data: myPostsData, isLoading: myPostsLoading } = usePostsControllerFindAll(
     { authorId: user.id, limit: 100 },
-    { query: { select: (r) => r.data } },
+    { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
   )
-  const { data: savedPostsData } = usePostsControllerGetSavedPosts(
+  const { data: savedPostsData, isLoading: savedPostsLoading } = usePostsControllerGetSavedPosts(
     {},
-    { query: { select: (r) => r.data } },
+    { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
   )
 
   const myPosts = myPostsData?.items ?? []
@@ -45,6 +46,7 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         posts={activeTab === 'MY POSTS' ? myPosts : savedPosts}
+        loading={activeTab === 'MY POSTS' ? myPostsLoading : savedPostsLoading}
       />
     </>
   )

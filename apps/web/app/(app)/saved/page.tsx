@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { keepPreviousData } from '@tanstack/react-query'
 import Link from 'next/link'
 import { LogIn } from 'lucide-react'
 import { usePostsControllerGetSavedPosts } from '@/src/lib/api/generated/posts/posts'
@@ -16,9 +17,15 @@ export default function SavedPage() {
   const guestSavedPosts = useUIStore((s) => s.savedPosts)
   const [page, setPage] = useState(1)
 
-  const { data: apiSavedData } = usePostsControllerGetSavedPosts(
+  const { data: apiSavedData, isLoading: savedLoading } = usePostsControllerGetSavedPosts(
     { page, limit: 20 },
-    { query: { select: (r) => r.data, enabled: isAuthenticated } },
+    {
+      query: {
+        select: (r) => r.data,
+        enabled: isAuthenticated,
+        placeholderData: keepPreviousData,
+      },
+    },
   )
 
   return (
@@ -42,6 +49,7 @@ export default function SavedPage() {
         {isAuthenticated ? (
           <PostFeed
             posts={apiSavedData?.items ?? []}
+            loading={savedLoading}
             page={apiSavedData?.page ?? 1}
             totalPages={apiSavedData?.totalPages ?? 1}
             onPageChange={setPage}

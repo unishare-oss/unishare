@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
+import { keepPreviousData } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
 import { FilterStrip } from '@/components/feed/filter-strip'
@@ -62,7 +63,7 @@ export default function FeedPage() {
     setPage(1)
   }
 
-  const { data } = usePostsControllerFindAll(
+  const { data, isLoading } = usePostsControllerFindAll(
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
       courseId: selectedCourseId || undefined,
@@ -71,7 +72,7 @@ export default function FeedPage() {
       page,
       limit: 20,
     },
-    { query: { select: (r) => r.data } },
+    { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
   )
 
   const items = data?.items ?? []
@@ -116,6 +117,7 @@ export default function FeedPage() {
 
       <PostFeed
         posts={filteredItems}
+        loading={isLoading}
         page={data?.page ?? 1}
         totalPages={data?.totalPages ?? 1}
         onPageChange={setPage}

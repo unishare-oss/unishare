@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { PostCard } from '@/components/post-card'
+import { PostCardSkeletonList } from '@/components/feed/post-card-skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
 import type { ApiPost } from '@/lib/api-types'
 
@@ -12,9 +13,10 @@ interface ProfileTabsProps {
   activeTab: Tab
   onTabChange: (tab: Tab) => void
   posts: ApiPost[]
+  loading?: boolean
 }
 
-export function ProfileTabs({ activeTab, onTabChange, posts }: ProfileTabsProps) {
+export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: ProfileTabsProps) {
   return (
     <>
       <div className="flex items-center gap-1 border-b border-border mb-0">
@@ -35,7 +37,9 @@ export function ProfileTabs({ activeTab, onTabChange, posts }: ProfileTabsProps)
       </div>
 
       <div>
-        {posts.length === 0 ? (
+        {loading && posts.length === 0 ? (
+          <PostCardSkeletonList count={3} />
+        ) : posts.length === 0 ? (
           <EmptyState
             message={
               activeTab === 'MY POSTS' ? "You haven't posted anything yet." : 'No saved posts yet.'
