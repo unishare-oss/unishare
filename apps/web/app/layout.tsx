@@ -4,7 +4,9 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
+import './themes.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
 const geistSans = Geist({
@@ -51,12 +53,32 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="theme-unishare"
+          themes={[
+            'theme-unishare',
+            'theme-catppuccin-mocha',
+            'theme-catppuccin-latte',
+            'theme-nord',
+            'theme-arctic',
+            'theme-tokyo-night',
+            'theme-dracula',
+            'theme-gruvbox-dark',
+            'theme-midnight-library',
+            'theme-parchment',
+            'theme-ocean-depth',
+            'theme-sakura',
+          ]}
+          disableTransitionOnChange
+        >
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </ThemeProvider>
         <Script
           defer
           src="https://analytics.psstee.dev/script.js"

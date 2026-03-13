@@ -15,7 +15,7 @@
   --secondary: #ffffff;
   --secondary-foreground: #1c1917;
   --muted: #f7f3ee;
-  --muted-foreground: #78716c;
+  --muted-foreground: #6b6560;
   --accent: #fef3c7;
   --accent-foreground: #d97706;
   --destructive: #dc2626;
@@ -38,14 +38,15 @@
   --sidebar-border: #e2dad0;
   --sidebar-ring: #d97706;
 
-  --text-secondary: #78716c;
-  --text-muted: #a8a29e;
+  --text-secondary: #6b6560;
+  --text-muted: #8a837e;
   --amber: #d97706;
   --amber-hover: #b45309;
   --amber-subtle: #fef3c7;
   --success: #16a34a;
   --info: #0369a1;
   --surface-dark: #1c1917;
+  --card-dark: #f0ebe4;
 }
 
 @theme inline {
