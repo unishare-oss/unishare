@@ -14,6 +14,8 @@ import {
   LogIn,
   Users,
   BarChart2,
+  MessageSquarePlus,
+  Palette,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -32,6 +34,7 @@ const authNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
 ]
 
