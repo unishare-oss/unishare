@@ -32,6 +32,25 @@ export class CommentsController {
     return this.commentsService.create(postId, dto, session.user.id)
   }
 
+  @Post(':commentId/replies')
+  @ApiOkResponse({ type: CommentEntity })
+  @ResponseMessage('Reply created successfully')
+  createReply(
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: CreateCommentDto,
+    @Session() session: UserSession,
+  ) {
+    return this.commentsService.create(
+      postId,
+      {
+        ...dto,
+        parentId: commentId,
+      },
+      session.user.id,
+    )
+  }
+
   @Patch(':commentId')
   @ApiOkResponse({ type: CommentEntity })
   @ResponseMessage('Comment updated successfully')

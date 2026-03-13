@@ -24,6 +24,9 @@ export class CommentEntity {
   @ApiProperty()
   postId: string
 
+  @ApiPropertyOptional({ nullable: true, type: String })
+  parentId: string | null
+
   @ApiProperty()
   createdAt: Date
 
@@ -35,4 +38,10 @@ export class CommentEntity {
 
   @ApiProperty({ type: CommentUserEntity })
   user: CommentUserEntity
+
+  @ApiPropertyOptional({
+    type: () => [CommentEntity],
+    description: 'Nested replies for this comment.',
+  })
+  children?: CommentEntity[]
 }

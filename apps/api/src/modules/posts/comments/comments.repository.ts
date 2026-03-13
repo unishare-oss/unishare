@@ -46,6 +46,7 @@ export class CommentsRepository {
         postId,
         userId,
         content: dto.content,
+        ...(dto.parentId ? { parentId: dto.parentId } : {}),
       },
       include: commentInclude,
     })
