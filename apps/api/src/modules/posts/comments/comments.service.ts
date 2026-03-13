@@ -1,10 +1,26 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import { UserRole } from '@/generated/prisma/client'
+import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { PostsService } from '../posts.service'
 import { CommentsRepository } from './comments.repository'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
+
+type FlatCommentNode = Prisma.CommentGetPayload<{
+  include: {
+    user: {
+      select: {
+        id: true
+        name: true
+        image: true
+      }
+    }
+  }
+}>
+
+type CommentTreeNode = FlatCommentNode & {
+  children?: CommentTreeNode[]
+}
 
 @Injectable()
 export class CommentsService {
@@ -16,11 +32,21 @@ export class CommentsService {
 
   async findAll(postId: string) {
     await this.postsService.assertCommentTargetExists(postId)
-    return this.commentsRepository.findAll(postId)
+
+    const comments = await this.commentsRepository.findAll(postId)
+    return this.buildCommentTree(comments)
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
     const post = await this.postsService.getNotificationTarget(postId)
+
+    if (dto.parentId) {
+      const parentComment = await this.commentsRepository.findById(dto.parentId)
+      if (!parentComment || parentComment.postId !== postId || parentComment.deletedAt) {
+        throw new NotFoundException('Parent comment not found')
+      }
+    }
+
     const comment = await this.commentsRepository.create(postId, userId, dto)
     void this.notificationsService.notifyComment(
       postId,
@@ -65,5 +91,26 @@ export class CommentsService {
     }
 
     return this.commentsRepository.softDelete(commentId)
+  }
+
+  private buildCommentTree(comments: FlatCommentNode[]) {
+    const nodes = new Map<string, CommentTreeNode>(
+      comments.map((comment) => [comment.id, { ...comment, children: [] }]),
+    )
+
+    const roots: CommentTreeNode[] = []
+    for (const comment of nodes.values()) {
+      if (comment.parentId) {
+        const parent = nodes.get(comment.parentId)
+        if (parent) {
+          parent.children!.push(comment)
+          continue
+        }
+      }
+
+      roots.push(comment)
+    }
+
+    return roots
   }
 }

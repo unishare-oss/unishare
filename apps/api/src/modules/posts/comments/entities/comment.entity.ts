@@ -26,4 +26,10 @@ export class CommentEntity {
 
   @ApiProperty({ type: CommentUserEntity })
   user: CommentUserEntity
+
+  @ApiPropertyOptional({
+    type: () => [CommentEntity],
+    description: 'Nested replies for this comment.',
+  })
+  children?: CommentEntity[]
 }
