@@ -1,15 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { CommentListSkeleton } from '@/components/post-detail/comment-list-skeleton'
-import { UserAvatar } from '@/components/shared/user-avatar'
+import { CommentThreadItem } from '@/components/post-detail/comment-thread-item'
 import {
   getCommentsControllerFindAllQueryKey,
   useCommentsControllerCreate,
   useCommentsControllerFindAll,
+  useCommentsControllerCreateReply,
   useCommentsControllerRemove,
   useCommentsControllerUpdate,
 } from '@/src/lib/api/generated/comments/comments'
@@ -27,12 +26,16 @@ interface DraftState {
   commentText: string
   editingCommentId: string | null
   editText: string
+  replyCommentId: string | null
+  replyText: string
 }
 
 const INITIAL_DRAFT_STATE: DraftState = {
   commentText: '',
   editingCommentId: null,
   editText: '',
+  replyCommentId: null,
+  replyText: '',
 }
 
 export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
@@ -47,12 +50,13 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     query: { select: (response) => response.data },
   })
   const { mutateAsync: createComment, isPending } = useCommentsControllerCreate()
+  const { mutateAsync: createReply, isPending: isReplying } = useCommentsControllerCreateReply()
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
   const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
 
   const currentUserId = user?.id ?? null
   const currentUserRole = user?.role
-  const { commentText, editingCommentId, editText } = drafts
+  const { commentText, editingCommentId, editText, replyCommentId, replyText } = drafts
 
   async function handleSubmit() {
     const content = commentText.trim()
@@ -90,6 +94,24 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     }))
   }
 
+  function startReply(commentId: string) {
+    setError(null)
+    setDrafts((current) => ({
+      ...current,
+      replyCommentId: commentId,
+      replyText: '',
+    }))
+  }
+
+  function cancelReply() {
+    setError(null)
+    setDrafts((current) => ({
+      ...current,
+      replyCommentId: null,
+      replyText: '',
+    }))
+  }
+
   async function handleUpdate(commentId: string) {
     const content = editText.trim()
 
@@ -119,11 +141,32 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       if (editingCommentId === commentId) {
         cancelEditing()
       }
+      if (replyCommentId === commentId) {
+        cancelReply()
+      }
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete comment')
+    }
+  }
+
+  async function handleReplySubmit(commentId: string) {
+    const content = replyText.trim()
+
+    if (!content || !isAuthenticated) return
+
+    setError(null)
+
+    try {
+      await createReply({ postId, commentId, data: { content } })
+      cancelReply()
+      await queryClient.invalidateQueries({
+        queryKey: getCommentsControllerFindAllQueryKey(postId),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to post reply')
     }
   }
 
@@ -160,99 +203,36 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       <div className="flex flex-col">
         {isLoading && comments.length === 0 && <CommentListSkeleton />}
         {comments.map((comment) => {
-          const isEdited = comment.updatedAt !== comment.createdAt
-
           return (
-            <div key={comment.id} className="group py-4 border-b border-border last:border-b-0">
-              {comment.deletedAt !== null ? (
-                <p className="text-sm text-text-muted italic">[deleted]</p>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                      <span className="text-sm font-medium text-foreground">
-                        {comment.user.name}
-                      </span>
-                      <span className="font-mono text-xs text-text-muted">
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                      </span>
-                      {isEdited && (
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                          (edited)
-                        </span>
-                      )}
-                    </div>
-                    {currentUserId && (
-                      <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
-                        {comment.userId === currentUserId && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => startEditing(comment.id, comment.content)}
-                            disabled={isUpdating || isRemoving}
-                            aria-label="Edit comment"
-                          >
-                            <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                          </Button>
-                        )}
-                        {(comment.userId === currentUserId ||
-                          (postAuthorId != null && postAuthorId === currentUserId) ||
-                          currentUserRole === 'ADMIN') && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => handleDelete(comment.id)}
-                            disabled={isUpdating || isRemoving}
-                            aria-label="Delete comment"
-                          >
-                            <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {editingCommentId === comment.id ? (
-                    <div className="pl-[34px] space-y-3">
-                      <Textarea
-                        value={editText}
-                        onChange={(e) =>
-                          setDrafts((current) => ({ ...current, editText: e.target.value }))
-                        }
-                        rows={3}
-                        className="resize-none"
-                      />
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={cancelEditing}
-                          disabled={isUpdating}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleUpdate(comment.id)}
-                          disabled={!editText.trim() || isUpdating}
-                          className="bg-amber text-primary-foreground hover:bg-amber-hover"
-                        >
-                          {isUpdating ? 'Saving...' : 'Save'}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-foreground leading-relaxed pl-[34px]">
-                      {comment.content}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
+            <CommentThreadItem
+              key={comment.id}
+              comment={comment}
+              depth={0}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+              postAuthorId={postAuthorId}
+              isAuthenticated={isAuthenticated}
+              editingCommentId={editingCommentId}
+              editText={editText}
+              replyCommentId={replyCommentId}
+              replyText={replyText}
+              isUpdating={isUpdating}
+              isRemoving={isRemoving}
+              isReplying={isReplying}
+              onStartEditing={startEditing}
+              onCancelEditing={cancelEditing}
+              onEditTextChange={(value) =>
+                setDrafts((current) => ({ ...current, editText: value }))
+              }
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onStartReply={startReply}
+              onCancelReply={cancelReply}
+              onReplyTextChange={(value) =>
+                setDrafts((current) => ({ ...current, replyText: value }))
+              }
+              onReplySubmit={handleReplySubmit}
+            />
           )
         })}
         {!isLoading && comments.length === 0 && (
