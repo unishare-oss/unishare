@@ -15,6 +15,7 @@ import {
   Users,
   BarChart2,
   Palette,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -87,13 +88,13 @@ export function AppSidebar() {
               className={cn(
                 'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
                 isActive
-                  ? 'bg-gradient-to-r from-amber/[0.12] to-transparent text-amber font-medium'
+                  ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
                   : 'text-text-muted hover:text-foreground hover:bg-muted',
               )}
             >
               <span
                 className={cn(
-                  'absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-gradient-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+                  'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
                   isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
                 )}
               />
@@ -127,13 +128,13 @@ export function AppSidebar() {
                   className={cn(
                     'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
                     isActive
-                      ? 'bg-gradient-to-r from-amber/[0.12] to-transparent text-amber font-medium'
+                      ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
                       : 'text-text-muted hover:text-foreground hover:bg-muted',
                   )}
                 >
                   <span
                     className={cn(
-                      'absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-gradient-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+                      'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
                       isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
                     )}
                   />

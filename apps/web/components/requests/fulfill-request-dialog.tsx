@@ -77,7 +77,7 @@ export function FulfillRequestDialog({ requestId }: { requestId: string }) {
               </SelectContent>
             </Select>
             {posts.length === 0 && (
-              <p className="text-xs text-text-muted">You haven't uploaded any posts yet.</p>
+              <p className="text-xs text-text-muted">You haven&apos;t uploaded any posts yet.</p>
             )}
           </div>
 
