@@ -737,6 +737,137 @@
         },
         "tags": ["stats"]
       }
+    },
+    "/api/post-requests": {
+      "post": {
+        "operationId": "PostRequestsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePostRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      },
+      "get": {
+        "operationId": "PostRequestsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "type": "number" }
+          },
+          { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string", "enum": ["OPEN", "FULFILLED"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedPostRequestEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      }
+    },
+    "/api/post-requests/{id}": {
+      "get": {
+        "operationId": "PostRequestsController_findOne",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      },
+      "delete": {
+        "operationId": "PostRequestsController_remove",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["post-requests"]
+      }
+    },
+    "/api/post-requests/{id}/upvote": {
+      "post": {
+        "operationId": "PostRequestsController_upvote",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      }
+    },
+    "/api/post-requests/{id}/fulfill": {
+      "patch": {
+        "operationId": "PostRequestsController_fulfill",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FulfillPostRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      }
     }
   },
   "info": {
@@ -1260,6 +1391,99 @@
           "topUsers": { "type": "array", "items": { "$ref": "#/components/schemas/TopUserEntity" } }
         },
         "required": ["overview", "topPostsByViews", "topPostsByReactions", "topUsers"]
+      },
+      "CreatePostRequestDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 200 },
+          "description": { "type": "string", "maxLength": 2000 },
+          "courseId": { "type": "string" }
+        },
+        "required": ["title", "courseId"]
+      },
+      "PostRequestAuthorEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name"]
+      },
+      "PostRequestCourseEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "code": { "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "code", "name"]
+      },
+      "PostRequestFulfilledByEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string", "nullable": true },
+          "shortCode": { "type": "string" }
+        },
+        "required": ["id", "shortCode"]
+      },
+      "PostRequestEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["OPEN", "FULFILLED"] },
+          "courseId": { "type": "string" },
+          "authorId": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "upvoteCount": { "type": "number" },
+          "isUpvoted": { "type": "boolean" },
+          "author": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/PostRequestAuthorEntity" }]
+          },
+          "course": { "$ref": "#/components/schemas/PostRequestCourseEntity" },
+          "fulfilledByPost": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/PostRequestFulfilledByEntity" }]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "courseId",
+          "authorId",
+          "createdAt",
+          "updatedAt",
+          "upvoteCount",
+          "isUpvoted",
+          "course"
+        ]
+      },
+      "PaginatedPostRequestEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PostRequestEntity" }
+          },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" },
+          "totalPages": { "type": "number" }
+        },
+        "required": ["items", "total", "page", "limit", "totalPages"]
+      },
+      "FulfillPostRequestDto": {
+        "type": "object",
+        "properties": {
+          "postId": { "type": "string", "description": "ID of the post that fulfills this request" }
+        },
+        "required": ["postId"]
       }
     }
   }
