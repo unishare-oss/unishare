@@ -14,6 +14,7 @@ import {
   LogIn,
   Users,
   BarChart2,
+  Palette,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -175,6 +176,16 @@ export function AppSidebar() {
             >
               <LogOut className="size-4" strokeWidth={1.5} />
             </Button>
+            <Link href="/profile#appearance">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Change theme"
+                className="shrink-0 text-text-muted rounded-2xl"
+              >
+                <Palette className="size-4" strokeWidth={1.5} />
+              </Button>
+            </Link>
           </div>
         ) : (
           <Link
