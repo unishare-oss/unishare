@@ -31,7 +31,9 @@ model User {
   reactions      Reaction[]
   savedPosts     SavedPost[]
   sessions       Session[]
-  department     Department?    @relation(fields: [departmentId], references: [id])
+  department     Department?         @relation(fields: [departmentId], references: [id])
+  postRequests   PostRequest[]       @relation("PostRequestAuthor")
+  postRequestUpvotes PostRequestUpvote[]
 
   @@map("user")
 }
@@ -54,6 +56,7 @@ model Course {
   createdAt    DateTime   @default(now())
   department   Department @relation(fields: [departmentId], references: [id])
   posts        Post[]
+  postRequests PostRequest[]
 
   @@unique([code, departmentId])
   @@index([departmentId])
@@ -87,6 +90,7 @@ model Post {
   postViews     PostView[]
   reactions     Reaction[]
   savedBy       SavedPost[]
+  fulfilledRequests PostRequest[] @relation("FulfilledRequests")
 
   @@index([authorId])
   @@index([courseId])
@@ -222,6 +226,44 @@ model Notification {
 
   @@index([userId])
   @@map("notification")
+}
+
+model PostRequest {
+  id                String              @id @default(cuid())
+  title             String
+  description       String?
+  courseId          String
+  authorId          String
+  status            PostRequestStatus   @default(OPEN)
+  fulfilledByPostId String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  author            User                @relation("PostRequestAuthor", fields: [authorId], references: [id])
+  course            Course              @relation(fields: [courseId], references: [id])
+  fulfilledByPost   Post?               @relation("FulfilledRequests", fields: [fulfilledByPostId], references: [id])
+  upvotes           PostRequestUpvote[]
+
+  @@index([authorId])
+  @@index([courseId])
+  @@index([status])
+  @@map("post_request")
+}
+
+model PostRequestUpvote {
+  userId    String
+  requestId String
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request   PostRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@id([userId, requestId])
+  @@index([requestId])
+  @@map("post_request_upvote")
+}
+
+enum PostRequestStatus {
+  OPEN
+  FULFILLED
 }
 
 enum NotificationType {

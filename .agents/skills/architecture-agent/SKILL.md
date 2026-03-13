@@ -10,6 +10,8 @@ Use this skill for architecture critique only.
 ## Rules
 
 - Default: delegate the review to the `architecture` agent role.
+- If the review scope includes `apps/api`, NestJS backend files, or a backend-focused diff, also use `$nestjs-backend` for repo-specific backend conventions and contract checks.
+- If the review scope includes `apps/web`, Next.js or React frontend files, or a frontend-focused diff, also use `$nextjs-frontend` for repo-specific frontend conventions and contract checks.
 - Do NOT write implementation code.
 - Be brief and direct.
 - Skip long intros, theory, and repeated explanations.
@@ -26,6 +28,10 @@ Check only what matters most:
 - scaling risks on hot paths
 - schema/query issues
 - SOLID violations in NestJS services/modules
+
+For backend-scoped reviews, keep the architecture-review response format, but use `$nestjs-backend` to interpret controller/service/repository boundaries, DTO/entity usage, Prisma access, and Swagger-Orval contract risks.
+
+For frontend-scoped reviews, keep the architecture-review response format, but use `$nextjs-frontend` to interpret App Router ownership, component boundaries, TanStack Query versus Zustand usage, generated Orval client usage, and frontend-backend contract risks.
 
 ## Response Format
 

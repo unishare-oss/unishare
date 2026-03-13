@@ -33,6 +33,7 @@ const authNavItems = [
   { href: '/', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
 ]
 

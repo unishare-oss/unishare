@@ -12,6 +12,7 @@ import { DepartmentsModule } from './modules/departments/departments.module'
 import { PostsModule } from './modules/posts/posts.module'
 import { FilesModule } from './modules/files/files.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
+import { PostRequestsModule } from './modules/post-requests/post-requests.module'
 import { StatsModule } from './modules/stats/stats.module'
 
 @Module({
@@ -27,6 +28,7 @@ import { StatsModule } from './modules/stats/stats.module'
     FilesModule,
     NotificationsModule,
     StatsModule,
+    PostRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
