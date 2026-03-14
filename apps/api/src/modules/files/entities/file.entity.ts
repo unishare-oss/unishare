@@ -17,9 +17,6 @@ export class FileEntity {
   mimeType: string
 
   @ApiProperty()
-  postId: string
-
-  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()

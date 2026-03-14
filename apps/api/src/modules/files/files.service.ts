@@ -29,7 +29,9 @@ export class FilesService {
     const exists = await this.storageService.fileExists(dto.key)
     if (!exists) throw new BadRequestException('File has not been uploaded yet')
 
-    return this.filesRepository.create(postId, dto)
+    const file = await this.filesRepository.create(postId, dto)
+    const { postId: _postId, ...rest } = file
+    return rest
   }
 
   async getDownloadUrl(postId: string, fileId: string) {
