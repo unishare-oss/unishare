@@ -4,7 +4,11 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
 
-const commentInclude = {
+const commentSelect = {
+  id: true,
+  content: true,
+  createdAt: true,
+  updatedAt: true,
   user: {
     select: {
       id: true,
@@ -12,7 +16,7 @@ const commentInclude = {
       image: true,
     },
   },
-} satisfies Prisma.CommentInclude
+} satisfies Prisma.CommentSelect
 
 @Injectable()
 export class CommentsRepository {
@@ -22,15 +26,18 @@ export class CommentsRepository {
     return this.prisma.comment.findMany({
       where: { postId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
-      include: commentInclude,
+      select: commentSelect,
     })
   }
 
   findById(id: string) {
     return this.prisma.comment.findUnique({
       where: { id },
-      include: {
-        ...commentInclude,
+      select: {
+        ...commentSelect,
+        postId: true,
+        userId: true,
+        deletedAt: true,
         post: {
           select: {
             authorId: true,
@@ -47,7 +54,7 @@ export class CommentsRepository {
         userId,
         content: dto.content,
       },
-      include: commentInclude,
+      select: commentSelect,
     })
   }
 
@@ -57,7 +64,7 @@ export class CommentsRepository {
       data: {
         ...(dto.content !== undefined ? { content: dto.content } : {}),
       },
-      include: commentInclude,
+      select: commentSelect,
     })
   }
 
@@ -65,7 +72,7 @@ export class CommentsRepository {
     return this.prisma.comment.update({
       where: { id },
       data: { deletedAt: new Date() },
-      include: commentInclude,
+      select: commentSelect,
     })
   }
 }

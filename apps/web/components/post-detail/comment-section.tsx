@@ -164,93 +164,85 @@ export function CommentSection({ postId, isPostOwner }: CommentSectionProps) {
 
           return (
             <div key={comment.id} className="group py-4 border-b border-border last:border-b-0">
-              {comment.deletedAt !== null ? (
-                <p className="text-sm text-text-muted italic">[deleted]</p>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                      <span className="text-sm font-medium text-foreground">
-                        {comment.user.name}
-                      </span>
-                      <span className="font-mono text-xs text-text-muted">
-                        {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                      </span>
-                      {isEdited && (
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                          (edited)
-                        </span>
-                      )}
-                    </div>
-                    {currentUserId && (
-                      <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
-                        {comment.userId === currentUserId && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => startEditing(comment.id, comment.content)}
-                            disabled={isUpdating || isRemoving}
-                            aria-label="Edit comment"
-                          >
-                            <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                          </Button>
-                        )}
-                        {(comment.userId === currentUserId ||
-                          isPostOwner ||
-                          currentUserRole === 'ADMIN') && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => handleDelete(comment.id)}
-                            disabled={isUpdating || isRemoving}
-                            aria-label="Delete comment"
-                          >
-                            <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                          </Button>
-                        )}
-                      </div>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
+                  <span className="text-sm font-medium text-foreground">{comment.user.name}</span>
+                  <span className="font-mono text-xs text-text-muted">
+                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                  </span>
+                  {isEdited && (
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                      (edited)
+                    </span>
+                  )}
+                </div>
+                {currentUserId && (
+                  <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                    {comment.user.id === currentUserId && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => startEditing(comment.id, comment.content)}
+                        disabled={isUpdating || isRemoving}
+                        aria-label="Edit comment"
+                      >
+                        <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                      </Button>
+                    )}
+                    {(comment.user.id === currentUserId ||
+                      isPostOwner ||
+                      currentUserRole === 'ADMIN') && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleDelete(comment.id)}
+                        disabled={isUpdating || isRemoving}
+                        aria-label="Delete comment"
+                      >
+                        <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                      </Button>
                     )}
                   </div>
-                  {editingCommentId === comment.id ? (
-                    <div className="pl-[34px] space-y-3">
-                      <Textarea
-                        value={editText}
-                        onChange={(e) =>
-                          setDrafts((current) => ({ ...current, editText: e.target.value }))
-                        }
-                        rows={3}
-                        className="resize-none"
-                      />
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={cancelEditing}
-                          disabled={isUpdating}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleUpdate(comment.id)}
-                          disabled={!editText.trim() || isUpdating}
-                          className="bg-amber text-primary-foreground hover:bg-amber-hover"
-                        >
-                          {isUpdating ? 'Saving...' : 'Save'}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-foreground leading-relaxed pl-[34px]">
-                      {comment.content}
-                    </p>
-                  )}
-                </>
+                )}
+              </div>
+              {editingCommentId === comment.id ? (
+                <div className="pl-[34px] space-y-3">
+                  <Textarea
+                    value={editText}
+                    onChange={(e) =>
+                      setDrafts((current) => ({ ...current, editText: e.target.value }))
+                    }
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelEditing}
+                      disabled={isUpdating}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleUpdate(comment.id)}
+                      disabled={!editText.trim() || isUpdating}
+                      className="bg-amber text-primary-foreground hover:bg-amber-hover"
+                    >
+                      {isUpdating ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-foreground leading-relaxed pl-[34px]">
+                  {comment.content}
+                </p>
               )}
             </div>
           )

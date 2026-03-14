@@ -19,19 +19,10 @@ export class CommentEntity {
   content: string
 
   @ApiProperty()
-  userId: string
-
-  @ApiProperty()
-  postId: string
-
-  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
   updatedAt: Date
-
-  @ApiPropertyOptional({ nullable: true, type: Date })
-  deletedAt: Date | null
 
   @ApiProperty({ type: CommentUserEntity })
   user: CommentUserEntity
