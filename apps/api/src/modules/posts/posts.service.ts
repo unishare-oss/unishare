@@ -60,7 +60,7 @@ export class PostsService {
       ...(type && { type }),
       ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
-      ...(!isPrivileged && !isViewingOwnPosts && { isAnonymous: false }),
+      ...(authorId && !isPrivileged && !isViewingOwnPosts && { isAnonymous: false }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
