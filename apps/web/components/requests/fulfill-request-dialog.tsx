@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   usePostRequestsControllerFulfill,
@@ -27,7 +28,13 @@ import { Label } from '@/components/ui/label'
 import { CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function FulfillRequestDialog({ requestId }: { requestId: string }) {
+export function FulfillRequestDialog({
+  requestId,
+  trigger,
+}: {
+  requestId: string
+  trigger?: ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const [postId, setPostId] = useState('')
   const { session } = useAuth()
@@ -53,9 +60,11 @@ export function FulfillRequestDialog({ requestId }: { requestId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="p-1 rounded text-text-muted hover:text-success hover:bg-success/10 transition-colors">
-          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-        </button>
+        {trigger ?? (
+          <button className="p-1 rounded text-text-muted hover:text-success hover:bg-success/10 transition-colors">
+            <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>

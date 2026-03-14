@@ -273,7 +273,7 @@ function RequestCard({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="flex items-start gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-foreground leading-snug">
               {request.title}
@@ -300,17 +300,6 @@ function RequestCard({
               {request.course.code}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {isOwner && !isFulfilled && <FulfillRequestDialog requestId={request.id} />}
-            {isOwner && (
-              <button
-                onClick={onDelete}
-                className="p-1 rounded text-text-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="size-3.5" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
         </div>
 
         {request.description && (
@@ -325,6 +314,44 @@ function RequestCard({
             <CheckCircle2 className="size-3" />
             Fulfilled by: {request.fulfilledByPost.title ?? request.fulfilledByPost.shortCode}
           </a>
+        )}
+
+        {isOwner && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {!isFulfilled && (
+              <FulfillRequestDialog
+                requestId={request.id}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className={cn(
+                      'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
+                      'hover:bg-muted/40 hover:text-foreground',
+                    )}
+                  >
+                    <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                    Fulfill
+                  </Button>
+                }
+              />
+            )}
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={onDelete}
+              className={cn(
+                'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
+                'hover:bg-destructive/10 hover:text-destructive',
+              )}
+            >
+              <Trash2 className="size-3.5" strokeWidth={1.5} />
+              Delete
+            </Button>
+          </div>
         )}
 
         <div className="flex items-center gap-2 mt-2">
