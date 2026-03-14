@@ -21,9 +21,6 @@ export class CourseEntity {
   @ApiProperty()
   name: string
 
-  @ApiProperty()
-  departmentId: string
-
   @ApiPropertyOptional({ nullable: true, type: Number, minimum: 1, maximum: 6 })
   yearLevel: number | null
 

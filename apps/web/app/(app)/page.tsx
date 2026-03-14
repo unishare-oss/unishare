@@ -35,7 +35,7 @@ export default function FeedPage() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
-  const effectiveDeptId = selectedDeptId ?? user?.departmentId ?? ''
+  const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
   useEffect(() => {
     if (!hasSelectedYear && user?.yearLevel) {

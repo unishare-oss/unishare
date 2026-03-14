@@ -217,7 +217,7 @@ export default function CreatePostPage() {
                 updateField('selectedCourse', '')
               }}
               selectedCourse={values.selectedCourse}
-              departmentId={me?.departmentId ?? undefined}
+              departmentId={me?.department?.id ?? undefined}
               meLoading={mePending}
               onCourseChange={(course) => {
                 updateField('selectedCourse', course)

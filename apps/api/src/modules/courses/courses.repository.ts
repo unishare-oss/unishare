@@ -5,16 +5,21 @@ import { paginate } from '@/common/utils/paginate'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 
+function mapCourse(course: any) {
+  const { departmentId, ...rest } = course
+  return rest
+}
+
 @Injectable()
 export class CoursesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(dto: CreateCourseDto) {
-    return this.prisma.course.create({ data: dto, include: { department: true } })
+    return this.prisma.course.create({ data: dto, include: { department: true } }).then(mapCourse)
   }
 
-  findAll(pagination: PaginationDto, departmentId?: string) {
-    return paginate(
+  async findAll(pagination: PaginationDto, departmentId?: string) {
+    const result = await paginate(
       this.prisma.course,
       {
         where: departmentId ? { departmentId } : undefined,
@@ -23,6 +28,7 @@ export class CoursesRepository {
       },
       pagination,
     )
+    return { ...result, items: result.items.map(mapCourse) }
   }
 
   findByCodeAndDept(code: string, departmentId: string) {
@@ -30,11 +36,15 @@ export class CoursesRepository {
   }
 
   findById(id: string) {
-    return this.prisma.course.findUnique({ where: { id }, include: { department: true } })
+    return this.prisma.course
+      .findUnique({ where: { id }, include: { department: true } })
+      .then((c) => (c ? mapCourse(c) : null))
   }
 
   update(id: string, dto: UpdateCourseDto) {
-    return this.prisma.course.update({ where: { id }, data: dto, include: { department: true } })
+    return this.prisma.course
+      .update({ where: { id }, data: dto, include: { department: true } })
+      .then(mapCourse)
   }
 
   remove(id: string) {

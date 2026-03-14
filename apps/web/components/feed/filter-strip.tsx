@@ -56,7 +56,7 @@ export function FilterStrip({
   const allCourses = coursesData?.items ?? []
 
   const filteredCourses = allCourses.filter((c) => {
-    const deptOk = selectedDeptId ? c.departmentId === selectedDeptId : true
+    const deptOk = selectedDeptId ? c.department.id === selectedDeptId : true
     const yearOk = selectedYear === null ? true : c.yearLevel === selectedYear
     return deptOk && yearOk
   })

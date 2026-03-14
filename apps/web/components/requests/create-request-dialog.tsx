@@ -61,7 +61,7 @@ export function CreateRequestDialog() {
   )
   const allCourses = coursesData?.items ?? []
   const filteredCourses = allCourses.filter((c) => {
-    const deptOk = dept === ALL || c.departmentId === dept
+    const deptOk = dept === ALL || c.department.id === dept
     const yearOk = year === ALL || c.yearLevel === Number(year)
     return deptOk && yearOk
   })
