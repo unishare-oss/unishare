@@ -50,7 +50,7 @@ export function FilterStrip({
   })
 
   const { data: coursesData } = useCoursesControllerFindAll(
-    { limit: 100 },
+    { limit: 100, ...(selectedDeptId ? { departmentId: selectedDeptId } : {}) },
     { query: { select: (r) => r.data } },
   )
   const allCourses = coursesData?.items ?? []
