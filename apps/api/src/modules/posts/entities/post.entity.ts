@@ -69,6 +69,9 @@ export class PostFileEntity {
 
   @ApiProperty()
   createdAt: Date
+
+  @ApiProperty()
+  downloads: number
 }
 
 export class PostCountEntity {
@@ -118,6 +121,9 @@ export class PostEntity {
 
   @ApiPropertyOptional({ nullable: true, type: String })
   authorId?: string | null
+
+  @ApiPropertyOptional()
+  isOwner?: boolean
 
   @ApiProperty()
   courseId: string

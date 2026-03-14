@@ -45,6 +45,7 @@ function mapPost<T>(
   savedByCurrentUser: boolean
   reactionCounts: Record<string, number>
   userReaction: string | null
+  isOwner: boolean
 } {
   const { savedBy, reactions, author, isAnonymous, authorId, ...rest } = post as any
   const viewerId = viewer?.id
@@ -63,6 +64,7 @@ function mapPost<T>(
   const base = {
     ...rest,
     isAnonymous: isAnonymousValue,
+    isOwner,
     savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
     reactionCounts,
     userReaction,
@@ -70,9 +72,7 @@ function mapPost<T>(
 
   if (isAnonymousValue) {
     // For anonymous posts, only moderators/admins can see full author info.
-    // Owners can see `authorId` for edit/delete checks, but not the author profile payload.
     if (isPrivileged) return { ...base, author, authorId }
-    if (isOwner) return { ...base, authorId }
     return base
   }
 
