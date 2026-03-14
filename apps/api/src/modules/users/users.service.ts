@@ -44,9 +44,9 @@ export class UsersService {
     _count?: { posts: number; comments: number; savedPosts: number }
     [key: string]: unknown
   }) {
-    const { _count, ...rest } = user
+    const { _count, departmentId, ...rest } = user
 
-    const shouldShowUpdateMajorPopup = !user.departmentId || user.enrollmentYear === null
+    const shouldShowUpdateMajorPopup = !departmentId || user.enrollmentYear === null
     const base = {
       ...rest,
       shouldShowUpdateMajorPopup,

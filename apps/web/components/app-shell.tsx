@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const showLoader = isLoading || !minimumLoaderElapsed
 
-  const requiresDepartmentOnboarding = !!user && !user.departmentId
+  const requiresDepartmentOnboarding = !!user && !user.department
 
   return (
     <div className="min-h-screen bg-background">

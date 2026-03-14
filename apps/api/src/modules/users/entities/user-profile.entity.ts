@@ -39,9 +39,6 @@ export class UserProfileEntity {
   @ApiProperty({ enum: UserRole, enumName: 'UserRole' })
   role: UserRole
 
-  @ApiPropertyOptional({ nullable: true, type: String })
-  departmentId: string | null
-
   @ApiPropertyOptional({ nullable: true, type: UserDepartmentEntity })
   department: UserDepartmentEntity | null
 

@@ -54,7 +54,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     defaultValues: {
       name: user.name,
       bio: user.bio ?? '',
-      departmentId: user.departmentId ?? '',
+      departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     },
     mode: 'onChange',
@@ -64,10 +64,10 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     form.reset({
       name: user.name,
       bio: user.bio ?? '',
-      departmentId: user.departmentId ?? '',
+      departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     })
-  }, [form, user.bio, user.departmentId, user.enrollmentYear, user.name])
+  }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name])
 
   const { data: depts } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
