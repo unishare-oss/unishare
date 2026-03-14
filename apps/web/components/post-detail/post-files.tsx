@@ -25,15 +25,17 @@ import {
   X,
   Copy,
   Check,
+  Minus,
+  Plus,
 } from 'lucide-react'
 import type { ApiPostDetail } from '@/lib/api-types'
-import type { PostFileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-import { filesControllerGetDownloadUrl } from '@/src/lib/api/generated/files/files'
+import {
+  filesControllerGetDownloadUrl,
+  filesControllerRecordDownload,
+} from '@/src/lib/api/generated/files/files'
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Button } from '@/components/ui/button'
-
-type PostFile = PostFileEntity & { downloads?: number }
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
@@ -78,11 +80,39 @@ function fileIcon(mimeType: string) {
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
-async function handleDownload(postId: string, fileId: string, fileName: string) {
-  const res = await filesControllerGetDownloadUrl(postId, fileId)
-  const { url } = res.data
+const DOWNLOADED_KEY = 'unishare:downloaded_files'
+
+function getDownloadedSet(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(DOWNLOADED_KEY) ?? '[]'))
+  } catch {
+    return new Set()
+  }
+}
+
+function markDownloaded(fileId: string) {
+  const set = getDownloadedSet()
+  set.add(fileId)
+  localStorage.setItem(DOWNLOADED_KEY, JSON.stringify([...set]))
+}
+
+async function handleDownload(
+  postId: string,
+  fileId: string,
+  fileName: string,
+  onNewDownload: () => void,
+) {
+  const isNew = !getDownloadedSet().has(fileId)
+  const [{ data }] = await Promise.all([
+    filesControllerGetDownloadUrl(postId, fileId),
+    isNew ? filesControllerRecordDownload(postId, fileId) : undefined,
+  ])
+  if (isNew) {
+    markDownloaded(fileId)
+    onNewDownload()
+  }
   const a = document.createElement('a')
-  a.href = url
+  a.href = data.url
   a.download = fileName
   a.target = '_blank'
   a.rel = 'noopener noreferrer'
@@ -105,7 +135,22 @@ export function PostFiles({ post }: PostFilesProps) {
     tooLarge?: boolean
   } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [fontSize, setFontSize] = useState(() => {
+    const stored = localStorage.getItem('unishare:code-font-size')
+    return stored ? Number(stored) : 13
+  })
+
+  const changeFontSize = (delta: number) =>
+    setFontSize((s) => {
+      const n = Math.min(20, Math.max(10, s + delta))
+      localStorage.setItem('unishare:code-font-size', String(n))
+      return n
+    })
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null)
+
+  const [downloadCounts, setDownloadCounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries(post.files.map((f) => [f.id, f.downloads])),
+  )
 
   const previewUrlCache = useRef<Record<string, string>>({})
   const previewTextCache = useRef<Record<string, { text: string; language: string }>>({})
@@ -131,6 +176,9 @@ export function PostFiles({ post }: PostFilesProps) {
 
     Prism.highlightElement(codeElRef.current)
   }, [previewFile?.id, previewFile?.text, previewFile?.language])
+
+  const incrementCount = (fileId: string) =>
+    setDownloadCounts((prev) => ({ ...prev, [fileId]: (prev[fileId] ?? 0) + 1 }))
 
   const handlePreview = async (file: {
     id: string
@@ -270,29 +318,52 @@ export function PostFiles({ post }: PostFilesProps) {
                       ? previewFile.language
                       : 'text'}
                   </p>
-                  {!previewFile.tooLarge && (
+                  <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(previewFile.text ?? '')
-                          setCopied(true)
-                          setTimeout(() => setCopied(false), 1500)
-                        } catch {
-                          // no-op
-                        }
-                      }}
-                      aria-label={copied ? 'Copied' : 'Copy code'}
+                      onClick={() => changeFontSize(-1)}
+                      aria-label="Decrease font size"
                     >
-                      {copied ? (
-                        <Check className="size-4 text-success" strokeWidth={1.5} />
-                      ) : (
-                        <Copy className="size-4 text-text-muted" strokeWidth={1.5} />
-                      )}
+                      <Minus className="size-3 text-text-muted" strokeWidth={1.5} />
                     </Button>
-                  )}
+                    <span className="font-mono text-xs text-text-muted w-6 text-center">
+                      {fontSize}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => changeFontSize(1)}
+                      aria-label="Increase font size"
+                    >
+                      <Plus className="size-3 text-text-muted" strokeWidth={1.5} />
+                    </Button>
+                    {!previewFile.tooLarge && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(previewFile.text ?? '')
+                            setCopied(true)
+                            setTimeout(() => setCopied(false), 1500)
+                          } catch {
+                            // no-op
+                          }
+                        }}
+                        aria-label={copied ? 'Copied' : 'Copy code'}
+                      >
+                        {copied ? (
+                          <Check className="size-4 text-success" strokeWidth={1.5} />
+                        ) : (
+                          <Copy className="size-4 text-text-muted" strokeWidth={1.5} />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {previewFile.tooLarge ? (
@@ -304,7 +375,8 @@ export function PostFiles({ post }: PostFilesProps) {
                   <pre className="bg-card-dark border border-border rounded-[6px] p-4 overflow-x-auto">
                     <code
                       ref={codeElRef}
-                      className={`language-${previewFile.language ?? 'none'} font-mono text-[13px] leading-relaxed text-foreground whitespace-pre`}
+                      className={`language-${previewFile.language ?? 'none'} font-mono leading-relaxed text-foreground whitespace-pre`}
+                      style={{ fontSize }}
                     >
                       {previewFile.text}
                     </code>
@@ -323,7 +395,7 @@ export function PostFiles({ post }: PostFilesProps) {
           Attachments
         </h2>
         <div className="flex flex-col gap-2">
-          {(post.files as PostFile[]).map((file) => (
+          {post.files.map((file) => (
             <div
               key={file.id}
               className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
@@ -337,10 +409,10 @@ export function PostFiles({ post }: PostFilesProps) {
               <span className="font-mono text-xs text-text-muted shrink-0">
                 {formatBytes(file.size)}
               </span>
-              {(file.downloads ?? 0) > 0 && (
+              {(downloadCounts[file.id] ?? 0) > 0 && (
                 <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs text-text-muted shrink-0">
                   <Download className="size-3" strokeWidth={1.5} />
-                  {file.downloads}
+                  {downloadCounts[file.id]}
                 </span>
               )}
               <div className="flex items-center gap-1">
@@ -367,7 +439,9 @@ export function PostFiles({ post }: PostFilesProps) {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={() => handleDownload(post.id, file.id, file.name)}
+                  onClick={() =>
+                    handleDownload(post.id, file.id, file.name, () => incrementCount(file.id))
+                  }
                   className="shrink-0"
                   aria-label={`Download ${file.name}`}
                 >
