@@ -694,7 +694,7 @@
           { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
           { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "204": { "description": "" } },
+        "responses": { "201": { "description": "" } },
         "tags": ["files"]
       }
     },
@@ -939,11 +939,10 @@
           "id": { "type": "string" },
           "code": { "type": "string" },
           "name": { "type": "string" },
-          "departmentId": { "type": "string" },
           "yearLevel": { "type": "number", "nullable": true, "minimum": 1, "maximum": 6 },
           "department": { "$ref": "#/components/schemas/CourseDeptEntity" }
         },
-        "required": ["id", "code", "name", "departmentId", "department"]
+        "required": ["id", "code", "name", "department"]
       },
       "PaginatedCourseEntity": {
         "type": "object",
@@ -985,7 +984,6 @@
           "image": { "type": "string", "nullable": true },
           "bio": { "type": "string", "nullable": true },
           "role": { "allOf": [{ "$ref": "#/components/schemas/UserRole" }] },
-          "departmentId": { "type": "string", "nullable": true },
           "department": {
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/UserDepartmentEntity" }]
@@ -1129,11 +1127,10 @@
           "name": { "type": "string" },
           "size": { "type": "number" },
           "mimeType": { "type": "string" },
-          "postId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "downloads": { "type": "number" }
         },
-        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
+        "required": ["id", "key", "name", "size", "mimeType", "createdAt", "downloads"]
       },
       "PostCountEntity": {
         "type": "object",
@@ -1155,12 +1152,9 @@
           "year": { "type": "number", "nullable": true },
           "semester": { "type": "number", "nullable": true },
           "shortCode": { "type": "string" },
-          "authorId": { "type": "string", "nullable": true },
           "isOwner": { "type": "boolean" },
-          "courseId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
           "author": {
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/PostAuthorEntity" }]
@@ -1179,7 +1173,7 @@
           "status",
           "isAnonymous",
           "shortCode",
-          "courseId",
+          "isOwner",
           "createdAt",
           "updatedAt",
           "course",
@@ -1205,12 +1199,9 @@
           "year": { "type": "number", "nullable": true },
           "semester": { "type": "number", "nullable": true },
           "shortCode": { "type": "string" },
-          "authorId": { "type": "string", "nullable": true },
           "isOwner": { "type": "boolean" },
-          "courseId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
           "author": {
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/PostAuthorEntity" }]
@@ -1229,7 +1220,7 @@
           "status",
           "isAnonymous",
           "shortCode",
-          "courseId",
+          "isOwner",
           "createdAt",
           "updatedAt",
           "course",
@@ -1296,14 +1287,11 @@
         "properties": {
           "id": { "type": "string" },
           "content": { "type": "string" },
-          "userId": { "type": "string" },
-          "postId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
           "user": { "$ref": "#/components/schemas/CommentUserEntity" }
         },
-        "required": ["id", "content", "userId", "postId", "createdAt", "updatedAt", "user"]
+        "required": ["id", "content", "createdAt", "updatedAt", "user"]
       },
       "CreateCommentDto": {
         "type": "object",
@@ -1318,14 +1306,13 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "userId": { "type": "string" },
           "type": { "type": "string" },
           "message": { "type": "string" },
           "read": { "type": "boolean" },
           "postId": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" }
         },
-        "required": ["id", "userId", "type", "message", "read", "postId", "createdAt"]
+        "required": ["id", "type", "message", "read", "postId", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",
@@ -1350,11 +1337,10 @@
           "name": { "type": "string" },
           "size": { "type": "number" },
           "mimeType": { "type": "string" },
-          "postId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "downloads": { "type": "number" }
         },
-        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
+        "required": ["id", "key", "name", "size", "mimeType", "createdAt", "downloads"]
       },
       "StatsOverviewEntity": {
         "type": "object",
@@ -1449,8 +1435,6 @@
           "title": { "type": "string" },
           "description": { "type": "string", "nullable": true },
           "status": { "type": "string", "enum": ["OPEN", "FULFILLED"] },
-          "courseId": { "type": "string" },
-          "authorId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
           "upvoteCount": { "type": "number" },
@@ -1469,8 +1453,6 @@
           "id",
           "title",
           "status",
-          "courseId",
-          "authorId",
           "createdAt",
           "updatedAt",
           "upvoteCount",

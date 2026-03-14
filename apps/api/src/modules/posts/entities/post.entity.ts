@@ -65,9 +65,6 @@ export class PostFileEntity {
   mimeType: string
 
   @ApiProperty()
-  postId: string
-
-  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
@@ -119,23 +116,14 @@ export class PostEntity {
   @ApiProperty()
   shortCode: string
 
-  @ApiPropertyOptional({ nullable: true, type: String })
-  authorId?: string | null
-
-  @ApiPropertyOptional()
-  isOwner?: boolean
-
   @ApiProperty()
-  courseId: string
+  isOwner: boolean
 
   @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
   updatedAt: Date
-
-  @ApiPropertyOptional({ nullable: true, type: Date })
-  deletedAt: Date | null
 
   @ApiPropertyOptional({ nullable: true, type: PostAuthorEntity })
   author?: PostAuthorEntity | null

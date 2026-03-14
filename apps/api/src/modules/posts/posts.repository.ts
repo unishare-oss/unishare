@@ -27,7 +27,17 @@ const postInclude = (viewerId?: string): Prisma.PostInclude => ({
       department: { select: { id: true, name: true } },
     },
   },
-  files: true,
+  files: {
+    select: {
+      id: true,
+      key: true,
+      name: true,
+      size: true,
+      mimeType: true,
+      createdAt: true,
+      downloads: true,
+    },
+  },
   reactions: { select: { type: true, userId: true } },
   _count: {
     select: {
@@ -47,7 +57,8 @@ function mapPost<T>(
   userReaction: string | null
   isOwner: boolean
 } {
-  const { savedBy, reactions, author, isAnonymous, authorId, ...rest } = post as any
+  const { savedBy, reactions, author, isAnonymous, authorId, deletedAt, courseId, ...rest } =
+    post as any
   const viewerId = viewer?.id
   const isAnonymousValue = isAnonymous ?? false
 
@@ -71,12 +82,11 @@ function mapPost<T>(
   }
 
   if (isAnonymousValue) {
-    // For anonymous posts, only moderators/admins can see full author info.
-    if (isPrivileged) return { ...base, author, authorId }
+    if (isPrivileged) return { ...base, author }
     return base
   }
 
-  return { ...base, author, authorId }
+  return { ...base, author }
 }
 
 @Injectable()

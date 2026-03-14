@@ -8,7 +8,6 @@ import {
   usePostsControllerRemove,
 } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
-import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
@@ -23,7 +22,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const router = useRouter()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
-  const { user } = useAuth()
   const markRead = useUIStore((s) => s.markRead)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -65,8 +63,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  const isOwner =
-    post.isOwner ?? (user?.id != null && post.authorId != null && user.id === post.authorId)
+  const isOwner = post.isOwner
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -88,7 +85,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           />
           <PostFiles post={post} />
           <PostReactions post={post} />
-          <RelatedPosts courseId={post.courseId} currentPostId={post.id} />
+          <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
           <div className="border-t border-border mt-4" />
           <CommentSection postId={post.id} isPostOwner={isOwner} />
         </div>
