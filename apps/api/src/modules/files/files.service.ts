@@ -44,7 +44,7 @@ export class FilesService {
     const file = await this.filesRepository.findById(fileId)
     if (!file) throw new NotFoundException('File not found')
     if (file.postId !== postId) throw new NotFoundException('File not found')
-    void this.filesRepository.incrementDownloads(fileId)
+    await this.filesRepository.incrementDownloads(fileId)
   }
 
   async remove(postId: string, fileId: string, userId: string, userRole: UserRole) {
