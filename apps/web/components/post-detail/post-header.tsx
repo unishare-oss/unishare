@@ -107,6 +107,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
   }
 
   const author = post.author
+  const { user } = useAuth()
 
   const academicYear = useAcademicYear()
   const yearLevel =
@@ -176,6 +177,18 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               </p>
             </div>
           </Link>
+        ) : isOwner && user ? (
+          <div className="flex items-center gap-3 mt-4 w-fit">
+            <UserAvatar name={user.name} image={user.image ?? null} size="md" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {user.name} <span className="text-text-muted font-normal">(you · anonymous)</span>
+              </p>
+              <p className="font-mono text-xs text-text-muted">
+                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center gap-3 mt-4 w-fit">
             <UserAvatar name="Anonymous" image={null} size="md" />

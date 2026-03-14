@@ -687,6 +687,17 @@
         "tags": ["files"]
       }
     },
+    "/api/posts/{postId}/files/{fileId}/download": {
+      "post": {
+        "operationId": "FilesController_recordDownload",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "fileId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["files"]
+      }
+    },
     "/api/posts/{postId}/files": {
       "post": {
         "operationId": "FilesController_confirmUpload",
@@ -1119,9 +1130,10 @@
           "size": { "type": "number" },
           "mimeType": { "type": "string" },
           "postId": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" }
+          "createdAt": { "format": "date-time", "type": "string" },
+          "downloads": { "type": "number" }
         },
-        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt"]
+        "required": ["id", "key", "name", "size", "mimeType", "postId", "createdAt", "downloads"]
       },
       "PostCountEntity": {
         "type": "object",
@@ -1144,6 +1156,7 @@
           "semester": { "type": "number", "nullable": true },
           "shortCode": { "type": "string" },
           "authorId": { "type": "string", "nullable": true },
+          "isOwner": { "type": "boolean" },
           "courseId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
@@ -1193,6 +1206,7 @@
           "semester": { "type": "number", "nullable": true },
           "shortCode": { "type": "string" },
           "authorId": { "type": "string", "nullable": true },
+          "isOwner": { "type": "boolean" },
           "courseId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
