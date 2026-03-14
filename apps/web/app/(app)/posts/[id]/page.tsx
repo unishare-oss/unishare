@@ -65,7 +65,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  const isOwner = user?.id != null && post.authorId != null && user.id === post.authorId
+  const isOwner =
+    post.isOwner ?? (user?.id != null && post.authorId != null && user.id === post.authorId)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -89,7 +90,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <PostReactions post={post} />
           <RelatedPosts courseId={post.courseId} currentPostId={post.id} />
           <div className="border-t border-border mt-4" />
-          <CommentSection postId={post.id} postAuthorId={post.authorId} />
+          <CommentSection postId={post.id} isPostOwner={isOwner} />
         </div>
       </div>
     </div>
