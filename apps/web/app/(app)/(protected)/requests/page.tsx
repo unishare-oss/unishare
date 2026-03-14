@@ -55,7 +55,7 @@ export default function RequestsPage() {
   const allCourses = coursesData?.items ?? []
 
   const filteredCourses = allCourses.filter((c) => {
-    const deptOk = deptFilter === ALL || c.departmentId === deptFilter
+    const deptOk = deptFilter === ALL || c.department.id === deptFilter
     const yearOk = yearFilter === ALL || c.yearLevel === Number(yearFilter)
     return deptOk && yearOk
   })
@@ -239,7 +239,7 @@ function RequestCard({
   onUpvote: () => void
   onDelete: () => void
 }) {
-  const isOwner = currentUserId === request.authorId
+  const isOwner = currentUserId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
   const authorName = request.author?.name ?? 'Unknown'
   const authorImage = request.author?.image ?? null

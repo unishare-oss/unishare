@@ -25,8 +25,6 @@ export class PostRequestEntity {
   @ApiProperty() title: string
   @ApiPropertyOptional({ nullable: true, type: String }) description: string | null
   @ApiProperty({ enum: PostRequestStatus }) status: PostRequestStatus
-  @ApiProperty() courseId: string
-  @ApiProperty() authorId: string
   @ApiProperty() createdAt: Date
   @ApiProperty() updatedAt: Date
   @ApiProperty() upvoteCount: number
