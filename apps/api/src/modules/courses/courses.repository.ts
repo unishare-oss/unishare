@@ -6,7 +6,7 @@ import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 
 function mapCourse(course: any) {
-  const { departmentId, ...rest } = course
+  const { departmentId: _departmentId, ...rest } = course
   return rest
 }
 

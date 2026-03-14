@@ -14,7 +14,7 @@ const requestInclude = (userId?: string) =>
   }) satisfies Prisma.PostRequestInclude
 
 function mapRequest(r: any, userId?: string) {
-  const { _count, upvotes, authorId, courseId, ...rest } = r
+  const { _count, upvotes, authorId: _authorId, courseId: _courseId, ...rest } = r
   return {
     ...rest,
     upvoteCount: _count.upvotes,

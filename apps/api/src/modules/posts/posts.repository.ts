@@ -57,8 +57,16 @@ function mapPost<T>(
   userReaction: string | null
   isOwner: boolean
 } {
-  const { savedBy, reactions, author, isAnonymous, authorId, deletedAt, courseId, ...rest } =
-    post as any
+  const {
+    savedBy,
+    reactions,
+    author,
+    isAnonymous,
+    authorId,
+    deletedAt: _deletedAt,
+    courseId: _courseId,
+    ...rest
+  } = post as any
   const viewerId = viewer?.id
   const isAnonymousValue = isAnonymous ?? false
 
