@@ -54,62 +54,61 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
   const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
 
-  const currentUserId = user?.id ?? null
-  const currentUserRole = user?.role
   const { commentText, editingCommentId, editText, replyCommentId, replyText } = drafts
 
-  async function handleSubmit() {
-    const content = commentText.trim()
-
-    if (!content || !isAuthenticated) return
-
-    setError(null)
-
-    try {
-      await createComment({ postId, data: { content } })
-      setDrafts((current) => ({ ...current, commentText: '' }))
-      await queryClient.invalidateQueries({
-        queryKey: getCommentsControllerFindAllQueryKey(postId),
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post comment')
-    }
+  const commentThreadViewer = {
+    user,
+    postAuthorId,
+    isAuthenticated,
   }
 
-  function startEditing(commentId: string, content: string) {
+  const commentThreadEditState = {
+    editingCommentId,
+    editText,
+  }
+  const commentThreadReplyState = {
+    replyCommentId,
+    replyText,
+  }
+
+  const commentThreadPendingState = {
+    isUpdating,
+    isRemoving,
+    isReplying,
+  }
+
+  function setEditingState(commentId: string | null, editText = '') {
     setError(null)
     setDrafts((current) => ({
       ...current,
       editingCommentId: commentId,
-      editText: content,
+      editText,
     }))
+  }
+
+  function startEditing(commentId: string, content: string) {
+    setEditingState(commentId, content)
   }
 
   function cancelEditing() {
-    setError(null)
-    setDrafts((current) => ({
-      ...current,
-      editingCommentId: null,
-      editText: '',
-    }))
+    setEditingState(null)
   }
 
-  function startReply(commentId: string) {
+  function setReplyState(commentId: string | null, replyText = '') {
     setError(null)
     setDrafts((current) => ({
       ...current,
       replyCommentId: commentId,
-      replyText: '',
+      replyText,
     }))
   }
 
+  function startReply(commentId: string) {
+    setReplyState(commentId)
+  }
+
   function cancelReply() {
-    setError(null)
-    setDrafts((current) => ({
-      ...current,
-      replyCommentId: null,
-      replyText: '',
-    }))
+    setReplyState(null)
   }
 
   async function handleUpdate(commentId: string) {
@@ -133,22 +132,21 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     }
   }
 
-  async function handleDelete(commentId: string) {
+  async function handleSubmit() {
+    const content = commentText.trim()
+
+    if (!content || !isAuthenticated) return
+
     setError(null)
 
     try {
-      await removeComment({ postId, commentId })
-      if (editingCommentId === commentId) {
-        cancelEditing()
-      }
-      if (replyCommentId === commentId) {
-        cancelReply()
-      }
+      await createComment({ postId, data: { content } })
+      setDrafts((current) => ({ ...current, commentText: '' }))
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete comment')
+      setError(err instanceof Error ? err.message : 'Failed to post comment')
     }
   }
 
@@ -168,6 +166,38 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to post reply')
     }
+  }
+
+  async function handleDelete(commentId: string) {
+    setError(null)
+
+    try {
+      await removeComment({ postId, commentId })
+      if (editingCommentId === commentId) {
+        cancelEditing()
+      }
+      if (replyCommentId === commentId) {
+        cancelReply()
+      }
+      await queryClient.invalidateQueries({
+        queryKey: getCommentsControllerFindAllQueryKey(postId),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete comment')
+    }
+  }
+
+  const commentThreadEditActions = {
+    start: startEditing,
+    cancel: cancelEditing,
+    change: (value: string) => setDrafts((current) => ({ ...current, editText: value })),
+    submit: handleUpdate,
+  }
+  const commentThreadReplyActions = {
+    start: startReply,
+    cancel: cancelReply,
+    change: (value: string) => setDrafts((current) => ({ ...current, replyText: value })),
+    submit: handleReplySubmit,
   }
 
   return (
@@ -208,30 +238,13 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
               key={comment.id}
               comment={comment}
               depth={0}
-              currentUserId={currentUserId}
-              currentUserRole={currentUserRole}
-              postAuthorId={postAuthorId}
-              isAuthenticated={isAuthenticated}
-              editingCommentId={editingCommentId}
-              editText={editText}
-              replyCommentId={replyCommentId}
-              replyText={replyText}
-              isUpdating={isUpdating}
-              isRemoving={isRemoving}
-              isReplying={isReplying}
-              onStartEditing={startEditing}
-              onCancelEditing={cancelEditing}
-              onEditTextChange={(value) =>
-                setDrafts((current) => ({ ...current, editText: value }))
-              }
-              onUpdate={handleUpdate}
+              viewer={commentThreadViewer}
+              editState={commentThreadEditState}
+              replyState={commentThreadReplyState}
+              pendingState={commentThreadPendingState}
+              editActions={commentThreadEditActions}
+              replyActions={commentThreadReplyActions}
               onDelete={handleDelete}
-              onStartReply={startReply}
-              onCancelReply={cancelReply}
-              onReplyTextChange={(value) =>
-                setDrafts((current) => ({ ...current, replyText: value }))
-              }
-              onReplySubmit={handleReplySubmit}
             />
           )
         })}
