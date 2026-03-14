@@ -19,8 +19,8 @@ export class FilesService {
   ) {}
 
   async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
-    const post = await this.postsService.findOne(postId)
-    if (post.authorId !== userId) throw new ForbiddenException('You do not own this post')
+    const post = await this.postsService.findOne(postId, { id: userId })
+    if (!post.isOwner) throw new ForbiddenException('You do not own this post')
 
     if (!dto.key.startsWith(`posts/${userId}/`)) {
       throw new BadRequestException('Invalid file key')
@@ -37,8 +37,14 @@ export class FilesService {
     if (!file) throw new NotFoundException('File not found')
     if (file.postId !== postId) throw new NotFoundException('File not found')
     const url = await this.storageService.generatePresignedDownloadUrl(file.key)
-    void this.filesRepository.incrementDownloads(fileId)
     return { url }
+  }
+
+  async recordDownload(postId: string, fileId: string) {
+    const file = await this.filesRepository.findById(fileId)
+    if (!file) throw new NotFoundException('File not found')
+    if (file.postId !== postId) throw new NotFoundException('File not found')
+    void this.filesRepository.incrementDownloads(fileId)
   }
 
   async remove(postId: string, fileId: string, userId: string, userRole: UserRole) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
@@ -19,6 +19,14 @@ export class FilesController {
   @ResponseMessage('Download URL generated')
   getDownloadUrl(@Param('postId') postId: string, @Param('fileId') fileId: string) {
     return this.filesService.getDownloadUrl(postId, fileId)
+  }
+
+  @Post(':fileId/download')
+  @OptionalAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseMessage('Download recorded')
+  recordDownload(@Param('postId') postId: string, @Param('fileId') fileId: string) {
+    return this.filesService.recordDownload(postId, fileId)
   }
 
   @Post()
