@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useFeedStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 
-export type ApiCourse = { id: string; code: string; name: string }
+export type ApiCourse = { id: string; code: string; name: string; yearLevel?: number | null }
 
 interface CourseListProps {
   deptName: string
@@ -17,8 +17,8 @@ export function CourseList({ deptName, deptId, courses, onBack }: CourseListProp
   const router = useRouter()
   const setPendingFilter = useFeedStore((s) => s.setPendingFilter)
 
-  function handleCourseClick(courseId: string) {
-    setPendingFilter(deptId, courseId)
+  function handleCourseClick(courseId: string, yearLevel: number | null) {
+    setPendingFilter(deptId, courseId, yearLevel)
     router.push('/')
   }
 
@@ -37,7 +37,7 @@ export function CourseList({ deptName, deptId, courses, onBack }: CourseListProp
         {courses.map((course) => (
           <button
             key={course.id}
-            onClick={() => handleCourseClick(course.id)}
+            onClick={() => handleCourseClick(course.id, course.yearLevel ?? null)}
             className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full cursor-pointer"
           >
             <span className="font-mono text-[13px] text-amber font-medium shrink-0">

@@ -26,11 +26,7 @@ export default function FeedPage() {
   } = useFeedStore()
 
   useState(() => {
-    const pending = consumePendingFilter()
-    if (pending) {
-      setSelectedDeptId(pending.deptId)
-      setSelectedCourseId(pending.courseId)
-    }
+    consumePendingFilter()
   })
 
   const [searchQuery, setSearchQuery] = useState('')

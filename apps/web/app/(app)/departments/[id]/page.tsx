@@ -42,8 +42,8 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
 
   const courses = coursesData?.items ?? []
 
-  function handleCourseClick(courseId: string) {
-    setPendingFilter(id, courseId)
+  function handleCourseClick(courseId: string, yearLevel: number | null) {
+    setPendingFilter(id, courseId, yearLevel)
     router.push('/')
   }
 
@@ -67,7 +67,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
               {courses.map((course) => (
                 <button
                   key={course.id}
-                  onClick={() => handleCourseClick(course.id)}
+                  onClick={() => handleCourseClick(course.id, course.yearLevel ?? null)}
                   className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full"
                 >
                   <span className="font-mono text-[13px] text-amber font-medium shrink-0">
