@@ -42,8 +42,8 @@ export class PostsService {
     const userRole = user?.role
     const userId = user?.id
 
-    //Role
-    const canSeeAllStatuses = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
+    const isPrivileged = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
+    const canSeeAllStatuses = isPrivileged
 
     const { courseId, departmentId, yearLevel, type, status, authorId, ...pagination } = query
 
@@ -52,12 +52,15 @@ export class PostsService {
       ...(yearLevel && { yearLevel }),
     }
 
+    const isViewingOwnPosts = authorId != null && authorId === userId
+
     const where = {
       deletedAt: null,
       ...(courseId && { courseId }),
       ...(type && { type }),
       ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
+      ...(!isPrivileged && !isViewingOwnPosts && { isAnonymous: false }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
