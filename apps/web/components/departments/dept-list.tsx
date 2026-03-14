@@ -17,7 +17,7 @@ export function DeptListSkeleton() {
           >
             <Skeleton className="w-10 h-10 rounded-[6px] shrink-0 bg-muted" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-3.5 w-48 bg-amber-subtle" />
+              <Skeleton className="h-3.5 w-48 bg-muted" />
               <Skeleton className="h-3 w-20 bg-muted" />
             </div>
           </div>

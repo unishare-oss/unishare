@@ -22,25 +22,25 @@ export function PostCardSkeleton({ index = 0, className }: { index?: number; cla
     >
       <div className="flex-1 min-w-0 pr-4">
         <div className="flex items-center gap-2 mb-1.5">
-          <Skeleton className="h-5 w-24 rounded-lg" />
-          <Skeleton className="h-5 w-16 rounded-lg" />
-          <Skeleton className="h-5 w-28 rounded-lg" />
+          <Skeleton className="h-5 w-24 rounded-lg bg-muted" />
+          <Skeleton className="h-5 w-16 rounded-lg bg-muted" />
+          <Skeleton className="h-5 w-28 rounded-lg bg-muted" />
         </div>
 
-        <Skeleton className={cn('h-5 mb-3', titleWidth)} />
+        <Skeleton className={cn('h-5 mb-3 bg-muted', titleWidth)} />
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <Skeleton className="size-4 rounded-full" />
-            <Skeleton className={cn('h-3', authorWidth)} />
+            <Skeleton className="size-4 rounded-full bg-muted" />
+            <Skeleton className={cn('h-3 bg-muted', authorWidth)} />
           </div>
-          <Skeleton className={cn('h-3', metaWidth)} />
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-3 w-16" />
+          <Skeleton className={cn('h-3 bg-muted', metaWidth)} />
+          <Skeleton className="h-3 w-20 bg-muted" />
+          <Skeleton className="h-3 w-16 bg-muted" />
         </div>
       </div>
 
-      <Skeleton className="size-8 rounded-md" />
+      <Skeleton className="size-8 rounded-md bg-muted" />
     </article>
   )
 }

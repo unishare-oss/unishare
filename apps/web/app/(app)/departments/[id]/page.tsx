@@ -18,7 +18,7 @@ function CourseListSkeleton() {
           key={i}
           className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px]"
         >
-          <Skeleton className="h-4 w-16 shrink-0 bg-amber-subtle" />
+          <Skeleton className="h-4 w-16 shrink-0 bg-muted" />
           <Skeleton className="h-4 flex-1 max-w-xs bg-muted" />
         </div>
       ))}

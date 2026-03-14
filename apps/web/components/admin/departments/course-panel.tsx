@@ -18,7 +18,7 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         {isLoading ? (
-          <Skeleton className="h-6 w-40 bg-amber-subtle" />
+          <Skeleton className="h-6 w-40 bg-muted" />
         ) : (
           <h2 className="text-lg font-semibold text-foreground">
             {deptName ?? 'Select department'}
@@ -37,7 +37,7 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-6 py-3.5 border-b border-border">
-              <Skeleton className="h-4 w-16 shrink-0 bg-amber-subtle" />
+              <Skeleton className="h-4 w-16 shrink-0 bg-muted" />
               <Skeleton className="h-4 flex-1 max-w-sm bg-muted" />
             </div>
           ))

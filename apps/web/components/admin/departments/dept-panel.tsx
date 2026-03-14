@@ -30,7 +30,7 @@ export function DeptPanel({
             Departments
           </span>
           {isLoading ? (
-            <Skeleton className="h-4 w-6 rounded-[4px] bg-amber-subtle" />
+            <Skeleton className="h-4 w-6 rounded-[4px] bg-muted" />
           ) : (
             <span className="font-mono text-[10px] bg-muted text-text-muted px-1.5 py-0.5 rounded-[4px]">
               {depts.length}
@@ -48,7 +48,7 @@ export function DeptPanel({
                 key={i}
                 className="flex items-center justify-between px-5 py-3.5 border-b border-border"
               >
-                <Skeleton className="h-3.5 w-32 bg-amber-subtle" />
+                <Skeleton className="h-3.5 w-32 bg-muted" />
                 <Skeleton className="h-3 w-16 bg-muted" />
               </div>
             ))
