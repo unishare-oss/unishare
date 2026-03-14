@@ -15,6 +15,7 @@ export class NotificationsRepository {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 50,
+      select: { id: true, type: true, message: true, read: true, postId: true, createdAt: true },
     })
   }
 
