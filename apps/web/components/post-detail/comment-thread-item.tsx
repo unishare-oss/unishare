@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, MessageSquareReply, Pencil, Trash2 } from 'lucide-react'
 import { CommentEditor } from '@/components/post-detail/comment-editor'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
 
@@ -67,6 +69,7 @@ export function CommentThreadItem({
   replyActions,
   onDelete,
 }: CommentThreadItemProps) {
+  const [areRepliesOpen, setAreRepliesOpen] = useState(true)
   const isDeleted = comment.deletedAt !== null
   const isEdited = comment.updatedAt !== comment.createdAt
   const currentUserId = viewer.user?.id ?? null
@@ -107,7 +110,27 @@ export function CommentThreadItem({
                     </span>
                   )}
                 </div>
-                <div className="mt-1.5 flex items-center gap-1 pl-[34px]">
+              </div>
+            </div>
+
+            {isEditing ? (
+              <div className="pl-[34px]">
+                <CommentEditor
+                  value={editState.editText}
+                  onChange={editActions.change}
+                  onCancel={editActions.cancel}
+                  onSubmit={() => editActions.submit(comment.id)}
+                  isPending={pendingState.isUpdating}
+                  submitLabel="Save"
+                  pendingLabel="Saving..."
+                />
+              </div>
+            ) : (
+              <>
+                <p className="pl-[34px] text-sm leading-relaxed text-foreground">
+                  {comment.content}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
                   {canReply && (
                     <Button
                       type="button"
@@ -146,25 +169,11 @@ export function CommentThreadItem({
                     </Button>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {isEditing ? (
-              <CommentEditor
-                value={editState.editText}
-                onChange={editActions.change}
-                onCancel={editActions.cancel}
-                onSubmit={() => editActions.submit(comment.id)}
-                isPending={pendingState.isUpdating}
-                submitLabel="Save"
-                pendingLabel="Saving..."
-              />
-            ) : (
-              <p className="pl-[34px] text-sm leading-relaxed text-foreground">{comment.content}</p>
+              </>
             )}
 
             {isReplyingToComment && (
-              <div className="mt-3">
+              <div className="mt-3 pl-[34px]">
                 <CommentEditor
                   value={replyState.replyText}
                   onChange={replyActions.change}
@@ -181,22 +190,42 @@ export function CommentThreadItem({
         )}
 
         {hasReplies && (
-          <div className="mt-2">
-            {comment.children?.map((child) => (
-              <CommentThreadItem
-                key={child.id}
-                comment={child}
-                depth={depth + 1}
-                viewer={viewer}
-                editState={editState}
-                replyState={replyState}
-                pendingState={pendingState}
-                editActions={editActions}
-                replyActions={replyActions}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
+          <Collapsible open={areRepliesOpen} onOpenChange={setAreRepliesOpen} className="mt-3">
+            <div className="pl-[34px]">
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="gap-1.5 font-mono uppercase tracking-wider text-text-muted"
+                >
+                  <ChevronDown
+                    className={cn('size-3 transition-transform', !areRepliesOpen && '-rotate-90')}
+                    strokeWidth={1.5}
+                  />
+                  {areRepliesOpen
+                    ? 'Hide replies'
+                    : `Show replies (${comment.children?.length ?? 0})`}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="mt-2">
+              {comment.children?.map((child) => (
+                <CommentThreadItem
+                  key={child.id}
+                  comment={child}
+                  depth={depth + 1}
+                  viewer={viewer}
+                  editState={editState}
+                  replyState={replyState}
+                  pendingState={pendingState}
+                  editActions={editActions}
+                  replyActions={replyActions}
+                  onDelete={onDelete}
+                />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </div>
     </div>

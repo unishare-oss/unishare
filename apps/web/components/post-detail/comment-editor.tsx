@@ -25,7 +25,7 @@ export function CommentEditor({
   placeholder,
 }: CommentEditorProps) {
   return (
-    <div className="space-y-3 pl-[34px]">
+    <div className="space-y-3">
       <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
