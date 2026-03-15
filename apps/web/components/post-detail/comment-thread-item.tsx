@@ -83,10 +83,15 @@ export function CommentThreadItem({
   const hasReplies = (comment.children?.length ?? 0) > 0
   const isEditing = editState.editingCommentId === comment.id
   const isReplyingToComment = replyState.replyCommentId === comment.id
+  const isTopLevelComment = depth === 0
 
   return (
     <div
-      className={cn('group py-4 border-b border-border last:border-b-0', depth > 0 && 'pb-0')}
+      className={cn(
+        'group py-4',
+        isTopLevelComment && 'border-b border-border last:border-b-0',
+        depth > 0 && 'pb-0',
+      )}
       style={depth > 0 ? { marginLeft: Math.min(depth, 4) * 28 } : undefined}
     >
       <div className={cn(depth > 0 && 'border-l border-border/70 pl-4 sm:pl-5')}>
