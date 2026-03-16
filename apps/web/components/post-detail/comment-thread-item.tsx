@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ChevronDown, MessageSquareReply, Pencil, Trash2 } from 'lucide-react'
 import { CommentEditor } from '@/components/post-detail/comment-editor'
@@ -161,15 +162,18 @@ export function CommentThreadItem({
           <div className="mb-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                <span
+                <Link href={`/users/${comment.userId}`} className="shrink-0">
+                  <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
+                </Link>
+                <Link
+                  href={`/users/${comment.userId}`}
                   className={cn(
-                    'truncate text-sm font-medium',
+                    'truncate text-sm font-medium hover:underline',
                     depth > 0 ? layerStyle.badgeClassName : 'text-foreground',
                   )}
                 >
                   {comment.user.name}
-                </span>
+                </Link>
                 {isOriginalPosterComment && (
                   <Badge
                     variant="outline"
@@ -196,7 +200,7 @@ export function CommentThreadItem({
           </div>
 
           {isEditing ? (
-            <div className="pl-[34px]">
+            <div className="pl-8.5">
               <CommentEditor
                 value={editState.editText}
                 onChange={editActions.change}
@@ -211,13 +215,13 @@ export function CommentThreadItem({
             <>
               <p
                 className={cn(
-                  'pl-[34px] text-sm leading-relaxed',
+                  'pl-8.5 text-sm leading-relaxed',
                   isDeletedComment ? 'italic text-text-muted' : 'text-foreground',
                 )}
               >
                 {comment.content}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
+              <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (
                   <Button
                     type="button"
@@ -260,7 +264,7 @@ export function CommentThreadItem({
           )}
 
           {isReplyingToComment && (
-            <div className="mt-3 pl-[34px]">
+            <div className="mt-3 pl-8.5">
               <CommentEditor
                 value={replyState.replyText}
                 onChange={replyActions.change}
@@ -274,7 +278,7 @@ export function CommentThreadItem({
             </div>
           )}
           {hasReplies && (
-            <div className="mt-3 pl-[34px]">
+            <div className="mt-3 pl-8.5">
               <span className="inline-flex h-8 items-center">
                 <ChevronDown
                   className={cn(
