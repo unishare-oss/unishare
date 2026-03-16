@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
@@ -6,8 +6,13 @@ import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { PostRequestsService } from './post-requests.service'
 import { CreatePostRequestDto } from './dto/create-post-request.dto'
 import { ListPostRequestsDto } from './dto/list-post-requests.dto'
-import { FulfillPostRequestDto } from './dto/fulfill-post-request.dto'
-import { PostRequestEntity, PaginatedPostRequestEntity } from './entities/post-request.entity'
+import { CreateFulfillmentSuggestionDto } from './dto/create-fulfillment-suggestion.dto'
+import {
+  PostRequestEntity,
+  PostRequestDetailEntity,
+  PostRequestFulfillmentEntity,
+  PaginatedPostRequestEntity,
+} from './entities/post-request.entity'
 
 @ApiTags('post-requests')
 @Controller('post-requests')
@@ -31,28 +36,49 @@ export class PostRequestsController {
 
   @Get(':id')
   @OptionalAuth()
-  @ApiOkResponse({ type: PostRequestEntity })
+  @ApiOkResponse({ type: PostRequestDetailEntity })
   @ResponseMessage('Request fetched successfully')
   findOne(@Param('id') id: string, @Session() session: UserSession) {
     return this.service.findOne(id, session?.user?.id)
   }
 
   @Post(':id/upvote')
-  @ApiOkResponse({ type: PostRequestEntity })
+  @ApiOkResponse({ type: PostRequestDetailEntity })
   @ResponseMessage('Upvote toggled')
   upvote(@Param('id') id: string, @Session() session: UserSession) {
     return this.service.toggleUpvote(id, session.user.id)
   }
 
-  @Patch(':id/fulfill')
-  @ApiOkResponse({ type: PostRequestEntity })
-  @ResponseMessage('Request marked as fulfilled')
-  fulfill(
+  @Post(':id/suggestions')
+  @ApiCreatedResponse({ type: PostRequestFulfillmentEntity })
+  @ResponseMessage('Suggestion submitted')
+  suggest(
     @Param('id') id: string,
-    @Body() dto: FulfillPostRequestDto,
+    @Body() dto: CreateFulfillmentSuggestionDto,
     @Session() session: UserSession,
   ) {
-    return this.service.fulfill(id, dto, session.user.id)
+    return this.service.suggest(id, dto, session.user.id)
+  }
+
+  @Delete(':id/suggestions/:suggestionId')
+  @ResponseMessage('Suggestion removed')
+  removeSuggestion(
+    @Param('id') id: string,
+    @Param('suggestionId') suggestionId: string,
+    @Session() session: UserSession,
+  ) {
+    return this.service.removeSuggestion(id, suggestionId, session.user.id)
+  }
+
+  @Post(':id/suggestions/:suggestionId/accept')
+  @ApiOkResponse({ type: PostRequestDetailEntity })
+  @ResponseMessage('Request marked as fulfilled')
+  acceptSuggestion(
+    @Param('id') id: string,
+    @Param('suggestionId') suggestionId: string,
+    @Session() session: UserSession,
+  ) {
+    return this.service.acceptSuggestion(id, suggestionId, session.user.id)
   }
 
   @Delete(':id')
