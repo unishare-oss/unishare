@@ -316,28 +316,45 @@ function RequestCard({
           </a>
         )}
 
-        {isOwner && (
+        {currentUserId && !isFulfilled && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {!isFulfilled && (
-              <FulfillRequestDialog
-                requestId={request.id}
-                trigger={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    className={cn(
-                      'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
-                      'hover:bg-muted/40 hover:text-foreground',
-                    )}
-                  >
-                    <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                    Fulfill
-                  </Button>
-                }
-              />
-            )}
+            <FulfillRequestDialog
+              requestId={request.id}
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className={cn(
+                    'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
+                    'hover:bg-muted/40 hover:text-foreground',
+                  )}
+                >
+                  <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                  Fulfill
+                </Button>
+              }
+            />
 
+            {isOwner && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={onDelete}
+                className={cn(
+                  'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
+                  'hover:bg-destructive/10 hover:text-destructive',
+                )}
+              >
+                <Trash2 className="size-3.5" strokeWidth={1.5} />
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
+        {isOwner && isFulfilled && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Button
               type="button"
               variant="ghost"
