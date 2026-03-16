@@ -11,7 +11,7 @@ export function NotificationsBell() {
   const isActive = pathname.startsWith('/notifications')
 
   const { data } = useNotificationsControllerFindAll({
-    query: { select: (r) => r.data, staleTime: 1000 * 60 },
+    query: { select: (r) => r.data },
   })
 
   const unreadCount = (data ?? []).filter((n) => !n.read).length
