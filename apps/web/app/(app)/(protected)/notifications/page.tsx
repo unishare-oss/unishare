@@ -93,7 +93,7 @@ export default function NotificationsPage() {
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
                     !n.read && 'bg-amber/[0.04]',
-                    !n.postId && 'cursor-default',
+                    n.postId ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <span
