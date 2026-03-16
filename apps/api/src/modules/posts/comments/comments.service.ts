@@ -1,10 +1,31 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import { UserRole } from '@/generated/prisma/client'
+import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { PostsService } from '../posts.service'
-import { CommentsRepository } from './comments.repository'
+import { commentSelect, CommentsRepository } from './comments.repository'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
+
+type FlatCommentNode = Prisma.CommentGetPayload<{
+  select: typeof commentSelect
+}>
+
+type CommentWithChildren = FlatCommentNode & {
+  children: CommentTreeNode[]
+}
+
+type CommentTreeNode = FlatCommentNode & {
+  children?: CommentTreeNode[]
+}
+
+type CommentResponseNode = CommentTreeNode
+
+const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
+const DELETED_COMMENT_USER = {
+  id: '',
+  name: 'Deleted user',
+  image: null,
+} as const
 
 @Injectable()
 export class CommentsService {
@@ -16,11 +37,21 @@ export class CommentsService {
 
   async findAll(postId: string) {
     await this.postsService.assertCommentTargetExists(postId)
-    return this.commentsRepository.findAll(postId)
+
+    const comments = await this.commentsRepository.findAll(postId)
+    return this.sanitizeCommentTree(this.buildCommentTree(comments))
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
     const post = await this.postsService.getNotificationTarget(postId)
+
+    if (dto.parentId) {
+      const parentComment = await this.commentsRepository.findById(dto.parentId)
+      if (!parentComment || parentComment.postId !== postId || parentComment.deletedAt) {
+        throw new NotFoundException('Parent comment not found')
+      }
+    }
+
     const comment = await this.commentsRepository.create(postId, userId, dto)
     void this.notificationsService.notifyComment(
       postId,
@@ -64,6 +95,51 @@ export class CommentsService {
       throw new ForbiddenException('You do not have permission to delete this comment')
     }
 
-    return this.commentsRepository.softDelete(commentId)
+    const deletedComment = await this.commentsRepository.softDelete(commentId)
+    return this.sanitizeComment(deletedComment)
+  }
+
+  private buildCommentTree(comments: FlatCommentNode[]) {
+    const nodes = new Map<string, CommentWithChildren>(
+      comments.map((comment) => [comment.id, { ...comment, children: [] }]),
+    )
+
+    const roots: CommentTreeNode[] = []
+    for (const comment of nodes.values()) {
+      if (comment.parentId) {
+        const parent = nodes.get(comment.parentId)
+        if (parent) {
+          parent.children.push(comment)
+          continue
+        }
+      }
+
+      roots.push(comment)
+    }
+
+    return roots
+  }
+
+  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentResponseNode[] {
+    return comments.map((comment) => this.sanitizeComment(comment))
+  }
+
+  private sanitizeComment(comment: CommentTreeNode): CommentResponseNode {
+    const children = comment.children ? this.sanitizeCommentTree(comment.children) : undefined
+
+    if (!comment.deletedAt) {
+      return {
+        ...comment,
+        ...(children ? { children } : {}),
+      }
+    }
+
+    return {
+      ...comment,
+      content: DELETED_COMMENT_CONTENT,
+      userId: '',
+      user: DELETED_COMMENT_USER,
+      ...(children ? { children } : {}),
+    }
   }
 }

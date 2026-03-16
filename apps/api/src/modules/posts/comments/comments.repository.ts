@@ -4,9 +4,13 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
 
-const commentSelect = {
+export const commentSelect = {
   id: true,
   content: true,
+  userId: true,
+  postId: true,
+  parentId: true,
+  deletedAt: true,
   createdAt: true,
   updatedAt: true,
   user: {
@@ -24,7 +28,7 @@ export class CommentsRepository {
 
   findAll(postId: string) {
     return this.prisma.comment.findMany({
-      where: { postId, deletedAt: null },
+      where: { postId },
       orderBy: { createdAt: 'asc' },
       select: commentSelect,
     })
@@ -53,6 +57,7 @@ export class CommentsRepository {
         postId,
         userId,
         content: dto.content,
+        ...(dto.parentId ? { parentId: dto.parentId } : {}),
       },
       select: commentSelect,
     })

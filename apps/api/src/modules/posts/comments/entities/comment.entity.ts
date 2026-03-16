@@ -19,6 +19,18 @@ export class CommentEntity {
   content: string
 
   @ApiProperty()
+  userId: string
+
+  @ApiProperty()
+  postId: string
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  parentId: string | null
+
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  deletedAt: Date | null
+
+  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
@@ -26,4 +38,10 @@ export class CommentEntity {
 
   @ApiProperty({ type: CommentUserEntity })
   user: CommentUserEntity
+
+  @ApiPropertyOptional({
+    type: () => [CommentEntity],
+    description: 'Nested replies for this comment.',
+  })
+  children?: CommentEntity[]
 }

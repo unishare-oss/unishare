@@ -577,6 +577,30 @@
         "tags": ["comments"]
       }
     },
+    "/api/posts/{postId}/comments/{commentId}/replies": {
+      "post": {
+        "operationId": "CommentsController_createReply",
+        "parameters": [
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "commentId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommentDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CommentEntity" } }
+            }
+          }
+        },
+        "tags": ["comments"]
+      }
+    },
     "/api/posts/{postId}/comments/{commentId}": {
       "patch": {
         "operationId": "CommentsController_update",
@@ -1287,20 +1311,41 @@
         "properties": {
           "id": { "type": "string" },
           "content": { "type": "string" },
+          "userId": { "type": "string" },
+          "postId": { "type": "string" },
+          "parentId": { "type": "string", "nullable": true },
+          "deletedAt": { "format": "date-time", "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "user": { "$ref": "#/components/schemas/CommentUserEntity" }
+          "user": { "$ref": "#/components/schemas/CommentUserEntity" },
+          "children": {
+            "description": "Nested replies for this comment.",
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CommentEntity" }
+          }
         },
-        "required": ["id", "content", "createdAt", "updatedAt", "user"]
+        "required": ["id", "content", "userId", "postId", "createdAt", "updatedAt", "user"]
       },
       "CreateCommentDto": {
         "type": "object",
-        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } },
+        "properties": {
+          "content": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "parentId": {
+            "type": "string",
+            "description": "Parent comment ID when creating a nested reply."
+          }
+        },
         "required": ["content"]
       },
       "UpdateCommentDto": {
         "type": "object",
-        "properties": { "content": { "type": "string", "minLength": 1, "maxLength": 2000 } }
+        "properties": {
+          "content": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "parentId": {
+            "type": "string",
+            "description": "Parent comment ID when creating a nested reply."
+          }
+        }
       },
       "NotificationEntity": {
         "type": "object",

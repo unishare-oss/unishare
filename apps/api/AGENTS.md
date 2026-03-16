@@ -107,6 +107,7 @@ That means backend API changes are not complete until Swagger metadata is correc
 - Keep controllers transport-focused.
 - Keep services responsible for business rules and authorization.
 - Keep repositories responsible for DB access.
+- If a function will only be used in a spec module, write it as `private`.
 - When changing response shapes, update the entity and Swagger annotations in the same change.
 - If a frontend hook looks wrong after regeneration, inspect the controller response decorators and entity metadata first.
 
