@@ -10,10 +10,19 @@ interface CoursePanelProps {
   deptName: string | undefined
   courses: ApiCourse[]
   onAddClick: () => void
+  onEditClick: (course: ApiCourse) => void
+  onDeleteClick: (course: ApiCourse) => void
   isLoading?: boolean
 }
 
-export function CoursePanel({ deptName, courses, onAddClick, isLoading }: CoursePanelProps) {
+export function CoursePanel({
+  deptName,
+  courses,
+  onAddClick,
+  onEditClick,
+  onDeleteClick,
+  isLoading,
+}: CoursePanelProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
@@ -56,11 +65,23 @@ export function CoursePanel({ deptName, courses, onAddClick, isLoading }: Course
               </span>
               <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>
               <div className="invisible group-hover:visible flex items-center gap-2 shrink-0">
-                <Button variant="ghost" size="icon-xs" aria-label="Edit course">
-                  <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Edit course"
+                  onClick={() => onEditClick(course)}
+                  className="text-text-muted hover:text-foreground hover:bg-muted"
+                >
+                  <Pencil className="size-3.5" strokeWidth={1.5} />
                 </Button>
-                <Button variant="ghost" size="icon-xs" aria-label="Delete course">
-                  <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Delete course"
+                  onClick={() => onDeleteClick(course)}
+                  className="text-text-muted hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-3.5" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>

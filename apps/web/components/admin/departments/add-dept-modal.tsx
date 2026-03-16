@@ -9,9 +9,10 @@ interface AddDeptModalProps {
   onChange: (value: string) => void
   onClose: () => void
   onSubmit: (name: string) => void
+  editMode?: boolean
 }
 
-export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModalProps) {
+export function AddDeptModal({ value, onChange, onClose, onSubmit, editMode }: AddDeptModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-surface-dark/30" />
@@ -20,7 +21,9 @@ export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModa
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-mono text-sm font-medium text-foreground">Add Department</h3>
+          <h3 className="font-mono text-sm font-medium text-foreground">
+            {editMode ? 'Edit Department' : 'Add Department'}
+          </h3>
           <Button variant="ghost" size="icon-xs" onClick={onClose}>
             <X className="size-4 text-text-muted" strokeWidth={1.5} />
           </Button>
@@ -51,7 +54,7 @@ export function AddDeptModal({ value, onChange, onClose, onSubmit }: AddDeptModa
             disabled={!value.trim()}
             className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
-            Create
+            {editMode ? 'Save' : 'Create'}
           </Button>
         </div>
       </div>

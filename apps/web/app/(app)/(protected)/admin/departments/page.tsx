@@ -5,27 +5,42 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useDepartmentsControllerFindAll,
   useDepartmentsControllerCreate,
+  useDepartmentsControllerUpdate,
+  useDepartmentsControllerRemove,
   getDepartmentsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/departments/departments'
 import {
   useCoursesControllerFindAll,
   useCoursesControllerCreate,
+  useCoursesControllerUpdate,
+  useCoursesControllerRemove,
   getCoursesControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/courses/courses'
 import { PageHeader } from '@/components/shared/page-header'
-import { DeptPanel } from '@/components/admin/departments/dept-panel'
-import { CoursePanel } from '@/components/admin/departments/course-panel'
+import { DeptPanel, type ApiDept } from '@/components/admin/departments/dept-panel'
+import { CoursePanel, type ApiCourse } from '@/components/admin/departments/course-panel'
 import { AddDeptModal } from '@/components/admin/departments/add-dept-modal'
 import { AddCourseModal } from '@/components/admin/departments/add-course-modal'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 
 export default function AdminDepartmentsPage() {
   const [selectedDeptId, setSelectedDeptId] = useState('')
-  const [showAddDept, setShowAddDept] = useState(false)
-  const [showAddCourse, setShowAddCourse] = useState(false)
-  const [newDeptName, setNewDeptName] = useState('')
-  const [newCourseCode, setNewCourseCode] = useState('')
-  const [newCourseName, setNewCourseName] = useState('')
   const queryClient = useQueryClient()
+
+  // Dept modal state
+  const [deptModal, setDeptModal] = useState<{ open: boolean; dept?: ApiDept }>({ open: false })
+  const [deptName, setDeptName] = useState('')
+
+  // Course modal state
+  const [courseModal, setCourseModal] = useState<{ open: boolean; course?: ApiCourse }>({
+    open: false,
+  })
+  const [courseCode, setCourseCode] = useState('')
+  const [courseName, setCourseName] = useState('')
+
+  // Delete confirm state
+  const [deleteDept, setDeleteDept] = useState<ApiDept | null>(null)
+  const [deleteCourse, setDeleteCourse] = useState<ApiCourse | null>(null)
 
   const { data: depts, isLoading: deptsLoading } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
@@ -38,17 +53,38 @@ export default function AdminDepartmentsPage() {
     { query: { enabled: !!effectiveDeptId, select: (r) => r.data } },
   )
 
+  const invalidateDepts = () =>
+    queryClient.invalidateQueries({ queryKey: getDepartmentsControllerFindAllQueryKey() })
+  const invalidateCourses = () =>
+    queryClient.invalidateQueries({ queryKey: getCoursesControllerFindAllQueryKey() })
+
   const { mutate: createDept } = useDepartmentsControllerCreate({
+    mutation: { onSuccess: invalidateDepts },
+  })
+  const { mutate: updateDept } = useDepartmentsControllerUpdate({
+    mutation: { onSuccess: invalidateDepts },
+  })
+  const { mutate: removeDept, isPending: removingDept } = useDepartmentsControllerRemove({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getDepartmentsControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        invalidateDepts()
+        setDeleteDept(null)
+      },
     },
   })
 
   const { mutate: createCourse } = useCoursesControllerCreate({
+    mutation: { onSuccess: invalidateCourses },
+  })
+  const { mutate: updateCourse } = useCoursesControllerUpdate({
+    mutation: { onSuccess: invalidateCourses },
+  })
+  const { mutate: removeCourse, isPending: removingCourse } = useCoursesControllerRemove({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getCoursesControllerFindAllQueryKey() }),
+      onSuccess: () => {
+        invalidateCourses()
+        setDeleteCourse(null)
+      },
     },
   })
 
@@ -65,44 +101,87 @@ export default function AdminDepartmentsPage() {
           selectedDeptId={effectiveDeptId}
           onSelect={setSelectedDeptId}
           onAddClick={() => {
-            setNewDeptName('')
-            setShowAddDept(true)
+            setDeptName('')
+            setDeptModal({ open: true })
           }}
+          onEditClick={(dept) => {
+            setDeptName(dept.name)
+            setDeptModal({ open: true, dept })
+          }}
+          onDeleteClick={setDeleteDept}
           isLoading={deptsLoading}
         />
         <CoursePanel
           deptName={selectedDept?.name}
           courses={deptCourses}
           onAddClick={() => {
-            setNewCourseCode('')
-            setNewCourseName('')
-            setShowAddCourse(true)
+            setCourseCode('')
+            setCourseName('')
+            setCourseModal({ open: true })
           }}
+          onEditClick={(course) => {
+            setCourseCode(course.code)
+            setCourseName(course.name)
+            setCourseModal({ open: true, course })
+          }}
+          onDeleteClick={setDeleteCourse}
           isLoading={coursesLoading}
         />
       </div>
 
-      {showAddDept && (
+      {deptModal.open && (
         <AddDeptModal
-          value={newDeptName}
-          onChange={setNewDeptName}
-          onClose={() => setShowAddDept(false)}
-          onSubmit={(name) => createDept({ data: { name } })}
+          value={deptName}
+          onChange={setDeptName}
+          editMode={!!deptModal.dept}
+          onClose={() => setDeptModal({ open: false })}
+          onSubmit={(name) => {
+            if (deptModal.dept) {
+              updateDept({ id: deptModal.dept.id, data: { name } })
+            } else {
+              createDept({ data: { name } })
+            }
+          }}
         />
       )}
 
-      {showAddCourse && (
+      {courseModal.open && (
         <AddCourseModal
-          code={newCourseCode}
-          name={newCourseName}
-          onCodeChange={setNewCourseCode}
-          onNameChange={setNewCourseName}
-          onClose={() => setShowAddCourse(false)}
-          onSubmit={(code, name) =>
-            createCourse({ data: { code, name, departmentId: effectiveDeptId } })
-          }
+          code={courseCode}
+          name={courseName}
+          editMode={!!courseModal.course}
+          onCodeChange={setCourseCode}
+          onNameChange={setCourseName}
+          onClose={() => setCourseModal({ open: false })}
+          onSubmit={(code, name) => {
+            if (courseModal.course) {
+              updateCourse({ id: courseModal.course.id, data: { code, name } })
+            } else {
+              createCourse({ data: { code, name, departmentId: effectiveDeptId } })
+            }
+          }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteDept}
+        onOpenChange={(open) => !open && setDeleteDept(null)}
+        title="Delete department?"
+        description={`This will permanently delete "${deleteDept?.name}" and all its courses.`}
+        confirmLabel="Delete"
+        isPending={removingDept}
+        onConfirm={() => deleteDept && removeDept({ id: deleteDept.id })}
+      />
+
+      <ConfirmDialog
+        open={!!deleteCourse}
+        onOpenChange={(open) => !open && setDeleteCourse(null)}
+        title="Delete course?"
+        description={`This will permanently delete "${deleteCourse?.code} — ${deleteCourse?.name}".`}
+        confirmLabel="Delete"
+        isPending={removingCourse}
+        onConfirm={() => deleteCourse && removeCourse({ id: deleteCourse.id })}
+      />
     </div>
   )
 }

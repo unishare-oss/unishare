@@ -1,9 +1,15 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export type ApiDept = { id: string; name: string; courseCount: number }
 
@@ -12,6 +18,8 @@ interface DeptPanelProps {
   selectedDeptId: string
   onSelect: (id: string) => void
   onAddClick: () => void
+  onEditClick: (dept: ApiDept) => void
+  onDeleteClick: (dept: ApiDept) => void
   isLoading?: boolean
 }
 
@@ -20,6 +28,8 @@ export function DeptPanel({
   selectedDeptId,
   onSelect,
   onAddClick,
+  onEditClick,
+  onDeleteClick,
   isLoading,
 }: DeptPanelProps) {
   return (
@@ -53,15 +63,15 @@ export function DeptPanel({
               </div>
             ))
           : depts.map((dept) => (
-              <button
+              <div
                 key={dept.id}
                 onClick={() => onSelect(dept.id)}
                 className={cn(
-                  'group flex items-center justify-between px-5 py-3 text-left transition-colors duration-150 border-b border-border whitespace-nowrap md:whitespace-normal shrink-0 md:shrink',
+                  'group flex items-center justify-between px-5 py-3 text-left transition-colors duration-150 border-b border-border whitespace-nowrap md:whitespace-normal shrink-0 md:shrink cursor-pointer',
                   selectedDeptId === dept.id ? 'bg-amber-subtle' : 'hover:bg-muted',
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={cn(
                       'w-1.5 h-1.5 rounded-sm shrink-0 transition-colors duration-150',
@@ -70,19 +80,52 @@ export function DeptPanel({
                   />
                   <span
                     className={cn(
-                      'text-sm',
+                      'text-sm truncate',
                       selectedDeptId === dept.id ? 'font-medium text-amber' : 'text-foreground',
                     )}
                   >
                     {dept.name}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 ml-3">
-                  <span className="font-mono text-xs text-text-muted">
-                    {dept.courseCount} courses
+                <div className="flex items-center ml-2 shrink-0">
+                  <span className="font-mono text-xs text-text-muted group-hover:invisible">
+                    {dept.courseCount}
                   </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Department options"
+                        className="invisible group-hover:visible text-text-muted hover:text-foreground hover:bg-muted"
+                      >
+                        <MoreHorizontal className="size-4" strokeWidth={1.5} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="bottom">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEditClick(dept)
+                        }}
+                      >
+                        <Pencil className="size-3.5 mr-2" strokeWidth={1.5} />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeleteClick(dept)
+                        }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="size-3.5 mr-2" strokeWidth={1.5} />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </button>
+              </div>
             ))}
       </div>
     </div>

@@ -11,6 +11,7 @@ interface AddCourseModalProps {
   onNameChange: (value: string) => void
   onClose: () => void
   onSubmit: (code: string, name: string) => void
+  editMode?: boolean
 }
 
 export function AddCourseModal({
@@ -20,6 +21,7 @@ export function AddCourseModal({
   onNameChange,
   onClose,
   onSubmit,
+  editMode,
 }: AddCourseModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -29,7 +31,9 @@ export function AddCourseModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-mono text-sm font-medium text-foreground">Add Course</h3>
+          <h3 className="font-mono text-sm font-medium text-foreground">
+            {editMode ? 'Edit Course' : 'Add Course'}
+          </h3>
           <Button variant="ghost" size="icon-xs" onClick={onClose}>
             <X className="size-4 text-text-muted" strokeWidth={1.5} />
           </Button>
@@ -74,7 +78,7 @@ export function AddCourseModal({
             disabled={!code.trim() || !name.trim()}
             className="bg-amber text-primary-foreground hover:bg-amber-hover"
           >
-            Create
+            {editMode ? 'Save' : 'Create'}
           </Button>
         </div>
       </div>
