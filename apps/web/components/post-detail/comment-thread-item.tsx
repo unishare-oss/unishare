@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ChevronDown, MessageSquareReply, Pencil, Trash2 } from 'lucide-react'
 import { CommentEditor } from '@/components/post-detail/comment-editor'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -125,9 +126,11 @@ export function CommentThreadItem({
   const isEdited = comment.updatedAt !== comment.createdAt
   const currentUserId = viewer.user?.id ?? null
   const isCommentOwner = comment.userId === currentUserId
-  const isPostAuthor = viewer.postAuthorId != null && viewer.postAuthorId === currentUserId
+  const isViewerPostAuthor = viewer.postAuthorId != null && viewer.postAuthorId === currentUserId
+  const isOriginalPosterComment =
+    viewer.postAuthorId != null && comment.userId === viewer.postAuthorId
   const isAdmin = viewer.user?.role === 'ADMIN'
-  const canModerate = isCommentOwner || isPostAuthor || isAdmin
+  const canModerate = isCommentOwner || isViewerPostAuthor || isAdmin
   const canEdit = isCommentOwner
   const canDelete = canModerate
   const canReply = viewer.isAuthenticated
@@ -168,6 +171,14 @@ export function CommentThreadItem({
                 >
                   {comment.user.name}
                 </span>
+                {isOriginalPosterComment && (
+                  <Badge
+                    variant="outline"
+                    className="h-5 rounded-full border-amber/30 bg-amber-subtle/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber"
+                  >
+                    OP
+                  </Badge>
+                )}
                 <span className={cn('font-mono text-xs', layerStyle.badgeClassName)}>
                   {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                 </span>

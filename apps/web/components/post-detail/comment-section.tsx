@@ -19,7 +19,7 @@ import { pluralize } from '@/lib/utils'
 
 interface CommentSectionProps {
   postId: string
-  isPostOwner?: boolean
+  postAuthorId?: string | null
 }
 
 interface DraftState {
@@ -38,7 +38,7 @@ const INITIAL_DRAFT_STATE: DraftState = {
   replyText: '',
 }
 
-export function CommentSection({ postId, isPostOwner }: CommentSectionProps) {
+export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const [error, setError] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<DraftState>(INITIAL_DRAFT_STATE)
 
@@ -58,7 +58,7 @@ export function CommentSection({ postId, isPostOwner }: CommentSectionProps) {
 
   const commentThreadViewer = {
     user,
-    postAuthorId: isPostOwner ? (user?.id ?? null) : null,
+    postAuthorId: postAuthorId ?? null,
     isAuthenticated,
   }
 

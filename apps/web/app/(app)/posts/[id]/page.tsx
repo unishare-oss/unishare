@@ -87,7 +87,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <PostReactions post={post} />
           <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
           <div className="border-t border-border mt-4" />
-          <CommentSection postId={post.id} isPostOwner={isOwner} />
+          <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
         </div>
       </div>
     </div>
