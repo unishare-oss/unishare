@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { ScheduleModule } from '@nestjs/schedule'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -14,10 +15,12 @@ import { FilesModule } from './modules/files/files.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
 import { PostRequestsModule } from './modules/post-requests/post-requests.module'
 import { StatsModule } from './modules/stats/stats.module'
+import { TasksModule } from './modules/tasks/tasks.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     StorageModule,
     AuthModule.forRoot({ auth }),
@@ -29,6 +32,7 @@ import { StatsModule } from './modules/stats/stats.module'
     NotificationsModule,
     StatsModule,
     PostRequestsModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
