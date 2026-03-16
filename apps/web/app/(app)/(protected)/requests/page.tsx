@@ -7,6 +7,7 @@ import {
   getPostRequestsControllerFindAllQueryKey,
   usePostRequestsControllerUpvote,
   usePostRequestsControllerRemove,
+  type postRequestsControllerFindAllResponse,
 } from '@/src/lib/api/generated/post-requests/post-requests'
 import type {
   PostRequestEntity,
@@ -75,7 +76,38 @@ export default function RequestsPage() {
 
   const upvote = usePostRequestsControllerUpvote({
     mutation: {
-      onSuccess: () =>
+      onMutate: async ({ id: requestId }) => {
+        await qc.cancelQueries({ queryKey: getPostRequestsControllerFindAllQueryKey() })
+        const snapshots = qc.getQueriesData<postRequestsControllerFindAllResponse>({
+          queryKey: getPostRequestsControllerFindAllQueryKey(),
+        })
+        qc.setQueriesData<postRequestsControllerFindAllResponse>(
+          { queryKey: getPostRequestsControllerFindAllQueryKey() },
+          (old) => {
+            if (!old) return old
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                items: old.data.items.map((r) =>
+                  r.id === requestId
+                    ? {
+                        ...r,
+                        isUpvoted: !r.isUpvoted,
+                        upvoteCount: r.isUpvoted ? r.upvoteCount - 1 : r.upvoteCount + 1,
+                      }
+                    : r,
+                ),
+              },
+            }
+          },
+        )
+        return { snapshots }
+      },
+      onError: (_err, _vars, ctx) => {
+        ctx?.snapshots.forEach(([key, snap]) => qc.setQueryData(key, snap))
+      },
+      onSettled: () =>
         qc.invalidateQueries({ queryKey: getPostRequestsControllerFindAllQueryKey() }),
     },
   })

@@ -15,6 +15,7 @@ import {
   usePostRequestsControllerAcceptSuggestion,
   getPostRequestsControllerFindOneQueryKey,
   getPostRequestsControllerFindAllQueryKey,
+  type postRequestsControllerFindOneResponse,
 } from '@/src/lib/api/generated/post-requests/post-requests'
 import type { PostRequestFulfillmentEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
@@ -45,7 +46,35 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   const upvote = usePostRequestsControllerUpvote({
     mutation: {
-      onSuccess: () =>
+      onMutate: async () => {
+        await qc.cancelQueries({ queryKey: getPostRequestsControllerFindOneQueryKey(id) })
+        const snapshot = qc.getQueryData<postRequestsControllerFindOneResponse>(
+          getPostRequestsControllerFindOneQueryKey(id),
+        )
+        qc.setQueryData<postRequestsControllerFindOneResponse>(
+          getPostRequestsControllerFindOneQueryKey(id),
+          (old) => {
+            if (!old) return old
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                isUpvoted: !old.data.isUpvoted,
+                upvoteCount: old.data.isUpvoted
+                  ? old.data.upvoteCount - 1
+                  : old.data.upvoteCount + 1,
+              },
+            }
+          },
+        )
+        return { snapshot }
+      },
+      onError: (_err, _vars, ctx) => {
+        if (ctx?.snapshot !== undefined) {
+          qc.setQueryData(getPostRequestsControllerFindOneQueryKey(id), ctx.snapshot)
+        }
+      },
+      onSettled: () =>
         qc.invalidateQueries({ queryKey: getPostRequestsControllerFindOneQueryKey(id) }),
     },
   })
