@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import helmet from 'helmet'
 import { NestFactory, Reflector } from '@nestjs/core'
 import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
@@ -20,6 +21,7 @@ async function bootstrap() {
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
+  app.use(helmet())
   app.enableCors({ origin: allowedOrigins, credentials: true })
   const loggerMiddleware = new LoggerMiddleware()
   app.use(loggerMiddleware.use.bind(loggerMiddleware))
