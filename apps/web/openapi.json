@@ -841,7 +841,9 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostRequestDetailEntity" }
+              }
             }
           }
         },
@@ -866,16 +868,18 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostRequestDetailEntity" }
+              }
             }
           }
         },
         "tags": ["post-requests"]
       }
     },
-    "/api/post-requests/{id}/fulfill": {
-      "patch": {
-        "operationId": "PostRequestsController_fulfill",
+    "/api/post-requests/{id}/suggestions": {
+      "post": {
+        "operationId": "PostRequestsController_suggest",
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
@@ -883,15 +887,48 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/FulfillPostRequestDto" }
+              "schema": { "$ref": "#/components/schemas/CreateFulfillmentSuggestionDto" }
             }
           }
         },
         "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostRequestFulfillmentEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["post-requests"]
+      }
+    },
+    "/api/post-requests/{id}/suggestions/{suggestionId}": {
+      "delete": {
+        "operationId": "PostRequestsController_removeSuggestion",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "suggestionId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["post-requests"]
+      }
+    },
+    "/api/post-requests/{id}/suggestions/{suggestionId}/accept": {
+      "post": {
+        "operationId": "PostRequestsController_acceptSuggestion",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "suggestionId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
           "200": {
             "description": "",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/PostRequestEntity" } }
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostRequestDetailEntity" }
+              }
             }
           }
         },
@@ -1513,10 +1550,68 @@
         },
         "required": ["items", "total", "page", "limit", "totalPages"]
       },
-      "FulfillPostRequestDto": {
+      "FulfillmentSuggestionPostEntity": {
         "type": "object",
         "properties": {
-          "postId": { "type": "string", "description": "ID of the post that fulfills this request" }
+          "id": { "type": "string" },
+          "title": { "type": "string", "nullable": true },
+          "shortCode": { "type": "string" },
+          "type": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
+          "author": { "$ref": "#/components/schemas/PostRequestAuthorEntity" }
+        },
+        "required": ["id", "shortCode", "type", "author"]
+      },
+      "PostRequestFulfillmentEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/PostRequestAuthorEntity" },
+          "post": { "$ref": "#/components/schemas/FulfillmentSuggestionPostEntity" }
+        },
+        "required": ["id", "createdAt", "user", "post"]
+      },
+      "PostRequestDetailEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["OPEN", "FULFILLED"] },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "upvoteCount": { "type": "number" },
+          "isUpvoted": { "type": "boolean" },
+          "author": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/PostRequestAuthorEntity" }]
+          },
+          "course": { "$ref": "#/components/schemas/PostRequestCourseEntity" },
+          "fulfilledByPost": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/PostRequestFulfilledByEntity" }]
+          },
+          "suggestions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PostRequestFulfillmentEntity" }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "upvoteCount",
+          "isUpvoted",
+          "course",
+          "suggestions"
+        ]
+      },
+      "CreateFulfillmentSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "postId": { "type": "string", "description": "ID of the post to suggest as fulfillment" }
         },
         "required": ["postId"]
       }

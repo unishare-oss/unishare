@@ -26,8 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
 import { CreateRequestDialog } from '@/components/requests/create-request-dialog'
-import { FulfillRequestDialog } from '@/components/requests/fulfill-request-dialog'
 import { ChevronUp, Trash2, CheckCircle2, Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -245,7 +245,8 @@ function RequestCard({
   const authorImage = request.author?.image ?? null
 
   return (
-    <div
+    <Link
+      href={`/requests/${request.id}`}
       className={cn(
         'flex gap-4 px-4 py-4 hover:bg-muted/40 transition-colors',
         isFulfilled && 'opacity-70',
@@ -254,7 +255,10 @@ function RequestCard({
       {/* Upvote column */}
       <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
         <button
-          onClick={onUpvote}
+          onClick={(e) => {
+            e.preventDefault()
+            onUpvote()
+          }}
           disabled={!currentUserId}
           className={cn(
             'flex flex-col items-center gap-0.5 p-1.5 rounded-[6px] transition-colors',
@@ -316,50 +320,16 @@ function RequestCard({
           </a>
         )}
 
-        {currentUserId && !isFulfilled && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <FulfillRequestDialog
-              requestId={request.id}
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className={cn(
-                    'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
-                    'hover:bg-muted/40 hover:text-foreground',
-                  )}
-                >
-                  <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                  Fulfill
-                </Button>
-              }
-            />
-
-            {isOwner && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                onClick={onDelete}
-                className={cn(
-                  'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
-                  'hover:bg-destructive/10 hover:text-destructive',
-                )}
-              >
-                <Trash2 className="size-3.5" strokeWidth={1.5} />
-                Delete
-              </Button>
-            )}
-          </div>
-        )}
-        {isOwner && isFulfilled && (
+        {isOwner && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Button
               type="button"
               variant="ghost"
               size="xs"
-              onClick={onDelete}
+              onClick={(e) => {
+                e.preventDefault()
+                onDelete()
+              }}
               className={cn(
                 'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
                 'hover:bg-destructive/10 hover:text-destructive',
@@ -378,7 +348,7 @@ function RequestCard({
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 
