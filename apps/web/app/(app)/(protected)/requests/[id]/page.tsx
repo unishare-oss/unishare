@@ -1,6 +1,6 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -23,6 +23,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { SuggestFulfillmentDialog } from '@/components/requests/suggest-fulfillment-dialog'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { cn } from '@/lib/utils'
 
 const POST_TYPE_LABEL: Record<string, string> = {
@@ -87,6 +88,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     )
   }
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const isOwner = userId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
   const suggestions: PostRequestFulfillmentEntity[] = request.suggestions ?? []
@@ -194,13 +196,22 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   type="button"
                   variant="ghost"
                   size="xs"
-                  onClick={() => remove.mutate({ id })}
+                  onClick={() => setConfirmDeleteOpen(true)}
                   disabled={remove.isPending}
                   className="h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="size-3.5" strokeWidth={1.5} />
                   Delete
                 </Button>
+                <ConfirmDialog
+                  open={confirmDeleteOpen}
+                  onOpenChange={setConfirmDeleteOpen}
+                  title="Delete request?"
+                  description="This will permanently delete your request and all its suggestions."
+                  confirmLabel="Delete"
+                  isPending={remove.isPending}
+                  onConfirm={() => remove.mutate({ id })}
+                />
               </div>
             )}
           </div>

@@ -32,6 +32,7 @@ import { ChevronUp, Trash2, CheckCircle2, Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 
 const ALL = '__all__'
 const YEARS = [1, 2, 3, 4, 5, 6]
@@ -239,6 +240,7 @@ function RequestCard({
   onUpvote: () => void
   onDelete: () => void
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const isOwner = currentUserId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
   const authorName = request.author?.name ?? 'Unknown'
@@ -328,7 +330,7 @@ function RequestCard({
               size="xs"
               onClick={(e) => {
                 e.preventDefault()
-                onDelete()
+                setConfirmOpen(true)
               }}
               className={cn(
                 'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
@@ -338,6 +340,17 @@ function RequestCard({
               <Trash2 className="size-3.5" strokeWidth={1.5} />
               Delete
             </Button>
+            <ConfirmDialog
+              open={confirmOpen}
+              onOpenChange={setConfirmOpen}
+              title="Delete request?"
+              description="This will permanently delete your request and all its suggestions."
+              confirmLabel="Delete"
+              onConfirm={() => {
+                setConfirmOpen(false)
+                onDelete()
+              }}
+            />
           </div>
         )}
 
