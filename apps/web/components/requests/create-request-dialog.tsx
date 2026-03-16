@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/contexts/auth-context'
@@ -46,13 +46,6 @@ export function CreateRequestDialog() {
   const [dept, setDept] = useState(() => user?.department?.id ?? ALL)
   const [year, setYear] = useState(() => (user?.yearLevel ? String(user.yearLevel) : ALL))
   const qc = useQueryClient()
-
-  useEffect(() => {
-    if (open) {
-      setDept(user?.department?.id ?? ALL)
-      setYear(user?.yearLevel ? String(user.yearLevel) : ALL)
-    }
-  }, [open, user?.department?.id, user?.yearLevel])
 
   const {
     register,
@@ -100,7 +93,16 @@ export function CreateRequestDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setDept(user?.department?.id ?? ALL)
+          setYear(user?.yearLevel ? String(user.yearLevel) : ALL)
+        }
+        setOpen(next)
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <MessageSquarePlus className="size-4" strokeWidth={1.5} />
