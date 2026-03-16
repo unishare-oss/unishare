@@ -316,6 +316,7 @@ function RequestCard({
           {isFulfilled && request.fulfilledByPost && (
             <a
               href={`/posts/${request.fulfilledByPost.id}`}
+              onClick={(e) => e.stopPropagation()}
               className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
             >
               <CheckCircle2 className="size-3" />
