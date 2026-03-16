@@ -4,6 +4,19 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { paginate } from '@/common/utils/paginate'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 
+const suggestionInclude = {
+  user: { select: { id: true, name: true, image: true } },
+  post: {
+    select: {
+      id: true,
+      title: true,
+      shortCode: true,
+      type: true,
+      author: { select: { id: true, name: true, image: true } },
+    },
+  },
+} satisfies Prisma.PostRequestFulfillmentInclude
+
 const requestInclude = (userId?: string) =>
   ({
     author: { select: { id: true, name: true, image: true } },
@@ -11,6 +24,15 @@ const requestInclude = (userId?: string) =>
     fulfilledByPost: { select: { id: true, title: true, shortCode: true } },
     upvotes: userId ? { where: { userId }, select: { userId: true } } : false,
     _count: { select: { upvotes: true } },
+  }) satisfies Prisma.PostRequestInclude
+
+const requestDetailInclude = (userId?: string) =>
+  ({
+    ...requestInclude(userId),
+    suggestions: {
+      include: suggestionInclude,
+      orderBy: { createdAt: 'asc' as const },
+    },
   }) satisfies Prisma.PostRequestInclude
 
 function mapRequest(r: any, userId?: string) {
@@ -42,7 +64,7 @@ export class PostRequestsRepository {
   async findById(id: string, userId?: string) {
     const r = await this.prisma.postRequest.findUnique({
       where: { id },
-      include: requestInclude(userId),
+      include: requestDetailInclude(userId),
     })
     if (!r) return null
     return mapRequest(r, userId)
@@ -71,12 +93,36 @@ export class PostRequestsRepository {
     return this.findById(requestId, userId)
   }
 
-  fulfill(id: string, postId: string, userId: string) {
+  findSuggestion(id: string) {
+    return this.prisma.postRequestFulfillment.findUnique({
+      where: { id },
+      include: suggestionInclude,
+    })
+  }
+
+  findSuggestionByUser(requestId: string, userId: string) {
+    return this.prisma.postRequestFulfillment.findUnique({
+      where: { requestId_userId: { requestId, userId } },
+    })
+  }
+
+  createSuggestion(requestId: string, postId: string, userId: string) {
+    return this.prisma.postRequestFulfillment.create({
+      data: { requestId, postId, userId },
+      include: suggestionInclude,
+    })
+  }
+
+  deleteSuggestion(id: string) {
+    return this.prisma.postRequestFulfillment.delete({ where: { id } })
+  }
+
+  acceptSuggestion(requestId: string, postId: string, userId: string) {
     return this.prisma.postRequest
       .update({
-        where: { id },
+        where: { id: requestId },
         data: { status: PostRequestStatus.FULFILLED, fulfilledByPostId: postId },
-        include: requestInclude(userId),
+        include: requestDetailInclude(userId),
       })
       .then((r) => mapRequest(r, userId))
   }
