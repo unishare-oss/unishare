@@ -23,12 +23,11 @@ export class NotificationsRepository {
     return this.prisma.notification.count({ where: { userId, read: false } })
   }
 
-  deleteOne(id: string, userId: string) {
-    return this.prisma.notification.deleteMany({ where: { id, userId } })
-  }
-
-  deleteAll(userId: string) {
-    return this.prisma.notification.deleteMany({ where: { userId } })
+  markOneRead(id: string, userId: string) {
+    return this.prisma.notification.updateMany({
+      where: { id, userId, read: false },
+      data: { read: true },
+    })
   }
 
   markAllRead(userId: string) {

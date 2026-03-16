@@ -667,10 +667,14 @@
           }
         },
         "tags": ["notifications"]
-      },
-      "delete": {
-        "operationId": "NotificationsController_deleteAll",
-        "parameters": [],
+      }
+    },
+    "/api/notifications/{id}/read": {
+      "patch": {
+        "operationId": "NotificationsController_markOneRead",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": { "200": { "description": "" } },
         "tags": ["notifications"]
       }
@@ -679,16 +683,6 @@
       "patch": {
         "operationId": "NotificationsController_markAllRead",
         "parameters": [],
-        "responses": { "200": { "description": "" } },
-        "tags": ["notifications"]
-      }
-    },
-    "/api/notifications/{id}": {
-      "delete": {
-        "operationId": "NotificationsController_deleteOne",
-        "parameters": [
-          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
-        ],
         "responses": { "200": { "description": "" } },
         "tags": ["notifications"]
       }
