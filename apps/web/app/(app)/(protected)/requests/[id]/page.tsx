@@ -93,7 +93,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const isFulfilled = request.status === 'FULFILLED'
   const suggestions: PostRequestFulfillmentEntity[] = request.suggestions ?? []
   const hasSuggested = suggestions.some((s) => s.user.id === userId)
-  const canSuggest = !!userId && !isOwner && !isFulfilled && !hasSuggested
+  const canSuggest = !!userId && !isFulfilled && !hasSuggested
 
   return (
     <div className="flex flex-col min-h-screen">
