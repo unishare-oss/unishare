@@ -210,11 +210,21 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
         <Textarea
           value={commentText}
           onChange={(e) => setDrafts((current) => ({ ...current, commentText: e.target.value }))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.shiftKey) {
+              e.preventDefault()
+              if (isAuthenticated && commentText.trim() && !isPending) handleSubmit()
+            }
+          }}
           placeholder="Write a comment..."
           rows={3}
           className="resize-none"
         />
-        <div className="flex justify-end mt-2">
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-[11px] text-text-muted select-none">
+            <kbd className="font-mono">Shift</kbd> + <kbd className="font-mono">Enter</kbd> to
+            submit
+          </span>
           <Button
             size="sm"
             onClick={handleSubmit}
