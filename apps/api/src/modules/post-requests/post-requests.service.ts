@@ -1,8 +1,13 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PostRequestsRepository } from './post-requests.repository'
 import { CreatePostRequestDto } from './dto/create-post-request.dto'
 import { ListPostRequestsDto } from './dto/list-post-requests.dto'
-import { FulfillPostRequestDto } from './dto/fulfill-post-request.dto'
+import { CreateFulfillmentSuggestionDto } from './dto/create-fulfillment-suggestion.dto'
 
 @Injectable()
 export class PostRequestsService {
@@ -32,17 +37,45 @@ export class PostRequestsService {
     return this.repo.toggleUpvote(id, userId)
   }
 
-  async fulfill(id: string, dto: FulfillPostRequestDto, userId: string) {
-    const r = await this.findOne(id, userId)
-    if (r.authorId !== userId) {
-      throw new ForbiddenException('Only the author can mark this request as fulfilled')
+  async suggest(requestId: string, dto: CreateFulfillmentSuggestionDto, userId: string) {
+    const request = await this.findOne(requestId, userId)
+    if (request.status === 'FULFILLED') {
+      throw new BadRequestException('This request is already fulfilled')
     }
-    return this.repo.fulfill(id, dto.postId, userId)
+    const existing = await this.repo.findSuggestionByUser(requestId, userId)
+    if (existing) {
+      throw new BadRequestException('You have already suggested a fulfillment for this request')
+    }
+    return this.repo.createSuggestion(requestId, dto.postId, userId)
+  }
+
+  async removeSuggestion(requestId: string, suggestionId: string, userId: string) {
+    const suggestion = await this.repo.findSuggestion(suggestionId)
+    if (!suggestion) throw new NotFoundException('Suggestion not found')
+    if (suggestion.userId !== userId) {
+      throw new ForbiddenException('You can only remove your own suggestions')
+    }
+    return this.repo.deleteSuggestion(suggestionId)
+  }
+
+  async acceptSuggestion(requestId: string, suggestionId: string, userId: string) {
+    const request = await this.findOne(requestId, userId)
+    if (request.author?.id !== userId) {
+      throw new ForbiddenException('Only the request author can accept a suggestion')
+    }
+    if (request.status === 'FULFILLED') {
+      throw new BadRequestException('This request is already fulfilled')
+    }
+    const suggestion = await this.repo.findSuggestion(suggestionId)
+    if (!suggestion || suggestion.requestId !== requestId) {
+      throw new NotFoundException('Suggestion not found')
+    }
+    return this.repo.acceptSuggestion(requestId, suggestion.postId, userId)
   }
 
   async remove(id: string, userId: string) {
     const r = await this.findOne(id, userId)
-    if (r.authorId !== userId) {
+    if (r.author?.id !== userId) {
       throw new ForbiddenException('Only the author can delete this request')
     }
     return this.repo.delete(id)
