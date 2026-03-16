@@ -38,49 +38,55 @@ export function AddCourseModal({
             <X className="size-4 text-text-muted" strokeWidth={1.5} />
           </Button>
         </div>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-              Course Code
-            </label>
-            <Input
-              type="text"
-              value={code}
-              onChange={(e) => onCodeChange(e.target.value)}
-              placeholder="e.g. CS501"
-              className="h-[42px]"
-            />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (code.trim() && name.trim()) {
+              onSubmit(code.trim(), name.trim())
+              onClose()
+            }
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                Course Code
+              </label>
+              <Input
+                autoFocus
+                type="text"
+                value={code}
+                onChange={(e) => onCodeChange(e.target.value)}
+                placeholder="e.g. CS501"
+                className="h-[42px]"
+              />
+            </div>
+            <div>
+              <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                Course Name
+              </label>
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="e.g. Advanced Databases"
+                className="h-[42px]"
+              />
+            </div>
           </div>
-          <div>
-            <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-              Course Name
-            </label>
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              placeholder="e.g. Advanced Databases"
-              className="h-[42px]"
-            />
+          <div className="flex items-center gap-3 justify-end mt-5">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!code.trim() || !name.trim()}
+              className="bg-amber text-primary-foreground hover:bg-amber-hover"
+            >
+              {editMode ? 'Save' : 'Create'}
+            </Button>
           </div>
-        </div>
-        <div className="flex items-center gap-3 justify-end mt-5">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (code.trim() && name.trim()) {
-                onSubmit(code.trim(), name.trim())
-                onClose()
-              }
-            }}
-            disabled={!code.trim() || !name.trim()}
-            className="bg-amber text-primary-foreground hover:bg-amber-hover"
-          >
-            {editMode ? 'Save' : 'Create'}
-          </Button>
-        </div>
+        </form>
       </div>
     </div>
   )
