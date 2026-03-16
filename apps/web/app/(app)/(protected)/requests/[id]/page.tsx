@@ -77,6 +77,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     },
   })
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+
   if (!request) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -87,8 +89,6 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       </div>
     )
   }
-
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const isOwner = userId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
   const suggestions: PostRequestFulfillmentEntity[] = request.suggestions ?? []
