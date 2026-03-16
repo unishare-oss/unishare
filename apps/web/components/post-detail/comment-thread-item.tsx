@@ -10,6 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
 
+const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
+
 interface CommentThreadViewer {
   user: UserProfileEntity | null
   postAuthorId?: string | null
@@ -119,6 +121,7 @@ export function CommentThreadItem({
 }: CommentThreadItemProps) {
   const [areRepliesOpen, setAreRepliesOpen] = useState(true)
   const layerStyle = getCommentLayerStyle(depth)
+  const isDeletedComment = comment.content === DELETED_COMMENT_CONTENT
   const isEdited = comment.updatedAt !== comment.createdAt
   const currentUserId = viewer.user?.id ?? null
   const isCommentOwner = comment.userId === currentUserId
@@ -143,24 +146,32 @@ export function CommentThreadItem({
       )}
     >
       <div className={cn(depth > 0 && 'pt-1')}>
-        <>
+        <div className={cn('relative', depth > 0 && 'pl-5')}>
+          {depth > 0 && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                'absolute top-0 bottom-0 left-0 w-1.5 rounded-full',
+                layerStyle.accentClassName,
+              )}
+            />
+          )}
           <div className="mb-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                {depth > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className={cn('h-6 w-1.5 shrink-0 rounded-full', layerStyle.accentClassName)}
-                  />
-                )}
                 <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                <span className="truncate text-sm font-medium text-foreground">
+                <span
+                  className={cn(
+                    'truncate text-sm font-medium',
+                    depth > 0 ? layerStyle.badgeClassName : 'text-foreground',
+                  )}
+                >
                   {comment.user.name}
                 </span>
                 <span className={cn('font-mono text-xs', layerStyle.badgeClassName)}>
                   {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                 </span>
-                {isEdited && (
+                {isEdited && !isDeletedComment && (
                   <span
                     className={cn(
                       'font-mono text-[10px] uppercase tracking-wider',
@@ -188,7 +199,12 @@ export function CommentThreadItem({
             </div>
           ) : (
             <>
-              <p className={cn('pl-[34px] text-sm leading-relaxed', 'text-foreground')}>
+              <p
+                className={cn(
+                  'pl-[34px] text-sm leading-relaxed',
+                  isDeletedComment ? 'italic text-text-muted' : 'text-foreground',
+                )}
+              >
                 {comment.content}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
@@ -199,10 +215,7 @@ export function CommentThreadItem({
                     size="xs"
                     onClick={() => replyActions.start(comment.id)}
                     disabled={pendingState.isReplying}
-                    className={cn(
-                      'font-mono uppercase tracking-wider hover:bg-transparent hover:text-foreground',
-                      layerStyle.badgeClassName,
-                    )}
+                    className="font-mono uppercase tracking-wider text-text-muted hover:bg-transparent hover:text-foreground"
                   >
                     <MessageSquareReply className="size-3.5" strokeWidth={1.5} />
                     Reply
@@ -217,13 +230,7 @@ export function CommentThreadItem({
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Edit comment"
                   >
-                    <Pencil
-                      className={cn(
-                        'size-3.5',
-                        depth > 0 ? layerStyle.badgeClassName : 'text-text-muted',
-                      )}
-                      strokeWidth={1.5}
-                    />
+                    <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
                   </Button>
                 )}
                 {canDelete && (
@@ -235,13 +242,7 @@ export function CommentThreadItem({
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Delete comment"
                   >
-                    <Trash2
-                      className={cn(
-                        'size-3.5',
-                        depth > 0 ? layerStyle.badgeClassName : 'text-text-muted',
-                      )}
-                      strokeWidth={1.5}
-                    />
+                    <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
                   </Button>
                 )}
               </div>
@@ -262,48 +263,50 @@ export function CommentThreadItem({
               />
             </div>
           )}
-        </>
-
-        {hasReplies && (
-          <Collapsible open={areRepliesOpen} onOpenChange={setAreRepliesOpen} className="mt-3">
-            <div className="pl-[34px]">
-              <CollapsibleTrigger asChild>
+          {hasReplies && (
+            <div className="mt-3 pl-[34px]">
+              <span className="inline-flex h-8 items-center">
+                <ChevronDown
+                  className={cn(
+                    'mr-1 size-3 transition-transform',
+                    !areRepliesOpen && '-rotate-90',
+                    layerStyle.badgeClassName,
+                  )}
+                  strokeWidth={1.5}
+                />
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className={cn(
-                    'gap-1.5 font-mono uppercase tracking-wider hover:bg-transparent hover:text-foreground',
-                    layerStyle.badgeClassName,
-                  )}
+                  onClick={() => setAreRepliesOpen((current) => !current)}
+                  className="gap-1.5 px-0 font-mono uppercase tracking-wider text-text-muted hover:bg-transparent hover:text-foreground"
                 >
-                  <ChevronDown
-                    className={cn('size-3 transition-transform', !areRepliesOpen && '-rotate-90')}
-                    strokeWidth={1.5}
-                  />
                   {areRepliesOpen
                     ? 'Hide replies'
                     : `Show replies (${comment.children?.length ?? 0})`}
                 </Button>
-              </CollapsibleTrigger>
+              </span>
             </div>
-            <CollapsibleContent className="mt-2">
-              {comment.children?.map((child) => (
-                <CommentThreadItem
-                  key={child.id}
-                  comment={child}
-                  depth={depth + 1}
-                  viewer={viewer}
-                  editState={editState}
-                  replyState={replyState}
-                  pendingState={pendingState}
-                  editActions={editActions}
-                  replyActions={replyActions}
-                  onDelete={onDelete}
-                />
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
+          )}
+        </div>
+
+        {hasReplies && areRepliesOpen && (
+          <div className="mt-2">
+            {comment.children?.map((child) => (
+              <CommentThreadItem
+                key={child.id}
+                comment={child}
+                depth={depth + 1}
+                viewer={viewer}
+                editState={editState}
+                replyState={replyState}
+                pendingState={pendingState}
+                editActions={editActions}
+                replyActions={replyActions}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>
