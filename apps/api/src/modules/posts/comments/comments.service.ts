@@ -2,25 +2,30 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { PostsService } from '../posts.service'
-import { CommentsRepository } from './comments.repository'
+import { commentSelect, CommentsRepository } from './comments.repository'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
 
 type FlatCommentNode = Prisma.CommentGetPayload<{
-  include: {
-    user: {
-      select: {
-        id: true
-        name: true
-        image: true
-      }
-    }
-  }
+  select: typeof commentSelect
 }>
+
+type CommentWithChildren = FlatCommentNode & {
+  children: CommentTreeNode[]
+}
 
 type CommentTreeNode = FlatCommentNode & {
   children?: CommentTreeNode[]
 }
+
+type CommentResponseNode = CommentTreeNode
+
+const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
+const DELETED_COMMENT_USER = {
+  id: '',
+  name: 'Deleted user',
+  image: null,
+} as const
 
 @Injectable()
 export class CommentsService {
@@ -34,7 +39,7 @@ export class CommentsService {
     await this.postsService.assertCommentTargetExists(postId)
 
     const comments = await this.commentsRepository.findAll(postId)
-    return this.buildCommentTree(comments)
+    return this.sanitizeCommentTree(this.buildCommentTree(comments))
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
@@ -90,11 +95,12 @@ export class CommentsService {
       throw new ForbiddenException('You do not have permission to delete this comment')
     }
 
-    return this.commentsRepository.softDelete(commentId)
+    const deletedComment = await this.commentsRepository.softDelete(commentId)
+    return this.sanitizeComment(deletedComment)
   }
 
   private buildCommentTree(comments: FlatCommentNode[]) {
-    const nodes = new Map<string, CommentTreeNode>(
+    const nodes = new Map<string, CommentWithChildren>(
       comments.map((comment) => [comment.id, { ...comment, children: [] }]),
     )
 
@@ -103,7 +109,7 @@ export class CommentsService {
       if (comment.parentId) {
         const parent = nodes.get(comment.parentId)
         if (parent) {
-          parent.children!.push(comment)
+          parent.children.push(comment)
           continue
         }
       }
@@ -112,5 +118,28 @@ export class CommentsService {
     }
 
     return roots
+  }
+
+  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentResponseNode[] {
+    return comments.map((comment) => this.sanitizeComment(comment))
+  }
+
+  private sanitizeComment(comment: CommentTreeNode): CommentResponseNode {
+    const children = comment.children ? this.sanitizeCommentTree(comment.children) : undefined
+
+    if (!comment.deletedAt) {
+      return {
+        ...comment,
+        ...(children ? { children } : {}),
+      }
+    }
+
+    return {
+      ...comment,
+      content: DELETED_COMMENT_CONTENT,
+      userId: '',
+      user: DELETED_COMMENT_USER,
+      ...(children ? { children } : {}),
+    }
   }
 }

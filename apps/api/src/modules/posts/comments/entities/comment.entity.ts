@@ -27,6 +27,9 @@ export class CommentEntity {
   @ApiPropertyOptional({ nullable: true, type: String })
   parentId: string | null
 
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  deletedAt: Date | null
+
   @ApiProperty()
   createdAt: Date
 
