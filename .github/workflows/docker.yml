@@ -50,7 +50,7 @@ jobs:
   build-api:
     name: Build API image
     needs: changes
-    if: needs.changes.outputs.api == 'true' || inputs.force_api
+    if: (github.event_name == 'push' && needs.changes.outputs.api == 'true') || inputs.force_api
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -87,7 +87,7 @@ jobs:
   build-web:
     name: Build Web image
     needs: changes
-    if: needs.changes.outputs.web == 'true' || inputs.force_web
+    if: (github.event_name == 'push' && needs.changes.outputs.web == 'true') || inputs.force_web
     runs-on: ubuntu-latest
     permissions:
       contents: read
