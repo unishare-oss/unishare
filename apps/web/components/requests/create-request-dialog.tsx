@@ -207,6 +207,11 @@ export function CreateRequestDialog() {
               placeholder="Add more context — which chapter, what semester, etc."
               rows={3}
               className="resize-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  handleSubmit(onSubmit)()
+                }
+              }}
               {...register('description', {
                 maxLength: { value: 2000, message: 'Max 2000 characters' },
               })}
@@ -216,7 +221,11 @@ export function CreateRequestDialog() {
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-text-muted select-none">
+              <kbd className="font-mono">Ctrl</kbd> + <kbd className="font-mono">Enter</kbd> to
+              submit
+            </span>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

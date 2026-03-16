@@ -68,7 +68,13 @@ export function SuggestFulfillmentDialog({ requestId }: { requestId: string }) {
         <DialogHeader>
           <DialogTitle>Suggest a Fulfillment</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 mt-2">
+        <form
+          className="flex flex-col gap-4 mt-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (postId) suggest.mutate({ id: requestId, data: { postId } })
+          }}
+        >
           <div className="flex flex-col gap-1.5">
             <Label>Link one of your posts</Label>
             {postsLoading ? (
@@ -98,14 +104,11 @@ export function SuggestFulfillmentDialog({ requestId }: { requestId: string }) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button
-              disabled={!postId || suggest.isPending}
-              onClick={() => suggest.mutate({ id: requestId, data: { postId } })}
-            >
+            <Button type="submit" disabled={!postId || suggest.isPending}>
               {suggest.isPending ? 'Submitting…' : 'Submit'}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )
