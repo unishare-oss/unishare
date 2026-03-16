@@ -247,121 +247,123 @@ function RequestCard({
   const authorImage = request.author?.image ?? null
 
   return (
-    <Link
-      href={`/requests/${request.id}`}
-      className={cn(
-        'flex gap-4 px-4 py-4 hover:bg-muted/40 transition-colors',
-        isFulfilled && 'opacity-70',
-      )}
-    >
-      {/* Upvote column */}
-      <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
-        <button
-          onClick={(e) => {
-            e.preventDefault()
-            onUpvote()
-          }}
-          disabled={!currentUserId}
-          className={cn(
-            'flex flex-col items-center gap-0.5 p-1.5 rounded-[6px] transition-colors',
-            request.isUpvoted
-              ? 'text-amber bg-amber/10'
-              : 'text-text-muted hover:text-foreground hover:bg-muted',
-            !currentUserId && 'cursor-default opacity-50',
-          )}
-        >
-          <ChevronUp className="size-4" strokeWidth={2} />
-          <span className="text-[11px] font-mono font-semibold leading-none">
-            {request.upvoteCount}
-          </span>
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground leading-snug">
-              {request.title}
-            </span>
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border',
-                isFulfilled ? 'border-success/50 text-success' : 'border-amber/50 text-amber',
-              )}
-            >
-              {isFulfilled ? (
-                <>
-                  <CheckCircle2 className="size-2.5" />
-                  Fulfilled
-                </>
-              ) : (
-                <>
-                  <Clock className="size-2.5" />
-                  Open
-                </>
-              )}
-            </span>
-            <span className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-text-muted">
-              {request.course.code}
-            </span>
-          </div>
-        </div>
-
-        {request.description && (
-          <p className="text-sm text-text-muted mt-1 line-clamp-3">{request.description}</p>
+    <>
+      <Link
+        href={`/requests/${request.id}`}
+        className={cn(
+          'flex gap-4 px-4 py-4 hover:bg-muted/40 transition-colors',
+          isFulfilled && 'opacity-70',
         )}
-
-        {isFulfilled && request.fulfilledByPost && (
-          <a
-            href={`/posts/${request.fulfilledByPost.id}`}
-            className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
+      >
+        {/* Upvote column */}
+        <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              onUpvote()
+            }}
+            disabled={!currentUserId}
+            className={cn(
+              'flex flex-col items-center gap-0.5 p-1.5 rounded-[6px] transition-colors',
+              request.isUpvoted
+                ? 'text-amber bg-amber/10'
+                : 'text-text-muted hover:text-foreground hover:bg-muted',
+              !currentUserId && 'cursor-default opacity-50',
+            )}
           >
-            <CheckCircle2 className="size-3" />
-            Fulfilled by: {request.fulfilledByPost.title ?? request.fulfilledByPost.shortCode}
-          </a>
-        )}
-
-        {isOwner && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={(e) => {
-                e.preventDefault()
-                setConfirmOpen(true)
-              }}
-              className={cn(
-                'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
-                'hover:bg-destructive/10 hover:text-destructive',
-              )}
-            >
-              <Trash2 className="size-3.5" strokeWidth={1.5} />
-              Delete
-            </Button>
-            <ConfirmDialog
-              open={confirmOpen}
-              onOpenChange={setConfirmOpen}
-              title="Delete request?"
-              description="This will permanently delete your request and all its suggestions."
-              confirmLabel="Delete"
-              onConfirm={() => {
-                setConfirmOpen(false)
-                onDelete()
-              }}
-            />
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 mt-2">
-          <UserAvatar name={authorName} image={authorImage} size="xs" />
-          <span className="text-[11px] text-text-muted">
-            {authorName} · {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
-          </span>
+            <ChevronUp className="size-4" strokeWidth={2} />
+            <span className="text-[11px] font-mono font-semibold leading-none">
+              {request.upvoteCount}
+            </span>
+          </button>
         </div>
-      </div>
-    </Link>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium text-foreground leading-snug">
+                {request.title}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border',
+                  isFulfilled ? 'border-success/50 text-success' : 'border-amber/50 text-amber',
+                )}
+              >
+                {isFulfilled ? (
+                  <>
+                    <CheckCircle2 className="size-2.5" />
+                    Fulfilled
+                  </>
+                ) : (
+                  <>
+                    <Clock className="size-2.5" />
+                    Open
+                  </>
+                )}
+              </span>
+              <span className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-text-muted">
+                {request.course.code}
+              </span>
+            </div>
+          </div>
+
+          {request.description && (
+            <p className="text-sm text-text-muted mt-1 line-clamp-3">{request.description}</p>
+          )}
+
+          {isFulfilled && request.fulfilledByPost && (
+            <a
+              href={`/posts/${request.fulfilledByPost.id}`}
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
+            >
+              <CheckCircle2 className="size-3" />
+              Fulfilled by: {request.fulfilledByPost.title ?? request.fulfilledByPost.shortCode}
+            </a>
+          )}
+
+          {isOwner && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setConfirmOpen(true)
+                }}
+                className={cn(
+                  'h-7 rounded-md px-2 font-mono text-[11px] uppercase tracking-wider text-text-muted',
+                  'hover:bg-destructive/10 hover:text-destructive',
+                )}
+              >
+                <Trash2 className="size-3.5" strokeWidth={1.5} />
+                Delete
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mt-2">
+            <UserAvatar name={authorName} image={authorImage} size="xs" />
+            <span className="text-[11px] text-text-muted">
+              {authorName} · {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+        </div>
+      </Link>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete request?"
+        description="This will permanently delete your request and all its suggestions."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          setConfirmOpen(false)
+          onDelete()
+        }}
+      />
+    </>
   )
 }
 
