@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { PostRequestStatus } from '@/generated/prisma/enums'
+import { PostType } from '@/generated/prisma/enums'
 import { PaginatedResult } from '@unishare/types'
 
 export class PostRequestAuthorEntity {
@@ -20,6 +21,21 @@ export class PostRequestFulfilledByEntity {
   @ApiProperty() shortCode: string
 }
 
+export class FulfillmentSuggestionPostEntity {
+  @ApiProperty() id: string
+  @ApiPropertyOptional({ nullable: true, type: String }) title: string | null
+  @ApiProperty() shortCode: string
+  @ApiProperty({ enum: PostType }) type: PostType
+  @ApiProperty({ type: PostRequestAuthorEntity }) author: PostRequestAuthorEntity
+}
+
+export class PostRequestFulfillmentEntity {
+  @ApiProperty() id: string
+  @ApiProperty() createdAt: Date
+  @ApiProperty({ type: PostRequestAuthorEntity }) user: PostRequestAuthorEntity
+  @ApiProperty({ type: FulfillmentSuggestionPostEntity }) post: FulfillmentSuggestionPostEntity
+}
+
 export class PostRequestEntity {
   @ApiProperty() id: string
   @ApiProperty() title: string
@@ -34,6 +50,11 @@ export class PostRequestEntity {
   @ApiProperty({ type: PostRequestCourseEntity }) course: PostRequestCourseEntity
   @ApiPropertyOptional({ nullable: true, type: PostRequestFulfilledByEntity })
   fulfilledByPost: PostRequestFulfilledByEntity | null
+}
+
+export class PostRequestDetailEntity extends PostRequestEntity {
+  @ApiProperty({ type: [PostRequestFulfillmentEntity] })
+  suggestions: PostRequestFulfillmentEntity[]
 }
 
 export class PaginatedPostRequestEntity implements PaginatedResult<PostRequestEntity> {
