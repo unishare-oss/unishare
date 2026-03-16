@@ -58,6 +58,54 @@ interface CommentThreadItemProps {
   onDelete: (commentId: string) => void
 }
 
+interface CommentLayerStyle {
+  accentClassName: string
+  badgeClassName: string
+  indentClassName: string
+}
+
+function getCommentLayerStyle(depth: number): CommentLayerStyle {
+  if (depth === 0) {
+    return {
+      accentClassName: 'bg-transparent',
+      badgeClassName: 'text-text-muted',
+      indentClassName: '',
+    }
+  }
+
+  const palette = [
+    {
+      accentClassName: 'bg-amber',
+      badgeClassName: 'text-amber',
+    },
+    {
+      accentClassName: 'bg-info',
+      badgeClassName: 'text-info',
+    },
+    {
+      accentClassName: 'bg-success',
+      badgeClassName: 'text-success',
+    },
+    {
+      accentClassName: 'bg-text-secondary',
+      badgeClassName: 'text-text-secondary',
+    },
+  ] as const
+
+  const paletteItem = palette[(depth - 1) % palette.length]
+  const indentSteps = Math.min(depth, 8)
+
+  return {
+    ...paletteItem,
+    indentClassName: cn(
+      depth >= 1 && 'ml-4',
+      indentSteps >= 2 && 'sm:ml-7',
+      indentSteps >= 3 && 'lg:ml-10',
+      indentSteps >= 5 && 'xl:ml-12',
+    ),
+  }
+}
+
 export function CommentThreadItem({
   comment,
   depth,
@@ -70,16 +118,16 @@ export function CommentThreadItem({
   onDelete,
 }: CommentThreadItemProps) {
   const [areRepliesOpen, setAreRepliesOpen] = useState(true)
-  const isDeleted = comment.deletedAt !== null
+  const layerStyle = getCommentLayerStyle(depth)
   const isEdited = comment.updatedAt !== comment.createdAt
   const currentUserId = viewer.user?.id ?? null
   const isCommentOwner = comment.userId === currentUserId
   const isPostAuthor = viewer.postAuthorId != null && viewer.postAuthorId === currentUserId
   const isAdmin = viewer.user?.role === 'ADMIN'
   const canModerate = isCommentOwner || isPostAuthor || isAdmin
-  const canEdit = !isDeleted && isCommentOwner
-  const canDelete = !isDeleted && canModerate
-  const canReply = viewer.isAuthenticated && !isDeleted
+  const canEdit = isCommentOwner
+  const canDelete = canModerate
+  const canReply = viewer.isAuthenticated
   const hasReplies = (comment.children?.length ?? 0) > 0
   const isEditing = editState.editingCommentId === comment.id
   const isReplyingToComment = replyState.replyCommentId === comment.id
@@ -89,30 +137,36 @@ export function CommentThreadItem({
     <div
       className={cn(
         'group py-4',
-        isTopLevelComment && 'border-b border-border last:border-b-0',
+        isTopLevelComment && 'border-b border-border/70 last:border-b-0',
         depth > 0 && 'pb-0',
+        layerStyle.indentClassName,
       )}
-      style={depth > 0 ? { marginLeft: Math.min(depth, 4) * 28 } : undefined}
     >
-      <div className={cn(depth > 0 && 'border-l border-border/70 pl-4 sm:pl-5')}>
+      <div className={cn(depth > 0 && 'pt-1')}>
         <>
           <div className="mb-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
+                {depth > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={cn('h-6 w-1.5 shrink-0 rounded-full', layerStyle.accentClassName)}
+                  />
+                )}
                 <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                <span
-                  className={cn(
-                    'truncate text-sm font-medium',
-                    isDeleted ? 'italic text-text-muted' : 'text-foreground',
-                  )}
-                >
+                <span className="truncate text-sm font-medium text-foreground">
                   {comment.user.name}
                 </span>
-                <span className="font-mono text-xs text-text-muted">
+                <span className={cn('font-mono text-xs', layerStyle.badgeClassName)}>
                   {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                 </span>
-                {isEdited && !isDeleted && (
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                {isEdited && (
+                  <span
+                    className={cn(
+                      'font-mono text-[10px] uppercase tracking-wider',
+                      layerStyle.badgeClassName,
+                    )}
+                  >
                     (edited)
                   </span>
                 )}
@@ -134,12 +188,7 @@ export function CommentThreadItem({
             </div>
           ) : (
             <>
-              <p
-                className={cn(
-                  'pl-[34px] text-sm leading-relaxed',
-                  isDeleted ? 'italic text-text-muted' : 'text-foreground',
-                )}
-              >
+              <p className={cn('pl-[34px] text-sm leading-relaxed', 'text-foreground')}>
                 {comment.content}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
@@ -150,7 +199,10 @@ export function CommentThreadItem({
                     size="xs"
                     onClick={() => replyActions.start(comment.id)}
                     disabled={pendingState.isReplying}
-                    className="font-mono uppercase tracking-wider text-text-muted"
+                    className={cn(
+                      'font-mono uppercase tracking-wider hover:bg-transparent hover:text-foreground',
+                      layerStyle.badgeClassName,
+                    )}
                   >
                     <MessageSquareReply className="size-3.5" strokeWidth={1.5} />
                     Reply
@@ -165,7 +217,13 @@ export function CommentThreadItem({
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Edit comment"
                   >
-                    <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                    <Pencil
+                      className={cn(
+                        'size-3.5',
+                        depth > 0 ? layerStyle.badgeClassName : 'text-text-muted',
+                      )}
+                      strokeWidth={1.5}
+                    />
                   </Button>
                 )}
                 {canDelete && (
@@ -177,7 +235,13 @@ export function CommentThreadItem({
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Delete comment"
                   >
-                    <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                    <Trash2
+                      className={cn(
+                        'size-3.5',
+                        depth > 0 ? layerStyle.badgeClassName : 'text-text-muted',
+                      )}
+                      strokeWidth={1.5}
+                    />
                   </Button>
                 )}
               </div>
@@ -208,7 +272,10 @@ export function CommentThreadItem({
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className="gap-1.5 font-mono uppercase tracking-wider text-text-muted"
+                  className={cn(
+                    'gap-1.5 font-mono uppercase tracking-wider hover:bg-transparent hover:text-foreground',
+                    layerStyle.badgeClassName,
+                  )}
                 >
                   <ChevronDown
                     className={cn('size-3 transition-transform', !areRepliesOpen && '-rotate-90')}
