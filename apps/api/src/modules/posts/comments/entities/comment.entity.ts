@@ -19,6 +19,15 @@ export class CommentEntity {
   content: string
 
   @ApiProperty()
+  userId: string
+
+  @ApiProperty()
+  postId: string
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  parentId: string | null
+
+  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
