@@ -95,104 +95,110 @@ export function CommentThreadItem({
       style={depth > 0 ? { marginLeft: Math.min(depth, 4) * 28 } : undefined}
     >
       <div className={cn(depth > 0 && 'border-l border-border/70 pl-4 sm:pl-5')}>
-        {isDeleted ? (
-          <p className="pl-[34px] text-sm italic text-text-muted">[deleted]</p>
-        ) : (
-          <>
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
-                  <span className="truncate text-sm font-medium text-foreground">
-                    {comment.user.name}
-                  </span>
-                  <span className="font-mono text-xs text-text-muted">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                  </span>
-                  {isEdited && (
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                      (edited)
-                    </span>
+        <>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserAvatar name={comment.user.name} image={comment.user.image} size="sm" />
+                <span
+                  className={cn(
+                    'truncate text-sm font-medium',
+                    isDeleted ? 'italic text-text-muted' : 'text-foreground',
                   )}
-                </div>
+                >
+                  {comment.user.name}
+                </span>
+                <span className="font-mono text-xs text-text-muted">
+                  {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                </span>
+                {isEdited && !isDeleted && (
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                    (edited)
+                  </span>
+                )}
               </div>
             </div>
+          </div>
 
-            {isEditing ? (
-              <div className="pl-[34px]">
-                <CommentEditor
-                  value={editState.editText}
-                  onChange={editActions.change}
-                  onCancel={editActions.cancel}
-                  onSubmit={() => editActions.submit(comment.id)}
-                  isPending={pendingState.isUpdating}
-                  submitLabel="Save"
-                  pendingLabel="Saving..."
-                />
+          {isEditing ? (
+            <div className="pl-[34px]">
+              <CommentEditor
+                value={editState.editText}
+                onChange={editActions.change}
+                onCancel={editActions.cancel}
+                onSubmit={() => editActions.submit(comment.id)}
+                isPending={pendingState.isUpdating}
+                submitLabel="Save"
+                pendingLabel="Saving..."
+              />
+            </div>
+          ) : (
+            <>
+              <p
+                className={cn(
+                  'pl-[34px] text-sm leading-relaxed',
+                  isDeleted ? 'italic text-text-muted' : 'text-foreground',
+                )}
+              >
+                {comment.content}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
+                {canReply && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => replyActions.start(comment.id)}
+                    disabled={pendingState.isReplying}
+                    className="font-mono uppercase tracking-wider text-text-muted"
+                  >
+                    <MessageSquareReply className="size-3.5" strokeWidth={1.5} />
+                    Reply
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => editActions.start(comment.id, comment.content)}
+                    disabled={pendingState.isUpdating || pendingState.isRemoving}
+                    aria-label="Edit comment"
+                  >
+                    <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => onDelete(comment.id)}
+                    disabled={pendingState.isUpdating || pendingState.isRemoving}
+                    aria-label="Delete comment"
+                  >
+                    <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                  </Button>
+                )}
               </div>
-            ) : (
-              <>
-                <p className="pl-[34px] text-sm leading-relaxed text-foreground">
-                  {comment.content}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-1 pl-[34px]">
-                  {canReply && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => replyActions.start(comment.id)}
-                      disabled={pendingState.isReplying}
-                      className="font-mono uppercase tracking-wider text-text-muted"
-                    >
-                      <MessageSquareReply className="size-3.5" strokeWidth={1.5} />
-                      Reply
-                    </Button>
-                  )}
-                  {canEdit && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => editActions.start(comment.id, comment.content)}
-                      disabled={pendingState.isUpdating || pendingState.isRemoving}
-                      aria-label="Edit comment"
-                    >
-                      <Pencil className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                    </Button>
-                  )}
-                  {canDelete && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => onDelete(comment.id)}
-                      disabled={pendingState.isUpdating || pendingState.isRemoving}
-                      aria-label="Delete comment"
-                    >
-                      <Trash2 className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
+            </>
+          )}
 
-            {isReplyingToComment && (
-              <div className="mt-3 pl-[34px]">
-                <CommentEditor
-                  value={replyState.replyText}
-                  onChange={replyActions.change}
-                  onCancel={replyActions.cancel}
-                  onSubmit={() => replyActions.submit(comment.id)}
-                  isPending={pendingState.isReplying}
-                  submitLabel="Reply"
-                  pendingLabel="Replying..."
-                  placeholder={`Reply to ${comment.user.name}...`}
-                />
-              </div>
-            )}
-          </>
-        )}
+          {isReplyingToComment && (
+            <div className="mt-3 pl-[34px]">
+              <CommentEditor
+                value={replyState.replyText}
+                onChange={replyActions.change}
+                onCancel={replyActions.cancel}
+                onSubmit={() => replyActions.submit(comment.id)}
+                isPending={pendingState.isReplying}
+                submitLabel="Reply"
+                pendingLabel="Replying..."
+                placeholder={`Reply to ${comment.user.name}...`}
+              />
+            </div>
+          )}
+        </>
 
         {hasReplies && (
           <Collapsible open={areRepliesOpen} onOpenChange={setAreRepliesOpen} className="mt-3">
