@@ -93,7 +93,7 @@ export class PostsService {
 
   async update(id: string, dto: UpdatePostDto, userId: string) {
     const post = await this.findOne(id, { id: userId })
-    if (!post.authorId || post.authorId !== userId) {
+    if (!post.isOwner) {
       throw new ForbiddenException('You do not own this post')
     }
 
@@ -108,9 +108,8 @@ export class PostsService {
     const viewer = { id: userId, role: userRole }
     const post = await this.findOne(id, viewer)
 
-    const isOwner = post.authorId === userId
     const isAdmin = userRole === UserRole.ADMIN
-    if (!isOwner && !isAdmin) throw new ForbiddenException('You do not own this post')
+    if (!post.isOwner && !isAdmin) throw new ForbiddenException('You do not own this post')
 
     return this.postsRepository.softDelete(id)
   }
