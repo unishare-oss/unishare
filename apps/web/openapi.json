@@ -1386,9 +1386,10 @@
           "message": { "type": "string" },
           "read": { "type": "boolean" },
           "postId": { "type": "string", "nullable": true },
+          "requestId": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" }
         },
-        "required": ["id", "type", "message", "read", "postId", "createdAt"]
+        "required": ["id", "type", "message", "read", "postId", "requestId", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",

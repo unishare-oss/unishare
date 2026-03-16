@@ -49,6 +49,44 @@ export class NotificationsService {
     this.events$.next({ userId: authorId, data: notification })
   }
 
+  async notifyRequestSuggestion(
+    requestId: string,
+    requestAuthorId: string,
+    suggesterId: string,
+    suggesterName?: string,
+    requestTitle?: string,
+  ) {
+    if (requestAuthorId === suggesterId) return
+
+    const who = suggesterName ?? 'Someone'
+    const title = requestTitle ? `"${requestTitle}"` : 'your request'
+    const notification = await this.notificationsRepository.create({
+      userId: requestAuthorId,
+      type: NotificationType.REQUEST_SUGGESTION_ADDED,
+      message: `${who} suggested a post to fulfill ${title}.`,
+      requestId,
+    })
+    this.events$.next({ userId: requestAuthorId, data: notification })
+  }
+
+  async notifyRequestFulfilled(
+    requestId: string,
+    suggesterUserId: string,
+    requestAuthorId: string,
+    requestTitle?: string,
+  ) {
+    if (suggesterUserId === requestAuthorId) return
+
+    const title = requestTitle ? `"${requestTitle}"` : 'A request'
+    const notification = await this.notificationsRepository.create({
+      userId: suggesterUserId,
+      type: NotificationType.REQUEST_FULFILLED,
+      message: `${title} was fulfilled using your suggested post!`,
+      requestId,
+    })
+    this.events$.next({ userId: suggesterUserId, data: notification })
+  }
+
   async notifyComment(
     postId: string,
     postAuthorId: string,

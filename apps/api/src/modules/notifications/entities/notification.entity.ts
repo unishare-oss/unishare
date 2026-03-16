@@ -6,5 +6,6 @@ export class NotificationEntity {
   @ApiProperty() message: string
   @ApiProperty() read: boolean
   @ApiProperty({ type: String, nullable: true }) postId: string | null
+  @ApiProperty({ type: String, nullable: true }) requestId: string | null
   @ApiProperty() createdAt: Date
 }

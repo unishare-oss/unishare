@@ -53,7 +53,8 @@ export default function NotificationsPage() {
 
   function handleClick(n: NotificationEntity) {
     if (!n.read) markOneRead({ id: n.id })
-    if (n.postId) router.push(`/posts/${n.postId}`)
+    if (n.requestId) router.push(`/requests/${n.requestId}`)
+    else if (n.postId) router.push(`/posts/${n.postId}`)
   }
 
   return (
@@ -93,7 +94,7 @@ export default function NotificationsPage() {
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
                     !n.read && 'bg-amber/[0.04]',
-                    n.postId ? 'cursor-pointer' : 'cursor-default',
+                    n.postId || n.requestId ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <span
@@ -115,14 +116,20 @@ export default function NotificationsPage() {
                         ? 'text-info'
                         : n.type === 'POST_REJECTED'
                           ? 'text-red-400'
-                          : 'text-text-muted',
+                          : n.type === 'REQUEST_FULFILLED'
+                            ? 'text-success'
+                            : 'text-text-muted',
                     )}
                   >
                     {n.type === 'POST_APPROVED'
                       ? 'Approved'
                       : n.type === 'POST_REJECTED'
                         ? 'Rejected'
-                        : 'Comment'}
+                        : n.type === 'REQUEST_SUGGESTION_ADDED'
+                          ? 'Suggestion'
+                          : n.type === 'REQUEST_FULFILLED'
+                            ? 'Fulfilled'
+                            : 'Comment'}
                   </span>
                 </button>
               ))}

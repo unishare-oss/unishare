@@ -8,10 +8,14 @@ import { PostRequestsRepository } from './post-requests.repository'
 import { CreatePostRequestDto } from './dto/create-post-request.dto'
 import { ListPostRequestsDto } from './dto/list-post-requests.dto'
 import { CreateFulfillmentSuggestionDto } from './dto/create-fulfillment-suggestion.dto'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class PostRequestsService {
-  constructor(private readonly repo: PostRequestsRepository) {}
+  constructor(
+    private readonly repo: PostRequestsRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   create(dto: CreatePostRequestDto, authorId: string) {
     return this.repo.create({ ...dto, authorId })
@@ -46,7 +50,15 @@ export class PostRequestsService {
     if (existing) {
       throw new BadRequestException('You have already suggested a fulfillment for this request')
     }
-    return this.repo.createSuggestion(requestId, dto.postId, userId)
+    const suggestion = await this.repo.createSuggestion(requestId, dto.postId, userId)
+    void this.notificationsService.notifyRequestSuggestion(
+      requestId,
+      request.author!.id,
+      userId,
+      undefined,
+      request.title,
+    )
+    return suggestion
   }
 
   async removeSuggestion(requestId: string, suggestionId: string, userId: string) {
@@ -70,7 +82,14 @@ export class PostRequestsService {
     if (!suggestion || suggestion.requestId !== requestId) {
       throw new NotFoundException('Suggestion not found')
     }
-    return this.repo.acceptSuggestion(requestId, suggestion.postId, userId)
+    const result = await this.repo.acceptSuggestion(requestId, suggestion.postId, userId)
+    void this.notificationsService.notifyRequestFulfilled(
+      requestId,
+      suggestion.userId,
+      userId,
+      request.title,
+    )
+    return result
   }
 
   async remove(id: string, userId: string) {

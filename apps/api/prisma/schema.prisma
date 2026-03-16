@@ -9,31 +9,31 @@ datasource db {
 }
 
 model User {
-  id             String         @id
-  name           String
-  email          String         @unique
-  emailVerified  Boolean        @default(false)
-  image          String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  departmentId   String?
-  role           UserRole       @default(STUDENT)
-  banExpires     DateTime?
-  banReason      String?
-  banned         Boolean?       @default(false)
-  bio            String?
-  enrollmentYear Int?
-  accounts       Account[]
-  comments       Comment[]
-  notifications  Notification[]
-  posts          Post[]         @relation("AuthorPosts")
-  postViews      PostView[]
-  reactions      Reaction[]
-  savedPosts     SavedPost[]
-  sessions       Session[]
-  department     Department?         @relation(fields: [departmentId], references: [id])
-  postRequests   PostRequest[]       @relation("PostRequestAuthor")
-  postRequestUpvotes PostRequestUpvote[]
+  id                      String                   @id
+  name                    String
+  email                   String                   @unique
+  emailVerified           Boolean                  @default(false)
+  image                   String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  departmentId            String?
+  role                    UserRole                 @default(STUDENT)
+  banExpires              DateTime?
+  banReason               String?
+  banned                  Boolean?                 @default(false)
+  bio                     String?
+  enrollmentYear          Int?
+  accounts                Account[]
+  comments                Comment[]
+  notifications           Notification[]
+  posts                   Post[]                   @relation("AuthorPosts")
+  postViews               PostView[]
+  reactions               Reaction[]
+  savedPosts              SavedPost[]
+  sessions                Session[]
+  department              Department?              @relation(fields: [departmentId], references: [id])
+  postRequests            PostRequest[]            @relation("PostRequestAuthor")
+  postRequestUpvotes      PostRequestUpvote[]
   postRequestFulfillments PostRequestFulfillment[]
 
   @@map("user")
@@ -49,13 +49,13 @@ model Department {
 }
 
 model Course {
-  id           String     @id @default(cuid())
+  id           String        @id @default(cuid())
   code         String
   name         String
   departmentId String
   yearLevel    Int?
-  createdAt    DateTime   @default(now())
-  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime      @default(now())
+  department   Department    @relation(fields: [departmentId], references: [id])
   posts        Post[]
   postRequests PostRequest[]
 
@@ -65,33 +65,33 @@ model Course {
 }
 
 model Post {
-  id            String         @id @default(cuid())
-  type          PostType
-  title         String?
-  examYear      Int?
-  year          Int?
-  semester      Int?
-  isAnonymous   Boolean?       @default(false)
-  authorId      String
-  courseId      String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
-  moduleNumber  Int?
-  status        PostStatus     @default(APPROVED)
-  description   String?
-  externalUrl   String?
-  shortCode     String         @unique
-  views         Int            @default(0)
-  comments      Comment[]
-  files         File[]
-  notifications Notification[]
-  author        User           @relation("AuthorPosts", fields: [authorId], references: [id])
-  course        Course         @relation(fields: [courseId], references: [id])
-  postViews     PostView[]
-  reactions     Reaction[]
-  savedBy       SavedPost[]
-  fulfilledRequests PostRequest[] @relation("FulfilledRequests")
+  id                  String                   @id @default(cuid())
+  type                PostType
+  title               String?
+  examYear            Int?
+  year                Int?
+  semester            Int?
+  isAnonymous         Boolean?                 @default(false)
+  authorId            String
+  courseId            String
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  deletedAt           DateTime?
+  moduleNumber        Int?
+  status              PostStatus               @default(APPROVED)
+  description         String?
+  externalUrl         String?
+  shortCode           String                   @unique
+  views               Int                      @default(0)
+  comments            Comment[]
+  files               File[]
+  notifications       Notification[]
+  author              User                     @relation("AuthorPosts", fields: [authorId], references: [id])
+  course              Course                   @relation(fields: [courseId], references: [id])
+  postViews           PostView[]
+  reactions           Reaction[]
+  savedBy             SavedPost[]
+  fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
 
   @@index([authorId])
@@ -227,8 +227,10 @@ model Notification {
   message   String
   read      Boolean          @default(false)
   postId    String?
+  requestId String?
   createdAt DateTime         @default(now())
   post      Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  request   PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -236,20 +238,21 @@ model Notification {
 }
 
 model PostRequest {
-  id                String              @id @default(cuid())
+  id                String                   @id @default(cuid())
   title             String
   description       String?
   courseId          String
   authorId          String
-  status            PostRequestStatus   @default(OPEN)
+  status            PostRequestStatus        @default(OPEN)
   fulfilledByPostId String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  author            User                @relation("PostRequestAuthor", fields: [authorId], references: [id])
-  course            Course              @relation(fields: [courseId], references: [id])
-  fulfilledByPost   Post?               @relation("FulfilledRequests", fields: [fulfilledByPostId], references: [id])
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  author            User                     @relation("PostRequestAuthor", fields: [authorId], references: [id])
+  course            Course                   @relation(fields: [courseId], references: [id])
+  fulfilledByPost   Post?                    @relation("FulfilledRequests", fields: [fulfilledByPostId], references: [id])
   upvotes           PostRequestUpvote[]
   suggestions       PostRequestFulfillment[]
+  notifications     Notification[]
 
   @@index([authorId])
   @@index([courseId])
@@ -293,6 +296,8 @@ enum NotificationType {
   POST_APPROVED
   POST_REJECTED
   COMMENT_ADDED
+  REQUEST_SUGGESTION_ADDED
+  REQUEST_FULFILLED
 }
 
 enum UserRole {

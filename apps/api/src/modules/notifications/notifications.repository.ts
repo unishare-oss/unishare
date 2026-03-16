@@ -6,7 +6,13 @@ import { PrismaService } from '@/prisma/prisma.service'
 export class NotificationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: { userId: string; type: NotificationType; message: string; postId?: string }) {
+  create(data: {
+    userId: string
+    type: NotificationType
+    message: string
+    postId?: string
+    requestId?: string
+  }) {
     return this.prisma.notification.create({ data })
   }
 
@@ -15,7 +21,15 @@ export class NotificationsRepository {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: 50,
-      select: { id: true, type: true, message: true, read: true, postId: true, createdAt: true },
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        read: true,
+        postId: true,
+        requestId: true,
+        createdAt: true,
+      },
     })
   }
 
