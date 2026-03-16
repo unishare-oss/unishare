@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
+import { useAuth } from '@/contexts/auth-context'
 import {
   usePostRequestsControllerCreate,
   getPostRequestsControllerFindAllQueryKey,
@@ -40,10 +41,18 @@ interface FormValues {
 }
 
 export function CreateRequestDialog() {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
-  const [dept, setDept] = useState(ALL)
-  const [year, setYear] = useState(ALL)
+  const [dept, setDept] = useState(() => user?.department?.id ?? ALL)
+  const [year, setYear] = useState(() => (user?.yearLevel ? String(user.yearLevel) : ALL))
   const qc = useQueryClient()
+
+  useEffect(() => {
+    if (open) {
+      setDept(user?.department?.id ?? ALL)
+      setYear(user?.yearLevel ? String(user.yearLevel) : ALL)
+    }
+  }, [open, user?.department?.id, user?.yearLevel])
 
   const {
     register,
@@ -72,8 +81,8 @@ export function CreateRequestDialog() {
         qc.invalidateQueries({ queryKey: getPostRequestsControllerFindAllQueryKey() })
         toast.success('Request posted!')
         reset()
-        setDept(ALL)
-        setYear(ALL)
+        setDept(user?.department?.id ?? ALL)
+        setYear(user?.yearLevel ? String(user.yearLevel) : ALL)
         setOpen(false)
       },
       onError: () => toast.error('Failed to post request'),

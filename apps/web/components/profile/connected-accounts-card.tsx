@@ -48,7 +48,6 @@ export function ConnectedAccountsCard() {
         <div className="flex flex-col gap-3">
           {PROVIDERS.map(({ id, label }) => {
             const account = accountMap.get(id)
-            console.log(account)
             const linked = !!account
             return (
               <div key={id} className="flex items-center justify-between">
