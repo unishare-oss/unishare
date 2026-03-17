@@ -3,7 +3,7 @@
 import { useStatsControllerGetStats } from '@/src/lib/api/generated/stats/stats'
 import { PageHeader } from '@/components/shared/page-header'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { cn, pluralize } from '@/lib/utils'
+import { pluralize } from '@/lib/utils'
 import { Eye, FileText, MessageSquare, SmilePlus, Users } from 'lucide-react'
 import Link from 'next/link'
 
