@@ -35,6 +35,7 @@ import {
   filesControllerRecordDownload,
 } from '@/src/lib/api/generated/files/files'
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
+import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
@@ -322,27 +323,31 @@ export function PostFiles({ post }: PostFilesProps) {
                       : 'text'}
                   </p>
                   <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => changeFontSize(-1)}
-                      aria-label="Decrease font size"
-                    >
-                      <Minus className="size-3 text-text-muted" strokeWidth={1.5} />
-                    </Button>
-                    <span className="font-mono text-xs text-text-muted w-6 text-center">
-                      {fontSize}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => changeFontSize(1)}
-                      aria-label="Increase font size"
-                    >
-                      <Plus className="size-3 text-text-muted" strokeWidth={1.5} />
-                    </Button>
+                    {previewFile.language !== 'markdown' && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => changeFontSize(-1)}
+                          aria-label="Decrease font size"
+                        >
+                          <Minus className="size-3 text-text-muted" strokeWidth={1.5} />
+                        </Button>
+                        <span className="font-mono text-xs text-text-muted w-6 text-center">
+                          {fontSize}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => changeFontSize(1)}
+                          aria-label="Increase font size"
+                        >
+                          <Plus className="size-3 text-text-muted" strokeWidth={1.5} />
+                        </Button>
+                      </>
+                    )}
                     {!previewFile.tooLarge && (
                       <Button
                         type="button"
@@ -374,6 +379,8 @@ export function PostFiles({ post }: PostFilesProps) {
                     This file is too large to preview ({formatBytes(previewFile.size)}). Download to
                     view.
                   </div>
+                ) : previewFile.language === 'markdown' ? (
+                  <Markdown className="p-1">{previewFile.text ?? ''}</Markdown>
                 ) : (
                   <pre className="bg-card-dark border border-border rounded-[6px] p-4 overflow-x-auto">
                     <code
