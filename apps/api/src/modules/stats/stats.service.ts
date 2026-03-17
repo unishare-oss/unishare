@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 
 @Injectable()
@@ -48,17 +49,28 @@ export class StatsService {
         },
       }),
 
-      this.prisma.user.findMany({
-        orderBy: { posts: { _count: 'desc' } },
-        take: 5,
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          _count: { select: { posts: { where: { deletedAt: null, isAnonymous: false } } } },
-          department: { select: { name: true } },
-        },
-      }),
+      this.prisma.$queryRaw<
+        {
+          id: string
+          name: string
+          image: string | null
+          postCount: bigint
+          departmentName: string | null
+        }[]
+      >(Prisma.sql`
+        SELECT u.id, u.name, u.image,
+               COUNT(p.id) AS "postCount",
+               d.name AS "departmentName"
+        FROM "user" u
+        LEFT JOIN "post" p
+          ON p."authorId" = u.id
+          AND p."deletedAt" IS NULL
+          AND p."isAnonymous" = false
+        LEFT JOIN "department" d ON d.id = u."departmentId"
+        GROUP BY u.id, u.name, u.image, d.name
+        ORDER BY "postCount" DESC
+        LIMIT 5
+      `),
     ])
 
     return {
@@ -83,8 +95,8 @@ export class StatsService {
         id: u.id,
         name: u.name,
         image: u.image,
-        postCount: u._count.posts,
-        departmentName: u.department?.name ?? null,
+        postCount: Number(u.postCount),
+        departmentName: u.departmentName,
       })),
     }
   }
