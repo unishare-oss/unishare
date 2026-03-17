@@ -9,7 +9,6 @@ export class StatsService {
     const [
       totalUsers,
       totalPosts,
-      pendingPosts,
       totalComments,
       totalReactions,
       topPostsByViews,
@@ -18,7 +17,6 @@ export class StatsService {
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.post.count({ where: { deletedAt: null } }),
-      this.prisma.post.count({ where: { status: 'PENDING', deletedAt: null } }),
       this.prisma.comment.count({ where: { deletedAt: null } }),
       this.prisma.reaction.count(),
 
@@ -64,7 +62,7 @@ export class StatsService {
     ])
 
     return {
-      overview: { totalUsers, totalPosts, pendingPosts, totalComments, totalReactions },
+      overview: { totalUsers, totalPosts, totalComments, totalReactions },
       topPostsByViews: topPostsByViews.map((p) => ({
         id: p.id,
         title: p.title ?? '(Untitled)',

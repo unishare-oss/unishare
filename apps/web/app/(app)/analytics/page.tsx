@@ -12,28 +12,16 @@ function StatCard({
   value,
   icon: Icon,
   loading,
-  highlight,
 }: {
   label: string
   value?: number
   icon: React.ElementType
   loading: boolean
-  highlight?: boolean
 }) {
   return (
-    <div
-      className={cn(
-        'bg-card border border-border rounded-[8px] p-5 flex items-center gap-4',
-        highlight && 'border-destructive/40',
-      )}
-    >
-      <div
-        className={cn(
-          'flex items-center justify-center size-10 rounded-[6px]',
-          highlight ? 'bg-destructive/10' : 'bg-muted',
-        )}
-      >
-        <Icon className={cn('size-5', highlight ? 'text-destructive' : 'text-text-muted')} />
+    <div className="bg-card border border-border rounded-[8px] p-5 flex items-center gap-4">
+      <div className="flex items-center justify-center size-10 rounded-[6px] bg-muted">
+        <Icon className="size-5 text-text-muted" />
       </div>
       <div>
         {loading ? (
@@ -60,7 +48,7 @@ function TableSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-export default function AdminAnalyticsPage() {
+export default function AnalyticsPage() {
   const { data: stats, isLoading } = useStatsControllerGetStats({
     query: { select: (r) => r.data },
   })
@@ -75,7 +63,7 @@ export default function AdminAnalyticsPage() {
           <h2 className="font-mono text-xs uppercase tracking-wider text-text-muted mb-3">
             Overview
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard
               label={pluralize(stats?.overview.totalUsers ?? 0, 'User')}
               value={stats?.overview.totalUsers}
@@ -87,13 +75,6 @@ export default function AdminAnalyticsPage() {
               value={stats?.overview.totalPosts}
               icon={FileText}
               loading={isLoading}
-            />
-            <StatCard
-              label={pluralize(stats?.overview.pendingPosts ?? 0, 'Pending post', 'Pending posts')}
-              value={stats?.overview.pendingPosts}
-              icon={FileText}
-              loading={isLoading}
-              highlight={(stats?.overview.pendingPosts ?? 0) > 0}
             />
             <StatCard
               label={pluralize(stats?.overview.totalComments ?? 0, 'Comment')}

@@ -8,9 +8,6 @@ export class StatsOverviewEntity {
   totalPosts: number
 
   @ApiProperty()
-  pendingPosts: number
-
-  @ApiProperty()
   totalComments: number
 
   @ApiProperty()

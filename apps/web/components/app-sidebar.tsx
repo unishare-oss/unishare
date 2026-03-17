@@ -37,6 +37,7 @@ const authNavItems = [
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
+  { href: '/analytics', label: 'Analytics', icon: BarChart2 },
 ]
 
 const adminItems = [
@@ -44,10 +45,7 @@ const adminItems = [
   { href: '/admin/departments', label: 'Manage Depts', icon: Building2 },
 ]
 
-const adminOnlyItems = [
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
-]
+const adminOnlyItems = [{ href: '/admin/users', label: 'Users', icon: Users }]
 
 export function AppSidebar() {
   const pathname = usePathname()
