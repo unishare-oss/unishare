@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showLoader = isLoading || !minimumLoaderElapsed
 
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
-  const requiresDepartmentOnboarding = !!user && !user.department
+  const requiresDepartmentOnboarding = isAuthenticated && !!user && !user.department
 
   return (
     <div className="min-h-screen bg-background">
