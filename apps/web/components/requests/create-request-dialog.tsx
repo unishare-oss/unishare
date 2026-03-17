@@ -58,15 +58,11 @@ export function CreateRequestDialog() {
   const { data: depts } = useDepartmentsControllerFindAll({ query: { select: (r) => r.data } })
 
   const { data: coursesData } = useCoursesControllerFindAll(
-    { limit: 100 },
-    { query: { select: (r) => r.data } },
+    { limit: 100, ...(dept !== ALL && { departmentId: dept }) },
+    { query: { select: (r) => r.data, enabled: dept !== ALL } },
   )
   const allCourses = coursesData?.items ?? []
-  const filteredCourses = allCourses.filter((c) => {
-    const deptOk = dept === ALL || c.department.id === dept
-    const yearOk = year === ALL || c.yearLevel === Number(year)
-    return deptOk && yearOk
-  })
+  const filteredCourses = allCourses.filter((c) => year === ALL || c.yearLevel === Number(year))
 
   const create = usePostRequestsControllerCreate({
     mutation: {
@@ -226,12 +222,14 @@ export function CreateRequestDialog() {
               <kbd className="font-mono">Ctrl</kbd> + <kbd className="font-mono">Enter</kbd> to
               submit
             </span>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Posting…' : 'Post Request'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={create.isPending}>
+                {create.isPending ? 'Posting…' : 'Post Request'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
