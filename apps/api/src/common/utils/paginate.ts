@@ -8,10 +8,12 @@ export async function paginate<T>(
 ): Promise<PaginatedResult<T>> {
   const skip = (page - 1) * limit
 
-  const countArgs = { ...(args as Record<string, unknown>) }
-  delete countArgs.include
-  delete countArgs.select
-  delete countArgs.orderBy
+  const {
+    include: _include,
+    select: _select,
+    orderBy: _orderBy,
+    ...countArgs
+  } = args as Record<string, unknown>
 
   const [data, total] = await Promise.all([
     model.findMany({ ...args, skip, take: limit }),
