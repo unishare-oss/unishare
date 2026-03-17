@@ -151,13 +151,23 @@ export function CommentThreadItem({
       <div className={cn(depth > 0 && 'pt-1')}>
         <div className={cn('relative', depth > 0 && 'pl-5')}>
           {depth > 0 && (
-            <span
-              aria-hidden="true"
+            <button
+              type="button"
+              aria-label={areRepliesOpen ? 'Collapse thread' : 'Expand thread'}
+              onClick={() => hasReplies && setAreRepliesOpen((c) => !c)}
               className={cn(
-                'absolute top-0 bottom-0 left-0 w-1.5 rounded-full',
-                layerStyle.accentClassName,
+                'absolute top-0 bottom-0 left-0 w-4 flex items-start justify-start',
+                hasReplies ? 'cursor-pointer group/bar' : 'cursor-default',
               )}
-            />
+            >
+              <span
+                className={cn(
+                  'w-1.5 h-full rounded-full transition-opacity duration-150',
+                  layerStyle.accentClassName,
+                  hasReplies && 'group-hover/bar:opacity-50',
+                )}
+              />
+            </button>
           )}
           <div className="mb-2 flex items-start justify-between gap-3">
             <div className="min-w-0">
