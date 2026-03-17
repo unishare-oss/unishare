@@ -30,8 +30,8 @@ export class TopPostEntity {
   @ApiProperty()
   reactionCount: number
 
-  @ApiProperty()
-  authorName: string
+  @ApiProperty({ nullable: true, type: String })
+  authorName: string | null
 }
 
 export class TopUserEntity {

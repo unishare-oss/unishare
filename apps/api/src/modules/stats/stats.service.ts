@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common'
-import { Prisma } from '@/generated/prisma/client'
-import { PrismaService } from '@/prisma/prisma.service'
+import { StatsRepository } from './stats.repository'
 
 @Injectable()
 export class StatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly statsRepository: StatsRepository) {}
 
   async getStats() {
     const [
@@ -16,61 +15,13 @@ export class StatsService {
       topPostsByReactions,
       topUsers,
     ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.post.count({ where: { deletedAt: null } }),
-      this.prisma.comment.count({ where: { deletedAt: null } }),
-      this.prisma.reaction.count(),
-
-      this.prisma.post.findMany({
-        where: { deletedAt: null, status: 'APPROVED', isAnonymous: false },
-        orderBy: { views: 'desc' },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          shortCode: true,
-          views: true,
-          _count: { select: { reactions: true } },
-          author: { select: { name: true } },
-        },
-      }),
-
-      this.prisma.post.findMany({
-        where: { deletedAt: null, status: 'APPROVED', isAnonymous: false },
-        orderBy: { reactions: { _count: 'desc' } },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          shortCode: true,
-          views: true,
-          _count: { select: { reactions: true } },
-          author: { select: { name: true } },
-        },
-      }),
-
-      this.prisma.$queryRaw<
-        {
-          id: string
-          name: string
-          image: string | null
-          postCount: bigint
-          departmentName: string | null
-        }[]
-      >(Prisma.sql`
-        SELECT u.id, u.name, u.image,
-               COUNT(p.id) AS "postCount",
-               d.name AS "departmentName"
-        FROM "user" u
-        LEFT JOIN "post" p
-          ON p."authorId" = u.id
-          AND p."deletedAt" IS NULL
-          AND p."isAnonymous" = false
-        LEFT JOIN "department" d ON d.id = u."departmentId"
-        GROUP BY u.id, u.name, u.image, d.name
-        ORDER BY "postCount" DESC
-        LIMIT 5
-      `),
+      this.statsRepository.countUsers(),
+      this.statsRepository.countPosts(),
+      this.statsRepository.countComments(),
+      this.statsRepository.countReactions(),
+      this.statsRepository.findTopPostsByViews(),
+      this.statsRepository.findTopPostsByReactions(),
+      this.statsRepository.findTopUsersByPostCount(),
     ])
 
     return {
@@ -81,7 +32,7 @@ export class StatsService {
         shortCode: p.shortCode,
         views: p.views,
         reactionCount: p._count.reactions,
-        authorName: p.author.name,
+        authorName: p.isAnonymous ? null : p.author.name,
       })),
       topPostsByReactions: topPostsByReactions.map((p) => ({
         id: p.id,
@@ -89,7 +40,7 @@ export class StatsService {
         shortCode: p.shortCode,
         views: p.views,
         reactionCount: p._count.reactions,
-        authorName: p.author.name,
+        authorName: p.isAnonymous ? null : p.author.name,
       })),
       topUsers: topUsers.map((u) => ({
         id: u.id,

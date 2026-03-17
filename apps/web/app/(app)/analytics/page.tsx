@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{post.title}</p>
                       <p className="font-mono text-[11px] text-text-muted truncate">
-                        {post.authorName}
+                        {post.authorName ?? 'Anonymous'}
                       </p>
                     </div>
                     <span className="font-mono text-xs text-text-muted shrink-0">
@@ -151,7 +151,7 @@ export default function AnalyticsPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{post.title}</p>
                       <p className="font-mono text-[11px] text-text-muted truncate">
-                        {post.authorName}
+                        {post.authorName ?? 'Anonymous'}
                       </p>
                     </div>
                     <span className="font-mono text-xs text-text-muted shrink-0">
