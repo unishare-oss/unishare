@@ -65,6 +65,10 @@ function PanOverlay({
   portalTarget: HTMLElement | null
 }) {
   const viewportRef = useViewportElement()
+  const scrollElRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    scrollElRef.current = (viewportRef?.current as HTMLElement) ?? null
+  })
   const dragOriginRef = useRef<{
     x: number
     y: number
@@ -80,7 +84,7 @@ function PanOverlay({
       style={{ zIndex: 10, touchAction: 'none' }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId)
-        const el = viewportRef?.current
+        const el = scrollElRef.current
         if (!el) return
         dragOriginRef.current = {
           x: e.clientX,
@@ -90,7 +94,7 @@ function PanOverlay({
         }
       }}
       onPointerMove={(e) => {
-        const el = viewportRef?.current
+        const el = scrollElRef.current
         if (!el || !dragOriginRef.current) return
         el.scrollLeft = dragOriginRef.current.scrollLeft - (e.clientX - dragOriginRef.current.x)
         el.scrollTop = dragOriginRef.current.scrollTop - (e.clientY - dragOriginRef.current.y)
