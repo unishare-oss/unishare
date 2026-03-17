@@ -22,7 +22,7 @@ export class StatsService {
       this.prisma.reaction.count(),
 
       this.prisma.post.findMany({
-        where: { deletedAt: null, status: 'APPROVED' },
+        where: { deletedAt: null, status: 'APPROVED', isAnonymous: false },
         orderBy: { views: 'desc' },
         take: 5,
         select: {
@@ -36,7 +36,7 @@ export class StatsService {
       }),
 
       this.prisma.post.findMany({
-        where: { deletedAt: null, status: 'APPROVED' },
+        where: { deletedAt: null, status: 'APPROVED', isAnonymous: false },
         orderBy: { reactions: { _count: 'desc' } },
         take: 5,
         select: {
