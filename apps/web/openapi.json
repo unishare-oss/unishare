@@ -1445,11 +1445,10 @@
         "properties": {
           "totalUsers": { "type": "number" },
           "totalPosts": { "type": "number" },
-          "pendingPosts": { "type": "number" },
           "totalComments": { "type": "number" },
           "totalReactions": { "type": "number" }
         },
-        "required": ["totalUsers", "totalPosts", "pendingPosts", "totalComments", "totalReactions"]
+        "required": ["totalUsers", "totalPosts", "totalComments", "totalReactions"]
       },
       "TopPostEntity": {
         "type": "object",
@@ -1459,7 +1458,7 @@
           "shortCode": { "type": "string" },
           "views": { "type": "number" },
           "reactionCount": { "type": "number" },
-          "authorName": { "type": "string" }
+          "authorName": { "type": "string", "nullable": true }
         },
         "required": ["id", "title", "shortCode", "views", "reactionCount", "authorName"]
       },
