@@ -16,6 +16,7 @@ import {
   BarChart2,
   Palette,
   MessageSquarePlus,
+  Github,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -152,6 +153,18 @@ export function AppSidebar() {
           </>
         )}
       </nav>
+
+      <div className="px-4 py-2">
+        <a
+          href="https://github.com/unishare-oss/unishare"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
+        >
+          <Github className="size-3.5 shrink-0" strokeWidth={1.5} />
+          Open source · Contribute
+        </a>
+      </div>
 
       <div className="border-t border-border px-4 py-4">
         {user ? (
