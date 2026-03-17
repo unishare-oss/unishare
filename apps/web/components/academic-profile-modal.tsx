@@ -29,6 +29,7 @@ import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departm
 
 interface AcademicProfileModalProps {
   requireDepartment?: boolean
+  onSkip?: () => void
 }
 
 const baseAcademicProfileSchema = z.object({
@@ -46,7 +47,10 @@ const baseAcademicProfileSchema = z.object({
 
 type AcademicProfileFormValues = z.infer<typeof baseAcademicProfileSchema>
 
-export function AcademicProfileModal({ requireDepartment = false }: AcademicProfileModalProps) {
+export function AcademicProfileModal({
+  requireDepartment = false,
+  onSkip,
+}: AcademicProfileModalProps) {
   const queryClient = useQueryClient()
 
   const form = useForm<AcademicProfileFormValues>({
@@ -163,14 +167,15 @@ export function AcademicProfileModal({ requireDepartment = false }: AcademicProf
             />
 
             <div className="flex gap-2 mt-1">
-              {!requireDepartment && (
+              {(!requireDepartment || onSkip) && (
                 <Button
                   type="button"
                   variant="ghost"
                   className="flex-1 text-text-muted"
                   disabled={isPending}
+                  onClick={onSkip}
                 >
-                  Skip
+                  Do it later
                 </Button>
               )}
               <Button type="submit" className="flex-1" disabled={saveDisabled}>

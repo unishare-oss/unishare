@@ -24,6 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const showLoader = isLoading || !minimumLoaderElapsed
 
+  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
   const requiresDepartmentOnboarding = !!user && !user.department
 
   return (
@@ -45,7 +46,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileNav />
       </div>
 
-      {!showLoader && requiresDepartmentOnboarding && <AcademicProfileModal requireDepartment />}
+      {!showLoader && requiresDepartmentOnboarding && !profileModalDismissed && (
+        <AcademicProfileModal requireDepartment onSkip={() => setProfileModalDismissed(true)} />
+      )}
 
       {showLoader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
