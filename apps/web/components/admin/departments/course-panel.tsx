@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export type ApiCourse = { id: string; code: string; name: string }
+export type ApiCourse = { id: string; code: string; name: string; yearLevel?: number | null }
 
 interface CoursePanelProps {
   deptName: string | undefined
@@ -64,6 +64,11 @@ export function CoursePanel({
                 {course.code}
               </span>
               <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>
+              {course.yearLevel != null && (
+                <span className="font-mono text-[11px] text-text-muted shrink-0">
+                  Y{course.yearLevel}
+                </span>
+              )}
               <div className="invisible group-hover:visible flex items-center gap-2 shrink-0">
                 <Button
                   variant="ghost"

@@ -31,6 +31,12 @@ export class CoursesService {
 
   async remove(id: string) {
     await this.findOne(id)
+    const { posts, requests } = await this.coursesRepository.hasLinkedData(id)
+    if (posts > 0 || requests > 0) {
+      throw new ConflictException(
+        `Cannot delete: this course has ${posts} post(s) and ${requests} request(s) linked to it`,
+      )
+    }
     return this.coursesRepository.remove(id)
   }
 }

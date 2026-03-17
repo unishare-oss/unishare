@@ -16,6 +16,7 @@ import {
   useCoursesControllerRemove,
   getCoursesControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/courses/courses'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/page-header'
 import { DeptPanel, type ApiDept } from '@/components/admin/departments/dept-panel'
 import { CoursePanel, type ApiCourse } from '@/components/admin/departments/course-panel'
@@ -37,6 +38,7 @@ export default function AdminDepartmentsPage() {
   })
   const [courseCode, setCourseCode] = useState('')
   const [courseName, setCourseName] = useState('')
+  const [courseYear, setCourseYear] = useState<number | null>(null)
 
   // Delete confirm state
   const [deleteDept, setDeleteDept] = useState<ApiDept | null>(null)
@@ -85,6 +87,10 @@ export default function AdminDepartmentsPage() {
         invalidateCourses()
         setDeleteCourse(null)
       },
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to delete course'
+        toast.error(message)
+      },
     },
   })
 
@@ -117,11 +123,13 @@ export default function AdminDepartmentsPage() {
           onAddClick={() => {
             setCourseCode('')
             setCourseName('')
+            setCourseYear(null)
             setCourseModal({ open: true })
           }}
           onEditClick={(course) => {
             setCourseCode(course.code)
             setCourseName(course.name)
+            setCourseYear(course.yearLevel ?? null)
             setCourseModal({ open: true, course })
           }}
           onDeleteClick={setDeleteCourse}
@@ -149,15 +157,17 @@ export default function AdminDepartmentsPage() {
         <AddCourseModal
           code={courseCode}
           name={courseName}
+          yearLevel={courseYear}
           editMode={!!courseModal.course}
           onCodeChange={setCourseCode}
           onNameChange={setCourseName}
+          onYearChange={setCourseYear}
           onClose={() => setCourseModal({ open: false })}
-          onSubmit={(code, name) => {
+          onSubmit={(code, name, yearLevel) => {
             if (courseModal.course) {
-              updateCourse({ id: courseModal.course.id, data: { code, name } })
+              updateCourse({ id: courseModal.course.id, data: { code, name, yearLevel } })
             } else {
-              createCourse({ data: { code, name, departmentId: effectiveDeptId } })
+              createCourse({ data: { code, name, yearLevel, departmentId: effectiveDeptId } })
             }
           }}
         />

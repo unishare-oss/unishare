@@ -3,22 +3,36 @@
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const YEARS = [1, 2, 3, 4, 5, 6]
+const NO_YEAR = '__none__'
 
 interface AddCourseModalProps {
   code: string
   name: string
+  yearLevel: number | null
   onCodeChange: (value: string) => void
   onNameChange: (value: string) => void
+  onYearChange: (value: number | null) => void
   onClose: () => void
-  onSubmit: (code: string, name: string) => void
+  onSubmit: (code: string, name: string, yearLevel: number | null) => void
   editMode?: boolean
 }
 
 export function AddCourseModal({
   code,
   name,
+  yearLevel,
   onCodeChange,
   onNameChange,
+  onYearChange,
   onClose,
   onSubmit,
   editMode,
@@ -42,7 +56,7 @@ export function AddCourseModal({
           onSubmit={(e) => {
             e.preventDefault()
             if (code.trim() && name.trim()) {
-              onSubmit(code.trim(), name.trim())
+              onSubmit(code.trim(), name.trim(), yearLevel)
               onClose()
             }
           }}
@@ -72,6 +86,27 @@ export function AddCourseModal({
                 placeholder="e.g. Advanced Databases"
                 className="h-[42px]"
               />
+            </div>
+            <div>
+              <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                Year Level <span className="normal-case tracking-normal">(optional)</span>
+              </label>
+              <Select
+                value={yearLevel != null ? String(yearLevel) : NO_YEAR}
+                onValueChange={(v) => onYearChange(v === NO_YEAR ? null : Number(v))}
+              >
+                <SelectTrigger className="h-[42px]">
+                  <SelectValue placeholder="Any year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_YEAR}>Any year</SelectItem>
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      Year {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex items-center gap-3 justify-end mt-5">

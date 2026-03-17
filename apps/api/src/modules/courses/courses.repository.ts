@@ -14,8 +14,9 @@ function mapCourse(course: any) {
 export class CoursesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateCourseDto) {
-    return this.prisma.course.create({ data: dto, include: { department: true } }).then(mapCourse)
+  async create(dto: CreateCourseDto) {
+    const course = await this.prisma.course.create({ data: dto, include: { department: true } })
+    return mapCourse(course)
   }
 
   async findAll(pagination: PaginationDto, departmentId?: string) {
@@ -35,16 +36,26 @@ export class CoursesRepository {
     return this.prisma.course.findUnique({ where: { code_departmentId: { code, departmentId } } })
   }
 
-  findById(id: string) {
-    return this.prisma.course
-      .findUnique({ where: { id }, include: { department: true } })
-      .then((c) => (c ? mapCourse(c) : null))
+  async findById(id: string) {
+    const c = await this.prisma.course.findUnique({ where: { id }, include: { department: true } })
+    return c ? mapCourse(c) : null
   }
 
-  update(id: string, dto: UpdateCourseDto) {
-    return this.prisma.course
-      .update({ where: { id }, data: dto, include: { department: true } })
-      .then(mapCourse)
+  async update(id: string, dto: UpdateCourseDto) {
+    const course = await this.prisma.course.update({
+      where: { id },
+      data: dto,
+      include: { department: true },
+    })
+    return mapCourse(course)
+  }
+
+  async hasLinkedData(id: string) {
+    const [posts, requests] = await Promise.all([
+      this.prisma.post.count({ where: { courseId: id } }),
+      this.prisma.postRequest.count({ where: { courseId: id } }),
+    ])
+    return { posts, requests }
   }
 
   remove(id: string) {
