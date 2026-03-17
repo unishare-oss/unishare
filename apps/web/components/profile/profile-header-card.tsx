@@ -64,7 +64,7 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
     <div className="border border-border rounded-[6px] p-6 bg-card mb-6">
       <div className="flex items-start gap-5">
         <div className="relative group shrink-0 w-[72px] h-[72px]">
-          <UserAvatar name={user.name} image={user.image} size="lg" />
+          <UserAvatar name={user.name} image={user.image} size="lg" priority />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

@@ -46,7 +46,7 @@ function PublicProfileHeader({
   return (
     <div className="border border-border rounded-[6px] p-6 bg-card mb-6">
       <div className="flex items-start gap-5">
-        <UserAvatar name={user.name} image={user.image} size="lg" className="shrink-0" />
+        <UserAvatar name={user.name} image={user.image} size="lg" className="shrink-0" priority />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>

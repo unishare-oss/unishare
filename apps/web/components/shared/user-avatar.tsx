@@ -8,14 +8,22 @@ const sizeClasses = {
   lg: 'w-[72px] h-[72px] rounded-[6px] text-xl',
 }
 
+const sizePx = {
+  xs: '20px',
+  sm: '24px',
+  md: '32px',
+  lg: '72px',
+}
+
 interface UserAvatarProps {
   name: string
   image?: string | null
   size: 'xs' | 'sm' | 'md' | 'lg'
   className?: string
+  priority?: boolean
 }
 
-export function UserAvatar({ name, image, size, className }: UserAvatarProps) {
+export function UserAvatar({ name, image, size, className, priority }: UserAvatarProps) {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -28,7 +36,18 @@ export function UserAvatar({ name, image, size, className }: UserAvatarProps) {
         className,
       )}
     >
-      {image ? <Image src={image} alt={name} fill className="object-cover" /> : initials}
+      {image ? (
+        <Image
+          src={image}
+          alt={name}
+          fill
+          sizes={sizePx[size]}
+          className="object-cover"
+          priority={priority}
+        />
+      ) : (
+        initials
+      )}
     </div>
   )
 }
