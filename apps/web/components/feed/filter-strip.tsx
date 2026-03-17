@@ -91,7 +91,7 @@ export function FilterStrip({
   }
 
   return (
-    <div className="border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
+    <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
       <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
         {typeFilters.map((filter) => (
           <button
