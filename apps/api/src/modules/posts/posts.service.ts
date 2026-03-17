@@ -37,7 +37,25 @@ export class PostsService {
     }
 
     const shortCode = nanoid(8)
-    return this.postsRepository.create({ shortCode, authorId: userId, ...dto }, { id: userId })
+    const post = await this.postsRepository.create(
+      { shortCode, authorId: userId, ...dto },
+      { id: userId },
+    )
+
+    if (post.status === PostStatus.APPROVED) {
+      void this.followsService
+        .getFollowerIds(userId)
+        .then((followerIds) =>
+          this.notificationsService.notifyFollowersNewPost(
+            post.id,
+            post.author?.name ?? 'Someone',
+            post.title,
+            followerIds,
+          ),
+        )
+    }
+
+    return post
   }
 
   async findAll(query: ListPostsDto, user?: { role?: UserRole; id?: string }) {
