@@ -107,6 +107,27 @@ export class NotificationsService {
     this.events$.next({ userId: postAuthorId, data: notification })
   }
 
+  async notifyFollowersNewPost(
+    postId: string,
+    authorName: string,
+    postTitle: string | null | undefined,
+    followerIds: string[],
+  ) {
+    if (followerIds.length === 0) return
+    const title = postTitle ? `"${postTitle}"` : 'a new post'
+    await Promise.all(
+      followerIds.map(async (userId) => {
+        const notification = await this.notificationsRepository.create({
+          userId,
+          type: NotificationType.NEW_POST_FROM_FOLLOWED,
+          message: `${authorName} posted ${title}.`,
+          postId,
+        })
+        this.events$.next({ userId, data: notification })
+      }),
+    )
+  }
+
   findByUser(userId: string) {
     return this.notificationsRepository.findByUser(userId)
   }

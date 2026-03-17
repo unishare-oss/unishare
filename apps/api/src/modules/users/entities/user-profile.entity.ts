@@ -62,4 +62,10 @@ export class UserProfileEntity {
 
   @ApiProperty()
   savedCount: number
+
+  @ApiProperty()
+  followerCount: number
+
+  @ApiPropertyOptional({ nullable: true, type: Boolean })
+  isFollowing: boolean | null
 }

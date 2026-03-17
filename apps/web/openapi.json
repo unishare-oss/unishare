@@ -215,6 +215,24 @@
         "tags": ["users"]
       }
     },
+    "/api/users/{id}/follow": {
+      "post": {
+        "operationId": "FollowsController_follow",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["follows"]
+      },
+      "delete": {
+        "operationId": "FollowsController_unfollow",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["follows"]
+      }
+    },
     "/api/departments": {
       "post": {
         "operationId": "DepartmentsController_create",
@@ -1049,7 +1067,9 @@
           "createdAt": { "format": "date-time", "type": "string" },
           "postCount": { "type": "number" },
           "commentCount": { "type": "number" },
-          "savedCount": { "type": "number" }
+          "savedCount": { "type": "number" },
+          "followerCount": { "type": "number" },
+          "isFollowing": { "type": "boolean", "nullable": true }
         },
         "required": [
           "id",
@@ -1061,7 +1081,8 @@
           "createdAt",
           "postCount",
           "commentCount",
-          "savedCount"
+          "savedCount",
+          "followerCount"
         ]
       },
       "UpdateProfileDto": {

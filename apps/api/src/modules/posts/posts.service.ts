@@ -8,6 +8,7 @@ import { nanoid } from 'nanoid'
 import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
+import { FollowsService } from '../follows/follows.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
@@ -20,6 +21,7 @@ export class PostsService {
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly notificationsService: NotificationsService,
+    private readonly followsService: FollowsService,
   ) {}
 
   async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
@@ -120,6 +122,18 @@ export class PostsService {
 
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
     void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
+    if (dto.status === PostStatus.APPROVED) {
+      void this.followsService
+        .getFollowerIds(post.authorId)
+        .then((followerIds) =>
+          this.notificationsService.notifyFollowersNewPost(
+            id,
+            post.author?.name ?? 'Someone',
+            post.title,
+            followerIds,
+          ),
+        )
+    }
     return updated
   }
 

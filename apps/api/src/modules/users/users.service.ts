@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { FollowsService } from '../follows/follows.service'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -9,12 +10,17 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly config: ConfigService,
+    private readonly followsService: FollowsService,
   ) {}
 
-  async findById(id: string) {
+  async findById(id: string, viewerId?: string) {
     const user = await this.usersRepository.findById(id)
     if (!user) throw new NotFoundException('User not found')
-    return this.toProfileView(user)
+    const [followerCount, isFollowing] = await Promise.all([
+      this.followsService.countFollowers(id),
+      viewerId && viewerId !== id ? this.followsService.isFollowing(viewerId, id) : null,
+    ])
+    return this.toProfileView(user, followerCount, isFollowing)
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
@@ -38,12 +44,16 @@ export class UsersService {
     return this.toProfileView(user)
   }
 
-  private toProfileView(user: {
-    enrollmentYear: number | null
-    departmentId?: string | null
-    _count?: { posts: number; comments: number; savedPosts: number }
-    [key: string]: unknown
-  }) {
+  private toProfileView(
+    user: {
+      enrollmentYear: number | null
+      departmentId?: string | null
+      _count?: { posts: number; comments: number; savedPosts: number }
+      [key: string]: unknown
+    },
+    followerCount = 0,
+    isFollowing: boolean | null = null,
+  ) {
     const { _count, departmentId, ...rest } = user
 
     const shouldShowUpdateMajorPopup = !departmentId || user.enrollmentYear === null
@@ -53,6 +63,8 @@ export class UsersService {
       postCount: _count?.posts ?? 0,
       commentCount: _count?.comments ?? 0,
       savedCount: _count?.savedPosts ?? 0,
+      followerCount,
+      isFollowing,
     }
 
     if (user.enrollmentYear === null) {

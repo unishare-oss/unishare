@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import type { UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
@@ -23,8 +24,8 @@ export class UsersController {
   @OptionalAuth()
   @ApiOkResponse({ type: UserProfileEntity })
   @ResponseMessage('Profile fetched successfully')
-  getById(@Param('id') id: string) {
-    return this.usersService.findById(id)
+  getById(@Param('id') id: string, @Session() session: UserSession) {
+    return this.usersService.findById(id, session?.user?.id)
   }
 
   @Patch('me')

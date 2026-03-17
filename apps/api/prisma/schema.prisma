@@ -35,6 +35,8 @@ model User {
   postRequests            PostRequest[]            @relation("PostRequestAuthor")
   postRequestUpvotes      PostRequestUpvote[]
   postRequestFulfillments PostRequestFulfillment[]
+  followers               Follow[]                 @relation("Following")
+  following               Follow[]                 @relation("Followers")
 
   @@map("user")
 }
@@ -275,6 +277,18 @@ model PostRequestFulfillment {
   @@map("post_request_fulfillment")
 }
 
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("follow")
+}
+
 model PostRequestUpvote {
   userId    String
   requestId String
@@ -298,6 +312,7 @@ enum NotificationType {
   COMMENT_ADDED
   REQUEST_SUGGESTION_ADDED
   REQUEST_FULFILLED
+  NEW_POST_FROM_FOLLOWED
 }
 
 enum UserRole {

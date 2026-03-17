@@ -13,6 +13,7 @@ import { DepartmentsModule } from './modules/departments/departments.module'
 import { PostsModule } from './modules/posts/posts.module'
 import { FilesModule } from './modules/files/files.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
+import { FollowsModule } from './modules/follows/follows.module'
 import { PostRequestsModule } from './modules/post-requests/post-requests.module'
 import { StatsModule } from './modules/stats/stats.module'
 import { TasksModule } from './modules/tasks/tasks.module'
@@ -31,6 +32,7 @@ import { TasksModule } from './modules/tasks/tasks.module'
     FilesModule,
     NotificationsModule,
     StatsModule,
+    FollowsModule,
     PostRequestsModule,
     TasksModule,
   ],

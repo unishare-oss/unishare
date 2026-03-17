@@ -1,12 +1,22 @@
 'use client'
 
 import { use, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
-import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
+import {
+  useUsersControllerGetById,
+  getUsersControllerGetByIdQueryKey,
+} from '@/src/lib/api/generated/users/users'
+import {
+  useFollowsControllerFollow,
+  useFollowsControllerUnfollow,
+} from '@/src/lib/api/generated/follows/follows'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
+import { Button } from '@/components/ui/button'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { useAuth } from '@/contexts/auth-context'
 import { pluralize } from '@/lib/utils'
 
 function StatItem({ label, value }: { label: string; value: number }) {
@@ -18,7 +28,19 @@ function StatItem({ label, value }: { label: string; value: number }) {
   )
 }
 
-function PublicProfileHeader({ user }: { user: UserProfileEntity }) {
+function PublicProfileHeader({
+  user,
+  isSelf,
+  onFollow,
+  onUnfollow,
+  isPending,
+}: {
+  user: UserProfileEntity
+  isSelf: boolean
+  onFollow: () => void
+  onUnfollow: () => void
+  isPending: boolean
+}) {
   const joinedYear = user.createdAt ? new Date(user.createdAt).getFullYear() : null
 
   return (
@@ -26,7 +48,20 @@ function PublicProfileHeader({ user }: { user: UserProfileEntity }) {
       <div className="flex items-start gap-5">
         <UserAvatar name={user.name} image={user.image} size="lg" className="shrink-0" />
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>
+            {!isSelf && (
+              <Button
+                size="sm"
+                variant={user.isFollowing ? 'outline' : 'default'}
+                disabled={isPending}
+                onClick={user.isFollowing ? onUnfollow : onFollow}
+                className="shrink-0"
+              >
+                {user.isFollowing ? 'Unfollow' : 'Follow'}
+              </Button>
+            )}
+          </div>
           {user.bio && <p className="text-sm text-foreground/80 mt-2">{user.bio}</p>}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <span className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border border-border rounded-[4px] text-foreground">
@@ -61,6 +96,10 @@ function PublicProfileHeader({ user }: { user: UserProfileEntity }) {
           label={pluralize(user.savedCount ?? 0, 'Saved', 'Saved')}
           value={user.savedCount ?? 0}
         />
+        <StatItem
+          label={pluralize(user.followerCount ?? 0, 'Follower')}
+          value={user.followerCount ?? 0}
+        />
       </div>
     </div>
   )
@@ -92,10 +131,49 @@ function UserPosts({ userId }: { userId: string }) {
 
 export default function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { user: me } = useAuth()
+  const qc = useQueryClient()
 
   const { data: user } = useUsersControllerGetById(id, {
     query: { select: (r) => r.data },
   })
+
+  const queryKey = getUsersControllerGetByIdQueryKey(id)
+
+  type UserResponse = { data: UserProfileEntity }
+
+  const optimisticToggle = (following: boolean) => ({
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey })
+      const snapshot = qc.getQueryData<UserResponse>(queryKey)
+      qc.setQueryData<UserResponse>(queryKey, (old) =>
+        old
+          ? {
+              ...old,
+              data: {
+                ...old.data,
+                isFollowing: following,
+                followerCount: (old.data.followerCount ?? 0) + (following ? 1 : -1),
+              },
+            }
+          : old,
+      )
+      return { snapshot }
+    },
+    onError: (_err: unknown, _vars: unknown, ctx: { snapshot?: UserResponse } | undefined) => {
+      if (ctx?.snapshot) qc.setQueryData(queryKey, ctx.snapshot)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey }),
+  })
+
+  const { mutate: follow, isPending: followPending } = useFollowsControllerFollow({
+    mutation: optimisticToggle(true),
+  })
+  const { mutate: unfollow, isPending: unfollowPending } = useFollowsControllerUnfollow({
+    mutation: optimisticToggle(false),
+  })
+
+  const isSelf = !!me && me.id === id
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -104,7 +182,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
         <div className="max-w-[700px] mx-auto px-6 py-8">
           {user && (
             <>
-              <PublicProfileHeader user={user} />
+              <PublicProfileHeader
+                user={user}
+                isSelf={isSelf}
+                onFollow={() => follow({ id })}
+                onUnfollow={() => unfollow({ id })}
+                isPending={followPending || unfollowPending}
+              />
               <UserPosts userId={id} />
             </>
           )}

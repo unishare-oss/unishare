@@ -14,6 +14,15 @@ import type { NotificationEntity } from '@/src/lib/api/generated/unishareAPI.sch
 import { PageHeader } from '@/components/shared/page-header'
 import { cn } from '@/lib/utils'
 
+const NOTIFICATION_META: Record<string, { label: string; color: string }> = {
+  POST_APPROVED: { label: 'Approved', color: 'text-info' },
+  POST_REJECTED: { label: 'Rejected', color: 'text-red-400' },
+  REQUEST_SUGGESTION_ADDED: { label: 'Suggestion', color: 'text-text-muted' },
+  REQUEST_FULFILLED: { label: 'Fulfilled', color: 'text-success' },
+  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
+  POST_COMMENT: { label: 'Comment', color: 'text-text-muted' },
+}
+
 export default function NotificationsPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -112,24 +121,10 @@ export default function NotificationsPage() {
                   <span
                     className={cn(
                       'font-mono text-[10px] uppercase tracking-wider shrink-0 mt-0.5',
-                      n.type === 'POST_APPROVED'
-                        ? 'text-info'
-                        : n.type === 'POST_REJECTED'
-                          ? 'text-red-400'
-                          : n.type === 'REQUEST_FULFILLED'
-                            ? 'text-success'
-                            : 'text-text-muted',
+                      NOTIFICATION_META[n.type]?.color ?? 'text-text-muted',
                     )}
                   >
-                    {n.type === 'POST_APPROVED'
-                      ? 'Approved'
-                      : n.type === 'POST_REJECTED'
-                        ? 'Rejected'
-                        : n.type === 'REQUEST_SUGGESTION_ADDED'
-                          ? 'Suggestion'
-                          : n.type === 'REQUEST_FULFILLED'
-                            ? 'Fulfilled'
-                            : 'Comment'}
+                    {NOTIFICATION_META[n.type]?.label ?? 'Comment'}
                   </span>
                 </button>
               ))}
