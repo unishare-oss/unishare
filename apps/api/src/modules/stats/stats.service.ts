@@ -57,7 +57,7 @@ export class StatsService {
           id: true,
           name: true,
           image: true,
-          _count: { select: { posts: true } },
+          _count: { select: { posts: { where: { deletedAt: null } } } },
           department: { select: { name: true } },
         },
       }),
