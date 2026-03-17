@@ -23,6 +23,18 @@ import {
   yearSchema,
 } from '@/lib/posts/form-schema'
 import { StepNav } from '@/components/posts/step-nav'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { TriangleAlert } from 'lucide-react'
 
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
@@ -102,6 +114,7 @@ export default function CreatePostPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [showOldQuestionWarning, setShowOldQuestionWarning] = useState(false)
 
   // Keep validation live so step gating and field feedback stay in sync as the user fills each stage.
   const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
@@ -204,7 +217,11 @@ export default function CreatePostPage() {
             <TypeStep
               postType={values.postType as PostType | null}
               onSelect={(type) => {
-                updateField('postType', type)
+                if (type === 'OLD_QUESTION') {
+                  setShowOldQuestionWarning(true)
+                } else {
+                  updateField('postType', type)
+                }
               }}
             />
           )}
@@ -261,6 +278,50 @@ export default function CreatePostPage() {
           />
         </div>
       </div>
+      <AlertDialog open={showOldQuestionWarning} onOpenChange={setShowOldQuestionWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10">
+              <TriangleAlert className="size-8 text-destructive" strokeWidth={1.5} />
+            </AlertDialogMedia>
+            <AlertDialogTitle className="text-destructive">
+              Sharing past exam papers
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  By uploading past exam papers or question banks, you confirm that you have the
+                  right to share this material.
+                </p>
+                <p>
+                  You are <span className="font-bold text-destructive">solely responsible</span> for
+                  ensuring it does not violate your institution&apos;s{' '}
+                  <span className="font-bold text-destructive">academic integrity policies</span> or
+                  any applicable <span className="font-bold text-destructive">copyright laws</span>.
+                </p>
+                <p>
+                  UniShare is <span className="font-bold text-destructive">not liable</span> for any
+                  consequences arising from sharing restricted materials.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => updateField('postType', null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                updateField('postType', 'OLD_QUESTION')
+                setShowOldQuestionWarning(false)
+              }}
+            >
+              I understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

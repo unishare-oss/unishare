@@ -47,32 +47,14 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           </div>
         </button>
         <button
-          onClick={() => onSelect('OLD_QUESTION')}
-          className={cn(
-            'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
-            postType === 'OLD_QUESTION'
-              ? 'border-amber bg-amber-subtle'
-              : 'border-border hover:bg-muted',
-          )}
+          disabled
+          className="relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left border-border opacity-50 cursor-not-allowed"
         >
-          {postType === 'OLD_QUESTION' && (
-            <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber flex items-center justify-center">
-              <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-            </span>
-          )}
-          <div
-            className={cn(
-              'w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0',
-              postType === 'OLD_QUESTION' ? 'bg-amber/20' : 'bg-muted',
-            )}
-          >
-            <GraduationCap
-              className={cn(
-                'size-5',
-                postType === 'OLD_QUESTION' ? 'text-amber' : 'text-text-muted',
-              )}
-              strokeWidth={1.5}
-            />
+          <span className="absolute top-3 right-3 text-[10px] font-medium text-text-muted bg-muted px-1.5 py-0.5 rounded">
+            Unavailable
+          </span>
+          <div className="w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0 bg-muted">
+            <GraduationCap className="size-5 text-text-muted" strokeWidth={1.5} />
           </div>
           <div>
             <p className="text-base font-medium text-foreground">Past Exam</p>
