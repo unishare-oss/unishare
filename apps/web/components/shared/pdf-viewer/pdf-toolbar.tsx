@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import {
   MousePointer2,
+  Hand,
   Highlighter,
   Pencil,
   StickyNote,
@@ -31,6 +32,8 @@ interface PdfToolbarProps {
   onBookmarkToggle: () => void
   showSearch: boolean
   showBookmarks: boolean
+  isPanMode: boolean
+  onPanModeToggle: () => void
 }
 
 const ANNOTATION_TOOLS: { id: string; icon: React.ReactNode; title: string }[] = [
@@ -51,6 +54,8 @@ export function PdfToolbar({
   onBookmarkToggle,
   showSearch,
   showBookmarks,
+  isPanMode,
+  onPanModeToggle,
 }: PdfToolbarProps) {
   const { state: zoomState, provides: zoomProvides } = useZoom(documentId)
   const { state: scrollState, provides: scrollProvides } = useScroll(documentId)
@@ -106,53 +111,67 @@ export function PdfToolbar({
 
   return (
     <div className="bg-card border-b border-border px-3 h-11 flex items-center gap-1 shrink-0 overflow-x-auto">
-      {/* Select tool */}
+      {/* Pan (hand) tool — always visible */}
       <Button
         variant="ghost"
         size="icon-sm"
-        title="Select"
-        className={cn(!activeToolId && 'bg-accent text-accent-foreground')}
-        onClick={() => annotationProvides?.setActiveTool(null)}
+        title="Pan (drag to scroll)"
+        className={cn(isPanMode && 'bg-accent text-accent-foreground')}
+        onClick={onPanModeToggle}
       >
-        <MousePointer2 className="size-4" strokeWidth={1.5} />
+        <Hand className="size-4" strokeWidth={1.5} />
       </Button>
 
-      <Separator />
-
-      {/* Annotation tools */}
-      {ANNOTATION_TOOLS.map(({ id, icon, title }) => (
+      {/* Select + annotation tools — hidden on mobile */}
+      <div className="hidden md:contents">
         <Button
-          key={id}
           variant="ghost"
           size="icon-sm"
-          title={title}
-          className={cn(activeToolId === id && 'bg-amber/15 text-amber ring-2 ring-amber/50')}
+          title="Select"
+          className={cn(!isPanMode && !activeToolId && 'bg-accent text-accent-foreground')}
           onClick={() => {
-            if (!annotationProvides) return
-            annotationProvides.setActiveTool(activeToolId === id ? null : id)
+            if (isPanMode) onPanModeToggle()
+            annotationProvides?.setActiveTool(null)
           }}
         >
-          {icon}
+          <MousePointer2 className="size-4" strokeWidth={1.5} />
         </Button>
-      ))}
 
-      {/* Delete — visible only when an annotation is selected */}
-      {selectedUids.length > 0 && (
-        <>
-          <Separator />
+        <Separator />
+
+        {ANNOTATION_TOOLS.map(({ id, icon, title }) => (
           <Button
+            key={id}
             variant="ghost"
             size="icon-sm"
-            title="Delete selected (Del)"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={handleDelete}
+            title={title}
+            className={cn(activeToolId === id && 'bg-amber/15 text-amber ring-2 ring-amber/50')}
+            onClick={() => {
+              if (!annotationProvides) return
+              annotationProvides.setActiveTool(activeToolId === id ? null : id)
+            }}
           >
-            <Trash2 className="size-4" strokeWidth={1.5} />
+            {icon}
           </Button>
-        </>
-      )}
+        ))}
 
-      <Separator />
+        {selectedUids.length > 0 && (
+          <>
+            <Separator />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Delete selected (Del)"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+            >
+              <Trash2 className="size-4" strokeWidth={1.5} />
+            </Button>
+          </>
+        )}
+
+        <Separator />
+      </div>
 
       {/* Zoom */}
       <Button

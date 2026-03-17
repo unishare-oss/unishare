@@ -15,7 +15,11 @@ import { RenderLayer } from '@embedpdf/plugin-render/react'
 import { TilingPluginPackage } from '@embedpdf/plugin-tiling'
 import { ZoomPluginPackage, ZoomMode } from '@embedpdf/plugin-zoom'
 import { InteractionManagerPluginPackage } from '@embedpdf/plugin-interaction-manager'
-import { PagePointerProvider } from '@embedpdf/plugin-interaction-manager/react'
+import {
+  PagePointerProvider,
+  useInteractionManager,
+  useInteractionManagerCapability,
+} from '@embedpdf/plugin-interaction-manager/react'
 import { HistoryPluginPackage } from '@embedpdf/plugin-history'
 import { AnnotationPluginPackage } from '@embedpdf/plugin-annotation'
 import { AnnotationLayer, createRenderer } from '@embedpdf/plugin-annotation/react'
@@ -31,6 +35,7 @@ import { PdfToolbar } from './pdf-toolbar'
 import { PdfSearchPanel } from './pdf-search-panel'
 import { PdfBookmarkPanel } from './pdf-bookmark-panel'
 import { usePdfAnnotationStore } from '@/lib/store'
+import { cn } from '@/lib/utils'
 import type { PageLayout } from '@embedpdf/plugin-scroll'
 import type { PdfAnnotationObject } from '@embedpdf/models'
 
@@ -49,11 +54,37 @@ interface PdfDocumentProps {
   storageKey: string
 }
 
+const PAN_MODE_ID = 'pan'
+
 function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
   const [showSearch, setShowSearch] = useState(false)
   const [showBookmarks, setShowBookmarks] = useState(false)
   const { provides: scrollProvides } = useScroll(documentId)
   const { provides: annotationProvides } = useAnnotation(documentId)
+  const { provides: interactionCapability } = useInteractionManagerCapability()
+  const { provides: interactionScope, state: interactionState } = useInteractionManager(documentId)
+
+  useEffect(() => {
+    if (!interactionCapability) return
+    interactionCapability.registerMode({
+      id: PAN_MODE_ID,
+      scope: 'page',
+      exclusive: false,
+      cursor: 'grab',
+      wantsRawTouch: false,
+    })
+  }, [interactionCapability])
+
+  const isPanMode = interactionState?.activeMode === PAN_MODE_ID
+
+  const togglePanMode = useCallback(() => {
+    if (!interactionScope) return
+    if (isPanMode) {
+      interactionScope.activateDefaultMode()
+    } else {
+      interactionScope.activate(PAN_MODE_ID)
+    }
+  }, [interactionScope, isPanMode])
   const saveAnnotations = usePdfAnnotationStore((s) => s.save)
   const getStoredAnnotations = usePdfAnnotationStore((s) => s.get)
 
@@ -161,6 +192,8 @@ function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
         onBookmarkToggle={() => setShowBookmarks((v) => !v)}
         showSearch={showSearch}
         showBookmarks={showBookmarks}
+        isPanMode={isPanMode}
+        onPanModeToggle={togglePanMode}
       />
       <div className="flex flex-1 min-h-0">
         {showBookmarks && (
@@ -177,6 +210,7 @@ function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
                   background: '#fff',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   userSelect: 'none',
+                  touchAction: 'pinch-zoom',
                 }}
               >
                 <RenderLayer
@@ -237,7 +271,7 @@ export function PdfViewer({ url, storageKey, className, style }: PdfViewerProps)
 
   if (!engine) {
     return (
-      <div className={className} style={{ width: '100%', height: '600px', ...style }}>
+      <div className={cn('w-full h-[500px] md:h-[600px]', className)} style={style}>
         <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
           Loading PDF engine…
         </div>
@@ -246,7 +280,7 @@ export function PdfViewer({ url, storageKey, className, style }: PdfViewerProps)
   }
 
   return (
-    <div className={className} style={{ width: '100%', height: '600px', ...style }}>
+    <div className={cn('w-full h-[500px] md:h-[600px]', className)} style={style}>
       <EmbedPDF engine={engine} plugins={plugins}>
         {({ activeDocumentId }) => (
           <DocumentContent documentId={activeDocumentId}>

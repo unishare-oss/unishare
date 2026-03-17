@@ -302,7 +302,10 @@ export function PostFiles({ post }: PostFilesProps) {
             {previewFile.mimeType === 'application/pdf' && previewFile.url ? (
               <PdfViewer key={previewFile.url} url={previewFile.url} storageKey={previewFile.id} />
             ) : previewFile.mimeType.startsWith('image/') && previewFile.url ? (
-              <div className="flex justify-center p-4">
+              <div
+                className="flex justify-center p-2 md:p-4 overflow-auto"
+                style={{ touchAction: 'pinch-zoom' }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewFile.url}
