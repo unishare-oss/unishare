@@ -1,13 +1,14 @@
 'use client'
 
 import { useMemo, useRef, useEffect, useState, CSSProperties, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { EmbedPDF } from '@embedpdf/core/react'
 import { createPluginRegistration } from '@embedpdf/core'
 import { usePdfiumEngine } from '@embedpdf/engines/react'
 import { DocumentManagerPluginPackage } from '@embedpdf/plugin-document-manager'
 import { DocumentContent } from '@embedpdf/plugin-document-manager/react'
 import { ViewportPluginPackage } from '@embedpdf/plugin-viewport'
-import { Viewport } from '@embedpdf/plugin-viewport/react'
+import { Viewport, useViewportElement } from '@embedpdf/plugin-viewport/react'
 import { ScrollPluginPackage } from '@embedpdf/plugin-scroll'
 import { Scroller, useScroll } from '@embedpdf/plugin-scroll/react'
 import { RenderPluginPackage } from '@embedpdf/plugin-render'
@@ -56,6 +57,55 @@ interface PdfDocumentProps {
 
 const PAN_MODE_ID = 'pan'
 
+function PanOverlay({
+  active,
+  portalTarget,
+}: {
+  active: boolean
+  portalTarget: HTMLElement | null
+}) {
+  const viewportRef = useViewportElement()
+  const dragOriginRef = useRef<{
+    x: number
+    y: number
+    scrollLeft: number
+    scrollTop: number
+  } | null>(null)
+
+  if (!active || !portalTarget) return null
+
+  return createPortal(
+    <div
+      className="absolute inset-0 cursor-grab active:cursor-grabbing"
+      style={{ zIndex: 10, touchAction: 'none' }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        const el = viewportRef?.current
+        if (!el) return
+        dragOriginRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+          scrollLeft: el.scrollLeft,
+          scrollTop: el.scrollTop,
+        }
+      }}
+      onPointerMove={(e) => {
+        const el = viewportRef?.current
+        if (!el || !dragOriginRef.current) return
+        el.scrollLeft = dragOriginRef.current.scrollLeft - (e.clientX - dragOriginRef.current.x)
+        el.scrollTop = dragOriginRef.current.scrollTop - (e.clientY - dragOriginRef.current.y)
+      }}
+      onPointerUp={() => {
+        dragOriginRef.current = null
+      }}
+      onPointerCancel={() => {
+        dragOriginRef.current = null
+      }}
+    />,
+    portalTarget,
+  )
+}
+
 function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
   const [showSearch, setShowSearch] = useState(false)
   const [showBookmarks, setShowBookmarks] = useState(false)
@@ -63,6 +113,7 @@ function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
   const { provides: annotationProvides } = useAnnotation(documentId)
   const { provides: interactionCapability } = useInteractionManagerCapability()
   const { provides: interactionScope, state: interactionState } = useInteractionManager(documentId)
+  const [wrapperEl, setWrapperEl] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!interactionCapability) return
@@ -199,44 +250,55 @@ function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
         {showBookmarks && (
           <PdfBookmarkPanel documentId={documentId} onClose={() => setShowBookmarks(false)} />
         )}
-        <Viewport documentId={documentId} style={{ flex: 1, backgroundColor: '#e7e3de' }}>
-          <Scroller
+        <div
+          ref={(el) => {
+            if (el) setWrapperEl(el)
+          }}
+          className="relative flex-1 min-w-0 min-h-0"
+        >
+          <Viewport
             documentId={documentId}
-            renderPage={({ pageIndex }: PageLayout) => (
-              <PagePointerProvider
-                documentId={documentId}
-                pageIndex={pageIndex}
-                style={{
-                  background: '#fff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                  userSelect: 'none',
-                  touchAction: 'pinch-zoom',
-                }}
-              >
-                <RenderLayer
+            style={{ width: '100%', height: '100%', backgroundColor: '#e7e3de' }}
+          >
+            <PanOverlay active={isPanMode} portalTarget={wrapperEl} />
+            <Scroller
+              documentId={documentId}
+              renderPage={({ pageIndex }: PageLayout) => (
+                <PagePointerProvider
                   documentId={documentId}
                   pageIndex={pageIndex}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-                />
-                <AnnotationLayer
-                  documentId={documentId}
-                  pageIndex={pageIndex}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-                  annotationRenderers={linkRenderer ? [linkRenderer] : []}
-                />
-                <SelectionLayer documentId={documentId} pageIndex={pageIndex} />
-                <SearchLayer
-                  documentId={documentId}
-                  pageIndex={pageIndex}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-                />
-              </PagePointerProvider>
-            )}
-          />
-        </Viewport>
-        {showSearch && (
-          <PdfSearchPanel documentId={documentId} onClose={() => setShowSearch(false)} />
-        )}
+                  style={{
+                    background: '#fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                    userSelect: 'none',
+                    touchAction: 'pinch-zoom',
+                  }}
+                >
+                  <RenderLayer
+                    documentId={documentId}
+                    pageIndex={pageIndex}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+                  />
+                  <AnnotationLayer
+                    documentId={documentId}
+                    pageIndex={pageIndex}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+                    annotationRenderers={linkRenderer ? [linkRenderer] : []}
+                  />
+                  <SelectionLayer documentId={documentId} pageIndex={pageIndex} />
+                  <SearchLayer
+                    documentId={documentId}
+                    pageIndex={pageIndex}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+                  />
+                </PagePointerProvider>
+              )}
+            />
+          </Viewport>
+          {showSearch && (
+            <PdfSearchPanel documentId={documentId} onClose={() => setShowSearch(false)} />
+          )}
+        </div>
       </div>
     </div>
   )
