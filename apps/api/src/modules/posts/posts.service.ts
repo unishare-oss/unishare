@@ -69,7 +69,6 @@ export class PostsService {
 
     const courseWhere = {
       ...(departmentId && { departmentId }),
-      ...(yearLevel && { yearLevel }),
     }
 
     const isViewingOwnPosts = authorId != null && authorId === userId
@@ -77,6 +76,7 @@ export class PostsService {
     const where = {
       deletedAt: null,
       ...(courseId && { courseId }),
+      ...(yearLevel != null && { year: yearLevel }),
       ...(type && { type }),
       ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
