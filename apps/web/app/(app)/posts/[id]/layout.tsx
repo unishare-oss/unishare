@@ -37,11 +37,13 @@ export async function generateMetadata({
       title,
       description,
       type: 'article',
+      images: [{ url: '/android-chrome-512x512.png', width: 512, height: 512 }],
     },
     twitter: {
       card: 'summary',
       title,
       description,
+      images: ['/android-chrome-512x512.png'],
     },
   }
 }
