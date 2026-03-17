@@ -17,13 +17,13 @@ import {
 @ApiTags('post-requests')
 @Controller('post-requests')
 export class PostRequestsController {
-  constructor(private readonly service: PostRequestsService) {}
+  constructor(private readonly postRequestsService: PostRequestsService) {}
 
   @Post()
   @ApiCreatedResponse({ type: PostRequestEntity })
   @ResponseMessage('Request created successfully')
   create(@Body() dto: CreatePostRequestDto, @Session() session: UserSession) {
-    return this.service.create(dto, session.user.id)
+    return this.postRequestsService.create(dto, session.user.id)
   }
 
   @Get()
@@ -31,7 +31,7 @@ export class PostRequestsController {
   @ApiOkResponse({ type: PaginatedPostRequestEntity })
   @ResponseMessage('Requests fetched successfully')
   findAll(@Query() query: ListPostRequestsDto, @Session() session: UserSession) {
-    return this.service.findAll(query, session?.user?.id)
+    return this.postRequestsService.findAll(query, session?.user?.id)
   }
 
   @Get(':id')
@@ -39,14 +39,14 @@ export class PostRequestsController {
   @ApiOkResponse({ type: PostRequestDetailEntity })
   @ResponseMessage('Request fetched successfully')
   findOne(@Param('id') id: string, @Session() session: UserSession) {
-    return this.service.findOne(id, session?.user?.id)
+    return this.postRequestsService.findOne(id, session?.user?.id)
   }
 
   @Post(':id/upvote')
   @ApiOkResponse({ type: PostRequestDetailEntity })
   @ResponseMessage('Upvote toggled')
   upvote(@Param('id') id: string, @Session() session: UserSession) {
-    return this.service.toggleUpvote(id, session.user.id)
+    return this.postRequestsService.toggleUpvote(id, session.user.id)
   }
 
   @Post(':id/suggestions')
@@ -57,7 +57,7 @@ export class PostRequestsController {
     @Body() dto: CreateFulfillmentSuggestionDto,
     @Session() session: UserSession,
   ) {
-    return this.service.suggest(id, dto, session.user.id)
+    return this.postRequestsService.suggest(id, dto, session.user.id)
   }
 
   @Delete(':id/suggestions/:suggestionId')
@@ -67,7 +67,7 @@ export class PostRequestsController {
     @Param('suggestionId') suggestionId: string,
     @Session() session: UserSession,
   ) {
-    return this.service.removeSuggestion(id, suggestionId, session.user.id)
+    return this.postRequestsService.removeSuggestion(id, suggestionId, session.user.id)
   }
 
   @Post(':id/suggestions/:suggestionId/accept')
@@ -78,12 +78,12 @@ export class PostRequestsController {
     @Param('suggestionId') suggestionId: string,
     @Session() session: UserSession,
   ) {
-    return this.service.acceptSuggestion(id, suggestionId, session.user.id)
+    return this.postRequestsService.acceptSuggestion(id, suggestionId, session.user.id)
   }
 
   @Delete(':id')
   @ResponseMessage('Request deleted successfully')
   remove(@Param('id') id: string, @Session() session: UserSession) {
-    return this.service.remove(id, session.user.id)
+    return this.postRequestsService.remove(id, session.user.id)
   }
 }
