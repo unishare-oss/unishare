@@ -66,7 +66,7 @@ export default function FeedPage() {
       departmentId: effectiveDeptId || undefined,
       yearLevel: selectedYear ?? undefined,
       page,
-      limit: 20,
+      limit: 10,
     },
     { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
   )

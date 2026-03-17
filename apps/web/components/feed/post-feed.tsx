@@ -24,7 +24,17 @@ export function PostFeed({
   emptyMessage = 'No posts found',
   emptyDescription,
 }: PostFeedProps) {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+  function getPageWindows(): (number | '...')[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const items: (number | '...')[] = [1]
+    if (page > 3) items.push('...')
+    for (let p = Math.max(2, page - 2); p <= Math.min(totalPages - 1, page + 2); p++) {
+      items.push(p)
+    }
+    if (page < totalPages - 2) items.push('...')
+    items.push(totalPages)
+    return items
+  }
 
   return (
     <>
@@ -49,22 +59,28 @@ export function PostFeed({
           >
             Prev
           </Button>
-          {pages.map((p) => (
-            <Button
-              key={p}
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(p)}
-              className={cn(
-                'font-mono text-xs',
-                p === page
-                  ? 'text-amber font-medium bg-amber-subtle hover:bg-amber-subtle'
-                  : 'text-text-muted',
-              )}
-            >
-              {p}
-            </Button>
-          ))}
+          {getPageWindows().map((p, i) =>
+            p === '...' ? (
+              <span key={`ellipsis-${i}`} className="font-mono text-xs text-text-muted px-1">
+                …
+              </span>
+            ) : (
+              <Button
+                key={p}
+                variant="ghost"
+                size="sm"
+                onClick={() => onPageChange(p)}
+                className={cn(
+                  'font-mono text-xs',
+                  p === page
+                    ? 'text-amber font-medium bg-amber-subtle hover:bg-amber-subtle'
+                    : 'text-text-muted',
+                )}
+              >
+                {p}
+              </Button>
+            ),
+          )}
           <Button
             variant="ghost"
             size="sm"
