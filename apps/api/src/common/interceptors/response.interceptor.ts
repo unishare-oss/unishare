@@ -9,6 +9,11 @@ export class ResponseInterceptor<T> implements NestInterceptor<T> {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler<T>): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<{ headers?: { accept?: string } }>()
+    if (request.headers?.accept?.includes('text/event-stream')) {
+      return next.handle()
+    }
+
     const message =
       this.reflector.getAllAndOverride<string>(RESPONSE_MESSAGE_KEY, [
         context.getHandler(),
