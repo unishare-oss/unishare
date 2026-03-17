@@ -20,6 +20,7 @@ type UploadType = 'document' | 'image'
 const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize: number }> = {
   document: {
     allowedMimeTypes: [
+      // Office documents
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -27,9 +28,24 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      // LibreOffice
+      'application/vnd.oasis.opendocument.text',
+      'application/vnd.oasis.opendocument.presentation',
+      'application/vnd.oasis.opendocument.spreadsheet',
+      // E-books
+      'application/epub+zip',
+      // Text / code
       'text/plain',
       'text/markdown',
+      'text/html',
+      'text/css',
+      'text/csv',
       'application/json',
+      // Archives
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-tar',
+      'application/gzip',
     ],
     maxSize: 50 * 1024 * 1024, // 50MB
   },
@@ -131,6 +147,7 @@ export class StorageService implements OnModuleInit {
 }
 
 const MIME_EXTENSIONS: Record<string, string> = {
+  // Office
   'application/pdf': 'pdf',
   'application/msword': 'doc',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
@@ -138,9 +155,25 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
   'application/vnd.ms-excel': 'xls',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  // LibreOffice
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'application/vnd.oasis.opendocument.presentation': 'odp',
+  'application/vnd.oasis.opendocument.spreadsheet': 'ods',
+  // E-books
+  'application/epub+zip': 'epub',
+  // Text / code
   'text/plain': 'txt',
   'text/markdown': 'md',
+  'text/html': 'html',
+  'text/css': 'css',
+  'text/csv': 'csv',
   'application/json': 'json',
+  // Archives
+  'application/zip': 'zip',
+  'application/x-zip-compressed': 'zip',
+  'application/x-tar': 'tar',
+  'application/gzip': 'gz',
+  // Images
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',

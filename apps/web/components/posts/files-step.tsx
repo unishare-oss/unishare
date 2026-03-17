@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { FileImage, FileSpreadsheet, FileText, Upload, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,7 +21,8 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const ACCEPTED_FILE_TYPES = [
+const ACCEPTED_MIME_TYPES = new Set([
+  // Documents
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -28,29 +30,89 @@ const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/epub+zip',
+  // Images
   'image/jpeg',
   'image/png',
   'image/webp',
-  // Code/text files
+  // Text / code
   'text/plain',
   'text/markdown',
+  'text/html',
+  'text/css',
+  'text/csv',
   'application/json',
-  '.txt',
-  '.md',
-  '.json',
+  // Archives
+  'application/zip',
+  'application/x-tar',
+  'application/gzip',
+  'application/x-zip-compressed',
+])
+
+const ACCEPTED_EXTENSIONS = new Set([
+  // Web
+  '.html',
+  '.css',
+  // JS/TS
   '.js',
   '.jsx',
   '.ts',
   '.tsx',
+  // Python
   '.py',
+  // Systems
+  '.c',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.cs',
+  // JVM
   '.java',
+  '.kt',
+  '.scala',
+  // Other languages
   '.go',
   '.rs',
+  '.rb',
+  '.php',
+  '.swift',
+  '.r',
+  // Data / config
   '.sql',
-  '.sh',
+  '.csv',
+  '.xml',
+  '.json',
+  '.toml',
+  '.ini',
   '.yml',
   '.yaml',
-].join(',')
+  '.env',
+  // Shell / scripts
+  '.sh',
+  // Docs / text
+  '.txt',
+  '.md',
+  '.rmd',
+  '.tex',
+  '.bib',
+  // Notebooks
+  '.ipynb',
+  // Archives
+  '.zip',
+  '.tar',
+  '.gz',
+])
+
+function isFileAccepted(file: File) {
+  if (ACCEPTED_MIME_TYPES.has(file.type)) return true
+  const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+  return ACCEPTED_EXTENSIONS.has(ext)
+}
+
+const ACCEPTED_FILE_TYPES = [...ACCEPTED_MIME_TYPES, ...ACCEPTED_EXTENSIONS].join(',')
 
 export interface FilesStepItem {
   id: string
@@ -78,6 +140,7 @@ interface FilesStepProps {
 
 export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [snippetLanguage, setSnippetLanguage] = useState<SnippetLanguage>('typescript')
   const [snippetName, setSnippetName] = useState('snippet')
   const [snippetText, setSnippetText] = useState('')
@@ -86,6 +149,23 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
     const picked = Array.from(e.target.files ?? [])
     if (picked.length > 0) onAddFiles(picked)
     e.target.value = ''
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    if (!disabled) setIsDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDragging(false)
+    if (disabled) return
+    const dropped = Array.from(e.dataTransfer.files).filter(isFileAccepted)
+    if (dropped.length > 0) onAddFiles(dropped)
   }
 
   function handleAttachSnippet() {
@@ -121,10 +201,31 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
         type="button"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className="w-full border-2 border-dashed border-border rounded-[6px] py-10 flex flex-col items-center gap-3 hover:border-amber hover:bg-amber-subtle transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          'w-full border-2 border-dashed rounded-[6px] py-10 flex flex-col items-center gap-3 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent',
+          isDragging
+            ? 'border-amber bg-amber-subtle scale-[1.01]'
+            : 'border-border hover:border-amber hover:bg-amber-subtle',
+        )}
       >
-        <Upload className="size-6 text-text-muted" strokeWidth={1.5} />
-        <p className="text-sm text-text-muted">Drop files here or click to browse</p>
+        <Upload
+          className={cn(
+            'size-6 transition-colors duration-150',
+            isDragging ? 'text-amber' : 'text-text-muted',
+          )}
+          strokeWidth={1.5}
+        />
+        <p
+          className={cn(
+            'text-sm transition-colors duration-150',
+            isDragging ? 'text-amber' : 'text-text-muted',
+          )}
+        >
+          {isDragging ? 'Release to upload' : 'Drop files here or click to browse'}
+        </p>
       </button>
 
       <div className="mt-4 rounded-[6px] border border-border bg-background p-4">
