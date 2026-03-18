@@ -369,6 +369,12 @@
             "schema": { "minimum": 1, "maximum": 6, "type": "number" }
           },
           {
+            "name": "moduleNumber",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "maximum": 3, "type": "number" }
+          },
+          {
             "name": "type",
             "required": false,
             "in": "query",
