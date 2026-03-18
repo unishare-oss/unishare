@@ -18,10 +18,12 @@ export default function FeedPage() {
     selectedYear,
     hasSelectedYear,
     selectedCourseId,
+    selectedModuleNumber,
     setActiveFilter,
     setSelectedDeptId,
     setSelectedYear,
     setSelectedCourseId,
+    setSelectedModuleNumber,
     consumePendingFilter,
   } = useFeedStore()
 
@@ -59,12 +61,18 @@ export default function FeedPage() {
     setPage(1)
   }
 
+  function handleModuleChange(moduleNumber: number | null) {
+    setSelectedModuleNumber(moduleNumber)
+    setPage(1)
+  }
+
   const { data, isLoading } = usePostsControllerFindAll(
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
       courseId: selectedCourseId || undefined,
       departmentId: effectiveDeptId || undefined,
       yearLevel: selectedYear ?? undefined,
+      moduleNumber: selectedModuleNumber ?? undefined,
       page,
       limit: 10,
     },
@@ -92,6 +100,8 @@ export default function FeedPage() {
         onYearChange={handleYearChange}
         selectedCourseId={selectedCourseId}
         onCourseChange={handleCourseChange}
+        selectedModuleNumber={selectedModuleNumber}
+        onModuleChange={handleModuleChange}
       />
 
       {/* Mobile search */}

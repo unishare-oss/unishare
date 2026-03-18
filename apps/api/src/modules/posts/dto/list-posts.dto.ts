@@ -23,6 +23,14 @@ export class ListPostsDto extends PaginationDto {
   @Max(6)
   yearLevel?: number
 
+  @ApiPropertyOptional({ minimum: 1, maximum: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  moduleNumber?: number
+
   @ApiPropertyOptional({ enum: PostType, enumName: 'PostType' })
   @IsOptional()
   @IsEnum(PostType)

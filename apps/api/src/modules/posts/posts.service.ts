@@ -65,7 +65,16 @@ export class PostsService {
     const isPrivileged = userRole === UserRole.MODERATOR || userRole === UserRole.ADMIN
     const canSeeAllStatuses = isPrivileged
 
-    const { courseId, departmentId, yearLevel, type, status, authorId, ...pagination } = query
+    const {
+      courseId,
+      departmentId,
+      yearLevel,
+      moduleNumber,
+      type,
+      status,
+      authorId,
+      ...pagination
+    } = query
 
     const courseWhere = {
       ...(departmentId && { departmentId }),
@@ -77,6 +86,7 @@ export class PostsService {
       deletedAt: null,
       ...(courseId && { courseId }),
       ...(yearLevel != null && { year: yearLevel }),
+      ...(moduleNumber != null && { moduleNumber }),
       ...(type && { type }),
       ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
