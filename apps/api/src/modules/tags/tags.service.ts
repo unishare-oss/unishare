@@ -15,7 +15,7 @@ export class TagsService {
       .toLowerCase()
       .trim()
       .replace(/\s+/g, '-')
-      .replace(/[^\w\-]/g, '')
+      .replace(/[^\w-]/g, '')
   }
 
   /**

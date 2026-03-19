@@ -133,7 +133,7 @@ export class PostsController {
   addTags(
     @Param('id') id: string,
     @Body() dto: { tags: string[] },
-    @Session() session: UserSession,
+    @Session() _session: UserSession,
   ) {
     return this.postsService.tagPost(id, dto.tags)
   }
@@ -143,7 +143,7 @@ export class PostsController {
   removeTag(
     @Param('id') id: string,
     @Param('tagId') tagId: string,
-    @Session() session: UserSession,
+    @Session() _session: UserSession,
   ) {
     return this.postsService.untagPost(id, tagId)
   }

@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common'
-import { ApiProperty, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger'
+import { Controller, Get, Query } from '@nestjs/common'
+import { ApiQuery, ApiResponse } from '@nestjs/swagger'
 import { TagsService } from './tags.service'
-import { CreateTagDto } from './dto/create-tag.dto'
 import { TagDto } from './dto/tag.dto'
 
 @Controller('tags')
