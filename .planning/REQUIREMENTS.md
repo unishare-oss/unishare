@@ -1,0 +1,107 @@
+# Requirements: UniShare Collaborative Canvas
+
+**Defined:** 2026-03-20
+**Core Value:** Multiple students can open a shared canvas and collaborate in real-time, inside UniShare — no platform switching, no re-sharing files across tools.
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Canvas
+
+- [ ] **CANV-01**: User can pan and zoom an infinite canvas
+- [ ] **CANV-02**: User can draw freehand strokes on the canvas
+- [ ] **CANV-03**: User can add and edit geometric shapes (rectangle, circle, arrow, line)
+- [ ] **CANV-04**: User can add and edit text boxes on the canvas
+- [ ] **CANV-05**: User can add color-coded sticky notes to the canvas
+- [ ] **CANV-06**: User can select, move, resize, and delete canvas objects
+- [ ] **CANV-07**: User can undo and redo canvas actions
+
+### Collaboration
+
+- [ ] **COLB-01**: Multiple users can edit the same canvas simultaneously with changes appearing in real-time for all participants
+- [ ] **COLB-02**: Users can see live named cursors of other participants (color-coded)
+- [ ] **COLB-03**: Users can see a list of who is currently in the room
+- [ ] **COLB-04**: Anyone with the room link can join without creating a UniShare account (guest access)
+
+### Rooms
+
+- [ ] **ROOM-01**: Authenticated users can create a standalone collaboration room
+- [ ] **ROOM-02**: Each room has a unique shareable link
+- [ ] **ROOM-03**: Board state persists after all participants leave — room can be rejoined later
+- [ ] **ROOM-04**: User can export the board as a PNG image
+
+### Export & Integration
+
+- [ ] **EXPO-01**: User can export the board as a PDF
+- [ ] **EXPO-02**: User can post an exported board directly to UniShare as a new post (image/PDF + title)
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Room Context
+
+- **ROOM-V2-01**: User can attach a collaboration room to an existing UniShare post (room link shown on post detail page)
+- **ROOM-V2-02**: Rooms can be named and tied to a department/course, browsable within a course context
+
+### Advanced Canvas
+
+- **CANV-V2-01**: User can input math equations (LaTeX) rendered on the canvas
+- **CANV-V2-02**: User can drag and drop PDF/image files onto the canvas for annotation
+- **CANV-V2-03**: User can start from a pre-built study template (concept map, exam prep table, pros/cons, timeline)
+
+### Session Intelligence
+
+- **SESS-V2-01**: Users can see a history of who contributed to a session (authenticated users)
+- **SESS-V2-02**: AI-generated summary of session exported as shareable notes
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature                               | Reason                                                                            |
+| ------------------------------------- | --------------------------------------------------------------------------------- |
+| Video/audio in rooms                  | Extremely high complexity (WebRTC, media servers); students use Discord for voice |
+| Live quiz / Q&A sessions              | Separate product surface; deferred per PROJECT.md                                 |
+| Shared study planner                  | Calendar/todo feature, not canvas feature — dilutes product identity              |
+| Version history with per-commit diffs | CRDT history is deeply complex; Miro charges for this as a premium feature        |
+| Presentation/slideshow mode           | Boards aren't slides; fights the tool's nature                                    |
+| Voting / dot-voting on stickies       | Corporate facilitation feature; emoji reactions cover study needs                 |
+| Per-object locking permissions        | Room-level permissions (viewer vs editor) are sufficient                          |
+| Mobile native app                     | Web-first; canvas interaction on mobile is a separate UX investment               |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status  |
+| ----------- | ----- | ------- |
+| CANV-01     | —     | Pending |
+| CANV-02     | —     | Pending |
+| CANV-03     | —     | Pending |
+| CANV-04     | —     | Pending |
+| CANV-05     | —     | Pending |
+| CANV-06     | —     | Pending |
+| CANV-07     | —     | Pending |
+| COLB-01     | —     | Pending |
+| COLB-02     | —     | Pending |
+| COLB-03     | —     | Pending |
+| COLB-04     | —     | Pending |
+| ROOM-01     | —     | Pending |
+| ROOM-02     | —     | Pending |
+| ROOM-03     | —     | Pending |
+| ROOM-04     | —     | Pending |
+| EXPO-01     | —     | Pending |
+| EXPO-02     | —     | Pending |
+
+**Coverage:**
+
+- v1 requirements: 17 total
+- Mapped to phases: 0
+- Unmapped: 17 ⚠️ (will be filled by roadmapper)
+
+---
+
+_Requirements defined: 2026-03-20_
+_Last updated: 2026-03-20 after initial definition_
