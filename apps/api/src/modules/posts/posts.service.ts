@@ -40,11 +40,19 @@ export class PostsService {
       throw new ForbiddenException('You can only create posts in your department')
     }
 
+    // Extract tags and handle separately
+    const { tags, ...postData } = dto
+
     const shortCode = nanoid(8)
     const post = await this.postsRepository.create(
-      { shortCode, authorId: userId, ...dto },
+      { shortCode, authorId: userId, ...postData },
       { id: userId },
     )
+
+    // Add tags if provided
+    if (tags && tags.length > 0) {
+      await this.tagPost(post.id, tags)
+    }
 
     if (post.status === PostStatus.APPROVED) {
       void this.followsService
@@ -125,7 +133,17 @@ export class PostsService {
       throw new BadRequestException('Exam year can only be updated for old question posts')
     }
 
-    return this.postsRepository.update(id, dto, { id: userId })
+    // Extract tags and handle separately
+    const { tags, ...postData } = dto
+
+    const updatedPost = await this.postsRepository.update(id, postData, { id: userId })
+
+    // Update tags if provided
+    if (tags) {
+      await this.tagPost(id, tags)
+    }
+
+    return updatedPost
   }
 
   async remove(id: string, userId: string, userRole: UserRole) {
