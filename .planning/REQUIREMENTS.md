@@ -77,29 +77,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status  |
 | ----------- | ----- | ------- |
-| CANV-01     | —     | Pending |
-| CANV-02     | —     | Pending |
-| CANV-03     | —     | Pending |
-| CANV-04     | —     | Pending |
-| CANV-05     | —     | Pending |
-| CANV-06     | —     | Pending |
-| CANV-07     | —     | Pending |
-| COLB-01     | —     | Pending |
-| COLB-02     | —     | Pending |
-| COLB-03     | —     | Pending |
-| COLB-04     | —     | Pending |
-| ROOM-01     | —     | Pending |
-| ROOM-02     | —     | Pending |
-| ROOM-03     | —     | Pending |
-| ROOM-04     | —     | Pending |
-| EXPO-01     | —     | Pending |
-| EXPO-02     | —     | Pending |
+| CANV-01     | 4     | Pending |
+| CANV-02     | 4     | Pending |
+| CANV-03     | 4     | Pending |
+| CANV-04     | 4     | Pending |
+| CANV-05     | 4     | Pending |
+| CANV-06     | 4     | Pending |
+| CANV-07     | 4     | Pending |
+| COLB-01     | 3     | Pending |
+| COLB-02     | 5     | Pending |
+| COLB-03     | 5     | Pending |
+| COLB-04     | 2     | Pending |
+| ROOM-01     | 1     | Pending |
+| ROOM-02     | 1     | Pending |
+| ROOM-03     | 1, 6  | Pending |
+| ROOM-04     | 6     | Pending |
+| EXPO-01     | 6     | Pending |
+| EXPO-02     | 6     | Pending |
 
 **Coverage:**
 
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️ (will be filled by roadmapper)
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 
