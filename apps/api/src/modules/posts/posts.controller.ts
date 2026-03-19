@@ -112,4 +112,39 @@ export class PostsController {
   remove(@Param('id') id: string, @Session() session: UserSession) {
     return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
   }
+
+  @Get('search')
+  @OptionalAuth()
+  @ApiOkResponse({ description: 'Search results with pagination' })
+  @ResponseMessage('Search completed successfully')
+  search(
+    @Query('q') q: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    const pageNum = parseInt(page, 10) || 1
+    const limitNum = parseInt(limit, 10) || 20
+    return this.postsService.searchPosts(q, limitNum, pageNum)
+  }
+
+  @Post(':id/tags')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Tags added successfully')
+  addTags(
+    @Param('id') id: string,
+    @Body() dto: { tags: string[] },
+    @Session() session: UserSession,
+  ) {
+    return this.postsService.tagPost(id, dto.tags)
+  }
+
+  @Delete(':id/tags/:tagId')
+  @ResponseMessage('Tag removed successfully')
+  removeTag(
+    @Param('id') id: string,
+    @Param('tagId') tagId: string,
+    @Session() session: UserSession,
+  ) {
+    return this.postsService.untagPost(id, tagId)
+  }
 }
