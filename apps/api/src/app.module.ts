@@ -19,6 +19,7 @@ import { StatsModule } from './modules/stats/stats.module'
 import { TasksModule } from './modules/tasks/tasks.module'
 import { TagsModule } from './modules/tags/tags.module'
 import { TrendingModule } from './modules/trending/trending.module'
+import { ReportsModule } from './modules/reports/reports.module'
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TrendingModule } from './modules/trending/trending.module'
     TasksModule,
     TagsModule,
     TrendingModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
