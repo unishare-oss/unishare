@@ -17,6 +17,7 @@ import { FollowsModule } from './modules/follows/follows.module'
 import { PostRequestsModule } from './modules/post-requests/post-requests.module'
 import { StatsModule } from './modules/stats/stats.module'
 import { TasksModule } from './modules/tasks/tasks.module'
+import { TagsModule } from './modules/tags/tags.module'
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { TasksModule } from './modules/tasks/tasks.module'
     FollowsModule,
     PostRequestsModule,
     TasksModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
