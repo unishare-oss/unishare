@@ -18,6 +18,7 @@ import { PostRequestsModule } from './modules/post-requests/post-requests.module
 import { StatsModule } from './modules/stats/stats.module'
 import { TasksModule } from './modules/tasks/tasks.module'
 import { TagsModule } from './modules/tags/tags.module'
+import { TrendingModule } from './modules/trending/trending.module'
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TagsModule } from './modules/tags/tags.module'
     PostRequestsModule,
     TasksModule,
     TagsModule,
+    TrendingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
