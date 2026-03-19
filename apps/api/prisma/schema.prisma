@@ -85,6 +85,7 @@ model Post {
   externalUrl         String?
   shortCode           String                   @unique
   views               Int                      @default(0)
+  searchVector        Unsupported("tsvector")?
   comments            Comment[]
   files               File[]
   notifications       Notification[]
@@ -93,6 +94,7 @@ model Post {
   postViews           PostView[]
   reactions           Reaction[]
   savedBy             SavedPost[]
+  tags                PostTag[]
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
 
@@ -340,4 +342,28 @@ enum ReactionType {
   WOW
   SALUTE
   FUNNY
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  color     String    @default("#3B82F6")
+  createdAt DateTime  @default(now())
+  posts     PostTag[]
+
+  @@index([slug])
+  @@map("tag")
+}
+
+model PostTag {
+  postId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tag")
 }
