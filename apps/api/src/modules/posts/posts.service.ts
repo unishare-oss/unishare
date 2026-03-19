@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
-import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
+import { PostStatus, PostType, UserRole, PostPublicationStatus } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
@@ -27,6 +27,16 @@ export class PostsService {
     private readonly tagsService: TagsService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Helper method to filter for published posts only.
+   * Used in all user-facing queries to ensure soft-deleted posts never appear.
+   */
+  private wherePublished() {
+    return {
+      publicationStatus: PostPublicationStatus.PUBLISHED,
+    }
+  }
 
   async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
     if (!departmentId) {
@@ -221,6 +231,7 @@ export class PostsService {
       FROM "post" p
       WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
         AND p.status = ${'APPROVED'}
+        AND p.publication_status = ${'PUBLISHED'}
         AND p.deleted_at IS NULL
       ORDER BY relevance DESC, p.created_at DESC
       LIMIT ${limit}
@@ -232,6 +243,7 @@ export class PostsService {
       FROM "post" p
       WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
         AND p.status = ${'APPROVED'}
+        AND p.publication_status = ${'PUBLISHED'}
         AND p.deleted_at IS NULL
     `) as any[]
 
@@ -334,6 +346,7 @@ export class PostsService {
             },
           },
         },
+        ...this.wherePublished(),
         status: PostStatus.APPROVED,
         deletedAt: null,
       },
@@ -350,6 +363,7 @@ export class PostsService {
             },
           },
         },
+        ...this.wherePublished(),
         status: PostStatus.APPROVED,
         deletedAt: null,
       },
@@ -385,6 +399,7 @@ export class PostsService {
             },
           },
         })),
+        ...this.wherePublished(),
         status: PostStatus.APPROVED,
         deletedAt: null,
       },
