@@ -1,4 +1,4 @@
-import { PostStatus, PostType } from '@/generated/prisma/enums'
+import { PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class PostAuthorDeptEntity {
@@ -88,6 +88,12 @@ export class PostEntity {
 
   @ApiProperty({ enum: PostStatus, enumName: 'PostStatus' })
   status: PostStatus
+
+  @ApiProperty({ enum: PostPublicationStatus, enumName: 'PostPublicationStatus' })
+  publicationStatus: PostPublicationStatus
+
+  @ApiProperty()
+  trendingScore: number
 
   @ApiProperty({ default: false })
   isAnonymous: boolean
