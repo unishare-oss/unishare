@@ -1,5 +1,14 @@
-import { Controller, Post, Get, Patch, Param, Body, Query } from '@nestjs/common'
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger'
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Query,
+  ForbiddenException,
+} from '@nestjs/common'
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ReportsService } from './reports.service'
@@ -72,12 +81,14 @@ export class AdminReportsController {
       },
     },
   })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
   async listReports(
     @Query() filters: ListReportsDto,
-    @Session() _session: UserSession,
+    @Session() session: UserSession,
   ): Promise<{ success: boolean; data: any }> {
-    // TODO: Verify admin role (Phase 3.3)
-    // if (session.user.role !== 'ADMIN') throw new ForbiddenException()
+    if (session?.user?.role !== 'admin') {
+      throw new ForbiddenException('Admin role required')
+    }
 
     const result = await this.reportsService.listReports(filters)
 
@@ -105,12 +116,16 @@ export class AdminReportsController {
       },
     },
   })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
   async approveReport(
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
     @Session() session: UserSession,
   ): Promise<{ success: boolean; data: ReportDetail }> {
-    // TODO: Verify admin role (Phase 3.3)
+    if (session?.user?.role !== 'admin') {
+      throw new ForbiddenException('Admin role required')
+    }
+
     const report = await this.reportsService.approveReport(reportId, session.user.id, body.reason)
 
     return {
@@ -137,12 +152,16 @@ export class AdminReportsController {
       },
     },
   })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
   async rejectReport(
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
     @Session() session: UserSession,
   ): Promise<{ success: boolean; data: ReportDetail }> {
-    // TODO: Verify admin role (Phase 3.3)
+    if (session?.user?.role !== 'admin') {
+      throw new ForbiddenException('Admin role required')
+    }
+
     const report = await this.reportsService.rejectReport(reportId, session.user.id, body.reason)
 
     return {
