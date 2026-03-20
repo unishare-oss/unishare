@@ -10,7 +10,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 - [x] **Phase 2: Guest Identity & Auth** - Better Auth anonymous plugin; unauthenticated users get an anonymous session before joining a room (completed 2026-03-20)
 - [x] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave (completed 2026-03-20)
 - [x] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional (completed 2026-03-20)
-- [ ] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time
+- [x] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time (completed 2026-03-21)
 - [ ] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow
 
 ## Phase Details
@@ -127,6 +127,14 @@ Plans:
 **Goal**: Board snapshots saved to PostgreSQL, PNG/PDF export, post-to-UniShare flow
 **Depends on**: Phase 5
 **Requirements**: ROOM-03 (persistence), ROOM-04, EXPO-01, EXPO-02
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 06-01-PLAN.md — Backend Yjs snapshot persistence (save on idle + disconnect, restore on rejoin)
+- [ ] 06-02-PLAN.md — Race condition fix, isAnonymous plumbing, export utilities, Export dropdown (PNG + PDF)
+- [ ] 06-03-PLAN.md — Post to UniShare flow (sessionStorage handoff + posts/new pre-fill + human verify)
+
 **Success Criteria** (what must be TRUE):
 
 1. Board state is saved to database on idle (30s after last change) and on last participant disconnect
@@ -141,11 +149,11 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- |
-| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
-| 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
-| 3. WebSocket Gateway & Yjs Relay | Complete    | 2026-03-20 |
-| 4. Canvas UI & Drawing Tools     | Complete    | 2026-03-20 |
-| 5. Presence & Awareness          | Complete    | 2026-03-21 |
-| 6. Board Persistence & Export    | Not started | -          |
+| Phase                            | Status   | Completed  |
+| -------------------------------- | -------- | ---------- |
+| 1. Data Model & Module Skeleton  | Complete | 2026-03-20 |
+| 2. Guest Identity & Auth         | Complete | 2026-03-20 |
+| 3. WebSocket Gateway & Yjs Relay | Complete | 2026-03-20 |
+| 4. Canvas UI & Drawing Tools     | Complete | 2026-03-20 |
+| 5. Presence & Awareness          | Complete | 2026-03-21 |
+| 6. Board Persistence & Export    | Planning | -          |
