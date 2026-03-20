@@ -21,6 +21,8 @@ const allowedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
+const PRESENCE_COLORS_COUNT = 10
+
 @WebSocketGateway({
   namespace: '/collab',
   cors: { origin: allowedOrigins, credentials: true },
@@ -34,6 +36,15 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     private readonly collabRoomService: CollabRoomService,
     private readonly collabRepository: CollabRepository,
   ) {}
+
+  private hashToColorIndex(id: string): number {
+    let hash = 0
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i)
+      hash |= 0
+    }
+    return Math.abs(hash) % PRESENCE_COLORS_COUNT
+  }
 
   afterInit(server: Server) {
     server.use(async (socket: Socket, next: (err?: Error) => void) => {
@@ -65,7 +76,11 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`)
+    const slug = this.collabRoomService.getRoomForSocket(client.id)
     this.collabRoomService.removeSocket(client.id)
+    if (slug) {
+      this.server.to(slug).emit('participant-left', { socketId: client.id })
+    }
   }
 
   @SubscribeMessage('join-room')
@@ -79,6 +94,11 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       return
     }
 
+    // Phase 5: assign presence metadata before joining room so fetchSockets() sees it
+    const colorIndex = this.hashToColorIndex(client.data.user.id)
+    client.data.colorIndex = colorIndex
+    client.data.name = client.data.user.name
+
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
 
@@ -87,6 +107,30 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     client.emit('room-joined', { slug, state: Buffer.from(state) })
     this.logger.log(`Client ${client.id} joined room ${slug}`)
+
+    // Phase 5: participant tracking
+    const roomSockets = await this.server.in(slug).fetchSockets()
+    const participants = roomSockets.map((s) => ({
+      socketId: s.id,
+      name: s.data.name as string,
+      colorIndex: s.data.colorIndex as number,
+    }))
+    client.emit('participant-list', participants)
+    client.to(slug).emit('participant-joined', {
+      socketId: client.id,
+      name: client.data.name,
+      colorIndex,
+    })
+  }
+
+  @SubscribeMessage('cursor-move')
+  handleCursorMove(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { x: number; y: number },
+  ): void {
+    const slug = this.collabRoomService.getRoomForSocket(client.id)
+    if (!slug) return
+    client.to(slug).emit('cursor-move', { socketId: client.id, ...data })
   }
 
   @SubscribeMessage('yjs-update')
