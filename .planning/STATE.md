@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 05
 status: unknown
-last_updated: '2026-03-20T17:47:38.072Z'
+last_updated: '2026-03-20T17:50:22.053Z'
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -62,6 +62,9 @@ progress:
 - [Phase 04]: BinaryFiles not synced via Yjs — images pasted onto canvas and library items do not propagate to remote sessions; deferred to Phase 6 (Board Persistence & Export)
 - [Phase 05]: djb2 hash + Math.abs() % paletteSize for deterministic presence color assignment
 - [Phase 05]: sceneToOverlay formula: (sceneCoord + scroll) \* zoom.value + offset - containerRect (Excalidraw 0.18.0 verified)
+- [Phase 05]: socket.data presence metadata (colorIndex, name) assigned BEFORE client.join(slug) so fetchSockets sees the joining socket's data
+- [Phase 05]: hashToColorIndex uses djb2 bit-shifting hash, deterministic color slot 0-9 per userId
+- [Phase 05]: handleDisconnect gets slug BEFORE removeSocket to avoid race condition on slug lookup
 
 ## Performance Metrics
 
@@ -76,6 +79,7 @@ progress:
 | Phase 04 P02 | 287    | 2 tasks      | 4 files |
 | Phase 04 P03 | ~30min | 2 tasks      | 2 files |
 | Phase 05 P02 | 102    | 2 tasks      | 4 files |
+| Phase 05 P01 | 300    | 2 tasks      | 2 files |
 
 ## Phase History
 
