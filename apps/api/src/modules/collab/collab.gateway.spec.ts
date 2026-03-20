@@ -105,6 +105,67 @@ describe('CollabGateway', () => {
       expect(client.emit).toHaveBeenCalledWith('error', { message: 'Room not found' })
       expect(client.join).not.toHaveBeenCalled()
     })
+
+    it('should emit participant-list to joiner and participant-joined to room', async () => {
+      collabRepository.findBySlug.mockResolvedValue({ id: 'room-1', slug: 'test-slug' })
+
+      const client = makeSocket('socket-new', 'user-new', 'New User')
+      const toEmit = jest.fn()
+      client.to.mockReturnValue({ emit: toEmit })
+
+      // Mock fetchSockets to return the new socket + an existing socket
+      const existingSocket = {
+        id: 'socket-existing',
+        data: { name: 'Existing User', colorIndex: 3 },
+      }
+      const newSocketRemote = {
+        id: 'socket-new',
+        data: { name: 'New User', colorIndex: expect.any(Number) },
+      }
+      ;(gateway as any).server.in.mockReturnValue({
+        fetchSockets: jest.fn().mockResolvedValue([newSocketRemote, existingSocket]),
+      })
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      // participant-list sent to joiner (includes self + existing)
+      expect(client.emit).toHaveBeenCalledWith(
+        'participant-list',
+        expect.arrayContaining([
+          expect.objectContaining({ socketId: 'socket-existing', name: 'Existing User' }),
+        ]),
+      )
+
+      // participant-joined sent to others
+      expect(toEmit).toHaveBeenCalledWith(
+        'participant-joined',
+        expect.objectContaining({
+          socketId: 'socket-new',
+          name: 'New User',
+          colorIndex: expect.any(Number),
+        }),
+      )
+    })
+
+    it('should set colorIndex and name on socket.data before join', async () => {
+      collabRepository.findBySlug.mockResolvedValue({ id: 'room-1', slug: 'test-slug' })
+
+      const client = makeSocket('socket-1', 'user-abc', 'Alice')
+      ;(gateway as any).server.in.mockReturnValue({
+        fetchSockets: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'socket-1', data: { name: 'Alice', colorIndex: expect.any(Number) } },
+          ]),
+      })
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      expect(client.data.colorIndex).toEqual(expect.any(Number))
+      expect(client.data.colorIndex).toBeGreaterThanOrEqual(0)
+      expect(client.data.colorIndex).toBeLessThan(10)
+      expect(client.data.name).toBe('Alice')
+    })
   })
 
   describe('handleCursorMove', () => {
