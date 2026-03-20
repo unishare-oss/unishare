@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useCollab, type Participant } from '@/contexts/collab-context'
+import { useCollabPresence, type Participant } from '@/contexts/collab-context'
 import { PRESENCE_COLORS } from '@/src/lib/presence'
 
 /** Extract initials: "Alice Bob" → "AB", "SleepyOtter" → "SL", "A" → "A" */
@@ -26,7 +26,7 @@ function getInitials(name: string): string {
 const MAX_VISIBLE_AVATARS = 3
 
 function ParticipantAvatars() {
-  const { participants, socketId } = useCollab()
+  const { participants, socketId } = useCollabPresence()
 
   if (participants.length === 0) return null
 

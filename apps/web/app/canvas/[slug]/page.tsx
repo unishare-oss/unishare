@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { DoorClosed, Loader2 } from 'lucide-react'
 import { CanvasHeader } from '@/src/components/canvas/canvas-header'
 import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
-import { CollabProvider, useCollab } from '@/contexts/collab-context'
+import { CollabProvider, useCollab, useCollabPresence } from '@/contexts/collab-context'
 
 const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
   ssr: false,
@@ -80,7 +80,8 @@ export default function CanvasPage() {
 }
 
 function CanvasInner() {
-  const { connectionStatus, emitCursorMove } = useCollab()
+  const { connectionStatus } = useCollab()
+  const { emitCursorMove } = useCollabPresence()
 
   if (connectionStatus === 'connecting') {
     return (

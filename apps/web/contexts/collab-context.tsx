@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -31,6 +32,11 @@ export interface CursorData {
   colorIndex: number
 }
 
+// ─── Core context ────────────────────────────────────────────────────────────
+// Stable values: Y.Doc, Excalidraw API, connection status.
+// ExcalidrawWrapper consumes ONLY this context so it is never re-rendered by
+// cursor-move events (which update CollabPresenceContext at 30fps).
+
 interface CollabContextValue {
   ydoc: Y.Doc
   yElements: Y.Array<unknown>
@@ -38,9 +44,17 @@ interface CollabContextValue {
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
   initialElements: unknown[] | null
+}
+
+// ─── Presence context ────────────────────────────────────────────────────────
+// High-frequency values: cursors (30fps), participants, cursor emit.
+// Only CursorOverlay, CanvasHeader, and the pointer-move handler consume this.
+
+interface CollabPresenceContextValue {
   remoteCursors: Map<string, CursorData>
   participants: Participant[]
   socketId: string | null
+  excalidrawAPI: ExcalidrawImperativeAPI | null
   emitCursorMove: (e: React.PointerEvent<HTMLElement>) => void
 }
 
@@ -50,6 +64,7 @@ interface CollabProviderProps {
 }
 
 const CollabContext = createContext<CollabContextValue | null>(null)
+const CollabPresenceContext = createContext<CollabPresenceContextValue | null>(null)
 
 export function CollabProvider({ slug, children }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
@@ -73,7 +88,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
       withCredentials: true,
       autoConnect: false,
       // Force WebSocket transport — avoids HTTP polling 413 errors on large Yjs payloads.
-      // Polling has a body size limit; WebSocket does not.
       transports: ['websocket'],
     })
 
@@ -91,7 +105,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
       setConnectionStatus('connected')
       hasJoined.current = true
       if (isReconnect) {
-        // Show "Reconnected" only after room-joined confirms state is refreshed
         toast.dismiss('collab-status')
         toast.success('Reconnected', { duration: 2000 })
       }
@@ -103,7 +116,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
 
     socket.on('participant-list', (list: Participant[]) => {
       setParticipants(list)
-      // Initialize cursor entries for others only (filter out self)
       const others = list.filter((p) => p.socketId !== socket.id)
       setRemoteCursors(
         new Map(
@@ -114,7 +126,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
 
     socket.on('participant-joined', (p: Participant) => {
       setParticipants((prev) => [...prev, p])
-      // Only add cursor entry if it's not self (shouldn't be, but guard)
       if (p.socketId !== socket.id) {
         setRemoteCursors((prev) =>
           new Map(prev).set(p.socketId, { x: 0, y: 0, name: p.name, colorIndex: p.colorIndex }),
@@ -144,8 +155,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
 
     socket.on('disconnect', () => {
       setConnectionStatus('disconnected')
-      // Clear presence state so reconnect gets a clean slate — stale cursors/participants
-      // would otherwise persist until the next participant-list event arrives.
       setParticipants([])
       setRemoteCursors(new Map())
       toast.error('Connection lost — reconnecting...', { id: 'collab-status', duration: Infinity })
@@ -186,24 +195,36 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
     [excalidrawAPI],
   )
 
-  const value: CollabContextValue = {
-    ydoc,
-    yElements,
-    connectionStatus,
-    excalidrawAPI,
-    setExcalidrawAPI,
-    initialElements,
-    remoteCursors,
-    participants,
-    socketId,
-    emitCursorMove,
-  }
+  // Core value: stable fields only. useMemo ensures ExcalidrawWrapper's context
+  // subscription never triggers from presence updates.
+  const coreValue = useMemo<CollabContextValue>(
+    () => ({ ydoc, yElements, connectionStatus, excalidrawAPI, setExcalidrawAPI, initialElements }),
+    [ydoc, yElements, connectionStatus, excalidrawAPI, setExcalidrawAPI, initialElements],
+  )
 
-  return <CollabContext value={value}>{children}</CollabContext>
+  // Presence value: high-frequency fields. CursorOverlay and CanvasHeader only.
+  const presenceValue = useMemo<CollabPresenceContextValue>(
+    () => ({ remoteCursors, participants, socketId, excalidrawAPI, emitCursorMove }),
+    [remoteCursors, participants, socketId, excalidrawAPI, emitCursorMove],
+  )
+
+  return (
+    <CollabContext value={coreValue}>
+      <CollabPresenceContext value={presenceValue}>{children}</CollabPresenceContext>
+    </CollabContext>
+  )
 }
 
+/** Core collab state: Y.Doc, connection, Excalidraw API. Used by ExcalidrawWrapper. */
 export function useCollab() {
   const context = useContext(CollabContext)
   if (!context) throw new Error('useCollab must be used within a CollabProvider')
+  return context
+}
+
+/** Presence state: cursors, participants, cursor emit. Used by CursorOverlay, CanvasHeader, page. */
+export function useCollabPresence() {
+  const context = useContext(CollabPresenceContext)
+  if (!context) throw new Error('useCollabPresence must be used within a CollabProvider')
   return context
 }

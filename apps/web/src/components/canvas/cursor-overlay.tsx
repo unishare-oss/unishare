@@ -1,13 +1,13 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { useCollab } from '@/contexts/collab-context'
+import { useCollabPresence } from '@/contexts/collab-context'
 import { PRESENCE_COLORS } from '@/src/lib/presence'
 import { sceneToOverlay } from '@/src/lib/cursor-coords'
 import { RemoteCursor } from './remote-cursor'
 
 export function CursorOverlay() {
-  const { remoteCursors, excalidrawAPI } = useCollab()
+  const { remoteCursors, excalidrawAPI } = useCollabPresence()
   const containerRef = useRef<HTMLDivElement>(null)
   const [, setScrollTick] = useState(0)
 
