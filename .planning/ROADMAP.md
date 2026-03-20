@@ -104,7 +104,7 @@ Plans:
 **Goal**: Live cursor positions and participant list displayed in real-time
 **Depends on**: Phase 4
 **Requirements**: COLB-02, COLB-03
-**Plans:** 1/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 
@@ -147,4 +147,4 @@ Plans:
 | 2. Guest Identity & Auth         | Complete | 2026-03-20  |
 | 3. WebSocket Gateway & Yjs Relay | Complete | 2026-03-20  |
 | 4. Canvas UI & Drawing Tools     | Complete | 2026-03-20  |
-| 5. Presence & Awareness          | 1/4      | In Progress |     | 6. Board Persistence & Export | Not started | -   |
+| 5. Presence & Awareness          | 3/4      | In Progress |     | 6. Board Persistence & Export | Not started | -   |

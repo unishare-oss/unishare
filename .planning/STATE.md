@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 05
 status: unknown
-last_updated: '2026-03-20T17:50:22.053Z'
+last_updated: '2026-03-20T19:50:35.140Z'
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -65,6 +65,8 @@ progress:
 - [Phase 05]: socket.data presence metadata (colorIndex, name) assigned BEFORE client.join(slug) so fetchSockets sees the joining socket's data
 - [Phase 05]: hashToColorIndex uses djb2 bit-shifting hash, deterministic color slot 0-9 per userId
 - [Phase 05]: handleDisconnect gets slug BEFORE removeSocket to avoid race condition on slug lookup
+- [Phase 05]: emitCursorMove uses inline screen→scene coord conversion (not sceneToOverlay) — rendering vs emission separation
+- [Phase 05]: socketRef pattern stores socket in ref for useCallback access without stale closures
 
 ## Performance Metrics
 
@@ -80,6 +82,7 @@ progress:
 | Phase 04 P03 | ~30min | 2 tasks      | 2 files |
 | Phase 05 P02 | 102    | 2 tasks      | 4 files |
 | Phase 05 P01 | 300    | 2 tasks      | 2 files |
+| Phase 05 P03 | 10     | 1 tasks      | 1 files |
 
 ## Phase History
 
