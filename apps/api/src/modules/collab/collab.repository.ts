@@ -12,4 +12,17 @@ export class CollabRepository {
   async findBySlug(slug: string) {
     return this.prisma.room.findUnique({ where: { slug } })
   }
+
+  async findBySlugWithGuestFlag(slug: string) {
+    return this.prisma.room.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        ownerId: true,
+        isGuestEditingAllowed: true,
+      },
+    })
+  }
 }

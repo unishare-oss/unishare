@@ -1,11 +1,13 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { Session } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UserSession } from '@/auth/auth.config'
+import type { Request, Response } from 'express'
 import { CollabService } from './collab.service'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { RoomEntity } from './entities/room.entity'
+import { JoinRoomResponseDto } from './dto/join-room-response.dto'
 
 @ApiTags('collab')
 @Controller('rooms')
@@ -24,5 +26,18 @@ export class CollabController {
   @ResponseMessage('Room fetched successfully')
   findBySlug(@Param('slug') slug: string) {
     return this.collabService.getRoomBySlug(slug)
+  }
+
+  @Post(':slug/join')
+  @OptionalAuth()
+  @ApiCreatedResponse({ type: JoinRoomResponseDto })
+  @ResponseMessage('Room joined successfully')
+  async joinRoom(
+    @Param('slug') slug: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Session() session: UserSession | null,
+  ) {
+    return this.collabService.joinRoom(slug, session, req, res)
   }
 }
