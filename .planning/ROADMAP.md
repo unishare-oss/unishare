@@ -8,7 +8,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 
 - [x] **Phase 1: Data Model & Module Skeleton** - Prisma Room model, CollabModule skeleton, room CRUD REST endpoints (completed 2026-03-20)
 - [x] **Phase 2: Guest Identity & Auth** - Better Auth anonymous plugin; unauthenticated users get an anonymous session before joining a room (completed 2026-03-20)
-- [ ] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave
+- [x] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave (completed 2026-03-20)
 - [ ] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional
 - [ ] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time
 - [ ] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow
@@ -61,7 +61,7 @@ Plans:
 **Goal**: NestJS WebSocket gateway on port 3001 (shared), Yjs update relay between clients, basic room join/leave
 **Depends on**: Phase 2
 **Requirements**: COLB-01
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
@@ -124,10 +124,10 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status      | Completed   |
-| -------------------------------- | ----------- | ----------- | --- | ---------------------------- | ----------- | --- |
-| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20  |
-| 2. Guest Identity & Auth         | Complete    | 2026-03-20  |
-| 3. WebSocket Gateway & Yjs Relay | 1/2         | In Progress |     | 4. Canvas UI & Drawing Tools | Not started | -   |
-| 5. Presence & Awareness          | Not started | -           |
-| 6. Board Persistence & Export    | Not started | -           |
+| Phase                            | Status      | Completed  |
+| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | ----------- | --- |
+| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
+| 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
+| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | Not started | -   |
+| 5. Presence & Awareness          | Not started | -          |
+| 6. Board Persistence & Export    | Not started | -          |

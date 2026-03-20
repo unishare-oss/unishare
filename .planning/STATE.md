@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 03
 status: unknown
-last_updated: '2026-03-20T09:09:29.211Z'
+last_updated: '2026-03-20T09:15:55.253Z'
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -17,7 +17,7 @@ progress:
 **Last updated:** 2026-03-20
 **Current phase:** 03
 **Phase status:** Complete
-**Last session stopped at:** Completed 03-01-PLAN.md
+**Last session stopped at:** Completed 03-02-PLAN.md
 
 ## Current Phase
 
@@ -51,6 +51,8 @@ progress:
 - [Phase 02]: pruneAnonymousUsers cron runs at 00:20 to avoid collision with existing jobs at 00:00, 00:05, 00:15
 - [Phase 03]: socket.io namespace middleware used in afterInit() for connection-time auth (not WsGuard)
 - [Phase 03]: socket.io added as explicit direct dep to apps/api for pnpm strict resolution
+- [Phase 03]: Per-test unique room slugs required in integration tests because CollabRoomService is a singleton — shared slugs cause Y.Doc state cross-contamination
+- [Phase 03]: Y.encodeStateAsUpdate() required for yjs-update relay tests — raw bytes fail Y.applyUpdate and abort relay before emitting to other clients
 
 ## Performance Metrics
 
@@ -60,6 +62,7 @@ progress:
 | Phase 02 P01 | 1297 | 3 tasks      | 8 files |
 | Phase 02 P02 | 300  | 2 tasks      | 2 files |
 | Phase 03 P01 | 595  | 2 tasks      | 7 files |
+| Phase 03 P02 | 480  | 1 tasks      | 1 files |
 
 ## Phase History
 
