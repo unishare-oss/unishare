@@ -55,7 +55,6 @@ Carry-forward from Phase 4/5 — no new type roles introduced.
 | Body    | 14px | 400 (regular)  | 1.5         | Dropdown item labels, tooltip text, error body copy            |
 | Label   | 12px | 400 (regular)  | 1.4         | Participant "(you)" indicator, avatar initials, overflow badge |
 | Heading | 16px | 600 (semibold) | 1.2         | Error page heading ("Room not found")                          |
-| Display | 20px | 700 (bold)     | 1.2         | Not used in this phase                                         |
 
 Font stack: `font-sans` → `'Geist', 'Geist Fallback'`; `font-mono` → `'Geist Mono', 'Geist Mono Fallback'` (logo only).
 
