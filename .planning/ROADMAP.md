@@ -61,7 +61,7 @@ Plans:
 **Goal**: NestJS WebSocket gateway on port 3001 (shared), Yjs update relay between clients, basic room join/leave
 **Depends on**: Phase 2
 **Requirements**: COLB-01
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 
@@ -124,11 +124,10 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- |
-| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
-| 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
-| 3. WebSocket Gateway & Yjs Relay | Not started | -          |
-| 4. Canvas UI & Drawing Tools     | Not started | -          |
-| 5. Presence & Awareness          | Not started | -          |
-| 6. Board Persistence & Export    | Not started | -          |
+| Phase                            | Status      | Completed   |
+| -------------------------------- | ----------- | ----------- | --- | ---------------------------- | ----------- | --- |
+| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20  |
+| 2. Guest Identity & Auth         | Complete    | 2026-03-20  |
+| 3. WebSocket Gateway & Yjs Relay | 1/2         | In Progress |     | 4. Canvas UI & Drawing Tools | Not started | -   |
+| 5. Presence & Awareness          | Not started | -           |
+| 6. Board Persistence & Export    | Not started | -           |
