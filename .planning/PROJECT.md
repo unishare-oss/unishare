@@ -29,7 +29,7 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 - [ ] Real-time collaborative canvas (whiteboard, sticky notes, structured text docs)
 - [ ] Standalone collaboration rooms shareable via link
 - [ ] Collaboration rooms attachable to existing posts
-- [ ] Guest access — anyone with the link can join without signing up
+- [x] Guest access — anyone with the link can join without signing up — Validated in Phase 2: Guest Identity & Auth
 - [ ] Boards persist after all participants leave
 - [ ] Export board as image or PDF
 - [ ] Option to post an exported board directly to UniShare as a new post
@@ -57,12 +57,12 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 
 ## Key Decisions
 
-| Decision                     | Rationale                                                                                                              | Outcome   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- |
-| Canvas-first v1              | Ship the real-time experience first; uni-specific tools (flashcards, quizzes) only matter if the canvas actually works | — Pending |
-| Rooms as first-class objects | Rooms exist standalone AND attach to posts — more flexible, avoids post dependency                                     | — Pending |
-| Guest join via link          | Study groups span people without accounts; friction at join kills adoption                                             | — Pending |
+| Decision                     | Rationale                                                                                                              | Outcome                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Canvas-first v1              | Ship the real-time experience first; uni-specific tools (flashcards, quizzes) only matter if the canvas actually works | — Pending                                                                     |
+| Rooms as first-class objects | Rooms exist standalone AND attach to posts — more flexible, avoids post dependency                                     | — Pending                                                                     |
+| Guest join via link          | Study groups span people without accounts; friction at join kills adoption                                             | ✓ Shipped — Better Auth anonymous plugin; isAnonymous flag; 7-day TTL cleanup |
 
 ---
 
-_Last updated: 2026-03-20 after initialization_
+_Last updated: 2026-03-20 after Phase 2: Guest Identity & Auth_
