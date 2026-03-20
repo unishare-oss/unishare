@@ -78,22 +78,20 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
 
     socket.on('connect', () => {
       setSocketId(socket.id ?? null)
-      if (hasJoined.current) {
-        // Reconnect after disconnect
-        toast.dismiss('collab-status')
-        toast.success('Reconnected', { duration: 2000 })
-        socket.emit('join-room', slug)
-      } else {
-        // First connect
-        socket.emit('join-room', slug)
-      }
+      socket.emit('join-room', slug)
     })
 
     socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
+      const isReconnect = hasJoined.current
       Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
       setInitialElements(yElements.toArray())
       setConnectionStatus('connected')
       hasJoined.current = true
+      if (isReconnect) {
+        // Show "Reconnected" only after room-joined confirms state is refreshed
+        toast.dismiss('collab-status')
+        toast.success('Reconnected', { duration: 2000 })
+      }
     })
 
     socket.on('yjs-update', (data: ArrayBuffer) => {
@@ -143,6 +141,10 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
 
     socket.on('disconnect', () => {
       setConnectionStatus('disconnected')
+      // Clear presence state so reconnect gets a clean slate — stale cursors/participants
+      // would otherwise persist until the next participant-list event arrives.
+      setParticipants([])
+      setRemoteCursors(new Map())
       toast.error('Connection lost — reconnecting...', { id: 'collab-status', duration: Infinity })
     })
 
