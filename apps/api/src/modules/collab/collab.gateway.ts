@@ -26,6 +26,9 @@ const PRESENCE_COLORS_COUNT = 10
 @WebSocketGateway({
   namespace: '/collab',
   cors: { origin: allowedOrigins, credentials: true },
+  // Large Yjs state snapshots can exceed socket.io's default 1MB polling limit.
+  // Force WebSocket transport on the client side; this is a safety net for polling fallback.
+  maxHttpBufferSize: 100 * 1024 * 1024, // 100MB
 })
 export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server

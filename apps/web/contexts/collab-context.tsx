@@ -72,6 +72,9 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
     const socket = io(`${apiUrl}/collab`, {
       withCredentials: true,
       autoConnect: false,
+      // Force WebSocket transport — avoids HTTP polling 413 errors on large Yjs payloads.
+      // Polling has a body size limit; WebSocket does not.
+      transports: ['websocket'],
     })
 
     socketRef.current = socket
