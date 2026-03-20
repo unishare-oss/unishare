@@ -76,11 +76,11 @@ Font: Geist (sans). All sizes from the existing type scale.
 | Role    | Size | Weight         | Line Height | Usage                                                 |
 | ------- | ---- | -------------- | ----------- | ----------------------------------------------------- |
 | Body    | 14px | 400 (regular)  | 1.5         | Header nav link, button labels, toast text            |
-| Label   | 12px | 500 (medium)   | 1.4         | Secondary labels, status indicator text               |
+| Label   | 12px | 400 (regular)  | 1.4         | Secondary labels, status indicator text               |
 | Heading | 20px | 600 (semibold) | 1.2         | Error page heading ("Room not found")                 |
 | Display | 14px | 600 (semibold) | 1.5         | Loading overlay status text ("Connecting to room...") |
 
-**Weights declared:** 400 (regular) and 600 (semibold). Weight 500 is used only for the 12px label role and maps to Tailwind `font-medium`.
+**Weights declared:** 400 (regular) and 600 (semibold) only. The 12px Label role relies on its smaller size — not a third weight — to distinguish it from the 14px Body role.
 
 ---
 
@@ -107,6 +107,8 @@ The canvas route inherits the active theme's CSS variables. Contracts below refe
 
 ### Surface 1: Canvas Header Bar
 
+**Primary visual anchor:** The UniShare logo mark on the left edge. It is the first element the eye reaches and establishes the brand frame for the collaboration session.
+
 **Layout:** Fixed 48px-tall bar. Flex row, `items-center`, `justify-between`. Horizontal padding 16px. Background: `var(--card)`. Bottom border: 1px solid `var(--border)`.
 
 **Left slot:** UniShare wordmark or logo mark (existing asset from the app shell). Wrapped in a Next.js `<Link href="/feed">` — functions as "back to feed" navigation. No label text — logo only. Touch target: 44px height minimum.
@@ -120,6 +122,8 @@ The canvas route inherits the active theme's CSS variables. Contracts below refe
 ---
 
 ### Surface 2: Loading Overlay
+
+**Primary visual anchor:** The spinner at the vertical and horizontal center of the viewport. The status text directly below it is secondary.
 
 **Trigger:** Mounted immediately when the canvas page loads, unmounted only after `connectionStatus === 'connected'` (socket connected AND `room-joined` received). Excalidraw does not mount while this overlay is visible.
 
@@ -136,6 +140,8 @@ The canvas route inherits the active theme's CSS variables. Contracts below refe
 ---
 
 ### Surface 3: Error Page (Room Not Found)
+
+**Primary visual anchor:** The `DoorClosed` icon paired with the "Room not found" heading directly below it. The icon anchors the visual weight; the heading names the problem.
 
 **Trigger:** Rendered when `POST /api/rooms/:slug/join` returns HTTP 404. Replaces the loading overlay. No socket connection is attempted.
 
