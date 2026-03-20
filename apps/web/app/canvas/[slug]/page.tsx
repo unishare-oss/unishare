@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { DoorClosed, Loader2 } from 'lucide-react'
 import { CanvasHeader } from '@/src/components/canvas/canvas-header'
+import { CollabProvider, useCollab } from '@/contexts/collab-context'
 
-type PageState = 'loading' | 'connected' | 'not-found'
+const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
+  ssr: false,
+})
+
+type JoinState = 'joining' | 'joined' | 'not-found'
 
 export default function CanvasPage() {
   const { slug } = useParams<{ slug: string }>()
-  const [pageState, setPageState] = useState<PageState>('loading')
+  const [joinState, setJoinState] = useState<JoinState>('joining')
 
   useEffect(() => {
     const joinRoom = async () => {
@@ -21,24 +27,20 @@ export default function CanvasPage() {
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
         })
-        if (res.status === 404) {
-          setPageState('not-found')
-          return
-        }
         if (!res.ok) {
-          setPageState('not-found')
+          setJoinState('not-found')
           return
         }
-        setPageState('connected')
+        setJoinState('joined')
       } catch {
-        setPageState('not-found')
+        setJoinState('not-found')
       }
     }
     joinRoom()
   }, [slug])
 
   // Error page — Surface 3 from UI-SPEC
-  if (pageState === 'not-found') {
+  if (joinState === 'not-found') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
         <DoorClosed className="h-12 w-12 text-muted-foreground" />
@@ -53,8 +55,8 @@ export default function CanvasPage() {
     )
   }
 
-  // Loading overlay — Surface 2 from UI-SPEC
-  if (pageState === 'loading') {
+  // Loading overlay while HTTP join in-flight
+  if (joinState === 'joining') {
     return (
       <div
         className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-background"
@@ -68,15 +70,36 @@ export default function CanvasPage() {
     )
   }
 
-  // Connected state — canvas shell (Excalidraw mounted here in Plan 03)
+  // Join succeeded — mount CollabProvider which opens socket
+  return (
+    <CollabProvider slug={slug}>
+      <CanvasInner />
+    </CollabProvider>
+  )
+}
+
+function CanvasInner() {
+  const { connectionStatus } = useCollab()
+
+  if (connectionStatus === 'connecting') {
+    return (
+      <div
+        className="fixed inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-background"
+        role="status"
+        aria-live="polite"
+        aria-label="Connecting to collaboration room"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm font-semibold text-foreground">Connecting to room...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen flex-col">
       <CanvasHeader />
       <main className="relative flex-1">
-        {/* Excalidraw will be mounted here by Plan 03 */}
-        <div className="flex h-full items-center justify-center text-muted-foreground">
-          Canvas loading...
-        </div>
+        <ExcalidrawWrapper />
       </main>
     </div>
   )
