@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import * as Y from 'yjs'
 import { io } from 'socket.io-client'
 import { toast } from 'sonner'
@@ -29,12 +29,10 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
   const [initialElements, setInitialElements] = useState<unknown[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
 
-  const ydocRef = useRef<Y.Doc>(new Y.Doc())
-  const yElementsRef = useRef<Y.Array<unknown>>(ydocRef.current.getArray('elements'))
+  const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
+  const [yElements] = useState<Y.Array<unknown>>(() => ydoc.getArray('elements'))
 
   useEffect(() => {
-    const ydoc = ydocRef.current
-    const yElements = yElementsRef.current
     const hasJoined = { current: false }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -82,11 +80,11 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
       socket.disconnect()
       ydoc.destroy()
     }
-  }, [slug])
+  }, [slug, ydoc, yElements])
 
   const value: CollabContextValue = {
-    ydoc: ydocRef.current,
-    yElements: yElementsRef.current,
+    ydoc,
+    yElements,
     connectionStatus,
     excalidrawAPI,
     setExcalidrawAPI,

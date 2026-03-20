@@ -22,7 +22,6 @@ describe('Yjs sync logic', () => {
 
   it('remote origin update does NOT trigger socket emit', () => {
     const ydoc = new Y.Doc()
-    const yElements = ydoc.getArray('elements')
     const mockEmit = vi.fn()
 
     ydoc.on('update', (update: Uint8Array, origin: unknown) => {
@@ -46,7 +45,6 @@ describe('Yjs sync logic', () => {
 
   it('init origin update does NOT trigger socket emit', () => {
     const ydoc = new Y.Doc()
-    const yElements = ydoc.getArray('elements')
     const mockEmit = vi.fn()
 
     ydoc.on('update', (update: Uint8Array, origin: unknown) => {
