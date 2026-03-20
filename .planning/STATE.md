@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 status: unknown
-last_updated: '2026-03-20T15:17:06.539Z'
+last_updated: '2026-03-20T15:50:00.000Z'
 progress:
   total_phases: 6
   completed_phases: 4
@@ -16,8 +16,8 @@ progress:
 
 **Last updated:** 2026-03-20
 **Current phase:** 04
-**Phase status:** Complete
-**Last session stopped at:** Completed 03-02-PLAN.md
+**Phase status:** Complete (all 3 plans verified)
+**Last session stopped at:** Completed 04-03-PLAN.md
 
 ## Current Phase
 
@@ -59,19 +59,20 @@ progress:
 - [Phase 04]: ExcalidrawElement imported from @excalidraw/excalidraw/element/types (not re-exported from main index)
 - [Phase 04]: isApplyingRemoteRef boolean ref chosen to prevent onChange<->observe infinite loop in ExcalidrawWrapper
 - [Phase 04]: CollabProvider mounted only after HTTP join succeeds — avoids opening socket on 404 rooms
+- [Phase 04]: BinaryFiles not synced via Yjs — images pasted onto canvas and library items do not propagate to remote sessions; deferred to Phase 6 (Board Persistence & Export)
 
 ## Performance Metrics
 
-| Phase        | Plan | Duration (s) | Tasks   | Files |
-| ------------ | ---- | ------------ | ------- | ----- |
-| 01           | 01   | 3246         | 3       | 12    |
-| Phase 02 P01 | 1297 | 3 tasks      | 8 files |
-| Phase 02 P02 | 300  | 2 tasks      | 2 files |
-| Phase 03 P01 | 595  | 2 tasks      | 7 files |
-| Phase 03 P02 | 480  | 1 tasks      | 1 files |
-| Phase 04 P01 | 120  | 1 tasks      | 4 files |
-| Phase 04 P02 | 287  | 2 tasks      | 4 files |
-| Phase 04 P03 | 147  | 1 tasks      | 2 files |
+| Phase        | Plan   | Duration (s) | Tasks   | Files |
+| ------------ | ------ | ------------ | ------- | ----- |
+| 01           | 01     | 3246         | 3       | 12    |
+| Phase 02 P01 | 1297   | 3 tasks      | 8 files |
+| Phase 02 P02 | 300    | 2 tasks      | 2 files |
+| Phase 03 P01 | 595    | 2 tasks      | 7 files |
+| Phase 03 P02 | 480    | 1 tasks      | 1 files |
+| Phase 04 P01 | 120    | 1 tasks      | 4 files |
+| Phase 04 P02 | 287    | 2 tasks      | 4 files |
+| Phase 04 P03 | ~30min | 2 tasks      | 2 files |
 
 ## Phase History
 

@@ -53,10 +53,10 @@ completed: 2026-03-20
 
 ## Performance
 
-- **Duration:** 3 min
+- **Duration:** ~30 min (including human verification)
 - **Started:** 2026-03-20T15:13:34Z
-- **Completed:** 2026-03-20T15:16:41Z
-- **Tasks:** 1 (Task 2 is human verification checkpoint — awaiting)
+- **Completed:** 2026-03-20T15:45:00Z
+- **Tasks:** 2 (Task 1 auto, Task 2 human-verify — approved)
 - **Files modified:** 2
 
 ## Accomplishments
@@ -66,14 +66,16 @@ completed: 2026-03-20
 - Excalidraw theme maps from active UniShare theme class to light/dark
 - Initial board state from room-joined event passed via initialData.elements
 - Build passes cleanly
+- Human verification confirmed: canvas loads, all 7 drawing tool groups work, two-way real-time sync between tabs works, remote undo isolation works, error page renders for invalid slugs
 
 ## Task Commits
 
 Each task was committed atomically:
 
 1. **Task 1: Create ExcalidrawWrapper with two-way Yjs sync and wire into canvas page** - `30bd235` (feat)
+2. **Task 2: Verify canvas route and drawing tools in browser** - human-verify checkpoint, approved by user
 
-**Plan metadata:** (pending — after Task 2 checkpoint)
+**Plan metadata:** `8011aa8` (docs: complete excalidraw wiring plan summary and state)
 
 ## Files Created/Modified
 
@@ -96,10 +98,28 @@ The only discovery was the correct TypeScript import path for `ExcalidrawElement
 
 None.
 
+## Known Gaps (Not Blocking — Deferred)
+
+Two gaps were discovered during human verification that are out of scope for this plan. Both share the same root cause: only `yElements` (Excalidraw elements array) is synced via Yjs; `BinaryFiles` (the map of file ID to blob data) is not included in the sync payload.
+
+**Gap 1: Imported images do not appear in remote sessions**
+
+- When a user pastes or drags an image onto the canvas, Excalidraw stores blob data in `BinaryFiles` (keyed by file hash). The image element references the file by ID. Remote clients receive the element (the image placeholder) but never receive the binary file data, so the image renders as a blank placeholder.
+- Deferred to Phase 6 (Board Persistence & Export) where file storage is planned.
+
+**Gap 2: Excalidraw library items cannot be imported across sessions**
+
+- Same root cause — library items that reference file assets rely on `BinaryFiles` being present on the receiving client.
+- Deferred to Phase 6.
+
+Both gaps are non-blocking for the core collaborative drawing use case (shapes, text, freehand, sticky notes all sync correctly).
+
 ## Next Phase Readiness
 
-- Full collaborative canvas at /canvas/:slug ready for human verification (Task 2 checkpoint)
-- After verification, Phase 5 (Presence & Awareness) can build on CollabProvider's excalidrawAPI ref and existing socket infrastructure
+- Full collaborative canvas at /canvas/:slug verified working by human smoke-test
+- All 7 CANV requirements (CANV-01 through CANV-07) confirmed met
+- Phase 5 (Presence & Awareness) can build on CollabProvider's excalidrawAPI ref and existing socket infrastructure
+- Phase 6 (Board Persistence & Export) should address BinaryFiles sync for image and library support
 
 ## Self-Check: PASSED
 

@@ -65,8 +65,8 @@ Plans:
 
 Plans:
 
-- [ ] 03-01-PLAN.md — CollabGateway + CollabRoomService + IoAdapter setup + unit tests
-- [ ] 03-02-PLAN.md — Integration tests with socket.io-client verifying end-to-end relay
+- [x] 03-01-PLAN.md — CollabGateway + CollabRoomService + IoAdapter setup + unit tests
+- [x] 03-02-PLAN.md — Integration tests with socket.io-client verifying end-to-end relay
 
 **Success Criteria** (what must be TRUE):
 
@@ -86,9 +86,9 @@ Plans:
 
 Plans:
 
-- [ ] 04-01-PLAN.md — Canvas route shell, join-first flow, header/loading/error surfaces, dependency install
-- [ ] 04-02-PLAN.md — CollabProvider context (Y.Doc + socket.io), vitest setup, sync logic unit tests
-- [ ] 04-03-PLAN.md — ExcalidrawWrapper with two-way Yjs sync, page wiring, human verification
+- [x] 04-01-PLAN.md — Canvas route shell, join-first flow, header/loading/error surfaces, dependency install
+- [x] 04-02-PLAN.md — CollabProvider context (Y.Doc + socket.io), vitest setup, sync logic unit tests
+- [x] 04-03-PLAN.md — ExcalidrawWrapper with two-way Yjs sync, page wiring, human verification
 
 **Success Criteria** (what must be TRUE):
 
@@ -133,8 +133,10 @@ Plans:
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | --- | -------- | ---------- | ----------------------- | ----------- | --- |
+| -------------------------------- | ----------- | ---------- |
 | 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
 | 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
-| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | 3/3 | Complete | 2026-03-20 | 5. Presence & Awareness | Not started | -   |
+| 3. WebSocket Gateway & Yjs Relay | Complete    | 2026-03-20 |
+| 4. Canvas UI & Drawing Tools     | Complete    | 2026-03-20 |
+| 5. Presence & Awareness          | Not started | -          |
 | 6. Board Persistence & Export    | Not started | -          |
