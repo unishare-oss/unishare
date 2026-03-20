@@ -57,12 +57,13 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 
 ## Key Decisions
 
-| Decision                     | Rationale                                                                                                              | Outcome                                                                       |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Canvas-first v1              | Ship the real-time experience first; uni-specific tools (flashcards, quizzes) only matter if the canvas actually works | — Pending                                                                     |
-| Rooms as first-class objects | Rooms exist standalone AND attach to posts — more flexible, avoids post dependency                                     | — Pending                                                                     |
-| Guest join via link          | Study groups span people without accounts; friction at join kills adoption                                             | ✓ Shipped — Better Auth anonymous plugin; isAnonymous flag; 7-day TTL cleanup |
+| Decision                     | Rationale                                                                                                              | Outcome                                                                                |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Canvas-first v1              | Ship the real-time experience first; uni-specific tools (flashcards, quizzes) only matter if the canvas actually works | — Pending                                                                              |
+| Rooms as first-class objects | Rooms exist standalone AND attach to posts — more flexible, avoids post dependency                                     | — Pending                                                                              |
+| Guest join via link          | Study groups span people without accounts; friction at join kills adoption                                             | ✓ Shipped — Better Auth anonymous plugin; isAnonymous flag; 7-day TTL cleanup          |
+| Yjs for CRDT sync            | Conflict-free real-time state merging without operational transforms; socket.io relays binary updates                  | ✓ Shipped — CollabGateway on /collab namespace; in-memory Y.Doc per room with 5-min GC |
 
 ---
 
-_Last updated: 2026-03-20 after Phase 2: Guest Identity & Auth_
+_Last updated: 2026-03-20 after Phase 3: WebSocket Gateway & Yjs Relay_
