@@ -7,8 +7,8 @@ import { TrendingService } from '../src/modules/trending/trending.service'
 
 describe('Trending Feed (e2e)', () => {
   let app: INestApplication
-  let prisma: PrismaService
-  let trendingService: TrendingService
+  let _prisma: PrismaService
+  let _trendingService: TrendingService
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,8 +16,8 @@ describe('Trending Feed (e2e)', () => {
     }).compile()
 
     app = moduleFixture.createNestApplication()
-    prisma = moduleFixture.get<PrismaService>(PrismaService)
-    trendingService = moduleFixture.get<TrendingService>(TrendingService)
+    _prisma = moduleFixture.get<PrismaService>(PrismaService)
+    _trendingService = moduleFixture.get<TrendingService>(TrendingService)
 
     await app.init()
   })

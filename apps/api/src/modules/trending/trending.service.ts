@@ -40,7 +40,6 @@ export class TrendingService {
 
         // Reaction count is higher signal than views
         const reactionCount = post.reactions.length
-        const commentCount = post.comments.length
 
         // Base score: (views * 0.3 + reactions * 0.7)
         const engagementScore = post.views * 0.3 + reactionCount * 0.7

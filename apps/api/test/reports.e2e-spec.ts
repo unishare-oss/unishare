@@ -6,7 +6,7 @@ import { PrismaService } from '../src/prisma/prisma.service'
 
 describe('Content Reporting (e2e)', () => {
   let app: INestApplication
-  let prisma: PrismaService
+  let _prisma: PrismaService
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({

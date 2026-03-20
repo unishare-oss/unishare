@@ -9,7 +9,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common'
 import { ApiTags, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger'
-import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ReportsService } from './reports.service'
 import { CreateReportDto } from './dto/create-report.dto'
