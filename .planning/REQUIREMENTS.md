@@ -15,7 +15,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CANV-04**: User can add and edit text boxes on the canvas
 - [x] **CANV-05**: User can add color-coded sticky notes to the canvas
 - [x] **CANV-06**: User can select, move, resize, and delete canvas objects
-- [ ] **CANV-07**: User can undo and redo canvas actions
+- [x] **CANV-07**: User can undo and redo canvas actions
 
 ### Collaboration
 
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CANV-04     | 4     | Complete |
 | CANV-05     | 4     | Complete |
 | CANV-06     | 4     | Complete |
-| CANV-07     | 4     | Pending  |
+| CANV-07     | 4     | Complete |
 | COLB-01     | 3     | Complete |
 | COLB-02     | 5     | Pending  |
 | COLB-03     | 5     | Pending  |

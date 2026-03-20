@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 status: unknown
-last_updated: '2026-03-20T15:12:09.184Z'
+last_updated: '2026-03-20T15:17:06.539Z'
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -56,6 +56,9 @@ progress:
 - [Phase 04]: Proxy middleware already allows /canvas/\* via allowlist — no change needed
 - [Phase 04]: NEXT_PUBLIC_API_URL added to .env.example for browser-side socket.io-client
 - [Phase 04]: CollabProvider placed at apps/web/contexts/ to match existing auth-context.tsx project convention
+- [Phase 04]: ExcalidrawElement imported from @excalidraw/excalidraw/element/types (not re-exported from main index)
+- [Phase 04]: isApplyingRemoteRef boolean ref chosen to prevent onChange<->observe infinite loop in ExcalidrawWrapper
+- [Phase 04]: CollabProvider mounted only after HTTP join succeeds — avoids opening socket on 404 rooms
 
 ## Performance Metrics
 
@@ -68,6 +71,7 @@ progress:
 | Phase 03 P02 | 480  | 1 tasks      | 1 files |
 | Phase 04 P01 | 120  | 1 tasks      | 4 files |
 | Phase 04 P02 | 287  | 2 tasks      | 4 files |
+| Phase 04 P03 | 147  | 1 tasks      | 2 files |
 
 ## Phase History
 

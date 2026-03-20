@@ -9,7 +9,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 - [x] **Phase 1: Data Model & Module Skeleton** - Prisma Room model, CollabModule skeleton, room CRUD REST endpoints (completed 2026-03-20)
 - [x] **Phase 2: Guest Identity & Auth** - Better Auth anonymous plugin; unauthenticated users get an anonymous session before joining a room (completed 2026-03-20)
 - [x] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave (completed 2026-03-20)
-- [ ] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional
+- [x] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional (completed 2026-03-20)
 - [ ] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time
 - [ ] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow
 
@@ -82,7 +82,7 @@ Plans:
 **Goal**: Excalidraw embedded in Next.js canvas route, connected to Yjs provider, all drawing tools functional
 **Depends on**: Phase 3
 **Requirements**: CANV-01, CANV-02, CANV-03, CANV-04, CANV-05, CANV-06, CANV-07
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
@@ -133,8 +133,8 @@ Plans:
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | --- | ----------- | --- | ----------------------- | ----------- | --- |
+| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | --- | -------- | ---------- | ----------------------- | ----------- | --- |
 | 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
 | 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
-| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | 2/3 | In Progress |     | 5. Presence & Awareness | Not started | -   |
+| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | 3/3 | Complete | 2026-03-20 | 5. Presence & Awareness | Not started | -   |
 | 6. Board Persistence & Export    | Not started | -          |
