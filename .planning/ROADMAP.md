@@ -104,14 +104,14 @@ Plans:
 **Goal**: Live cursor positions and participant list displayed in real-time
 **Depends on**: Phase 4
 **Requirements**: COLB-02, COLB-03
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 
 Plans:
 
-- [ ] 05-01-PLAN.md — Backend gateway: cursor-move relay, participant join/leave events, tests
-- [ ] 05-02-PLAN.md — Frontend utilities: presence colors, hashToColorIndex, sceneToOverlay, TDD tests
-- [ ] 05-03-PLAN.md — CollabContext extensions: remote cursors, participants, throttled cursor emit
-- [ ] 05-04-PLAN.md — UI components: CursorOverlay, RemoteCursor, ParticipantAvatars, page wiring
+- [x] 05-01-PLAN.md — Backend gateway: cursor-move relay, participant join/leave events, tests
+- [x] 05-02-PLAN.md — Frontend utilities: presence colors, hashToColorIndex, sceneToOverlay, TDD tests
+- [x] 05-03-PLAN.md — CollabContext extensions: remote cursors, participants, throttled cursor emit
+- [x] 05-04-PLAN.md — UI components: CursorOverlay, RemoteCursor, ParticipantAvatars, page wiring
 
 **Success Criteria** (what must be TRUE):
 
@@ -141,10 +141,11 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status   | Completed   |
-| -------------------------------- | -------- | ----------- | --- | ----------------------------- | ----------- | --- |
-| 1. Data Model & Module Skeleton  | Complete | 2026-03-20  |
-| 2. Guest Identity & Auth         | Complete | 2026-03-20  |
-| 3. WebSocket Gateway & Yjs Relay | Complete | 2026-03-20  |
-| 4. Canvas UI & Drawing Tools     | Complete | 2026-03-20  |
-| 5. Presence & Awareness          | 3/4      | In Progress |     | 6. Board Persistence & Export | Not started | -   |
+| Phase                            | Status      | Completed  |
+| -------------------------------- | ----------- | ---------- |
+| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
+| 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
+| 3. WebSocket Gateway & Yjs Relay | Complete    | 2026-03-20 |
+| 4. Canvas UI & Drawing Tools     | Complete    | 2026-03-20 |
+| 5. Presence & Awareness          | Complete    | 2026-03-21 |
+| 6. Board Persistence & Export    | Not started | -          |
