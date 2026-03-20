@@ -26,9 +26,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Rooms
 
-- [ ] **ROOM-01**: Authenticated users can create a standalone collaboration room
-- [ ] **ROOM-02**: Each room has a unique shareable link
-- [ ] **ROOM-03**: Board state persists after all participants leave — room can be rejoined later
+- [x] **ROOM-01**: Authenticated users can create a standalone collaboration room
+- [x] **ROOM-02**: Each room has a unique shareable link
+- [x] **ROOM-03**: Board state persists after all participants leave — room can be rejoined later
 - [ ] **ROOM-04**: User can export the board as a PNG image
 
 ### Export & Integration
@@ -75,25 +75,25 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status  |
-| ----------- | ----- | ------- |
-| CANV-01     | 4     | Pending |
-| CANV-02     | 4     | Pending |
-| CANV-03     | 4     | Pending |
-| CANV-04     | 4     | Pending |
-| CANV-05     | 4     | Pending |
-| CANV-06     | 4     | Pending |
-| CANV-07     | 4     | Pending |
-| COLB-01     | 3     | Pending |
-| COLB-02     | 5     | Pending |
-| COLB-03     | 5     | Pending |
-| COLB-04     | 2     | Pending |
-| ROOM-01     | 1     | Pending |
-| ROOM-02     | 1     | Pending |
-| ROOM-03     | 1, 6  | Pending |
-| ROOM-04     | 6     | Pending |
-| EXPO-01     | 6     | Pending |
-| EXPO-02     | 6     | Pending |
+| Requirement | Phase | Status   |
+| ----------- | ----- | -------- |
+| CANV-01     | 4     | Pending  |
+| CANV-02     | 4     | Pending  |
+| CANV-03     | 4     | Pending  |
+| CANV-04     | 4     | Pending  |
+| CANV-05     | 4     | Pending  |
+| CANV-06     | 4     | Pending  |
+| CANV-07     | 4     | Pending  |
+| COLB-01     | 3     | Pending  |
+| COLB-02     | 5     | Pending  |
+| COLB-03     | 5     | Pending  |
+| COLB-04     | 2     | Pending  |
+| ROOM-01     | 1     | Complete |
+| ROOM-02     | 1     | Complete |
+| ROOM-03     | 1, 6  | Complete |
+| ROOM-04     | 6     | Pending  |
+| EXPO-01     | 6     | Pending  |
+| EXPO-02     | 6     | Pending  |
 
 **Coverage:**
 

@@ -6,7 +6,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 
 ## Phases
 
-- [ ] **Phase 1: Data Model & Module Skeleton** - Prisma Room model, CollabModule skeleton, room CRUD REST endpoints
+- [x] **Phase 1: Data Model & Module Skeleton** - Prisma Room model, CollabModule skeleton, room CRUD REST endpoints (completed 2026-03-20)
 - [ ] **Phase 2: Guest Identity & Auth** - Better Auth anonymous plugin; unauthenticated users get an anonymous session before joining a room
 - [ ] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave
 - [ ] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional
@@ -20,7 +20,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 **Goal**: Prisma Room model, CollabModule with service/repository/controller skeleton, room CRUD REST endpoints
 **Depends on**: Nothing (first phase)
 **Requirements**: ROOM-01, ROOM-02, ROOM-03
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 
@@ -111,9 +111,8 @@ Plans:
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                            | Status      | Completed |
-| -------------------------------- | ----------- | --------- |
-| 1. Data Model & Module Skeleton  | Planning    | -         |
-| 2. Guest Identity & Auth         | Not started | -         |
+| -------------------------------- | ----------- | --------- | ---------- | ------------------------ | ----------- | --- |
+| 1. Data Model & Module Skeleton  | 1/1         | Complete  | 2026-03-20 | 2. Guest Identity & Auth | Not started | -   |
 | 3. WebSocket Gateway & Yjs Relay | Not started | -         |
 | 4. Canvas UI & Drawing Tools     | Not started | -         |
 | 5. Presence & Awareness          | Not started | -         |
