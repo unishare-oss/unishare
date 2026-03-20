@@ -170,8 +170,8 @@ describe('CollabService', () => {
   })
 
   describe('joinRoom', () => {
-    const signInAnonymousMock = auth.api.signInAnonymous as jest.Mock
-    const getSessionMock = auth.api.getSession as jest.Mock
+    const signInAnonymousMock = auth.api.signInAnonymous as unknown as jest.Mock
+    const getSessionMock = auth.api.getSession as unknown as jest.Mock
 
     it('should call signInAnonymous and return isAnonymous: true when no session', async () => {
       repository.findBySlugWithGuestFlag.mockResolvedValue(mockRoom)
