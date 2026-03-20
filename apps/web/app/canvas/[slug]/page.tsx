@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { DoorClosed, Loader2 } from 'lucide-react'
 import { CanvasHeader } from '@/src/components/canvas/canvas-header'
+import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
 import { CollabProvider, useCollab } from '@/contexts/collab-context'
 
 const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
@@ -79,7 +80,7 @@ export default function CanvasPage() {
 }
 
 function CanvasInner() {
-  const { connectionStatus } = useCollab()
+  const { connectionStatus, emitCursorMove } = useCollab()
 
   if (connectionStatus === 'connecting') {
     return (
@@ -98,8 +99,9 @@ function CanvasInner() {
   return (
     <div className="flex h-screen flex-col">
       <CanvasHeader />
-      <main className="relative flex-1">
+      <main className="relative flex-1 overflow-hidden" onPointerMove={emitCursorMove}>
         <ExcalidrawWrapper />
+        <CursorOverlay />
       </main>
     </div>
   )
