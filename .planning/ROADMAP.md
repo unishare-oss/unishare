@@ -20,6 +20,12 @@ Six phases build the collaborative canvas feature from data model to exportable,
 **Goal**: Prisma Room model, CollabModule with service/repository/controller skeleton, room CRUD REST endpoints
 **Depends on**: Nothing (first phase)
 **Requirements**: ROOM-01, ROOM-02, ROOM-03
+**Plans:** 1 plan
+
+Plans:
+
+- [ ] 01-01-PLAN.md — Room model, collab module skeleton, CRUD endpoints, unit tests
+
 **Success Criteria** (what must be TRUE):
 
 1. POST /api/rooms creates a room and returns a unique slug/link
@@ -106,7 +112,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 
 | Phase                            | Status      | Completed |
 | -------------------------------- | ----------- | --------- |
-| 1. Data Model & Module Skeleton  | Not started | -         |
+| 1. Data Model & Module Skeleton  | Planning    | -         |
 | 2. Guest Identity & Auth         | Not started | -         |
 | 3. WebSocket Gateway & Yjs Relay | Not started | -         |
 | 4. Canvas UI & Drawing Tools     | Not started | -         |
