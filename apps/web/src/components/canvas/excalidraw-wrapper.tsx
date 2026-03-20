@@ -38,6 +38,15 @@ export function ExcalidrawWrapper() {
     (elements: readonly ExcalidrawElement[]) => {
       if (isApplyingRemoteRef.current) return
 
+      // Only write to Yjs when elements actually changed — Excalidraw fires onChange
+      // on every pointer event (appState changes), not just element mutations.
+      // Skipping no-op writes eliminates the constant 100-500KB Yjs update storm.
+      const current = yElements.toArray() as ExcalidrawElement[]
+      const unchanged =
+        elements.length === current.length &&
+        elements.every((el, i) => current[i]?.id === el.id && current[i]?.version === el.version)
+      if (unchanged) return
+
       ydoc.transact(() => {
         yElements.delete(0, yElements.length)
         yElements.insert(0, elements as unknown[])
