@@ -26,13 +26,19 @@ describe('CollabGateway', () => {
   let collabRepository: {
     findBySlug: jest.Mock
   }
+  let mockServerEmit: jest.Mock
+  let mockFetchSockets: jest.Mock
 
-  const makeSocket = (id = 'socket-1') => ({
+  const makeSocket = (id = 'socket-1', userId = 'user-1', userName = 'Test User') => ({
     id,
     join: jest.fn().mockResolvedValue(undefined),
     emit: jest.fn(),
     to: jest.fn().mockReturnValue({ emit: jest.fn() }),
-    data: { user: { id: 'user-1' } },
+    data: {
+      user: { id: userId, name: userName },
+      colorIndex: undefined as number | undefined,
+      name: undefined as string | undefined,
+    },
   })
 
   beforeEach(async () => {
@@ -60,6 +66,13 @@ describe('CollabGateway', () => {
     }).compile()
 
     gateway = module.get<CollabGateway>(CollabGateway)
+
+    mockServerEmit = jest.fn()
+    mockFetchSockets = jest.fn().mockResolvedValue([])
+    ;(gateway as any).server = {
+      in: jest.fn().mockReturnValue({ fetchSockets: mockFetchSockets }),
+      to: jest.fn().mockReturnValue({ emit: mockServerEmit }),
+    }
   })
 
   describe('handleJoinRoom', () => {
@@ -91,6 +104,34 @@ describe('CollabGateway', () => {
 
       expect(client.emit).toHaveBeenCalledWith('error', { message: 'Room not found' })
       expect(client.join).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('handleCursorMove', () => {
+    it('should relay cursor-move to room with socketId, not echo to sender', () => {
+      roomService.getRoomForSocket.mockReturnValue('test-slug')
+      const client = makeSocket()
+      const toEmit = jest.fn()
+      client.to.mockReturnValue({ emit: toEmit })
+
+      gateway.handleCursorMove(client as never, { x: 100, y: 200 })
+
+      expect(client.to).toHaveBeenCalledWith('test-slug')
+      expect(toEmit).toHaveBeenCalledWith('cursor-move', {
+        socketId: 'socket-1',
+        x: 100,
+        y: 200,
+      })
+      expect(client.emit).not.toHaveBeenCalled()
+    })
+
+    it('should return early when socket has no room', () => {
+      roomService.getRoomForSocket.mockReturnValue(undefined)
+      const client = makeSocket()
+
+      gateway.handleCursorMove(client as never, { x: 10, y: 20 })
+
+      expect(client.to).not.toHaveBeenCalled()
     })
   })
 
@@ -139,6 +180,27 @@ describe('CollabGateway', () => {
       gateway.handleDisconnect(client as never)
 
       expect(roomService.removeSocket).toHaveBeenCalledWith('socket-99')
+    })
+
+    it('should emit participant-left to room when socket had a room', () => {
+      roomService.getRoomForSocket.mockReturnValue('test-slug')
+      const client = makeSocket('socket-99')
+
+      gateway.handleDisconnect(client as never)
+
+      expect(roomService.removeSocket).toHaveBeenCalledWith('socket-99')
+      expect((gateway as any).server.to).toHaveBeenCalledWith('test-slug')
+      expect(mockServerEmit).toHaveBeenCalledWith('participant-left', { socketId: 'socket-99' })
+    })
+
+    it('should NOT emit participant-left when socket had no room', () => {
+      roomService.getRoomForSocket.mockReturnValue(undefined)
+      const client = makeSocket('socket-99')
+
+      gateway.handleDisconnect(client as never)
+
+      expect(roomService.removeSocket).toHaveBeenCalledWith('socket-99')
+      expect((gateway as any).server.to).not.toHaveBeenCalled()
     })
   })
 })
