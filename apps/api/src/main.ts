@@ -3,6 +3,7 @@ import helmet from 'helmet'
 import { NestFactory, Reflector } from '@nestjs/core'
 import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { IoAdapter } from '@nestjs/platform-socket.io'
 import { AppModule } from './app.module'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
@@ -51,6 +52,8 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config)
     SwaggerModule.setup('docs', app, document)
   }
+
+  app.useWebSocketAdapter(new IoAdapter(app))
 
   const port = process.env.PORT ?? 3001
   await app.listen(port)
