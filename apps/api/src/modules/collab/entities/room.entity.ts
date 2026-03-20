@@ -1,0 +1,21 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+
+export class RoomEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  slug: string
+
+  @ApiPropertyOptional({ nullable: true })
+  title: string | null
+
+  @ApiProperty()
+  ownerId: string
+
+  @ApiProperty()
+  createdAt: Date
+
+  @ApiProperty()
+  updatedAt: Date
+}
