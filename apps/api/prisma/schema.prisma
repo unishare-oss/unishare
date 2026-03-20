@@ -37,6 +37,9 @@ model User {
   postRequestFulfillments PostRequestFulfillment[]
   followers               Follow[]                 @relation("Following")
   following               Follow[]                 @relation("Followers")
+  reports                 Report[]                 @relation("ReportsSubmitted")
+  adminActions            AdminAction[]            @relation("AdminActions")
+  rooms                   Room[]
 
   @@map("user")
 }
@@ -85,6 +88,9 @@ model Post {
   externalUrl         String?
   shortCode           String                   @unique
   views               Int                      @default(0)
+  searchVector        Unsupported("tsvector")?
+  trendingScore       Float                    @default(0)
+  publicationStatus   PostPublicationStatus    @default(PUBLISHED)
   comments            Comment[]
   files               File[]
   notifications       Notification[]
@@ -93,13 +99,18 @@ model Post {
   postViews           PostView[]
   reactions           Reaction[]
   savedBy             SavedPost[]
+  tags                PostTag[]
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
+  reports             Report[]                 @relation("PostReports")
 
   @@index([authorId])
   @@index([courseId])
   @@index([type])
   @@index([status])
+  @@index([trendingScore])
+  @@index([publicationStatus])
+  @@index([createdAt])
   @@map("post")
 }
 
@@ -301,6 +312,20 @@ model PostRequestUpvote {
   @@map("post_request_upvote")
 }
 
+model Room {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String?
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  snapshot  Bytes?
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("room")
+}
+
 enum PostRequestStatus {
   OPEN
   FULFILLED
@@ -340,4 +365,84 @@ enum ReactionType {
   WOW
   SALUTE
   FUNNY
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  color     String    @default("#3B82F6")
+  createdAt DateTime  @default(now())
+  posts     PostTag[]
+
+  @@index([slug])
+  @@map("tag")
+}
+
+model PostTag {
+  postId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tag")
+}
+
+enum PostPublicationStatus {
+  PUBLISHED
+  PENDING_REVIEW // Soft-deleted: reported, pending admin review
+  REJECTED // Permanently deleted: admin rejected report
+}
+
+enum ReportReason {
+  SPAM // Duplicate, off-topic
+  OFFENSIVE // Inappropriate language
+  COPYRIGHT // IP violation
+  OTHER // Policy violation
+}
+
+enum ReportStatus {
+  PENDING // Awaiting admin review
+  APPROVED // Admin approved report
+  REJECTED // Admin rejected report (post remains published)
+}
+
+model Report {
+  id        String       @id @default(cuid())
+  postId    String
+  userId    String // Reporter
+  reason    ReportReason
+  comment   String?      @db.Text
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  post     Post @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
+  reporter User @relation("ReportsSubmitted", fields: [userId], references: [id], onDelete: Cascade)
+
+  adminAction AdminAction?
+
+  @@unique([postId, userId]) // One report per user per post
+  @@index([status])
+  @@index([reason])
+  @@index([createdAt])
+  @@map("report")
+}
+
+model AdminAction {
+  id        String   @id @default(cuid())
+  reportId  String   @unique
+  adminId   String
+  action    String // 'approve', 'reject'
+  reason    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  admin  User   @relation("AdminActions", fields: [adminId], references: [id])
+
+  @@index([createdAt])
+  @@map("admin_action")
 }
