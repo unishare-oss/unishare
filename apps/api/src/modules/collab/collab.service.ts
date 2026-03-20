@@ -3,7 +3,6 @@ import { nanoid } from 'nanoid'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response } from 'express'
 import { auth, type UserSession } from '@/auth/auth.config'
-import { generateGuestDisplayName } from '@/auth/guest-display-name'
 import { CollabRepository } from './collab.repository'
 import { CreateRoomDto } from './dto/create-room.dto'
 
