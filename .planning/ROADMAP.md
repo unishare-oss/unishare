@@ -44,8 +44,8 @@ Plans:
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Schema + auth config + join endpoint + anonymous session creation + unit tests
-- [ ] 02-02-PLAN.md — Anonymous user cleanup cron + unit tests
+- [x] 02-01-PLAN.md — Schema + auth config + join endpoint + anonymous session creation + unit tests
+- [x] 02-02-PLAN.md — Anonymous user cleanup cron + unit tests
 
 **Success Criteria** (what must be TRUE):
 
@@ -61,6 +61,13 @@ Plans:
 **Goal**: NestJS WebSocket gateway on port 3001 (shared), Yjs update relay between clients, basic room join/leave
 **Depends on**: Phase 2
 **Requirements**: COLB-01
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 03-01-PLAN.md — CollabGateway + CollabRoomService + IoAdapter setup + unit tests
+- [ ] 03-02-PLAN.md — Integration tests with socket.io-client verifying end-to-end relay
+
 **Success Criteria** (what must be TRUE):
 
 1. Two browser tabs can connect to the same room via WebSocket
@@ -117,10 +124,11 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                           | Status      | Completed  |
-| ------------------------------- | ----------- | ---------- | ---------- | -------------------------------- | ----------- | --- |
-| 1. Data Model & Module Skeleton | Complete    | 2026-03-20 |
-| 2. Guest Identity & Auth        | 2/2         | Complete   | 2026-03-20 | 3. WebSocket Gateway & Yjs Relay | Not started | -   |
-| 4. Canvas UI & Drawing Tools    | Not started | -          |
-| 5. Presence & Awareness         | Not started | -          |
-| 6. Board Persistence & Export   | Not started | -          |
+| Phase                            | Status      | Completed  |
+| -------------------------------- | ----------- | ---------- |
+| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
+| 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
+| 3. WebSocket Gateway & Yjs Relay | Not started | -          |
+| 4. Canvas UI & Drawing Tools     | Not started | -          |
+| 5. Presence & Awareness          | Not started | -          |
+| 6. Board Persistence & Export    | Not started | -          |
