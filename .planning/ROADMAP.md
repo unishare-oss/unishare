@@ -104,6 +104,15 @@ Plans:
 **Goal**: Live cursor positions and participant list displayed in real-time
 **Depends on**: Phase 4
 **Requirements**: COLB-02, COLB-03
+**Plans:** 4 plans
+
+Plans:
+
+- [ ] 05-01-PLAN.md — Backend gateway: cursor-move relay, participant join/leave events, tests
+- [ ] 05-02-PLAN.md — Frontend utilities: presence colors, hashToColorIndex, sceneToOverlay, TDD tests
+- [ ] 05-03-PLAN.md — CollabContext extensions: remote cursors, participants, throttled cursor emit
+- [ ] 05-04-PLAN.md — UI components: CursorOverlay, RemoteCursor, ParticipantAvatars, page wiring
+
 **Success Criteria** (what must be TRUE):
 
 1. User sees named, color-coded cursors for all other participants moving in real-time
