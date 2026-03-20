@@ -40,7 +40,7 @@ Plans:
 **Goal**: Better Auth anonymous plugin configured; unauthenticated users get an anonymous session before joining a room
 **Depends on**: Phase 1
 **Requirements**: COLB-04
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 
@@ -117,11 +117,10 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- |
-| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
-| 2. Guest Identity & Auth         | Planned     | -          |
-| 3. WebSocket Gateway & Yjs Relay | Not started | -          |
-| 4. Canvas UI & Drawing Tools     | Not started | -          |
-| 5. Presence & Awareness          | Not started | -          |
-| 6. Board Persistence & Export    | Not started | -          |
+| Phase                           | Status      | Completed   |
+| ------------------------------- | ----------- | ----------- | --- | -------------------------------- | ----------- | --- |
+| 1. Data Model & Module Skeleton | Complete    | 2026-03-20  |
+| 2. Guest Identity & Auth        | 1/2         | In Progress |     | 3. WebSocket Gateway & Yjs Relay | Not started | -   |
+| 4. Canvas UI & Drawing Tools    | Not started | -           |
+| 5. Presence & Awareness         | Not started | -           |
+| 6. Board Persistence & Export   | Not started | -           |
