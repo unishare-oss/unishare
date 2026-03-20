@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Canvas
 
-- [ ] **CANV-01**: User can pan and zoom an infinite canvas
-- [ ] **CANV-02**: User can draw freehand strokes on the canvas
-- [ ] **CANV-03**: User can add and edit geometric shapes (rectangle, circle, arrow, line)
-- [ ] **CANV-04**: User can add and edit text boxes on the canvas
-- [ ] **CANV-05**: User can add color-coded sticky notes to the canvas
-- [ ] **CANV-06**: User can select, move, resize, and delete canvas objects
+- [x] **CANV-01**: User can pan and zoom an infinite canvas
+- [x] **CANV-02**: User can draw freehand strokes on the canvas
+- [x] **CANV-03**: User can add and edit geometric shapes (rectangle, circle, arrow, line)
+- [x] **CANV-04**: User can add and edit text boxes on the canvas
+- [x] **CANV-05**: User can add color-coded sticky notes to the canvas
+- [x] **CANV-06**: User can select, move, resize, and delete canvas objects
 - [ ] **CANV-07**: User can undo and redo canvas actions
 
 ### Collaboration
@@ -77,12 +77,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status   |
 | ----------- | ----- | -------- |
-| CANV-01     | 4     | Pending  |
-| CANV-02     | 4     | Pending  |
-| CANV-03     | 4     | Pending  |
-| CANV-04     | 4     | Pending  |
-| CANV-05     | 4     | Pending  |
-| CANV-06     | 4     | Pending  |
+| CANV-01     | 4     | Complete |
+| CANV-02     | 4     | Complete |
+| CANV-03     | 4     | Complete |
+| CANV-04     | 4     | Complete |
+| CANV-05     | 4     | Complete |
+| CANV-06     | 4     | Complete |
 | CANV-07     | 4     | Pending  |
 | COLB-01     | 3     | Complete |
 | COLB-02     | 5     | Pending  |

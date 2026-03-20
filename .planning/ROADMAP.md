@@ -82,7 +82,7 @@ Plans:
 **Goal**: Excalidraw embedded in Next.js canvas route, connected to Yjs provider, all drawing tools functional
 **Depends on**: Phase 3
 **Requirements**: CANV-01, CANV-02, CANV-03, CANV-04, CANV-05, CANV-06, CANV-07
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
@@ -133,9 +133,8 @@ Plans:
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase                            | Status      | Completed  |
-| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | ----------- | --- |
+| -------------------------------- | ----------- | ---------- | ---------- | ---------------------------- | --- | ----------- | --- | ----------------------- | ----------- | --- |
 | 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
 | 2. Guest Identity & Auth         | Complete    | 2026-03-20 |
-| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | Not started | -   |
-| 5. Presence & Awareness          | Not started | -          |
+| 3. WebSocket Gateway & Yjs Relay | 2/2         | Complete   | 2026-03-20 | 4. Canvas UI & Drawing Tools | 1/3 | In Progress |     | 5. Presence & Awareness | Not started | -   |
 | 6. Board Persistence & Export    | Not started | -          |
