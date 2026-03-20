@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
+current_phase: 05
 status: unknown
-last_updated: '2026-03-20T15:50:00.000Z'
+last_updated: '2026-03-20T17:47:38.072Z'
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
 ---
 
 # Project State: UniShare Collaborative Canvas
 
 **Last updated:** 2026-03-20
-**Current phase:** 04
+**Current phase:** 05
 **Phase status:** Complete (all 3 plans verified)
 **Last session stopped at:** Completed 04-03-PLAN.md
 
@@ -60,6 +60,8 @@ progress:
 - [Phase 04]: isApplyingRemoteRef boolean ref chosen to prevent onChange<->observe infinite loop in ExcalidrawWrapper
 - [Phase 04]: CollabProvider mounted only after HTTP join succeeds — avoids opening socket on 404 rooms
 - [Phase 04]: BinaryFiles not synced via Yjs — images pasted onto canvas and library items do not propagate to remote sessions; deferred to Phase 6 (Board Persistence & Export)
+- [Phase 05]: djb2 hash + Math.abs() % paletteSize for deterministic presence color assignment
+- [Phase 05]: sceneToOverlay formula: (sceneCoord + scroll) \* zoom.value + offset - containerRect (Excalidraw 0.18.0 verified)
 
 ## Performance Metrics
 
@@ -73,6 +75,7 @@ progress:
 | Phase 04 P01 | 120    | 1 tasks      | 4 files |
 | Phase 04 P02 | 287    | 2 tasks      | 4 files |
 | Phase 04 P03 | ~30min | 2 tasks      | 2 files |
+| Phase 05 P02 | 102    | 2 tasks      | 4 files |
 
 ## Phase History
 

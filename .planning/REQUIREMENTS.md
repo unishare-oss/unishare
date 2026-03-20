@@ -20,7 +20,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Collaboration
 
 - [x] **COLB-01**: Multiple users can edit the same canvas simultaneously with changes appearing in real-time for all participants
-- [ ] **COLB-02**: Users can see live named cursors of other participants (color-coded)
+- [x] **COLB-02**: Users can see live named cursors of other participants (color-coded)
 - [ ] **COLB-03**: Users can see a list of who is currently in the room
 - [x] **COLB-04**: Anyone with the room link can join without creating a UniShare account (guest access)
 
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CANV-06     | 4     | Complete |
 | CANV-07     | 4     | Complete |
 | COLB-01     | 3     | Complete |
-| COLB-02     | 5     | Pending  |
+| COLB-02     | 5     | Complete |
 | COLB-03     | 5     | Pending  |
 | COLB-04     | 2     | Complete |
 | ROOM-01     | 1     | Complete |
