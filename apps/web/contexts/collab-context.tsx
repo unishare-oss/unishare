@@ -76,11 +76,6 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
       socket.emit('yjs-update', update)
     })
 
-    yElements.observe(() => {
-      // Remote updates to the Y.Array — excalidrawAPI.updateScene will be called by Plan 03
-      // The excalidrawAPI ref is set by the ExcalidrawWrapper component
-    })
-
     socket.connect()
 
     return () => {
