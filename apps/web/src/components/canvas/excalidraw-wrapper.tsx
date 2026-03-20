@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Excalidraw, CaptureUpdateAction } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useTheme } from 'next-themes'
@@ -18,13 +18,22 @@ const DARK_THEMES = [
   'theme-ocean-depth',
 ]
 
-export function ExcalidrawWrapper() {
+// Stable references — these never change so we define them outside the component
+// to guarantee they don't cause Excalidraw to re-render.
+const renderTopRightUI = () => null
+const uiOptions = { canvasActions: { toggleTheme: false } }
+
+function ExcalidrawWrapperInner() {
   const { yElements, ydoc, initialElements, setExcalidrawAPI } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
   const isApplyingRemoteRef = useRef(false)
+  // Track the versionNonce fingerprint of what we last wrote to Yjs.
+  // Using a local ref (not yElements) avoids false-unchanged results when
+  // remote updates arrive and update yElements concurrently.
+  const lastWrittenFingerprintRef = useRef<string>('')
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -34,18 +43,27 @@ export function ExcalidrawWrapper() {
     [setExcalidrawAPI],
   )
 
+  // Memoised initial data — only changes when initialElements changes (room join/reconnect).
+  const initialData = useMemo(
+    () => ({
+      elements: (initialElements ?? []) as ExcalidrawElement[],
+      scrollToContent: true,
+    }),
+    [initialElements],
+  )
+
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
       if (isApplyingRemoteRef.current) return
 
       // Only write to Yjs when elements actually changed — Excalidraw fires onChange
       // on every pointer event (appState changes), not just element mutations.
-      // Skipping no-op writes eliminates the constant 100-500KB Yjs update storm.
-      const current = yElements.toArray() as ExcalidrawElement[]
-      const unchanged =
-        elements.length === current.length &&
-        elements.every((el, i) => current[i]?.id === el.id && current[i]?.version === el.version)
-      if (unchanged) return
+      // We fingerprint using versionNonce (a random value Excalidraw bumps on each
+      // mutation) tracked against our own last write, not yElements (which can be
+      // updated by concurrent remote changes and cause false unchanged=true).
+      const fingerprint = elements.map((el) => `${el.id}:${el.versionNonce}`).join('|')
+      if (fingerprint === lastWrittenFingerprintRef.current) return
+      lastWrittenFingerprintRef.current = fingerprint
 
       ydoc.transact(() => {
         yElements.delete(0, yElements.length)
@@ -59,10 +77,15 @@ export function ExcalidrawWrapper() {
     const observer = () => {
       if (!excalidrawAPIRef.current) return
       isApplyingRemoteRef.current = true
+      const remoteElements = yElements.toArray() as ExcalidrawElement[]
       excalidrawAPIRef.current.updateScene({
-        elements: yElements.toArray() as ExcalidrawElement[],
+        elements: remoteElements,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
+      // Update our fingerprint to match the remote state so we don't re-emit it.
+      lastWrittenFingerprintRef.current = remoteElements
+        .map((el) => `${el.id}:${el.versionNonce}`)
+        .join('|')
       requestAnimationFrame(() => {
         isApplyingRemoteRef.current = false
       })
@@ -84,21 +107,18 @@ export function ExcalidrawWrapper() {
     >
       <Excalidraw
         excalidrawAPI={handleAPI}
-        initialData={{
-          elements: (initialElements ?? []) as ExcalidrawElement[],
-          scrollToContent: true,
-        }}
+        initialData={initialData}
         onChange={handleChange}
         theme={excalidrawTheme}
-        renderTopRightUI={() => null}
-        UIOptions={{
-          canvasActions: {
-            toggleTheme: false,
-          },
-        }}
+        renderTopRightUI={renderTopRightUI}
+        UIOptions={uiOptions}
       />
     </div>
   )
 }
 
+// memo: prevents re-render when parent (CanvasInner) re-renders due to presence
+// context updates (30fps cursor moves). ExcalidrawWrapper only re-renders when
+// CollabContext (core) changes or theme changes.
+export const ExcalidrawWrapper = memo(ExcalidrawWrapperInner)
 export default ExcalidrawWrapper
