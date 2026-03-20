@@ -24,7 +24,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 
 Plans:
 
-- [ ] 01-01-PLAN.md — Room model, collab module skeleton, CRUD endpoints, unit tests
+- [x] 01-01-PLAN.md — Room model, collab module skeleton, CRUD endpoints, unit tests
 
 **Success Criteria** (what must be TRUE):
 
@@ -40,6 +40,13 @@ Plans:
 **Goal**: Better Auth anonymous plugin configured; unauthenticated users get an anonymous session before joining a room
 **Depends on**: Phase 1
 **Requirements**: COLB-04
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 02-01-PLAN.md — Schema + auth config + join endpoint + anonymous session creation + unit tests
+- [ ] 02-02-PLAN.md — Anonymous user cleanup cron + unit tests
+
 **Success Criteria** (what must be TRUE):
 
 1. Unauthenticated user hitting room join endpoint receives an anonymous session cookie
@@ -110,10 +117,11 @@ Plans:
 
 **Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
 
-| Phase                            | Status      | Completed |
-| -------------------------------- | ----------- | --------- | ---------- | ------------------------ | ----------- | --- |
-| 1. Data Model & Module Skeleton  | 1/1         | Complete  | 2026-03-20 | 2. Guest Identity & Auth | Not started | -   |
-| 3. WebSocket Gateway & Yjs Relay | Not started | -         |
-| 4. Canvas UI & Drawing Tools     | Not started | -         |
-| 5. Presence & Awareness          | Not started | -         |
-| 6. Board Persistence & Export    | Not started | -         |
+| Phase                            | Status      | Completed  |
+| -------------------------------- | ----------- | ---------- |
+| 1. Data Model & Module Skeleton  | Complete    | 2026-03-20 |
+| 2. Guest Identity & Auth         | Planned     | -          |
+| 3. WebSocket Gateway & Yjs Relay | Not started | -          |
+| 4. Canvas UI & Drawing Tools     | Not started | -          |
+| 5. Presence & Awareness          | Not started | -          |
+| 6. Board Persistence & Export    | Not started | -          |
