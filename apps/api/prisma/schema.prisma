@@ -21,6 +21,7 @@ model User {
   banExpires              DateTime?
   banReason               String?
   banned                  Boolean?                 @default(false)
+  isAnonymous             Boolean?                 @default(false)
   bio                     String?
   enrollmentYear          Int?
   accounts                Account[]
@@ -195,6 +196,8 @@ model Session {
   userAgent      String?
   userId         String
   impersonatedBy String?
+  displayName    String?
+  isViewOnly     Boolean? @default(false)
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -319,8 +322,9 @@ model Room {
   ownerId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  snapshot  Bytes?
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  snapshot              Bytes?
+  isGuestEditingAllowed Boolean  @default(true)
+  owner                 User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("room")
