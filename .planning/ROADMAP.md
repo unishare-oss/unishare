@@ -82,6 +82,14 @@ Plans:
 **Goal**: Excalidraw embedded in Next.js canvas route, connected to Yjs provider, all drawing tools functional
 **Depends on**: Phase 3
 **Requirements**: CANV-01, CANV-02, CANV-03, CANV-04, CANV-05, CANV-06, CANV-07
+**Plans:** 3 plans
+
+Plans:
+
+- [ ] 04-01-PLAN.md — Canvas route shell, join-first flow, header/loading/error surfaces, dependency install
+- [ ] 04-02-PLAN.md — CollabProvider context (Y.Doc + socket.io), vitest setup, sync logic unit tests
+- [ ] 04-03-PLAN.md — ExcalidrawWrapper with two-way Yjs sync, page wiring, human verification
+
 **Success Criteria** (what must be TRUE):
 
 1. User can navigate to /canvas/:slug and see the Excalidraw canvas
