@@ -24,9 +24,11 @@ export class TrendingService {
           publicationStatus: 'PUBLISHED',
           deletedAt: null,
         },
-        include: {
-          reactions: true,
-          comments: true,
+        select: {
+          id: true,
+          views: true,
+          createdAt: true,
+          _count: { select: { reactions: true } },
         },
       })
 
@@ -39,7 +41,7 @@ export class TrendingService {
         const timeDecayFactor = Math.max(1.0 - hoursSinceCreation / 168, 0.1)
 
         // Reaction count is higher signal than views
-        const reactionCount = post.reactions.length
+        const reactionCount = post._count.reactions
 
         // Base score: (views * 0.3 + reactions * 0.7)
         const engagementScore = post.views * 0.3 + reactionCount * 0.7
