@@ -149,12 +149,15 @@ describe('CollabService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         snapshot: null,
+        passwordHash: null,
       }
       repository.create.mockResolvedValue(mockRoom)
 
       const result = await service.createRoom({}, 'user-1')
 
-      expect(result).toBe(mockRoom)
+      expect(result.id).toBe(mockRoom.id)
+      expect(result.slug).toBe(mockRoom.slug)
+      expect(result.hasPassword).toBe(false)
     })
   })
 
