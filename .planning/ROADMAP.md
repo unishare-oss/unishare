@@ -12,7 +12,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 - [x] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional (completed 2026-03-20)
 - [x] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time (completed 2026-03-21)
 - [x] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow (completed 2026-03-21)
-- [ ] **Phase 7: Room Access Control** - Public/private room visibility, view-only shareable links, per-room permission management
+- [x] **Phase 7: Room Access Control** - Public/private room visibility, view-only shareable links, per-room permission management (completed 2026-03-21)
 
 ## Phase Details
 
@@ -151,7 +151,7 @@ Plans:
 **Goal**: Public/private room visibility, view-only shareable links, and per-room permission management
 **Depends on**: Phase 6
 **Requirements**: SHARE-01, SHARE-02, SHARE-03
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
