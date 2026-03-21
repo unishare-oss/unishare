@@ -1,7 +1,8 @@
 ---
 phase: 8
 slug: canvas-hub-boards-page-with-owned-rooms-list-and-create-room-flow
-status: draft
+status: approved
+reviewed_at: 2026-03-21
 shadcn_initialized: true
 preset: new-york / neutral / css-variables
 created: 2026-03-21
