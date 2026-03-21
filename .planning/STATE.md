@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 06
 status: unknown
-last_updated: '2026-03-21T05:57:09.487Z'
+last_updated: '2026-03-21T06:13:43.715Z'
 progress:
   total_phases: 6
   completed_phases: 6
@@ -75,6 +75,7 @@ progress:
 - [Phase 06]: Retry once after 500ms on non-404 join errors to fix anonymous cookie timing race condition
 - [Phase 06]: sessionStorage cleared immediately after read in posts/new — prevents re-attach on page refresh
 - [Phase 06]: window.open('/posts/new', '\_blank') keeps canvas tab active with socket session intact after posting
+- [Phase 06]: setCurrentStep(0) used instead of setCurrentStep(3) — jumping to FILES step skipped required TYPE/COURSE steps; pre-filled file persists in form.files when user naturally reaches FILES
 
 ## Performance Metrics
 
@@ -94,6 +95,7 @@ progress:
 | Phase 06 P01 | 680    | 2 tasks      | 6 files |
 | Phase 06 P02 | 158    | 2 tasks      | 7 files |
 | Phase 06 P03 | 74     | 2 tasks      | 3 files |
+| Phase 06 P03 | 1800   | 3 tasks      | 3 files |
 
 ## Phase History
 
