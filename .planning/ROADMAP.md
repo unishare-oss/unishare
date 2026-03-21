@@ -11,7 +11,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 - [x] **Phase 3: WebSocket Gateway & Yjs Relay** - NestJS WebSocket gateway, Yjs update relay, basic room join/leave (completed 2026-03-20)
 - [x] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional (completed 2026-03-20)
 - [x] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time (completed 2026-03-21)
-- [ ] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow
+- [x] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow (completed 2026-03-21)
 
 ## Phase Details
 
@@ -127,7 +127,7 @@ Plans:
 **Goal**: Board snapshots saved to PostgreSQL, PNG/PDF export, post-to-UniShare flow
 **Depends on**: Phase 5
 **Requirements**: ROOM-03 (persistence), ROOM-04, EXPO-01, EXPO-02
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 

@@ -34,7 +34,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Export & Integration
 
 - [x] **EXPO-01**: User can export the board as a PDF
-- [ ] **EXPO-02**: User can post an exported board directly to UniShare as a new post (image/PDF + title)
+- [x] **EXPO-02**: User can post an exported board directly to UniShare as a new post (image/PDF + title)
 
 ## v2 Requirements
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ROOM-03     | 1, 6  | Complete |
 | ROOM-04     | 6     | Complete |
 | EXPO-01     | 6     | Complete |
-| EXPO-02     | 6     | Pending  |
+| EXPO-02     | 6     | Complete |
 
 **Coverage:**
 
