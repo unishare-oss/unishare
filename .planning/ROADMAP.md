@@ -2,7 +2,7 @@
 
 ## Overview
 
-Six phases build the collaborative canvas feature from data model to exportable, shareable board. Phases 1-2 establish the backend contracts (schema, REST, auth) before any WebSocket code is written — retrofitting either is expensive. Phase 3 proves real-time sync end-to-end. Phase 4 wires the Excalidraw frontend to the Yjs provider. Phase 5 layers presence on top of a working sync. Phase 6 closes the loop with persistence and the post-to-UniShare differentiator.
+Six phases build the collaborative canvas feature from data model to exportable, shareable board. Phases 1-2 establish the backend contracts (schema, REST, auth) before any WebSocket code is written — retrofitting either is expensive. Phase 3 proves real-time sync end-to-end. Phase 4 wires the Excalidraw frontend to the Yjs provider. Phase 5 layers presence on top of a working sync. Phase 6 closes the loop with persistence and the post-to-UniShare differentiator. Phase 7 adds room access control — public/private visibility, view-only shareable links, and per-room permission management.
 
 ## Phases
 
@@ -12,6 +12,7 @@ Six phases build the collaborative canvas feature from data model to exportable,
 - [x] **Phase 4: Canvas UI & Drawing Tools** - Excalidraw in Next.js canvas route, connected to Yjs provider, all drawing tools functional (completed 2026-03-20)
 - [x] **Phase 5: Presence & Awareness** - Live cursor positions and participant list in real-time (completed 2026-03-21)
 - [x] **Phase 6: Board Persistence & Export** - Board snapshots to PostgreSQL, PNG/PDF export, post-to-UniShare flow (completed 2026-03-21)
+- [ ] **Phase 7: Room Access Control** - Public/private room visibility, view-only shareable links, per-room permission management
 
 ## Phase Details
 
@@ -145,9 +146,28 @@ Plans:
 
 ---
 
+### Phase 7: Room Access Control
+
+**Goal**: Public/private room visibility, view-only shareable links, and per-room permission management
+**Depends on**: Phase 6
+**Requirements**: SHARE-01, SHARE-02, SHARE-03
+**Plans:** 0/0 plans complete
+
+Plans:
+
+_TBD after context discussion_
+
+**Success Criteria** (what must be TRUE):
+
+1. Room owner can set a room to public (anyone with link can view without an account) or private (edit-only, current behaviour)
+2. A view-only link lets non-editors see the live board but not draw or modify it
+3. Room owner can manage access — revoke links or change visibility at any time
+
+---
+
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase                            | Status   | Completed  |
 | -------------------------------- | -------- | ---------- |
@@ -156,4 +176,5 @@ Plans:
 | 3. WebSocket Gateway & Yjs Relay | Complete | 2026-03-20 |
 | 4. Canvas UI & Drawing Tools     | Complete | 2026-03-20 |
 | 5. Presence & Awareness          | Complete | 2026-03-21 |
-| 6. Board Persistence & Export    | Planning | -          |
+| 6. Board Persistence & Export    | Complete | 2026-03-21 |
+| 7. Room Access Control           | Planned  | -          |

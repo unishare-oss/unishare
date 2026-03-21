@@ -36,6 +36,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EXPO-01**: User can export the board as a PDF
 - [x] **EXPO-02**: User can post an exported board directly to UniShare as a new post (image/PDF + title)
 
+### Access Control
+
+- [ ] **SHARE-01**: Room owner can set room visibility to public (view-only for anyone with the link) or private (edit-only, current behaviour)
+- [ ] **SHARE-02**: A view-only link allows anyone to see the live board state without drawing or modifying it
+- [ ] **SHARE-03**: Room owner can revoke or regenerate the view-only link at any time
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
