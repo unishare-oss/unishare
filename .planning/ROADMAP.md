@@ -132,9 +132,9 @@ Plans:
 
 Plans:
 
-- [ ] 06-01-PLAN.md — Backend Yjs snapshot persistence (save on idle + disconnect, restore on rejoin)
-- [ ] 06-02-PLAN.md — Race condition fix, isAnonymous plumbing, export utilities, Export dropdown (PNG + PDF)
-- [ ] 06-03-PLAN.md — Post to UniShare flow (sessionStorage handoff + posts/new pre-fill + human verify)
+- [x] 06-01-PLAN.md — Backend Yjs snapshot persistence (save on idle + disconnect, restore on rejoin)
+- [x] 06-02-PLAN.md — Race condition fix, isAnonymous plumbing, export utilities, Export dropdown (PNG + PDF)
+- [x] 06-03-PLAN.md — Post to UniShare flow (sessionStorage handoff + posts/new pre-fill + human verify)
 
 **Success Criteria** (what must be TRUE):
 
@@ -151,11 +151,13 @@ Plans:
 **Goal**: Public/private room visibility, view-only shareable links, and per-room permission management
 **Depends on**: Phase 6
 **Requirements**: SHARE-01, SHARE-02, SHARE-03
-**Plans:** 0/0 plans complete
+**Plans:** 3 plans
 
 Plans:
 
-_TBD after context discussion_
+- [ ] 07-01-PLAN.md — DB migration (RoomVisibility enum), service layer, PATCH endpoint, unit tests
+- [ ] 07-02-PLAN.md — Gateway isViewOnly guard + PRIVATE block + gateway tests
+- [ ] 07-03-PLAN.md — Frontend: private gate, context expansion, Excalidraw viewMode, settings popover
 
 **Success Criteria** (what must be TRUE):
 
