@@ -38,9 +38,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Access Control
 
-- [ ] **SHARE-01**: Room owner can set room visibility to public (view-only for anyone with the link) or private (edit-only, current behaviour)
+- [x] **SHARE-01**: Room owner can set room visibility to public (view-only for anyone with the link) or private (edit-only, current behaviour)
 - [ ] **SHARE-02**: A view-only link allows anyone to see the live board state without drawing or modifying it
-- [ ] **SHARE-03**: Room owner can revoke or regenerate the view-only link at any time
+- [x] **SHARE-03**: Room owner can revoke or regenerate the view-only link at any time
 
 ## v2 Requirements
 
