@@ -192,7 +192,7 @@ Plans:
 **Goal:** Optional password protection orthogonal to room visibility — owners set/change/remove passwords, visitors enter password to join, boards hub shows lock badge
 **Requirements**: PWD-01, PWD-02, PWD-03, PWD-04, PWD-05
 **Depends on:** Phase 8
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 

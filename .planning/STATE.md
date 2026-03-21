@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 08
+current_phase: 09
 status: unknown
-last_updated: '2026-03-21T11:14:35.388Z'
+last_updated: '2026-03-21T13:34:34.891Z'
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 8
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 22
+  completed_plans: 21
 ---
 
 # Project State: UniShare Collaborative Canvas
 
 **Last updated:** 2026-03-20
-**Current phase:** 08
+**Current phase:** 09
 **Phase status:** Complete (all 3 plans verified)
 **Last session stopped at:** Completed 04-03-PLAN.md
 
@@ -84,6 +84,8 @@ progress:
 - [Phase 07]: SettingsPopover fetches current visibility on mount then PATCHes on change with optimistic update + rollback
 - [Phase 08]: UpdateRoomDto fields made optional; GET /rooms placed before GET :slug; updateRoom delegates to repository.updateRoom for combined title+visibility updates
 - [Phase 08]: Orval RoomEntityTitle nullable quirk resolved with 'as any' cast; RoomCard owns PATCH/DELETE fetch with callback-based optimistic updates
+- [Phase 09]: toRoomResponse() strips passwordHash and adds hasPassword: boolean for all room responses
+- [Phase 09]: Password check placed AFTER PRIVATE visibility guard; owner bypass via user.id===room.ownerId; pwVerified:true sentinel skips bcrypt (D-22)
 
 ## Performance Metrics
 
@@ -110,6 +112,7 @@ progress:
 | Phase 07 P03 | 180    | 3 tasks      | 4 files |
 | Phase 08 P01 | 124    | 2 tasks      | 5 files |
 | Phase 08 P02 | 480    | 1 tasks      | 8 files |
+| Phase 09 P01 | 327    | 2 tasks      | 8 files |
 
 ## Phase History
 
@@ -131,3 +134,4 @@ Phase 1 complete 2026-03-20. Room model and CollabModule fully scaffolded.
 ### Roadmap Evolution
 
 - Phase 8 added: Canvas Hub — boards page with owned rooms list and create-room flow
+- Phase 9 added: Canvas password protection for link-shared rooms
