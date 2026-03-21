@@ -55,6 +55,13 @@ export default function BoardsPage() {
     )
   }
 
+  const handlePasswordChange = (slug: string, hasPassword: boolean) => {
+    setLocalRooms((prev) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (prev ?? rooms ?? []).map((r) => (r.slug === slug ? ({ ...r, hasPassword } as any) : r)),
+    )
+  }
+
   const showSkeleton = authLoading || isLoading
   const showEmpty = !showSkeleton && (!displayRooms || displayRooms.length === 0)
   const showGrid = !showSkeleton && displayRooms && displayRooms.length > 0
@@ -106,6 +113,7 @@ export default function BoardsPage() {
                   onDelete={handleDelete}
                   onRename={handleRename}
                   onVisibilityChange={handleVisibilityChange}
+                  onPasswordChange={handlePasswordChange}
                 />
               ))}
             </div>

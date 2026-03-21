@@ -14,6 +14,7 @@ import {
   Lock,
   Trash2,
   Check,
+  X,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { Label } from '@/components/ui/label'
 
 interface RoomCardProps {
   room: {
@@ -47,6 +49,7 @@ interface RoomCardProps {
   onDelete: (slug: string) => void
   onRename: (slug: string, title: string) => void
   onVisibilityChange: (slug: string, visibility: string) => void
+  onPasswordChange: (slug: string, hasPassword: boolean) => void
 }
 
 function VisibilityBadge({ visibility }: { visibility: string }) {
@@ -71,13 +74,23 @@ function VisibilityBadge({ visibility }: { visibility: string }) {
   )
 }
 
-export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomCardProps) {
+export function RoomCard({
+  room,
+  onDelete,
+  onRename,
+  onVisibilityChange,
+  onPasswordChange,
+}: RoomCardProps) {
   const router = useRouter()
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [renamePending, setRenamePending] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [passwordValue, setPasswordValue] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [passwordPending, setPasswordPending] = useState(false)
 
   const handleCardClick = () => {
     router.push(`/canvas/${room.slug}`)
@@ -119,6 +132,55 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
       toast.error('Failed to rename board')
     } finally {
       setRenamePending(false)
+    }
+  }
+
+  const handleSetPassword = async () => {
+    if (!passwordValue.trim()) return
+    setPasswordPending(true)
+    try {
+      const res = await fetch(`/api/rooms/${room.slug}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordValue.trim() }),
+      })
+      if (!res.ok) {
+        toast.error('Failed to save password')
+      } else {
+        onPasswordChange(room.slug, true)
+        setPasswordOpen(false)
+        setPasswordValue('')
+        toast.success(room.hasPassword ? 'Password updated' : 'Password set')
+      }
+    } catch {
+      toast.error('Failed to save password')
+    } finally {
+      setPasswordPending(false)
+    }
+  }
+
+  const handleRemovePassword = async () => {
+    setPasswordPending(true)
+    try {
+      const res = await fetch(`/api/rooms/${room.slug}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: null }),
+      })
+      if (!res.ok) {
+        toast.error('Failed to remove password')
+      } else {
+        onPasswordChange(room.slug, false)
+        setPasswordOpen(false)
+        setPasswordValue('')
+        toast.success('Password removed')
+      }
+    } catch {
+      toast.error('Failed to remove password')
+    } finally {
+      setPasswordPending(false)
     }
   }
 
@@ -321,6 +383,25 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground px-2 py-1">
+                  Password
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPasswordValue('')
+                    setPasswordOpen(true)
+                  }}
+                >
+                  <KeyRound className="size-4 mr-2" strokeWidth={1.5} />
+                  {room.hasPassword ? 'Change password' : 'Set password'}
+                </DropdownMenuItem>
+                {room.hasPassword && (
+                  <DropdownMenuItem onClick={handleRemovePassword}>
+                    <X className="size-4 mr-2" strokeWidth={1.5} />
+                    Remove password
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => setDeleteOpen(true)}
@@ -356,7 +437,6 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
           </div>
         </div>
       </article>
-
       {/* Rename dialog — separate from dropdown to avoid Radix focus conflict */}
       <Dialog
         open={renameOpen}
@@ -392,8 +472,69 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Delete confirmation dialog */}
+      {/* Password dialog */}
+      <Dialog
+        open={passwordOpen}
+        onOpenChange={(next) => {
+          if (!passwordPending) setPasswordOpen(next)
+        }}
+      >
+        <DialogContent className="rounded-[6px] border-border bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-foreground">
+              {room.hasPassword ? 'Change password' : 'Set password'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="room-password" className="text-sm text-muted-foreground">
+                {room.hasPassword ? 'New password' : 'Password'}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="room-password"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Enter password"
+                  value={passwordValue}
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                  autoFocus
+                  disabled={passwordPending}
+                  className="pr-9"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSetPassword()
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((s) => !s)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                >
+                  {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setPasswordOpen(false)}
+                disabled={passwordPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSetPassword}
+                disabled={passwordPending || !passwordValue.trim()}
+                className="rounded-[6px]"
+              >
+                {room.hasPassword ? 'Update password' : 'Set password'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Delete confirmation dialog */}{' '}
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

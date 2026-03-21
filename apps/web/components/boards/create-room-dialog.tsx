@@ -125,9 +125,17 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
               >
                 {(
                   [
-                    { value: 'OPEN', label: 'Open', desc: 'Anyone with the link can join' },
-                    { value: 'VIEW_ONLY', label: 'View only', desc: 'Viewers cannot draw' },
-                    { value: 'PRIVATE', label: 'Private', desc: 'Only you can access' },
+                    { value: 'OPEN', label: 'Open', desc: 'Everyone can edit' },
+                    {
+                      value: 'VIEW_ONLY',
+                      label: 'View only',
+                      desc: 'Guests can view, signed-in users edit',
+                    },
+                    {
+                      value: 'PRIVATE',
+                      label: 'Private',
+                      desc: 'Only signed-in users can access',
+                    },
                   ] as const
                 ).map(({ value, label, desc }) => (
                   <label
