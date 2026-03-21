@@ -31,15 +31,21 @@ describe('CollabGateway', () => {
   let mockServerEmit: jest.Mock
   let mockFetchSockets: jest.Mock
 
-  const makeSocket = (id = 'socket-1', userId = 'user-1', userName = 'Test User') => ({
+  const makeSocket = (
+    id = 'socket-1',
+    userId = 'user-1',
+    userName = 'Test User',
+    isAnonymous = false,
+  ) => ({
     id,
     join: jest.fn().mockResolvedValue(undefined),
     emit: jest.fn(),
     to: jest.fn().mockReturnValue({ emit: jest.fn() }),
     data: {
-      user: { id: userId, name: userName },
+      user: { id: userId, name: userName, isAnonymous },
       colorIndex: undefined as number | undefined,
       name: undefined as string | undefined,
+      isViewOnly: undefined as boolean | undefined,
     },
   })
 
@@ -81,7 +87,7 @@ describe('CollabGateway', () => {
 
   describe('handleJoinRoom', () => {
     it('should call client.join(slug) and emit room-joined with state buffer for valid slug', async () => {
-      const mockRoom = { id: 'room-1', slug: 'test-slug' }
+      const mockRoom = { id: 'room-1', slug: 'test-slug', visibility: 'OPEN' }
       collabRepository.findBySlug.mockResolvedValue(mockRoom)
 
       const client = makeSocket()
@@ -111,7 +117,11 @@ describe('CollabGateway', () => {
     })
 
     it('should emit participant-list to joiner and participant-joined to room', async () => {
-      collabRepository.findBySlug.mockResolvedValue({ id: 'room-1', slug: 'test-slug' })
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'OPEN',
+      })
 
       const client = makeSocket('socket-new', 'user-new', 'New User')
       const toEmit = jest.fn()
@@ -152,7 +162,11 @@ describe('CollabGateway', () => {
     })
 
     it('should set colorIndex and name on socket.data before join', async () => {
-      collabRepository.findBySlug.mockResolvedValue({ id: 'room-1', slug: 'test-slug' })
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'OPEN',
+      })
 
       const client = makeSocket('socket-1', 'user-abc', 'Alice')
       ;(gateway as any).server.in.mockReturnValue({
@@ -169,6 +183,75 @@ describe('CollabGateway', () => {
       expect(client.data.colorIndex).toBeGreaterThanOrEqual(0)
       expect(client.data.colorIndex).toBeLessThan(10)
       expect(client.data.name).toBe('Alice')
+    })
+
+    it('should set socket.data.isViewOnly = true for anonymous user on VIEW_ONLY room', async () => {
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'VIEW_ONLY',
+      })
+      const client = makeSocket('socket-1', 'user-anon', 'GuestPanda', true)
+      ;(gateway as any).server.in.mockReturnValue({
+        fetchSockets: jest
+          .fn()
+          .mockResolvedValue([{ id: 'socket-1', data: { name: 'GuestPanda', colorIndex: 0 } }]),
+      })
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      expect(client.data.isViewOnly).toBe(true)
+    })
+
+    it('should set socket.data.isViewOnly = false for authenticated user on VIEW_ONLY room', async () => {
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'VIEW_ONLY',
+      })
+      const client = makeSocket('socket-1', 'user-auth', 'AuthUser', false)
+      ;(gateway as any).server.in.mockReturnValue({
+        fetchSockets: jest
+          .fn()
+          .mockResolvedValue([{ id: 'socket-1', data: { name: 'AuthUser', colorIndex: 0 } }]),
+      })
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      expect(client.data.isViewOnly).toBe(false)
+    })
+
+    it('should emit error and NOT join when anonymous user connects to PRIVATE room', async () => {
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'PRIVATE',
+      })
+      const client = makeSocket('socket-1', 'user-anon', 'GuestFox', true)
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      expect(client.emit).toHaveBeenCalledWith('error', { message: 'Room is private' })
+      expect(client.join).not.toHaveBeenCalled()
+    })
+
+    it('should allow authenticated user to join PRIVATE room with isViewOnly = false', async () => {
+      collabRepository.findBySlug.mockResolvedValue({
+        id: 'room-1',
+        slug: 'test-slug',
+        visibility: 'PRIVATE',
+      })
+      const client = makeSocket('socket-1', 'user-auth', 'AuthUser', false)
+      ;(gateway as any).server.in.mockReturnValue({
+        fetchSockets: jest
+          .fn()
+          .mockResolvedValue([{ id: 'socket-1', data: { name: 'AuthUser', colorIndex: 0 } }]),
+      })
+
+      await gateway.handleJoinRoom(client as never, 'test-slug')
+
+      expect(client.join).toHaveBeenCalledWith('test-slug')
+      expect(client.data.isViewOnly).toBe(false)
     })
   })
 
@@ -233,6 +316,21 @@ describe('CollabGateway', () => {
       const data = Buffer.from([1, 2, 3])
 
       gateway.handleYjsUpdate(client as never, data)
+
+      expect(client.to).not.toHaveBeenCalled()
+      expect(roomService.getDoc).not.toHaveBeenCalled()
+    })
+
+    it('should return early and NOT relay when socket.data.isViewOnly is true', () => {
+      const client = makeSocket()
+      client.data.isViewOnly = true
+      roomService.getRoomForSocket.mockReturnValue('test-slug')
+
+      const sourceDoc = new Y.Doc()
+      sourceDoc.getText('content').insert(0, 'blocked')
+      const update = Buffer.from(Y.encodeStateAsUpdate(sourceDoc))
+
+      gateway.handleYjsUpdate(client as never, update)
 
       expect(client.to).not.toHaveBeenCalled()
       expect(roomService.getDoc).not.toHaveBeenCalled()
