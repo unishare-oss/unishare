@@ -1,12 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ClipboardCopy, Download, FileText, Settings, Share2 } from 'lucide-react'
+import {
+  ClipboardCopy,
+  Download,
+  FileText,
+  KeyRound,
+  Loader2,
+  Settings,
+  Share2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
@@ -179,6 +189,10 @@ function SettingsPopover() {
   const { slug } = useParams<{ slug: string }>()
   const [visibility, setVisibility] = useState<RoomVisibility>('OPEN')
   const [isLoaded, setIsLoaded] = useState(false)
+  const [hasPassword, setHasPassword] = useState(false)
+  const [pwInputValue, setPwInputValue] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const pwInputRef = useRef<HTMLInputElement>(null)
 
   // Only render for owner
   if (userId !== ownerId || !ownerId) return null
@@ -189,6 +203,7 @@ function SettingsPopover() {
       .then((res) => res.json())
       .then((data) => {
         setVisibility(data.data?.visibility ?? 'OPEN')
+        setHasPassword(data.data?.hasPassword ?? false)
         setIsLoaded(true)
       })
       .catch(() => setIsLoaded(true))
@@ -234,6 +249,65 @@ function SettingsPopover() {
     }
   }
 
+  const handleSetOrChangePassword = async () => {
+    if (!pwInputValue.trim()) return
+    setPwSaving(true)
+    const previousHasPassword = hasPassword
+    setHasPassword(true) // optimistic
+
+    try {
+      const res = await fetch(`/api/rooms/${slug}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwInputValue }),
+      })
+
+      if (!res.ok) {
+        setHasPassword(previousHasPassword)
+        toast.error('Failed to save password — try again')
+        setPwSaving(false)
+        return
+      }
+
+      toast.success(previousHasPassword ? 'Password updated' : 'Password set')
+      setPwInputValue('')
+    } catch {
+      setHasPassword(previousHasPassword)
+      toast.error('Failed to save password — try again')
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
+  const handleRemovePassword = async () => {
+    setPwSaving(true)
+    setHasPassword(false) // optimistic
+
+    try {
+      const res = await fetch(`/api/rooms/${slug}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: null }),
+      })
+
+      if (!res.ok) {
+        setHasPassword(true) // rollback
+        toast.error('Failed to remove password — try again')
+        setPwSaving(false)
+        return
+      }
+
+      toast.success('Password removed')
+    } catch {
+      setHasPassword(true)
+      toast.error('Failed to remove password — try again')
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -273,6 +347,94 @@ function SettingsPopover() {
             <ClipboardCopy className="h-4 w-4" />
             Copy link
           </Button>
+
+          <Separator className="my-4" />
+
+          {/* Password protection section — D-23 through D-28 */}
+          {!hasPassword ? (
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Password protection</h4>
+                <p className="text-xs text-muted-foreground">No password set</p>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  ref={pwInputRef}
+                  type="password"
+                  placeholder="Set a password"
+                  className="h-8 text-xs flex-1"
+                  value={pwInputValue}
+                  onChange={(e) => setPwInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSetOrChangePassword()
+                    }
+                  }}
+                  disabled={pwSaving}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSetOrChangePassword}
+                  disabled={pwSaving || !pwInputValue.trim()}
+                >
+                  Set Password
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Password protection</h4>
+                  <p className="text-xs text-muted-foreground">Password: Set</p>
+                </div>
+                <KeyRound className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  ref={pwInputRef}
+                  type="password"
+                  placeholder="Change password"
+                  className="h-8 text-xs flex-1"
+                  value={pwInputValue}
+                  onChange={(e) => setPwInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSetOrChangePassword()
+                    }
+                  }}
+                  disabled={pwSaving}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSetOrChangePassword}
+                  disabled={pwSaving || !pwInputValue.trim()}
+                >
+                  Change Password
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-destructive hover:text-destructive"
+                onClick={handleRemovePassword}
+                disabled={pwSaving}
+              >
+                {pwSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  'Remove password'
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>

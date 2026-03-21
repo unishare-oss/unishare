@@ -10,6 +10,7 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  KeyRound,
   Lock,
   Trash2,
   Check,
@@ -41,6 +42,7 @@ interface RoomCardProps {
     visibility: string
     createdAt: string
     updatedAt: string
+    hasPassword: boolean
   }
   onDelete: (slug: string) => void
   onRename: (slug: string, title: string) => void
@@ -338,7 +340,15 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
           >
             {room.title ?? 'Untitled'}
           </span>
-          <VisibilityBadge visibility={room.visibility} />
+          <div className="flex items-center gap-2">
+            <VisibilityBadge visibility={room.visibility} />
+            {room.hasPassword && (
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                <KeyRound className="h-3 w-3" aria-hidden="true" />
+                Protected
+              </span>
+            )}
+          </div>
           <div className="flex gap-3 text-xs text-muted-foreground">
             <span>Created {createdAgo}</span>
             <span>·</span>

@@ -101,6 +101,7 @@ export default function BoardsPage() {
                     visibility: room.visibility,
                     createdAt: room.createdAt,
                     updatedAt: room.updatedAt,
+                    hasPassword: (room as any).hasPassword ?? false,
                   }}
                   onDelete={handleDelete}
                   onRename={handleRename}
