@@ -172,7 +172,7 @@ Plans:
 **Goal:** Boards hub page at /boards where authenticated users see all owned rooms as cards, create new rooms via modal, and manage rooms (rename, delete, change visibility) from card kebab menus
 **Depends on:** Phase 7
 **Requirements**: HUB-01, HUB-02, HUB-03, HUB-04, HUB-05
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 

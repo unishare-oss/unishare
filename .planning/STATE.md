@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 07
+current_phase: 08
 status: unknown
-last_updated: '2026-03-21T10:14:08.727Z'
+last_updated: '2026-03-21T11:07:42.964Z'
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 19
 ---
 
 # Project State: UniShare Collaborative Canvas
 
 **Last updated:** 2026-03-20
-**Current phase:** 07
+**Current phase:** 08
 **Phase status:** Complete (all 3 plans verified)
 **Last session stopped at:** Completed 04-03-PLAN.md
 
@@ -82,6 +82,7 @@ progress:
 - [Phase 07]: isViewOnly guard placed as first line of handleYjsUpdate for lowest-cost early return
 - [Phase 07]: isViewOnly/ownerId/userId passed as props into CollabProvider matching isAnonymous pattern from Phase 06
 - [Phase 07]: SettingsPopover fetches current visibility on mount then PATCHes on change with optimistic update + rollback
+- [Phase 08]: UpdateRoomDto fields made optional; GET /rooms placed before GET :slug; updateRoom delegates to repository.updateRoom for combined title+visibility updates
 
 ## Performance Metrics
 
@@ -106,6 +107,7 @@ progress:
 | Phase 07 P02 | 103    | 1 tasks      | 2 files |
 | Phase 07 P03 | 117    | 2 tasks      | 4 files |
 | Phase 07 P03 | 180    | 3 tasks      | 4 files |
+| Phase 08 P01 | 124    | 2 tasks      | 5 files |
 
 ## Phase History
 
