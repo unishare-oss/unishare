@@ -18,6 +18,7 @@ import type { Request, Response } from 'express'
 import { CollabService } from './collab.service'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
+import { JoinRoomBodyDto } from './dto/join-room-body.dto'
 import { RoomEntity } from './entities/room.entity'
 import { JoinRoomResponseDto } from './dto/join-room-response.dto'
 
@@ -71,10 +72,11 @@ export class CollabController {
   @ResponseMessage('Room joined successfully')
   async joinRoom(
     @Param('slug') slug: string,
+    @Body() body: JoinRoomBodyDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @Session() session: UserSession | null,
   ) {
-    return this.collabService.joinRoom(slug, session, req, res)
+    return this.collabService.joinRoom(slug, body, session, req, res)
   }
 }

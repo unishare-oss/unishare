@@ -1,9 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { NotFoundException, ForbiddenException } from '@nestjs/common'
+import { NotFoundException, ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import type { Request, Response } from 'express'
+import * as bcrypt from 'bcryptjs'
 import { auth } from '@/auth/auth.config'
 import { CollabService } from './collab.service'
 import { CollabRepository } from './collab.repository'
+
+// Mock bcryptjs
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn().mockResolvedValue('$2a$10$hashedvalue'),
+  compare: jest.fn(),
+}))
 
 // Mock auth module — factory must not reference variables declared in outer scope
 // (jest.mock is hoisted above variable declarations)
@@ -153,7 +160,7 @@ describe('CollabService', () => {
 
   describe('getRoomBySlug', () => {
     it('should return room when found', async () => {
-      const mockRoom = {
+      const mockRoomFull = {
         id: 'room-1',
         slug: 'abc1234567',
         ownerId: 'user-1',
@@ -161,12 +168,13 @@ describe('CollabService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         snapshot: null,
+        passwordHash: null,
       }
-      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.findBySlug.mockResolvedValue(mockRoomFull)
 
       const result = await service.getRoomBySlug('abc1234567')
 
-      expect(result).toBe(mockRoom)
+      expect(result.slug).toBe('abc1234567')
       expect(repository.findBySlug).toHaveBeenCalledWith('abc1234567')
     })
 
@@ -174,6 +182,34 @@ describe('CollabService', () => {
       repository.findBySlug.mockResolvedValue(null)
 
       await expect(service.getRoomBySlug('nonexistent')).rejects.toThrow(NotFoundException)
+    })
+
+    it('should return hasPassword: true when room has passwordHash', async () => {
+      repository.findBySlug.mockResolvedValue({
+        ...mockRoom,
+        passwordHash: '$2a$10$hash',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      const result = await service.getRoomBySlug('abc1234567')
+
+      expect(result.hasPassword).toBe(true)
+      expect((result as any).passwordHash).toBeUndefined()
+    })
+
+    it('should return hasPassword: false when room has no passwordHash', async () => {
+      repository.findBySlug.mockResolvedValue({
+        ...mockRoom,
+        passwordHash: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      const result = await service.getRoomBySlug('abc1234567')
+
+      expect(result.hasPassword).toBe(false)
+      expect((result as any).passwordHash).toBeUndefined()
     })
   })
 
@@ -186,7 +222,7 @@ describe('CollabService', () => {
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
-      const result = await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      const result = await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
 
       expect(signInAnonymousMock).toHaveBeenCalledTimes(1)
       expect(result.isAnonymous).toBe(true)
@@ -197,7 +233,7 @@ describe('CollabService', () => {
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
-      await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
 
       expect((mockRes as unknown as { setHeader: jest.Mock }).setHeader).toHaveBeenCalledWith(
         'set-cookie',
@@ -210,6 +246,7 @@ describe('CollabService', () => {
 
       const result = await service.joinRoom(
         'abc1234567',
+        {},
         mockAuthSession as unknown as import('@/auth/auth.config').UserSession,
         mockReq,
         mockRes,
@@ -227,7 +264,7 @@ describe('CollabService', () => {
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
-      const result = await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      const result = await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
 
       expect(result.isViewOnly).toBe(true)
     })
@@ -240,6 +277,7 @@ describe('CollabService', () => {
 
       const result = await service.joinRoom(
         'abc1234567',
+        {},
         mockAuthSession as unknown as import('@/auth/auth.config').UserSession,
         mockReq,
         mockRes,
@@ -256,7 +294,7 @@ describe('CollabService', () => {
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
-      await expect(service.joinRoom('abc1234567', null, mockReq, mockRes)).rejects.toThrow(
+      await expect(service.joinRoom('abc1234567', {}, null, mockReq, mockRes)).rejects.toThrow(
         ForbiddenException,
       )
     })
@@ -268,6 +306,7 @@ describe('CollabService', () => {
       })
       const result = await service.joinRoom(
         'abc1234567',
+        {},
         mockAuthSession as unknown as import('@/auth/auth.config').UserSession,
         mockReq,
         mockRes,
@@ -278,7 +317,7 @@ describe('CollabService', () => {
     it('should throw NotFoundException for nonexistent room', async () => {
       repository.findBySlugWithVisibility.mockResolvedValue(null)
 
-      await expect(service.joinRoom('nonexistent', null, mockReq, mockRes)).rejects.toThrow(
+      await expect(service.joinRoom('nonexistent', {}, null, mockReq, mockRes)).rejects.toThrow(
         NotFoundException,
       )
     })
@@ -288,7 +327,7 @@ describe('CollabService', () => {
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
-      const result = await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      const result = await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
 
       // anonymous user.name is set by generateName callback (generateGuestDisplayName)
       expect(result.displayName).toBe('Purple Penguin')
@@ -298,8 +337,90 @@ describe('CollabService', () => {
       repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
-      const result = await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      const result = await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
       expect(result.ownerId).toBe('user-1')
+    })
+
+    // --- Password protection tests ---
+    const mockRoomWithPassword = {
+      id: 'room-1',
+      slug: 'abc1234567',
+      title: null,
+      ownerId: 'user-1',
+      visibility: 'OPEN',
+      passwordHash: '$2a$10$hashedvalue',
+    }
+
+    it('should throw UnauthorizedException when no password supplied on protected room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoomWithPassword)
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+
+      await expect(service.joinRoom('abc1234567', {}, null, mockReq, mockRes)).rejects.toThrow(
+        UnauthorizedException,
+      )
+    })
+
+    it('should throw UnauthorizedException with "Incorrect password" when wrong password', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoomWithPassword)
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+      ;(bcrypt.compare as jest.Mock).mockResolvedValue(false)
+
+      await expect(
+        service.joinRoom('abc1234567', { password: 'wrong' }, null, mockReq, mockRes),
+      ).rejects.toThrow('Incorrect password')
+    })
+
+    it('should succeed when correct password supplied on protected room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoomWithPassword)
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+      ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
+
+      const result = await service.joinRoom(
+        'abc1234567',
+        { password: 'correct' },
+        null,
+        mockReq,
+        mockRes,
+      )
+      expect(result.roomSlug).toBe('abc1234567')
+    })
+
+    it('should skip password check for owner of protected room (D-07)', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoomWithPassword)
+      // Owner session — user.id matches room.ownerId
+      const ownerSession = {
+        session: { id: 'sess-owner', displayName: null },
+        user: { id: 'user-1', name: 'Owner', isAnonymous: false },
+      }
+
+      const result = await service.joinRoom(
+        'abc1234567',
+        {},
+        ownerSession as unknown as import('@/auth/auth.config').UserSession,
+        mockReq,
+        mockRes,
+      )
+      expect(bcrypt.compare).not.toHaveBeenCalled()
+      expect(result.roomSlug).toBe('abc1234567')
+    })
+
+    it('should skip password check when body.pwVerified is true (D-22 sentinel)', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoomWithPassword)
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+
+      const result = await service.joinRoom(
+        'abc1234567',
+        { pwVerified: true },
+        null,
+        mockReq,
+        mockRes,
+      )
+      expect(bcrypt.compare).not.toHaveBeenCalled()
+      expect(result.roomSlug).toBe('abc1234567')
     })
   })
 
@@ -337,7 +458,9 @@ describe('CollabService', () => {
 
   describe('getRoomsByOwner', () => {
     it('should call repository.findByOwner with the ownerId', async () => {
-      repository.findByOwner.mockResolvedValue([mockRoom])
+      repository.findByOwner.mockResolvedValue([
+        { ...mockRoom, passwordHash: null, createdAt: new Date(), updatedAt: new Date() },
+      ])
 
       await service.getRoomsByOwner('user-1')
 
@@ -345,11 +468,33 @@ describe('CollabService', () => {
     })
 
     it('should return the array from repository.findByOwner', async () => {
-      repository.findByOwner.mockResolvedValue([mockRoom])
+      repository.findByOwner.mockResolvedValue([
+        { ...mockRoom, passwordHash: null, createdAt: new Date(), updatedAt: new Date() },
+      ])
 
       const result = await service.getRoomsByOwner('user-1')
 
-      expect(result).toEqual([mockRoom])
+      expect(result).toHaveLength(1)
+      expect(result[0].slug).toBe('abc1234567')
+    })
+
+    it('should return hasPassword on each room', async () => {
+      repository.findByOwner.mockResolvedValue([
+        { ...mockRoom, passwordHash: '$2a$10$hash', createdAt: new Date(), updatedAt: new Date() },
+        {
+          ...mockRoom,
+          slug: 'xyz',
+          passwordHash: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ])
+
+      const result = await service.getRoomsByOwner('user-1')
+
+      expect(result[0].hasPassword).toBe(true)
+      expect(result[1].hasPassword).toBe(false)
+      expect((result[0] as any).passwordHash).toBeUndefined()
     })
   })
 
@@ -408,7 +553,29 @@ describe('CollabService', () => {
       const result = await service.updateRoom('abc1234567', {}, 'user-1')
 
       expect(repository.updateRoom).not.toHaveBeenCalled()
-      expect(result).toBe(mockRoom)
+      expect(result.slug).toBe(mockRoom.slug)
+      expect(result.ownerId).toBe(mockRoom.ownerId)
+    })
+
+    it('should hash password and pass passwordHash to repository when dto.password is a string', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, passwordHash: '$2a$10$hashedvalue' })
+
+      await service.updateRoom('abc1234567', { password: 'secret' }, 'user-1')
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('secret', 10)
+      expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', {
+        passwordHash: '$2a$10$hashedvalue',
+      })
+    })
+
+    it('should pass passwordHash: null to repository when dto.password is null', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, passwordHash: null })
+
+      await service.updateRoom('abc1234567', { password: null }, 'user-1')
+
+      expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', { passwordHash: null })
     })
   })
 })

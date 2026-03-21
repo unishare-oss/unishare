@@ -1,12 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { nanoid } from 'nanoid'
 import { fromNodeHeaders } from 'better-auth/node'
+import * as bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
 import { CollabRepository } from './collab.repository'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
+import { JoinRoomBodyDto } from './dto/join-room-body.dto'
 
 @Injectable()
 export class CollabService {
@@ -20,11 +27,12 @@ export class CollabService {
   async getRoomBySlug(slug: string) {
     const room = await this.collabRepository.findBySlug(slug)
     if (!room) throw new NotFoundException('Room not found')
-    return room
+    return this.toRoomResponse(room)
   }
 
   async getRoomsByOwner(ownerId: string) {
-    return this.collabRepository.findByOwner(ownerId)
+    const rooms = await this.collabRepository.findByOwner(ownerId)
+    return rooms.map((room) => this.toRoomResponse(room))
   }
 
   async deleteRoom(slug: string, userId: string) {
@@ -40,14 +48,32 @@ export class CollabService {
     if (!room) throw new NotFoundException('Room not found')
     if (room.ownerId !== userId)
       throw new ForbiddenException('Only the room owner can update settings')
-    const updateData: { title?: string; visibility?: RoomVisibility } = {}
+    const updateData: {
+      title?: string
+      visibility?: RoomVisibility
+      passwordHash?: string | null
+    } = {}
     if (dto.visibility !== undefined) updateData.visibility = dto.visibility
     if (dto.title !== undefined) updateData.title = dto.title
-    if (Object.keys(updateData).length === 0) return room
-    return this.collabRepository.updateRoom(slug, updateData)
+    if (dto.password !== undefined) {
+      if (dto.password === null) {
+        updateData.passwordHash = null
+      } else {
+        updateData.passwordHash = await bcrypt.hash(dto.password, 10)
+      }
+    }
+    if (Object.keys(updateData).length === 0) return this.toRoomResponse(room)
+    const updated = await this.collabRepository.updateRoom(slug, updateData)
+    return this.toRoomResponse(updated)
   }
 
-  async joinRoom(slug: string, session: UserSession | null, req: Request, res: Response) {
+  async joinRoom(
+    slug: string,
+    body: JoinRoomBodyDto,
+    session: UserSession | null,
+    req: Request,
+    res: Response,
+  ) {
     const room = await this.collabRepository.findBySlugWithVisibility(slug)
     if (!room) throw new NotFoundException('Room not found')
 
@@ -87,6 +113,25 @@ export class CollabService {
     if (room.visibility === RoomVisibility.PRIVATE && isAnonymous) {
       throw new ForbiddenException('Room is private')
     }
+
+    // Password protection — check AFTER visibility (PRIVATE takes precedence per D-04)
+    if (
+      room.passwordHash !== null &&
+      room.passwordHash !== undefined &&
+      activeSession.user.id !== room.ownerId
+    ) {
+      if (body.pwVerified === true) {
+        // Sentinel from sessionStorage — tab already verified password (D-22)
+      } else if (!body.password) {
+        throw new UnauthorizedException('Password required')
+      } else {
+        const passwordValid = await bcrypt.compare(body.password, room.passwordHash)
+        if (!passwordValid) {
+          throw new UnauthorizedException('Incorrect password')
+        }
+      }
+    }
+
     const isViewOnly = room.visibility === RoomVisibility.VIEW_ONLY && isAnonymous
 
     // displayName: for anonymous users, name was set by generateName callback in auth.config;
@@ -105,5 +150,12 @@ export class CollabService {
       isViewOnly,
       ownerId: room.ownerId,
     }
+  }
+
+  private toRoomResponse(room: Record<string, unknown>) {
+    const { passwordHash, ...rest } = room as Record<string, unknown> & {
+      passwordHash?: string | null
+    }
+    return { ...rest, hasPassword: passwordHash !== null && passwordHash !== undefined }
   }
 }
