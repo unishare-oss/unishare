@@ -17,6 +17,7 @@ import {
   Palette,
   MessageSquarePlus,
   Github,
+  LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -34,6 +35,7 @@ const publicNavItems = [
 const authNavItems = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },

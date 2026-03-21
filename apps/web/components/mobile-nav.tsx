@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutList, FileText, Bookmark, User, LogIn, Bell } from 'lucide-react'
+import { LayoutList, FileText, Bookmark, User, LogIn, Bell, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
@@ -16,7 +16,7 @@ const guestTabs = [
 const authTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'Posts', icon: FileText },
-  { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/notifications', label: 'Notifs', icon: Bell },
   { href: '/profile', label: 'Profile', icon: User },
 ]
