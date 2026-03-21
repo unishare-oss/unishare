@@ -42,6 +42,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SHARE-02**: A view-only link allows anyone to see the live board state without drawing or modifying it
 - [x] **SHARE-03**: Room owner can revoke or regenerate the view-only link at any time
 
+### Canvas Hub
+
+- [ ] **HUB-01**: Authenticated user can see a list of their owned boards on /boards
+- [ ] **HUB-02**: User can create a new board from the boards page via a modal dialog
+- [ ] **HUB-03**: User can delete, rename, and change visibility of boards from the boards page
+- [ ] **HUB-04**: Boards page is accessible from sidebar nav and mobile nav
+- [ ] **HUB-05**: Empty state with hero illustration shown when user has no boards
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -100,14 +108,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ROOM-04     | 6     | Complete |
 | EXPO-01     | 6     | Complete |
 | EXPO-02     | 6     | Complete |
+| SHARE-01    | 7     | Complete |
+| SHARE-02    | 7     | Complete |
+| SHARE-03    | 7     | Complete |
+| HUB-01      | 8     | Planned  |
+| HUB-02      | 8     | Planned  |
+| HUB-03      | 8     | Planned  |
+| HUB-04      | 8     | Planned  |
+| HUB-05      | 8     | Planned  |
 
 **Coverage:**
 
-- v1 requirements: 17 total
-- Mapped to phases: 17
+- v1 requirements: 22 total
+- Mapped to phases: 22
 - Unmapped: 0
 
 ---
 
 _Requirements defined: 2026-03-20_
-_Last updated: 2026-03-20 after initial definition_
+_Last updated: 2026-03-21 after Phase 8 planning_

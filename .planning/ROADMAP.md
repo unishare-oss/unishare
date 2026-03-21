@@ -167,9 +167,31 @@ Plans:
 
 ---
 
+### Phase 8: Canvas Hub — boards page with owned rooms list and create-room flow
+
+**Goal:** Boards hub page at /boards where authenticated users see all owned rooms as cards, create new rooms via modal, and manage rooms (rename, delete, change visibility) from card kebab menus
+**Depends on:** Phase 7
+**Requirements**: HUB-01, HUB-02, HUB-03, HUB-04, HUB-05
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 08-01-PLAN.md — Backend: extend UpdateRoomDto, add findByOwner/deleteBySlug repository methods, GET /rooms and DELETE /rooms/:slug endpoints, unit tests
+- [ ] 08-02-PLAN.md — Frontend: boards page, room cards with kebab menu, create-room dialog, empty state, nav wiring, human verification
+
+**Success Criteria** (what must be TRUE):
+
+1. Authenticated user sees all their owned rooms as cards on /boards
+2. User can create a new room via modal and is redirected to the canvas
+3. User can rename, delete, and change visibility of rooms from card kebab menus
+4. "Boards" appears in sidebar nav and mobile nav (replacing "Saved" on mobile)
+5. Hero empty state with SVG illustration shows when user has no rooms
+
+---
+
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase                            | Status   | Completed  |
 | -------------------------------- | -------- | ---------- |
@@ -180,3 +202,4 @@ Plans:
 | 5. Presence & Awareness          | Complete | 2026-03-21 |
 | 6. Board Persistence & Export    | Complete | 2026-03-21 |
 | 7. Room Access Control           | Planned  | -          |
+| 8. Canvas Hub                    | Planned  | -          |
