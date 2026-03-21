@@ -22,7 +22,7 @@ async function bootstrap() {
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
-  app.use(helmet())
+  app.use(helmet({ contentSecurityPolicy: false }))
   app.enableCors({ origin: allowedOrigins, credentials: true })
   const loggerMiddleware = new LoggerMiddleware()
   app.use(loggerMiddleware.use.bind(loggerMiddleware))
