@@ -22,18 +22,20 @@ const allowedOrigins = [
 ]
 
 const PRESENCE_COLORS_COUNT = 10
+const CURSOR_THROTTLE_MS = 33 // ~30fps
 
 @WebSocketGateway({
   namespace: '/collab',
   cors: { origin: allowedOrigins, credentials: true },
   // Large Yjs state snapshots can exceed socket.io's default 1MB polling limit.
   // Force WebSocket transport on the client side; this is a safety net for polling fallback.
-  maxHttpBufferSize: 100 * 1024 * 1024, // 100MB
+  maxHttpBufferSize: 5 * 1024 * 1024, // 5MB — Yjs snapshots rarely exceed 1-2MB
 })
 export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server
 
   private readonly logger = new Logger(CollabGateway.name)
+  private readonly lastCursorEmit = new Map<string, number>()
 
   constructor(
     private readonly collabRoomService: CollabRoomService,
@@ -84,6 +86,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     this.logger.log(`Client disconnected: ${client.id}`)
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     this.collabRoomService.removeSocket(client.id)
+    this.lastCursorEmit.delete(client.id)
     if (slug) {
       this.server.to(slug).emit('participant-left', { socketId: client.id })
     }
@@ -142,6 +145,10 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { x: number; y: number },
   ): void {
+    const now = Date.now()
+    const last = this.lastCursorEmit.get(client.id) ?? 0
+    if (now - last < CURSOR_THROTTLE_MS) return
+    this.lastCursorEmit.set(client.id, now)
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     if (!slug) return
     client.to(slug).emit('cursor-move', { socketId: client.id, ...data })

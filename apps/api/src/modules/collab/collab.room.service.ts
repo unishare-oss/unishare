@@ -14,8 +14,8 @@ export class CollabRoomService {
   private readonly rooms = new Map<string, RoomEntry>()
   private readonly socketToRoom = new Map<string, string>()
 
-  /** GC delay in ms — 5 minutes after last client leaves */
-  private readonly GC_DELAY = 5 * 60 * 1000
+  /** GC delay in ms — 60s after last client leaves (keep short on low-RAM servers) */
+  private readonly GC_DELAY = parseInt(process.env.COLLAB_GC_DELAY_MS ?? '60000', 10)
 
   /** Idle save delay — 30 seconds after last Yjs update */
   private readonly IDLE_SAVE_DELAY = 30_000
