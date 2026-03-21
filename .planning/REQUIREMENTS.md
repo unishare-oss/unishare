@@ -54,9 +54,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **PWD-01**: Room owner can set, change, or remove a password on any room via the Settings popover
 - [x] **PWD-02**: Non-owner visitors must supply the correct password to join a password-protected room
-- [ ] **PWD-03**: Frontend shows a full-screen password gate when the join endpoint returns 401
+- [x] **PWD-03**: Frontend shows a full-screen password gate when the join endpoint returns 401
 - [x] **PWD-04**: Boards hub room cards show a "Protected" lock badge when a room has a password
-- [ ] **PWD-05**: Tab-scoped session memory (sessionStorage) prevents re-prompting for password on page refresh
+- [x] **PWD-05**: Tab-scoped session memory (sessionStorage) prevents re-prompting for password on page refresh
 
 ## v2 Requirements
 

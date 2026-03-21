@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 09
 status: unknown
-last_updated: '2026-03-21T13:34:34.891Z'
+last_updated: '2026-03-21T14:04:34.225Z'
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -86,6 +86,9 @@ progress:
 - [Phase 08]: Orval RoomEntityTitle nullable quirk resolved with 'as any' cast; RoomCard owns PATCH/DELETE fetch with callback-based optimistic updates
 - [Phase 09]: toRoomResponse() strips passwordHash and adds hasPassword: boolean for all room responses
 - [Phase 09]: Password check placed AFTER PRIVATE visibility guard; owner bypass via user.id===room.ownerId; pwVerified:true sentinel skips bcrypt (D-22)
+- [Phase 09]: Password gate added as new JoinState ('password-required'); 401 handled separately from retry path
+- [Phase 09]: sessionStorage pw-verified-{slug} sentinel for tab-scoped memory; sends pwVerified:true in join body
+- [Phase 09]: Shake animation via CSS @keyframes + setTimeout 300ms reset; no JS animation library needed
 
 ## Performance Metrics
 
@@ -113,6 +116,7 @@ progress:
 | Phase 08 P01 | 124    | 2 tasks      | 5 files |
 | Phase 08 P02 | 480    | 1 tasks      | 8 files |
 | Phase 09 P01 | 327    | 2 tasks      | 8 files |
+| Phase 09 P02 | 1800   | 2 tasks      | 6 files |
 
 ## Phase History
 
