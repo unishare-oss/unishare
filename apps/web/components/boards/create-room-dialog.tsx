@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, LayoutGrid } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,15 +59,35 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
         if (!isPending) onOpenChange(next)
       }}
     >
-      <DialogContent className="rounded-[6px] border-border bg-card sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-base font-semibold text-foreground">New Board</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="board-title" className="text-sm text-muted-foreground">
-              Title (optional)
-            </label>
+      <DialogContent className="rounded-[6px] border-border bg-card sm:max-w-sm p-0 overflow-hidden">
+        {/* Header accent */}
+        <div className="h-20 bg-muted relative overflow-hidden flex items-center justify-center">
+          <svg
+            aria-hidden="true"
+            width="100%"
+            height="100%"
+            className="absolute inset-0 opacity-30"
+          >
+            <defs>
+              <pattern id="create-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--border)" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#create-grid)" />
+          </svg>
+          <div className="relative flex items-center justify-center size-10 rounded-[8px] bg-card border border-border shadow-sm">
+            <LayoutGrid className="size-5 text-primary" strokeWidth={1.5} />
+          </div>
+        </div>
+
+        <div className="p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base font-semibold text-foreground">New Board</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Name your canvas, or start blank and rename later.
+            </p>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               id="board-title"
               placeholder="Untitled board"
@@ -76,14 +96,14 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
               autoFocus
               disabled={isPending}
             />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isPending} className="w-full rounded-[6px]">
-              {isPending && <Loader2 className="size-4 mr-1.5 animate-spin" />}
-              Create board
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="submit" disabled={isPending} className="w-full rounded-[6px]">
+                {isPending && <Loader2 className="size-4 mr-1.5 animate-spin" />}
+                Create board
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

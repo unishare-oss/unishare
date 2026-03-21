@@ -63,6 +63,11 @@ export default function BoardsPage() {
     <div className="flex flex-col min-h-screen">
       <PageHeader
         title="Boards"
+        subtitle={
+          showGrid
+            ? `${displayRooms!.length} board${displayRooms!.length === 1 ? '' : 's'}`
+            : undefined
+        }
         action={
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="size-4 mr-1.5" strokeWidth={1.5} />

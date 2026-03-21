@@ -94,8 +94,10 @@ export function CollabProvider({
   const [socketId, setSocketId] = useState<string | null>(null)
   const socketRef = useRef<ReturnType<typeof io> | null>(null)
   const lastEmitTimeRef = useRef(0)
+  const unmountingRef = useRef(false)
 
   useEffect(() => {
+    unmountingRef.current = false
     const hasJoined = { current: false }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -169,6 +171,7 @@ export function CollabProvider({
     )
 
     socket.on('disconnect', () => {
+      if (unmountingRef.current) return
       setConnectionStatus('disconnected')
       setParticipants([])
       setRemoteCursors(new Map())
@@ -183,10 +186,12 @@ export function CollabProvider({
     socket.connect()
 
     return () => {
+      unmountingRef.current = true
       socketRef.current = null
       setSocketId(null)
       setParticipants([])
       setRemoteCursors(new Map())
+      toast.dismiss('collab-status')
       socket.disconnect()
       ydoc.destroy()
     }

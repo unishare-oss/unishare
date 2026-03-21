@@ -3,11 +3,22 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
-import { MoreVertical, ExternalLink, Link2, Pencil, Eye, EyeOff, Lock, Trash2 } from 'lucide-react'
+import {
+  MoreVertical,
+  ExternalLink,
+  Link2,
+  Pencil,
+  Eye,
+  EyeOff,
+  Lock,
+  Trash2,
+  Check,
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -39,20 +50,20 @@ interface RoomCardProps {
 function VisibilityBadge({ visibility }: { visibility: string }) {
   if (visibility === 'OPEN') {
     return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-subtle text-amber">
+      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-subtle text-amber">
         Open
       </span>
     )
   }
   if (visibility === 'VIEW_ONLY') {
     return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
         View only
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-foreground">
+    <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-foreground">
       Private
     </span>
   )
@@ -155,98 +166,184 @@ export function RoomCard({ room, onDelete, onRename, onVisibilityChange }: RoomC
   return (
     <>
       <article
-        className="group relative rounded-[6px] border border-border bg-card hover:bg-card-dark p-4 flex flex-col gap-3 cursor-pointer transition-colors"
+        className="group relative rounded-[6px] border border-border bg-card hover:bg-card-dark flex flex-col cursor-pointer transition-colors overflow-hidden"
         onClick={handleCardClick}
       >
-        <div className="flex items-center justify-between">
+        {/* Canvas preview header */}
+        <div className="h-24 bg-[var(--muted)] relative overflow-hidden flex-shrink-0">
+          <svg
+            aria-hidden="true"
+            width="100%"
+            height="100%"
+            className="absolute inset-0 opacity-40"
+          >
+            <defs>
+              <pattern
+                id={`grid-${room.slug}`}
+                width="20"
+                height="20"
+                patternUnits="userSpaceOnUse"
+              >
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--border)" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#grid-${room.slug})`} />
+          </svg>
+          {room.visibility === 'OPEN' && (
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-50/60 to-transparent" />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg
+              aria-hidden="true"
+              width="52"
+              height="40"
+              viewBox="0 0 52 40"
+              fill="none"
+              className="opacity-20"
+            >
+              <rect
+                x="1"
+                y="1"
+                width="50"
+                height="30"
+                rx="3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <line
+                x1="8"
+                y1="10"
+                x2="22"
+                y2="10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="8"
+                y1="15"
+                x2="18"
+                y2="15"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="8"
+                y1="20"
+                x2="25"
+                y2="20"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path d="M32 22 L38 14 L44 18 L38 26Z" stroke="currentColor" strokeWidth="1.2" />
+              <line
+                x1="18"
+                y1="31"
+                x2="15"
+                y2="39"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="34"
+                y1="31"
+                x2="37"
+                y2="39"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="13"
+                y1="39"
+                x2="39"
+                y2="39"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          {/* Kebab — top-right of preview area */}
+          <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 bg-card/80 backdrop-blur-sm border border-border opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-card"
+                  aria-label="Board options"
+                >
+                  <MoreVertical className="size-3.5" strokeWidth={1.5} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push(`/canvas/${room.slug}`)}>
+                  <ExternalLink className="size-4 mr-2" strokeWidth={1.5} />
+                  Open board
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyLink}>
+                  <Link2 className="size-4 mr-2" strokeWidth={1.5} />
+                  Copy link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleRenameOpen}>
+                  <Pencil className="size-4 mr-2" strokeWidth={1.5} />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground px-2 py-1">
+                  Visibility
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleVisibilityChange('OPEN')}>
+                  <Eye className="size-4 mr-2" strokeWidth={1.5} />
+                  Open
+                  {room.visibility === 'OPEN' && (
+                    <Check className="size-3.5 ml-auto text-muted-foreground" strokeWidth={2} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleVisibilityChange('VIEW_ONLY')}>
+                  <EyeOff className="size-4 mr-2" strokeWidth={1.5} />
+                  View only
+                  {room.visibility === 'VIEW_ONLY' && (
+                    <Check className="size-3.5 ml-auto text-muted-foreground" strokeWidth={2} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleVisibilityChange('PRIVATE')}>
+                  <Lock className="size-4 mr-2" strokeWidth={1.5} />
+                  Private
+                  {room.visibility === 'PRIVATE' && (
+                    <Check className="size-3.5 ml-auto text-muted-foreground" strokeWidth={2} />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-4 mr-2" strokeWidth={1.5} />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Card body */}
+        <div className="p-4 flex flex-col gap-2.5">
           <span
-            className={`text-sm font-semibold ${room.title ? 'text-foreground' : 'text-text-muted'}`}
+            className={`text-sm font-semibold leading-snug ${room.title ? 'text-foreground' : 'text-text-muted'}`}
           >
             {room.title ?? 'Untitled'}
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 shrink-0"
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Board options"
-              >
-                <MoreVertical className="size-4" strokeWidth={1.5} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => router.push(`/canvas/${room.slug}`)}>
-                <ExternalLink className="size-4 mr-2" strokeWidth={1.5} />
-                Open board
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyLink}>
-                <Link2 className="size-4 mr-2" strokeWidth={1.5} />
-                Copy link
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleRenameOpen}>
-                <Pencil className="size-4 mr-2" strokeWidth={1.5} />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <div className="flex flex-col gap-1 cursor-default focus:bg-accent">
-                  <span className="text-sm flex items-center gap-2 px-0 py-0">
-                    Change visibility
-                  </span>
-                  <div className="flex flex-col gap-0.5 pl-0">
-                    <button
-                      className={`flex items-center gap-2 w-full text-xs px-2 py-1 rounded hover:bg-muted transition-colors ${room.visibility === 'OPEN' ? 'font-medium text-amber' : 'text-muted-foreground'}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleVisibilityChange('OPEN')
-                      }}
-                    >
-                      <Eye className="size-3" strokeWidth={1.5} />
-                      Open
-                    </button>
-                    <button
-                      className={`flex items-center gap-2 w-full text-xs px-2 py-1 rounded hover:bg-muted transition-colors ${room.visibility === 'VIEW_ONLY' ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleVisibilityChange('VIEW_ONLY')
-                      }}
-                    >
-                      <EyeOff className="size-3" strokeWidth={1.5} />
-                      View only
-                    </button>
-                    <button
-                      className={`flex items-center gap-2 w-full text-xs px-2 py-1 rounded hover:bg-muted transition-colors ${room.visibility === 'PRIVATE' ? 'font-medium text-foreground' : 'text-muted-foreground'}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleVisibilityChange('PRIVATE')
-                      }}
-                    >
-                      <Lock className="size-3" strokeWidth={1.5} />
-                      Private
-                    </button>
-                  </div>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="size-4 mr-2" strokeWidth={1.5} />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div>
           <VisibilityBadge visibility={room.visibility} />
-        </div>
-
-        <div className="flex gap-3 text-xs text-muted-foreground">
-          <span>Created {createdAgo}</span>
-          <span>Updated {updatedAgo}</span>
+          <div className="flex gap-3 text-xs text-muted-foreground">
+            <span>Created {createdAgo}</span>
+            <span>·</span>
+            <span>Updated {updatedAgo}</span>
+          </div>
         </div>
       </article>
 
