@@ -105,7 +105,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
 
-    const doc = this.collabRoomService.getOrCreate(slug)
+    const doc = await this.collabRoomService.getOrCreate(slug)
     const state = Y.encodeStateAsUpdate(doc)
 
     client.emit('room-joined', { slug, state: Buffer.from(state) })
@@ -145,8 +145,10 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     if (!slug) return
 
     const update = Buffer.isBuffer(data) ? new Uint8Array(data) : new Uint8Array(data)
-    const doc = this.collabRoomService.getOrCreate(slug)
+    const doc = this.collabRoomService.getDoc(slug)
+    if (!doc) return
     Y.applyUpdate(doc, update)
+    this.collabRoomService.resetIdleTimer(slug)
 
     client.to(slug).emit('yjs-update', data)
   }
