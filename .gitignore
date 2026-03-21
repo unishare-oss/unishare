@@ -13,3 +13,4 @@ apps/api/src/metadata.ts
 apps/web/src/lib/api/generated/
 
 .DS_Store
+.planning
