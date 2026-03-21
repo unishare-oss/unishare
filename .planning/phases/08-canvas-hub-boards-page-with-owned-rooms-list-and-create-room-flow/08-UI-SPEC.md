@@ -46,7 +46,6 @@ Exceptions:
 - PageHeader: `px-6 py-4` (24px horizontal, 16px vertical) — matches existing `page-header.tsx` pattern exactly.
 - Kebab trigger button: 32px touch target minimum (size-8) — matches `PostCardSkeleton` kebab sizing.
 - Room card padding: `p-4` (16px all sides) — matches `room-card-skeleton.tsx` in RESEARCH.md.
-- Empty state illustration container: centred with `py-20` (80px) matching `EmptyState` vertical rhythm but with hero content.
 
 ---
 
@@ -57,13 +56,13 @@ All sizes read from existing component source (`page-header.tsx`, `empty-state.t
 | Role                | Size             | Weight         | Line Height | Usage                                                   |
 | ------------------- | ---------------- | -------------- | ----------- | ------------------------------------------------------- |
 | Page title          | 18px (text-lg)   | 600 (semibold) | 1.4         | PageHeader "Boards" h1                                  |
-| Card title          | 14px (text-sm)   | 500 (medium)   | 1.4         | Room card title; fallback "Untitled" in text-text-muted |
+| Card title          | 14px (text-sm)   | 600 (semibold) | 1.4         | Room card title; fallback "Untitled" in text-text-muted |
 | Meta / label        | 12px (text-xs)   | 400 (regular)  | 1.5         | "Created X ago", "Updated X ago", visibility badge text |
 | Empty state heading | 16px (text-base) | 600 (semibold) | 1.3         | "No boards yet" h2 in hero empty state                  |
 
 Font family: `font-sans` (Geist) for all UI text. `font-mono` reserved for subtitle/debug copy only (see `page-header.tsx` subtitle pattern).
 
-Weights in use: 400 (regular) and 600 (semibold). Medium 500 is used exclusively for card titles to distinguish them from surrounding meta without reaching semibold weight.
+Weights in use: 400 (regular) and 600 (semibold). Visual distinction between card titles and meta is carried by size difference (14px vs 12px), not weight.
 
 ---
 
@@ -171,7 +170,7 @@ Components to build (new) and reuse (existing):
 - Separate Dialog (not nested in DropdownMenu to avoid Radix focus conflict)
 - Title: "Rename board"
 - Single Input: pre-populated with current title (or empty if untitled)
-- CTA: "Save" (primary)
+- CTA: "Save name" (primary)
 - Cancel: ghost button
 - On save: PATCH /rooms/:slug with `{ title }`, optimistic update, rollback on error with `toast.error`
 
@@ -187,7 +186,7 @@ Uses existing `ConfirmDialog` component:
 
 ### Empty State (Hero)
 
-- Container: `flex flex-col items-center justify-center py-20 text-center gap-6`
+- Container: `flex flex-col items-center justify-center py-12 text-center gap-6`
 - Inline SVG illustration: depicts a blank canvas/drawing board with a simple pen/cursor
   - All fill/stroke values use `currentColor` or CSS vars (`var(--border)`, `var(--primary)`, `var(--muted-foreground)`)
   - SVG width: 120px, height: 100px (fixed, not responsive — decorative)
@@ -225,6 +224,8 @@ Uses existing `ConfirmDialog` component:
 | Copy link success toast         | "Link copied"                                                  |
 | Copy link failure toast         | "Could not copy link"                                          |
 | Create error toast              | Error message from API response                                |
+| Rename dialog title             | "Rename board"                                                 |
+| Rename dialog submit button     | "Save name"                                                    |
 | Rename success: no toast        | (silent — optimistic update reflects immediately)              |
 | Rename error toast              | "Failed to rename board"                                       |
 | Delete confirmation title       | "Delete this board?"                                           |
