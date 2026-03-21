@@ -135,6 +135,27 @@ export default function CreatePostPage() {
     form.setValue('year', String(me.yearLevel), { shouldDirty: false, shouldTouch: false })
   }, [form, me?.yearLevel, values.year, yearDirty])
 
+  // Pre-fill exported board image from canvas "Post to UniShare" flow
+  useEffect(() => {
+    const raw = sessionStorage.getItem('pending-board-export')
+    if (!raw) return
+    sessionStorage.removeItem('pending-board-export')
+
+    try {
+      const { dataUrl, filename } = JSON.parse(raw) as { dataUrl: string; filename: string }
+      const [header, base64] = dataUrl.split(',')
+      const mime = header?.match(/:(.*?);/)?.[1] ?? 'image/png'
+      const bytes = atob(base64!)
+      const arr = new Uint8Array(bytes.length)
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+      const file = new File([arr], filename, { type: mime })
+      form.setValue('files', [file])
+      setCurrentStep(3) // Jump to FILES step
+    } catch {
+      // Silently ignore malformed sessionStorage data
+    }
+  }, [form])
+
   function updateField<K extends FieldPath<CreatePostFormValues>>(
     field: K,
     value: FieldPathValue<CreatePostFormValues, K>,
