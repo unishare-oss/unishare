@@ -16,7 +16,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCollab, useCollabPresence, type Participant } from '@/contexts/collab-context'
 import { PRESENCE_COLORS } from '@/src/lib/presence'
-import { exportPng, exportPdf } from './export-utils'
+import { exportPng, exportPdf, postToUniShare } from './export-utils'
 
 /** Extract initials: "Alice Bob" → "AB", "SleepyOtter" → "SL", "A" → "A" */
 function getInitials(name: string): string {
@@ -113,7 +113,13 @@ function ExportDropdown() {
   }
 
   const handlePostToUniShare = async () => {
-    // Implemented in Plan 03
+    if (!excalidrawAPI) return
+    try {
+      await postToUniShare(excalidrawAPI, slug)
+      toast.success('Opening post editor...')
+    } catch {
+      toast.error('Export failed — try again')
+    }
   }
 
   return (

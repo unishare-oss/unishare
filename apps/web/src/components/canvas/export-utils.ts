@@ -64,3 +64,23 @@ export async function exportPngBlob(api: ExcalidrawImperativeAPI): Promise<Blob>
     mimeType: 'image/png',
   })
 }
+
+export async function postToUniShare(api: ExcalidrawImperativeAPI, slug: string): Promise<void> {
+  const blob = await exportPngBlob(api)
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to read export blob'))
+    reader.readAsDataURL(blob)
+  })
+
+  sessionStorage.setItem(
+    'pending-board-export',
+    JSON.stringify({
+      dataUrl,
+      filename: `unishare-board-${slug}.png`,
+    }),
+  )
+  window.open('/posts/new', '_blank')
+}
