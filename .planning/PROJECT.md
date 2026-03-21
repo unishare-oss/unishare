@@ -30,6 +30,7 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 - [ ] Standalone collaboration rooms shareable via link
 - [ ] Collaboration rooms attachable to existing posts
 - [x] Guest access — anyone with the link can join without signing up — Validated in Phase 2: Guest Identity & Auth
+- [x] Room access control (OPEN/VIEW_ONLY/PRIVATE) — Validated in Phase 7: Room Access Control
 - [ ] Boards persist after all participants leave
 - [ ] Export board as image or PDF
 - [ ] Option to post an exported board directly to UniShare as a new post
@@ -66,4 +67,4 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 
 ---
 
-_Last updated: 2026-03-20 after Phase 3: WebSocket Gateway & Yjs Relay_
+_Last updated: 2026-03-21 after Phase 7: Room Access Control_
