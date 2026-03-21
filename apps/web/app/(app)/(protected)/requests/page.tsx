@@ -346,14 +346,18 @@ function RequestCard({
           )}
 
           {isFulfilled && request.fulfilledByPost && (
-            <a
-              href={`/posts/${request.fulfilledByPost.id}`}
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.location.href = `/posts/${request.fulfilledByPost!.id}`
+              }}
               className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
             >
               <CheckCircle2 className="size-3" />
               Fulfilled by: {request.fulfilledByPost.title ?? request.fulfilledByPost.shortCode}
-            </a>
+            </button>
           )}
 
           {isOwner && (
