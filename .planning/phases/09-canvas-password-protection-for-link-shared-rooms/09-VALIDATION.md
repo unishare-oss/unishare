@@ -2,7 +2,7 @@
 phase: 9
 slug: canvas-password-protection-for-link-shared-rooms
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-21
 ---
@@ -36,14 +36,12 @@ created: 2026-03-21
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement         | Test Type   | Automated Command                    | File Exists | Status     |
-| ------- | ---- | ---- | ------------------- | ----------- | ------------------------------------ | ----------- | ---------- |
-| 9-01-01 | 01   | 1    | password schema     | unit        | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
-| 9-01-02 | 01   | 1    | hash on save        | unit        | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
-| 9-02-01 | 02   | 2    | join password check | unit        | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
-| 9-02-02 | 02   | 2    | 401 response        | integration | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
-| 9-03-01 | 03   | 3    | password gate UI    | unit        | `pnpm --filter web test --run`       | ❌ W0       | ⬜ pending |
-| 9-03-02 | 03   | 3    | hub badge           | unit        | `pnpm --filter web test --run`       | ❌ W0       | ⬜ pending |
+| Task ID | Plan | Wave | Requirement            | Test Type | Automated Command                    | File Exists | Status     |
+| ------- | ---- | ---- | ---------------------- | --------- | ------------------------------------ | ----------- | ---------- |
+| 9-01-01 | 01   | 1    | password schema        | unit      | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
+| 9-01-02 | 01   | 1    | hash + join + sentinel | unit      | `pnpm --filter api test --runInBand` | ✅          | ⬜ pending |
+| 9-02-01 | 02   | 2    | password gate UI       | unit      | `pnpm --filter web test --run`       | ❌ W0       | ⬜ pending |
+| 9-02-02 | 02   | 2    | settings + badge       | unit      | `pnpm --filter web test --run`       | ❌ W0       | ⬜ pending |
 
 _Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky_
 
