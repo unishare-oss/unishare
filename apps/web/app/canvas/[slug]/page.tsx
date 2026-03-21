@@ -19,20 +19,32 @@ type JoinState = 'joining' | 'joined' | 'not-found'
 export default function CanvasPage() {
   const { slug } = useParams<{ slug: string }>()
   const [joinState, setJoinState] = useState<JoinState>('joining')
+  const [isAnonymous, setIsAnonymous] = useState(false)
 
   useEffect(() => {
-    const joinRoom = async () => {
+    const joinRoom = async (retried = false): Promise<void> => {
       try {
         const res = await fetch(`/api/rooms/${slug}/join`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
         })
-        if (!res.ok) {
+        if (res.ok) {
+          const data = await res.json()
+          setIsAnonymous(data.data?.isAnonymous ?? false)
+          setJoinState('joined')
+          return
+        }
+        if (res.status === 404) {
           setJoinState('not-found')
           return
         }
-        setJoinState('joined')
+        // Non-404 error (401/403 cookie timing) — retry once after 500ms
+        if (!retried) {
+          await new Promise((r) => setTimeout(r, 500))
+          return joinRoom(true)
+        }
+        setJoinState('not-found')
       } catch {
         setJoinState('not-found')
       }
@@ -73,7 +85,7 @@ export default function CanvasPage() {
 
   // Join succeeded — mount CollabProvider which opens socket
   return (
-    <CollabProvider slug={slug}>
+    <CollabProvider slug={slug} isAnonymous={isAnonymous}>
       <CanvasInner />
     </CollabProvider>
   )

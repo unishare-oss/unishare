@@ -44,6 +44,7 @@ interface CollabContextValue {
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
   initialElements: unknown[] | null
+  isAnonymous: boolean
 }
 
 // ─── Presence context ────────────────────────────────────────────────────────
@@ -60,13 +61,14 @@ interface CollabPresenceContextValue {
 
 interface CollabProviderProps {
   slug: string
+  isAnonymous: boolean
   children: ReactNode
 }
 
 const CollabContext = createContext<CollabContextValue | null>(null)
 const CollabPresenceContext = createContext<CollabPresenceContextValue | null>(null)
 
-export function CollabProvider({ slug, children }: CollabProviderProps) {
+export function CollabProvider({ slug, isAnonymous, children }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const [initialElements, setInitialElements] = useState<unknown[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
@@ -198,8 +200,24 @@ export function CollabProvider({ slug, children }: CollabProviderProps) {
   // Core value: stable fields only. useMemo ensures ExcalidrawWrapper's context
   // subscription never triggers from presence updates.
   const coreValue = useMemo<CollabContextValue>(
-    () => ({ ydoc, yElements, connectionStatus, excalidrawAPI, setExcalidrawAPI, initialElements }),
-    [ydoc, yElements, connectionStatus, excalidrawAPI, setExcalidrawAPI, initialElements],
+    () => ({
+      ydoc,
+      yElements,
+      connectionStatus,
+      excalidrawAPI,
+      setExcalidrawAPI,
+      initialElements,
+      isAnonymous,
+    }),
+    [
+      ydoc,
+      yElements,
+      connectionStatus,
+      excalidrawAPI,
+      setExcalidrawAPI,
+      initialElements,
+      isAnonymous,
+    ],
   )
 
   // Presence value: high-frequency fields. CursorOverlay and CanvasHeader only.
