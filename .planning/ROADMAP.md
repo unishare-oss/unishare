@@ -151,7 +151,7 @@ Plans:
 **Goal**: Public/private room visibility, view-only shareable links, and per-room permission management
 **Depends on**: Phase 6
 **Requirements**: SHARE-01, SHARE-02, SHARE-03
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 

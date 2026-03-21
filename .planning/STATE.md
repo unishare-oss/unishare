@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 07
 status: unknown
-last_updated: '2026-03-21T07:11:25.985Z'
+last_updated: '2026-03-21T07:14:51.353Z'
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -78,6 +78,8 @@ progress:
 - [Phase 06]: setCurrentStep(0) used instead of setCurrentStep(3) — jumping to FILES step skipped required TYPE/COURSE steps; pre-filled file persists in form.files when user naturally reaches FILES
 - [Phase 07]: RoomVisibility import path is @/generated/prisma/client (not @/generated/prisma) — no barrel index in generated dir
 - [Phase 07]: Prisma migrate dev blocked by drift from prior db push phases; used db push + migrate resolve --applied to record 20260321070000_add_room_visibility
+- [Phase 07]: isViewOnly computed at join time from room.visibility + isAnonymous; string comparison avoids enum import
+- [Phase 07]: isViewOnly guard placed as first line of handleYjsUpdate for lowest-cost early return
 
 ## Performance Metrics
 
@@ -99,6 +101,7 @@ progress:
 | Phase 06 P03 | 74     | 2 tasks      | 3 files |
 | Phase 06 P03 | 1800   | 3 tasks      | 3 files |
 | Phase 07 P01 | 255    | 2 tasks      | 9 files |
+| Phase 07 P02 | 103    | 1 tasks      | 2 files |
 
 ## Phase History
 
