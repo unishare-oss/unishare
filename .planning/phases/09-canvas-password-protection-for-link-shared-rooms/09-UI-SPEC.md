@@ -44,7 +44,6 @@ Declared values (must be multiples of 4):
 Exceptions:
 
 - Gate card vertical centering: `min-h-screen flex flex-col items-center justify-center gap-4` — matches existing `'private'` and `'not-found'` gate layout exactly
-- Password input + button in gate: `gap-3` (12px) between input and submit button for visual grouping
 - Settings popover password section: `pt-4 mt-4 border-t border-border` separator above new section — matches pattern of existing `space-y-4` popover structure
 
 Source: Inferred from `apps/web/app/canvas/[slug]/page.tsx` gate layouts and `apps/web/src/components/canvas/canvas-header.tsx` SettingsPopover.
@@ -58,13 +57,13 @@ Source: Inferred from `apps/web/app/canvas/[slug]/page.tsx` gate layouts and `ap
 | Body                    | 14px (text-sm) | 400 (regular)  | 1.5         |
 | Label                   | 12px (text-xs) | 400 (regular)  | 1.4         |
 | Heading                 | 20px (text-xl) | 600 (semibold) | 1.2         |
-| Popover section heading | 14px (text-sm) | 500 (medium)   | 1.2         |
+| Popover section heading | 14px (text-sm) | 600 (semibold) | 1.2         |
 
 Notes:
 
 - Gate headings use `text-xl font-semibold` — matches the `'private'` gate: `"This board is private"` at `text-xl font-semibold text-foreground`
 - Gate subtext uses `text-sm text-muted-foreground` — matches existing pattern
-- Popover section label (`"Password protection"`) uses `text-sm font-medium text-foreground` — matches `"Room access"` heading in SettingsPopover
+- Popover section label (`"Password protection"`) uses `text-sm font-semibold text-foreground` — elevated from `font-medium` to maintain 2-weight limit (400 body + 600 headings)
 - Status line (`"Password: Set"` or `"No password set"`) uses `text-xs text-muted-foreground`
 - Inline error under input uses `text-xs` at weight 400 in `text-destructive`
 
@@ -112,7 +111,7 @@ Layout: Reuses the exact pattern from the existing `'private'` gate (lines 66–
   <KeyRound className="h-12 w-12 text-muted-foreground" />
   <h1 className="text-xl font-semibold text-foreground">This board is password protected</h1>
   <p className="text-sm text-muted-foreground">Enter the password to join.</p>
-  <div className="flex flex-col gap-3 w-full max-w-xs">
+  <div className="flex flex-col gap-4 w-full max-w-xs">
     <Input type="password" placeholder="Password" ... />
     [inline error text — "Incorrect password" — text-xs text-destructive, visible on 401 retry]
     <Button variant="default" className="w-full">Join Board</Button>
@@ -163,14 +162,14 @@ Sub-states:
 **No password set:**
 
 ```
-<div className="space-y-3">
+<div className="space-y-4">
   <div>
-    <h4 className="text-sm font-medium text-foreground">Password protection</h4>
+    <h4 className="text-sm font-semibold text-foreground">Password protection</h4>
     <p className="text-xs text-muted-foreground">No password set</p>
   </div>
   <div className="flex gap-2">
     <Input type="password" placeholder="Set a password" className="h-8 text-xs flex-1" />
-    <Button variant="outline" size="sm">Set</Button>
+    <Button variant="outline" size="sm">Set Password</Button>
   </div>
 </div>
 ```
@@ -178,17 +177,17 @@ Sub-states:
 **Password set:**
 
 ```
-<div className="space-y-3">
+<div className="space-y-4">
   <div className="flex items-center justify-between">
     <div>
-      <h4 className="text-sm font-medium text-foreground">Password protection</h4>
+      <h4 className="text-sm font-semibold text-foreground">Password protection</h4>
       <p className="text-xs text-muted-foreground">Password: Set</p>
     </div>
     <KeyRound className="h-4 w-4 text-muted-foreground flex-shrink-0" />
   </div>
   <div className="flex gap-2">
     <Input type="password" placeholder="Change password" className="h-8 text-xs flex-1" />
-    <Button variant="outline" size="sm">Change</Button>
+    <Button variant="outline" size="sm">Change Password</Button>
   </div>
   <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive">
     Remove password
@@ -200,7 +199,7 @@ Interaction: Set/Change PATCHes `/api/rooms/:slug` with `{ password: string }`. 
 
 #### Surface 3: `KeyRound` Badge on Room Cards
 
-Position: Inline alongside `<VisibilityBadge>` in the card body `<div className="p-4 flex flex-col gap-2.5">`.
+Position: Inline alongside `<VisibilityBadge>` in the card body `<div className="p-4 flex flex-col gap-2">`.
 
 Rendered when `room.hasPassword === true`. Badge row:
 
@@ -246,8 +245,8 @@ Source: `apps/web/src/components/canvas/canvas-header.tsx`, `apps/web/components
 | Status — password set                | "Password: Set"                               |
 | Settings input placeholder (set)     | "Set a password"                              |
 | Settings input placeholder (change)  | "Change password"                             |
-| Settings set CTA                     | "Set"                                         |
-| Settings change CTA                  | "Change"                                      |
+| Settings set CTA                     | "Set Password"                                |
+| Settings change CTA                  | "Change Password"                             |
 | Settings remove CTA                  | "Remove password"                             |
 | Toast — password set                 | "Password set"                                |
 | Toast — password changed             | "Password updated"                            |
