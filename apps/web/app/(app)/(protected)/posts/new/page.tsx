@@ -150,7 +150,6 @@ export default function CreatePostPage() {
       for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
       const file = new File([arr], filename, { type: mime })
       form.setValue('files', [file])
-      setCurrentStep(3) // Jump to FILES step
     } catch {
       // Silently ignore malformed sessionStorage data
     }
