@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, Res } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -20,6 +31,20 @@ export class CollabController {
   @ResponseMessage('Room created successfully')
   create(@Body() dto: CreateRoomDto, @Session() session: UserSession) {
     return this.collabService.createRoom(dto, session.user.id)
+  }
+
+  @Get()
+  @ApiOkResponse({ type: [RoomEntity] })
+  @ResponseMessage('Rooms fetched successfully')
+  findByOwner(@Session() session: UserSession) {
+    return this.collabService.getRoomsByOwner(session.user.id)
+  }
+
+  @Delete(':slug')
+  @HttpCode(204)
+  @ResponseMessage('Room deleted')
+  async deleteRoom(@Param('slug') slug: string, @Session() session: UserSession) {
+    await this.collabService.deleteRoom(slug, session.user.id)
   }
 
   @Get(':slug')

@@ -23,12 +23,28 @@ export class CollabService {
     return room
   }
 
+  async getRoomsByOwner(ownerId: string) {
+    return this.collabRepository.findByOwner(ownerId)
+  }
+
+  async deleteRoom(slug: string, userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can delete this room')
+    await this.collabRepository.deleteBySlug(slug)
+  }
+
   async updateRoom(slug: string, dto: UpdateRoomDto, userId: string) {
     const room = await this.collabRepository.findBySlug(slug)
     if (!room) throw new NotFoundException('Room not found')
     if (room.ownerId !== userId)
       throw new ForbiddenException('Only the room owner can update settings')
-    return this.collabRepository.updateVisibility(slug, dto.visibility)
+    const updateData: { title?: string; visibility?: RoomVisibility } = {}
+    if (dto.visibility !== undefined) updateData.visibility = dto.visibility
+    if (dto.title !== undefined) updateData.title = dto.title
+    if (Object.keys(updateData).length === 0) return room
+    return this.collabRepository.updateRoom(slug, updateData)
   }
 
   async joinRoom(slug: string, session: UserSession | null, req: Request, res: Response) {

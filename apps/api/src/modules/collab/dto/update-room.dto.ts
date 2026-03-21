@@ -1,9 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsEnum } from 'class-validator'
+import { ApiPropertyOptional } from '@nestjs/swagger'
+import { IsEnum, IsOptional, IsString } from 'class-validator'
 import { RoomVisibility } from '@/generated/prisma/client'
 
 export class UpdateRoomDto {
-  @ApiProperty({ enum: ['OPEN', 'VIEW_ONLY', 'PRIVATE'] })
+  @ApiPropertyOptional({ enum: ['OPEN', 'VIEW_ONLY', 'PRIVATE'] })
+  @IsOptional()
   @IsEnum(RoomVisibility)
-  visibility: RoomVisibility
+  visibility?: RoomVisibility
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string
 }

@@ -27,6 +27,21 @@ export class CollabRepository {
     })
   }
 
+  async findByOwner(ownerId: string) {
+    return this.prisma.room.findMany({
+      where: { ownerId },
+      orderBy: { updatedAt: 'desc' },
+    })
+  }
+
+  async deleteBySlug(slug: string) {
+    await this.prisma.room.delete({ where: { slug } })
+  }
+
+  async updateRoom(slug: string, data: { title?: string; visibility?: RoomVisibility }) {
+    return this.prisma.room.update({ where: { slug }, data })
+  }
+
   async updateVisibility(slug: string, visibility: RoomVisibility) {
     return this.prisma.room.update({ where: { slug }, data: { visibility } })
   }
