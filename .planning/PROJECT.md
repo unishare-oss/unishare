@@ -67,4 +67,4 @@ Multiple students can open a shared canvas and collaborate in real-time, inside 
 
 ---
 
-_Last updated: 2026-03-21 after Phase 7: Room Access Control_
+\_Last updated: 2026-03-21 after Phase 9: Canvas Password Protection for Link-Shared Rooms — Phase 9 complete — password protection shipped (bcryptjs, passwordHash field, gate UI, sessionStorage sentinel, Protected badge, create dialog visibility+password)
