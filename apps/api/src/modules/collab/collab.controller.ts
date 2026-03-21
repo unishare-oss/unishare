@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Req, Res } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -6,6 +6,7 @@ import { UserSession } from '@/auth/auth.config'
 import type { Request, Response } from 'express'
 import { CollabService } from './collab.service'
 import { CreateRoomDto } from './dto/create-room.dto'
+import { UpdateRoomDto } from './dto/update-room.dto'
 import { RoomEntity } from './entities/room.entity'
 import { JoinRoomResponseDto } from './dto/join-room-response.dto'
 
@@ -26,6 +27,17 @@ export class CollabController {
   @ResponseMessage('Room fetched successfully')
   findBySlug(@Param('slug') slug: string) {
     return this.collabService.getRoomBySlug(slug)
+  }
+
+  @Patch(':slug')
+  @ApiOkResponse({ type: RoomEntity })
+  @ResponseMessage('Room updated')
+  updateRoom(
+    @Param('slug') slug: string,
+    @Body() dto: UpdateRoomDto,
+    @Session() session: UserSession,
+  ) {
+    return this.collabService.updateRoom(slug, dto, session.user.id)
   }
 
   @Post(':slug/join')

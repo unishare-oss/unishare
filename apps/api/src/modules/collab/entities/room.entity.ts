@@ -18,4 +18,7 @@ export class RoomEntity {
 
   @ApiProperty()
   updatedAt: Date
+
+  @ApiProperty({ enum: ['OPEN', 'VIEW_ONLY', 'PRIVATE'] })
+  visibility: string
 }

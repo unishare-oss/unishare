@@ -18,4 +18,7 @@ export class JoinRoomResponseDto {
 
   @ApiProperty()
   isViewOnly: boolean
+
+  @ApiProperty()
+  ownerId: string
 }

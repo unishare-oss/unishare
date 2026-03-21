@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { RoomVisibility } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 
 @Injectable()
@@ -13,7 +14,7 @@ export class CollabRepository {
     return this.prisma.room.findUnique({ where: { slug } })
   }
 
-  async findBySlugWithGuestFlag(slug: string) {
+  async findBySlugWithVisibility(slug: string) {
     return this.prisma.room.findUnique({
       where: { slug },
       select: {
@@ -21,9 +22,13 @@ export class CollabRepository {
         slug: true,
         title: true,
         ownerId: true,
-        isGuestEditingAllowed: true,
+        visibility: true,
       },
     })
+  }
+
+  async updateVisibility(slug: string, visibility: RoomVisibility) {
+    return this.prisma.room.update({ where: { slug }, data: { visibility } })
   }
 
   async saveSnapshot(slug: string, snapshot: Uint8Array): Promise<void> {

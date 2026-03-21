@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundException, ForbiddenException } from '@nestjs/common'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
 import { CollabService } from './collab.service'
@@ -25,7 +25,8 @@ describe('CollabService', () => {
   let repository: {
     create: jest.Mock
     findBySlug: jest.Mock
-    findBySlugWithGuestFlag: jest.Mock
+    findBySlugWithVisibility: jest.Mock
+    updateVisibility: jest.Mock
   }
 
   const mockReq = { headers: {} } as unknown as Request
@@ -36,7 +37,7 @@ describe('CollabService', () => {
     slug: 'abc1234567',
     title: null,
     ownerId: 'user-1',
-    isGuestEditingAllowed: true,
+    visibility: 'OPEN',
   }
 
   const mockAnonSignInResult = {
@@ -60,7 +61,8 @@ describe('CollabService', () => {
     repository = {
       create: jest.fn(),
       findBySlug: jest.fn(),
-      findBySlugWithGuestFlag: jest.fn(),
+      findBySlugWithVisibility: jest.fn(),
+      updateVisibility: jest.fn(),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -174,7 +176,7 @@ describe('CollabService', () => {
     const getSessionMock = auth.api.getSession as unknown as jest.Mock
 
     it('should call signInAnonymous and return isAnonymous: true when no session', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue(mockRoom)
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
@@ -185,7 +187,7 @@ describe('CollabService', () => {
     })
 
     it('should forward set-cookie header when creating anonymous session', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue(mockRoom)
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
@@ -198,7 +200,7 @@ describe('CollabService', () => {
     })
 
     it('should skip signInAnonymous and return existing session when session provided', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue(mockRoom)
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
 
       const result = await service.joinRoom(
         'abc1234567',
@@ -211,10 +213,10 @@ describe('CollabService', () => {
       expect(result.userId).toBe('user-auth-1')
     })
 
-    it('should set isViewOnly: true for anonymous user when editing is disabled', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue({
+    it('should set isViewOnly: true for anonymous user on VIEW_ONLY room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue({
         ...mockRoom,
-        isGuestEditingAllowed: false,
+        visibility: 'VIEW_ONLY',
       })
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
@@ -224,10 +226,10 @@ describe('CollabService', () => {
       expect(result.isViewOnly).toBe(true)
     })
 
-    it('should set isViewOnly: false for authenticated user when editing is disabled', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue({
+    it('should set isViewOnly: false for authenticated user on VIEW_ONLY room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue({
         ...mockRoom,
-        isGuestEditingAllowed: false,
+        visibility: 'VIEW_ONLY',
       })
 
       const result = await service.joinRoom(
@@ -240,8 +242,35 @@ describe('CollabService', () => {
       expect(result.isViewOnly).toBe(false)
     })
 
+    it('should throw ForbiddenException for anonymous user on PRIVATE room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue({
+        ...mockRoom,
+        visibility: 'PRIVATE',
+      })
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+
+      await expect(service.joinRoom('abc1234567', null, mockReq, mockRes)).rejects.toThrow(
+        ForbiddenException,
+      )
+    })
+
+    it('should return isViewOnly: false for authenticated user on PRIVATE room', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue({
+        ...mockRoom,
+        visibility: 'PRIVATE',
+      })
+      const result = await service.joinRoom(
+        'abc1234567',
+        mockAuthSession as unknown as import('@/auth/auth.config').UserSession,
+        mockReq,
+        mockRes,
+      )
+      expect(result.isViewOnly).toBe(false)
+    })
+
     it('should throw NotFoundException for nonexistent room', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue(null)
+      repository.findBySlugWithVisibility.mockResolvedValue(null)
 
       await expect(service.joinRoom('nonexistent', null, mockReq, mockRes)).rejects.toThrow(
         NotFoundException,
@@ -249,7 +278,7 @@ describe('CollabService', () => {
     })
 
     it('should return displayName from user.name for anonymous session (set by generateName)', async () => {
-      repository.findBySlugWithGuestFlag.mockResolvedValue(mockRoom)
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
       signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
       getSessionMock.mockResolvedValue(mockAnonSessionResult)
 
@@ -257,6 +286,46 @@ describe('CollabService', () => {
 
       // anonymous user.name is set by generateName callback (generateGuestDisplayName)
       expect(result.displayName).toBe('Purple Penguin')
+    })
+
+    it('should return ownerId in joinRoom response', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
+      signInAnonymousMock.mockResolvedValue(mockAnonSignInResult)
+      getSessionMock.mockResolvedValue(mockAnonSessionResult)
+      const result = await service.joinRoom('abc1234567', null, mockReq, mockRes)
+      expect(result.ownerId).toBe('user-1')
+    })
+  })
+
+  describe('updateRoom', () => {
+    it('should update visibility when called by owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateVisibility.mockResolvedValue({ ...mockRoom, visibility: 'VIEW_ONLY' })
+
+      const result = await service.updateRoom(
+        'abc1234567',
+        { visibility: 'VIEW_ONLY' as any },
+        'user-1',
+      )
+
+      expect(repository.updateVisibility).toHaveBeenCalledWith('abc1234567', 'VIEW_ONLY')
+      expect(result.visibility).toBe('VIEW_ONLY')
+    })
+
+    it('should throw ForbiddenException when called by non-owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+
+      await expect(
+        service.updateRoom('abc1234567', { visibility: 'PRIVATE' as any }, 'user-999'),
+      ).rejects.toThrow(ForbiddenException)
+    })
+
+    it('should throw NotFoundException when room not found', async () => {
+      repository.findBySlug.mockResolvedValue(null)
+
+      await expect(
+        service.updateRoom('nonexistent', { visibility: 'OPEN' as any }, 'user-1'),
+      ).rejects.toThrow(NotFoundException)
     })
   })
 })

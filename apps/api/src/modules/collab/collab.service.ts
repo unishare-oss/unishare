@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
 import { nanoid } from 'nanoid'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response } from 'express'
+import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
 import { CollabRepository } from './collab.repository'
 import { CreateRoomDto } from './dto/create-room.dto'
+import { UpdateRoomDto } from './dto/update-room.dto'
 
 @Injectable()
 export class CollabService {
@@ -21,8 +23,16 @@ export class CollabService {
     return room
   }
 
+  async updateRoom(slug: string, dto: UpdateRoomDto, userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can update settings')
+    return this.collabRepository.updateVisibility(slug, dto.visibility)
+  }
+
   async joinRoom(slug: string, session: UserSession | null, req: Request, res: Response) {
-    const room = await this.collabRepository.findBySlugWithGuestFlag(slug)
+    const room = await this.collabRepository.findBySlugWithVisibility(slug)
     if (!room) throw new NotFoundException('Room not found')
 
     let activeSession = session
@@ -58,7 +68,10 @@ export class CollabService {
       isAnonymous = !!(activeSession.user as unknown as Record<string, unknown>).isAnonymous
     }
 
-    const isViewOnly = !room.isGuestEditingAllowed && isAnonymous
+    if (room.visibility === RoomVisibility.PRIVATE && isAnonymous) {
+      throw new ForbiddenException('Room is private')
+    }
+    const isViewOnly = room.visibility === RoomVisibility.VIEW_ONLY && isAnonymous
 
     // displayName: for anonymous users, name was set by generateName callback in auth.config;
     // for authenticated users, use session.displayName or user.name as fallback
@@ -74,6 +87,7 @@ export class CollabService {
       displayName,
       isAnonymous,
       isViewOnly,
+      ownerId: room.ownerId,
     }
   }
 }
