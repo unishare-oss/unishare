@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 06
 status: unknown
-last_updated: '2026-03-21T05:50:03.431Z'
+last_updated: '2026-03-21T05:54:18.706Z'
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -70,6 +70,9 @@ progress:
 - [Phase 06]: saveSnapshot/getSnapshot use Uint8Array (not Buffer) to satisfy Prisma strict Bytes type
 - [Phase 06]: getDoc(slug) added as sync in-memory lookup for handleYjsUpdate hot path — room guaranteed in memory after join
 - [Phase 06]: In-memory Y.Doc is canonical — rooms.has(slug) guard in getOrCreate prevents redundant DB restore
+- [Phase 06]: PNG-in-PDF via jsPDF addImage() instead of pdf.svg() for reliable Excalidraw export
+- [Phase 06]: isAnonymous passed as prop to CollabProvider from join response, not derived inside context
+- [Phase 06]: Retry once after 500ms on non-404 join errors to fix anonymous cookie timing race condition
 
 ## Performance Metrics
 
@@ -87,6 +90,7 @@ progress:
 | Phase 05 P01 | 300    | 2 tasks      | 2 files |
 | Phase 05 P03 | 10     | 1 tasks      | 1 files |
 | Phase 06 P01 | 680    | 2 tasks      | 6 files |
+| Phase 06 P02 | 158    | 2 tasks      | 7 files |
 
 ## Phase History
 

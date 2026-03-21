@@ -29,11 +29,11 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ROOM-01**: Authenticated users can create a standalone collaboration room
 - [x] **ROOM-02**: Each room has a unique shareable link
 - [x] **ROOM-03**: Board state persists after all participants leave — room can be rejoined later
-- [ ] **ROOM-04**: User can export the board as a PNG image
+- [x] **ROOM-04**: User can export the board as a PNG image
 
 ### Export & Integration
 
-- [ ] **EXPO-01**: User can export the board as a PDF
+- [x] **EXPO-01**: User can export the board as a PDF
 - [ ] **EXPO-02**: User can post an exported board directly to UniShare as a new post (image/PDF + title)
 
 ## v2 Requirements
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ROOM-01     | 1     | Complete |
 | ROOM-02     | 1     | Complete |
 | ROOM-03     | 1, 6  | Complete |
-| ROOM-04     | 6     | Pending  |
-| EXPO-01     | 6     | Pending  |
+| ROOM-04     | 6     | Complete |
+| EXPO-01     | 6     | Complete |
 | EXPO-02     | 6     | Pending  |
 
 **Coverage:**
