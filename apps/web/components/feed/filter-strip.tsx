@@ -31,6 +31,8 @@ interface FilterStripProps {
   onYearChange: (year: number | null) => void
   selectedCourseId: string
   onCourseChange: (courseId: string) => void
+  selectedModuleNumber: number | null
+  onModuleChange: (moduleNumber: number | null) => void
 }
 
 const ALL = '__all__'
@@ -44,6 +46,8 @@ export function FilterStrip({
   onYearChange,
   selectedCourseId,
   onCourseChange,
+  selectedModuleNumber,
+  onModuleChange,
 }: FilterStripProps) {
   const { data: departments } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
@@ -90,8 +94,12 @@ export function FilterStrip({
     onCourseChange(value === ALL ? '' : value)
   }
 
+  function handleModuleChange(value: string) {
+    onModuleChange(value === ALL ? null : Number(value))
+  }
+
   return (
-    <div className="border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
+    <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
       <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
         {typeFilters.map((filter) => (
           <button
@@ -147,6 +155,25 @@ export function FilterStrip({
               {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
                 <SelectItem key={y} value={String(y)}>
                   Year {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-w-0">
+          <Select
+            value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
+            onValueChange={handleModuleChange}
+          >
+            <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-28">
+              <SelectValue placeholder="Module" />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value={ALL}>All modules</SelectItem>
+              {[1, 2, 3].map((m) => (
+                <SelectItem key={m} value={String(m)}>
+                  Module {m}
                 </SelectItem>
               ))}
             </SelectContent>

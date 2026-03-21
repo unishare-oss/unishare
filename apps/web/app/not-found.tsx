@@ -13,7 +13,7 @@ export default function NotFound() {
         </p>
       </div>
       <Link
-        href="/"
+        href="/feed"
         className="font-mono text-sm text-text-muted hover:text-foreground transition-colors duration-150 underline underline-offset-4"
       >
         Back to feed

@@ -369,6 +369,12 @@
             "schema": { "minimum": 1, "maximum": 6, "type": "number" }
           },
           {
+            "name": "moduleNumber",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "maximum": 3, "type": "number" }
+          },
+          {
             "name": "type",
             "required": false,
             "in": "query",
@@ -951,6 +957,110 @@
           }
         },
         "tags": ["post-requests"]
+      }
+    },
+    "/api/rooms": {
+      "post": {
+        "operationId": "CollabController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateRoomDto" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RoomEntity" } }
+            }
+          }
+        },
+        "tags": ["collab"]
+      },
+      "get": {
+        "operationId": "CollabController_findByOwner",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/RoomEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["collab"]
+      }
+    },
+    "/api/rooms/{slug}": {
+      "delete": {
+        "operationId": "CollabController_deleteRoom",
+        "parameters": [
+          { "name": "slug", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["collab"]
+      },
+      "get": {
+        "operationId": "CollabController_findBySlug",
+        "parameters": [
+          { "name": "slug", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RoomEntity" } }
+            }
+          }
+        },
+        "tags": ["collab"]
+      },
+      "patch": {
+        "operationId": "CollabController_updateRoom",
+        "parameters": [
+          { "name": "slug", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateRoomDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/RoomEntity" } }
+            }
+          }
+        },
+        "tags": ["collab"]
+      }
+    },
+    "/api/rooms/{slug}/join": {
+      "post": {
+        "operationId": "CollabController_joinRoom",
+        "parameters": [
+          { "name": "slug", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JoinRoomResponseDto" }
+              }
+            }
+          }
+        },
+        "tags": ["collab"]
       }
     }
   },
@@ -1635,6 +1745,53 @@
           "postId": { "type": "string", "description": "ID of the post to suggest as fulfillment" }
         },
         "required": ["postId"]
+      },
+      "CreateRoomDto": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "Optional room title", "maxLength": 120 }
+        }
+      },
+      "RoomEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "slug": { "type": "string" },
+          "title": { "type": "object", "nullable": true },
+          "ownerId": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "visibility": { "type": "string", "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"] }
+        },
+        "required": ["id", "slug", "ownerId", "createdAt", "updatedAt", "visibility"]
+      },
+      "UpdateRoomDto": {
+        "type": "object",
+        "properties": {
+          "visibility": { "type": "string", "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"] },
+          "title": { "type": "string" }
+        }
+      },
+      "JoinRoomResponseDto": {
+        "type": "object",
+        "properties": {
+          "roomSlug": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "userId": { "type": "string" },
+          "displayName": { "type": "string" },
+          "isAnonymous": { "type": "boolean" },
+          "isViewOnly": { "type": "boolean" },
+          "ownerId": { "type": "string" }
+        },
+        "required": [
+          "roomSlug",
+          "sessionId",
+          "userId",
+          "displayName",
+          "isAnonymous",
+          "isViewOnly",
+          "ownerId"
+        ]
       }
     }
   }

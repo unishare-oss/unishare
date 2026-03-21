@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { openAPI, admin } from 'better-auth/plugins'
+import { openAPI, admin, anonymous } from 'better-auth/plugins'
+import { generateGuestDisplayName } from './guest-display-name'
 import { ac, roles } from '../lib/permissions'
 import { UserRole } from '../generated/prisma/client'
 import { PrismaClient } from '../generated/prisma/client'
@@ -55,12 +56,31 @@ export const auth = betterAuth({
       defaultRole: UserRole.STUDENT,
       adminRoles: [UserRole.ADMIN],
     }),
+    anonymous({
+      emailDomainName: 'guest.unishare.app',
+      generateName: () => generateGuestDisplayName(),
+    }),
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAgeUnitInMilliseconds: 60 * 60 * 1000,
+    additionalFields: {
+      displayName: {
+        type: 'string' as const,
+        required: false,
+        input: false,
+        returned: true,
+      },
+      isViewOnly: {
+        type: 'boolean' as const,
+        required: false,
+        defaultValue: false,
+        input: false,
+        returned: true,
+      },
+    },
   },
   user: {
     additionalFields: {

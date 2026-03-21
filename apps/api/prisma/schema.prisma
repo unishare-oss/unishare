@@ -21,6 +21,7 @@ model User {
   banExpires              DateTime?
   banReason               String?
   banned                  Boolean?                 @default(false)
+  isAnonymous             Boolean?                 @default(false)
   bio                     String?
   enrollmentYear          Int?
   accounts                Account[]
@@ -38,7 +39,8 @@ model User {
   followers               Follow[]                 @relation("Following")
   following               Follow[]                 @relation("Followers")
   reports                 Report[]                 @relation("ReportsSubmitted")
-  adminActions            AdminAction[]           @relation("AdminActions")
+  adminActions            AdminAction[]            @relation("AdminActions")
+  rooms                   Room[]
 
   @@map("user")
 }
@@ -194,6 +196,8 @@ model Session {
   userAgent      String?
   userId         String
   impersonatedBy String?
+  displayName    String?
+  isViewOnly     Boolean? @default(false)
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -311,6 +315,28 @@ model PostRequestUpvote {
   @@map("post_request_upvote")
 }
 
+model Room {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  title        String?
+  ownerId      String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  snapshot     Bytes?
+  visibility   RoomVisibility @default(OPEN)
+  passwordHash String?
+  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("room")
+}
+
+enum RoomVisibility {
+  OPEN
+  VIEW_ONLY
+  PRIVATE
+}
+
 enum PostRequestStatus {
   OPEN
   FULFILLED
@@ -378,39 +404,39 @@ model PostTag {
 
 enum PostPublicationStatus {
   PUBLISHED
-  PENDING_REVIEW  // Soft-deleted: reported, pending admin review
-  REJECTED        // Permanently deleted: admin rejected report
+  PENDING_REVIEW // Soft-deleted: reported, pending admin review
+  REJECTED // Permanently deleted: admin rejected report
 }
 
 enum ReportReason {
-  SPAM        // Duplicate, off-topic
-  OFFENSIVE   // Inappropriate language
-  COPYRIGHT   // IP violation
-  OTHER       // Policy violation
+  SPAM // Duplicate, off-topic
+  OFFENSIVE // Inappropriate language
+  COPYRIGHT // IP violation
+  OTHER // Policy violation
 }
 
 enum ReportStatus {
-  PENDING     // Awaiting admin review
-  APPROVED    // Admin approved report
-  REJECTED    // Admin rejected report (post remains published)
+  PENDING // Awaiting admin review
+  APPROVED // Admin approved report
+  REJECTED // Admin rejected report (post remains published)
 }
 
 model Report {
-  id          String   @id @default(cuid())
-  postId      String
-  userId      String   // Reporter
-  reason      ReportReason
-  comment     String?  @db.Text
-  status      ReportStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String       @id @default(cuid())
+  postId    String
+  userId    String // Reporter
+  reason    ReportReason
+  comment   String?      @db.Text
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  post        Post     @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
-  reporter    User     @relation("ReportsSubmitted", fields: [userId], references: [id], onDelete: Cascade)
+  post     Post @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
+  reporter User @relation("ReportsSubmitted", fields: [userId], references: [id], onDelete: Cascade)
 
   adminAction AdminAction?
 
-  @@unique([postId, userId])  // One report per user per post
+  @@unique([postId, userId]) // One report per user per post
   @@index([status])
   @@index([reason])
   @@index([createdAt])
@@ -418,15 +444,15 @@ model Report {
 }
 
 model AdminAction {
-  id          String   @id @default(cuid())
-  reportId    String   @unique
-  adminId     String
-  action      String   // 'approve', 'reject'
-  reason      String?  @db.Text
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  reportId  String   @unique
+  adminId   String
+  action    String // 'approve', 'reject'
+  reason    String?  @db.Text
+  createdAt DateTime @default(now())
 
-  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  admin       User     @relation("AdminActions", fields: [adminId], references: [id])
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  admin  User   @relation("AdminActions", fields: [adminId], references: [id])
 
   @@index([createdAt])
   @@map("admin_action")

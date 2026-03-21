@@ -17,6 +17,7 @@ import {
   Palette,
   MessageSquarePlus,
   Github,
+  LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -26,14 +27,15 @@ import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
 
 const publicNavItems = [
-  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/departments', label: 'Departments', icon: Building2 },
 ]
 
 const authNavItems = [
-  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
@@ -79,7 +81,7 @@ export function AppSidebar() {
 
       <nav className="flex flex-col gap-0.5 px-3 flex-1">
         {navItems.map((item) => {
-          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+          const isActive = pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}

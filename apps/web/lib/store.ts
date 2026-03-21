@@ -29,11 +29,13 @@ interface FeedStore {
   selectedYear: number | null
   hasSelectedYear: boolean
   selectedCourseId: string
+  selectedModuleNumber: number | null
   pendingFilter: { deptId: string; courseId: string; yearLevel: number | null } | null
   setActiveFilter: (filter: TypeFilter) => void
   setSelectedDeptId: (deptId: string | null) => void
   setSelectedYear: (year: number | null) => void
   setSelectedCourseId: (courseId: string) => void
+  setSelectedModuleNumber: (moduleNumber: number | null) => void
   setPendingFilter: (deptId: string, courseId: string, yearLevel: number | null) => void
   consumePendingFilter: () => { deptId: string; courseId: string; yearLevel: number | null } | null
 }
@@ -46,12 +48,14 @@ export const useFeedStore = create<FeedStore>()(
       selectedYear: null,
       hasSelectedYear: false,
       selectedCourseId: '',
+      selectedModuleNumber: null,
       pendingFilter: null,
       setActiveFilter: (activeFilter) => set({ activeFilter }),
       setSelectedDeptId: (selectedDeptId) => set({ selectedDeptId, selectedCourseId: '' }),
       setSelectedYear: (selectedYear) =>
         set({ selectedYear, hasSelectedYear: true, selectedCourseId: '' }),
       setSelectedCourseId: (selectedCourseId) => set({ selectedCourseId }),
+      setSelectedModuleNumber: (selectedModuleNumber) => set({ selectedModuleNumber }),
       setPendingFilter: (deptId, courseId, yearLevel) =>
         set({ pendingFilter: { deptId, courseId, yearLevel } }),
       consumePendingFilter: () => {

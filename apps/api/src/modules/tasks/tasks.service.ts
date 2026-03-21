@@ -42,6 +42,17 @@ export class TasksService {
     if (count > 0) this.logger.log(`Lifted ${count} expired bans`)
   }
 
+  // Prune anonymous guest users older than 7 days
+  @Cron('0 20 0 * * *') // 00:20 daily
+  async pruneAnonymousUsers() {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 7)
+    const { count } = await this.prisma.user.deleteMany({
+      where: { isAnonymous: true, createdAt: { lt: cutoff } },
+    })
+    if (count > 0) this.logger.log(`Pruned ${count} anonymous users older than 7 days`)
+  }
+
   // Hard-delete soft-deleted posts (+ S3 files) and comments older than 90 days
   @Cron('0 15 0 * * *') // 00:15 daily
   async purgeDeletedContent() {
