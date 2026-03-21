@@ -8,13 +8,13 @@ import { useAuth } from '@/contexts/auth-context'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 
 const guestTabs = [
-  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/login', label: 'Sign In', icon: LogIn },
 ]
 
 const authTabs = [
-  { href: '/', label: 'Feed', icon: LayoutList },
+  { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/my-posts', label: 'Posts', icon: FileText },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/notifications', label: 'Notifs', icon: Bell },
@@ -35,7 +35,7 @@ export function MobileNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
       <div className="flex items-center justify-around h-14">
         {tabs.map((tab) => {
-          const isActive = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
+          const isActive = pathname.startsWith(tab.href)
           const showBadge = tab.href === '/notifications' && unreadCount > 0
           return (
             <Link
