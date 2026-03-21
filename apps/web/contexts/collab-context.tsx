@@ -45,6 +45,9 @@ interface CollabContextValue {
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
   initialElements: unknown[] | null
   isAnonymous: boolean
+  isViewOnly: boolean
+  ownerId: string | null
+  userId: string | null
 }
 
 // ─── Presence context ────────────────────────────────────────────────────────
@@ -62,13 +65,23 @@ interface CollabPresenceContextValue {
 interface CollabProviderProps {
   slug: string
   isAnonymous: boolean
+  isViewOnly: boolean
+  ownerId: string | null
+  userId: string | null
   children: ReactNode
 }
 
 const CollabContext = createContext<CollabContextValue | null>(null)
 const CollabPresenceContext = createContext<CollabPresenceContextValue | null>(null)
 
-export function CollabProvider({ slug, isAnonymous, children }: CollabProviderProps) {
+export function CollabProvider({
+  slug,
+  isAnonymous,
+  isViewOnly,
+  ownerId,
+  userId,
+  children,
+}: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const [initialElements, setInitialElements] = useState<unknown[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
@@ -208,6 +221,9 @@ export function CollabProvider({ slug, isAnonymous, children }: CollabProviderPr
       setExcalidrawAPI,
       initialElements,
       isAnonymous,
+      isViewOnly,
+      ownerId,
+      userId,
     }),
     [
       ydoc,
@@ -217,6 +233,9 @@ export function CollabProvider({ slug, isAnonymous, children }: CollabProviderPr
       setExcalidrawAPI,
       initialElements,
       isAnonymous,
+      isViewOnly,
+      ownerId,
+      userId,
     ],
   )
 

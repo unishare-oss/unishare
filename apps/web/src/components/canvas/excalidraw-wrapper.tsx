@@ -24,7 +24,7 @@ const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElements, ydoc, initialElements, setExcalidrawAPI } = useCollab()
+  const { yElements, ydoc, initialElements, setExcalidrawAPI, isViewOnly } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
@@ -112,6 +112,7 @@ function ExcalidrawWrapperInner() {
         theme={excalidrawTheme}
         renderTopRightUI={renderTopRightUI}
         UIOptions={uiOptions}
+        viewModeEnabled={isViewOnly}
       />
     </div>
   )
