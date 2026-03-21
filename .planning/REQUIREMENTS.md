@@ -50,6 +50,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **HUB-04**: Boards page is accessible from sidebar nav and mobile nav
 - [x] **HUB-05**: Empty state with hero illustration shown when user has no boards
 
+### Room Password Protection
+
+- [ ] **PWD-01**: Room owner can set, change, or remove a password on any room via the Settings popover
+- [ ] **PWD-02**: Non-owner visitors must supply the correct password to join a password-protected room
+- [ ] **PWD-03**: Frontend shows a full-screen password gate when the join endpoint returns 401
+- [ ] **PWD-04**: Boards hub room cards show a "Protected" lock badge when a room has a password
+- [ ] **PWD-05**: Tab-scoped session memory (sessionStorage) prevents re-prompting for password on page refresh
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -116,12 +124,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HUB-03      | 8     | Planned  |
 | HUB-04      | 8     | Planned  |
 | HUB-05      | 8     | Planned  |
+| PWD-01      | 9     | Planned  |
+| PWD-02      | 9     | Planned  |
+| PWD-03      | 9     | Planned  |
+| PWD-04      | 9     | Planned  |
+| PWD-05      | 9     | Planned  |
 
 **Coverage:**
 
 - v1 requirements: 22 total
 - Mapped to phases: 22
 - Unmapped: 0
+- v1+ requirements (PWD): 5 total, all mapped to Phase 9
 
 ---
 

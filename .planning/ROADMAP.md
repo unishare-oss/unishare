@@ -187,6 +187,18 @@ Plans:
 4. "Boards" appears in sidebar nav and mobile nav (replacing "Saved" on mobile)
 5. Hero empty state with SVG illustration shows when user has no rooms
 
+### Phase 9: Canvas password protection for link-shared rooms
+
+**Goal:** Optional password protection orthogonal to room visibility — owners set/change/remove passwords, visitors enter password to join, boards hub shows lock badge
+**Requirements**: PWD-01, PWD-02, PWD-03, PWD-04, PWD-05
+**Depends on:** Phase 8
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 09-01-PLAN.md — Backend: Prisma migration, bcryptjs, DTO/entity extensions, joinRoom password check, updateRoom hash/clear, unit tests
+- [ ] 09-02-PLAN.md — Frontend: password gate UI, shake animation, sessionStorage, SettingsPopover password section, room card Protected badge, human verification
+
 ---
 
 ## Progress
