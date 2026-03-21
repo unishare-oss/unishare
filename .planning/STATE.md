@@ -121,3 +121,9 @@ progress:
 ## Notes
 
 Phase 1 complete 2026-03-20. Room model and CollabModule fully scaffolded.
+
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 8 added: Canvas Hub — boards page with owned rooms list and create-room flow
