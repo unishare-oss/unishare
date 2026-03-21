@@ -6,7 +6,13 @@ import { PrismaService } from '@/prisma/prisma.service'
 export class CollabRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: { slug: string; ownerId: string; title?: string }) {
+  async create(data: {
+    slug: string
+    ownerId: string
+    title?: string
+    visibility?: RoomVisibility
+    passwordHash?: string
+  }) {
     return this.prisma.room.create({ data })
   }
 

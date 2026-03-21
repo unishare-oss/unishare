@@ -22,7 +22,15 @@ export class CollabService {
 
   async createRoom(dto: CreateRoomDto, ownerId: string) {
     const slug = nanoid(10)
-    return this.collabRepository.create({ slug, ownerId, title: dto.title })
+    const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : undefined
+    const room = await this.collabRepository.create({
+      slug,
+      ownerId,
+      title: dto.title,
+      visibility: dto.visibility,
+      passwordHash,
+    })
+    return this.toRoomResponse(room)
   }
 
   async getRoomBySlug(slug: string) {

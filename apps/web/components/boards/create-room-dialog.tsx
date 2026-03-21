@@ -1,10 +1,13 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, LayoutGrid } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, LayoutGrid, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +15,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+
+type RoomVisibility = 'OPEN' | 'VIEW_ONLY' | 'PRIVATE'
 
 interface CreateRoomDialogProps {
   open: boolean
@@ -21,6 +26,9 @@ interface CreateRoomDialogProps {
 export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) {
   const router = useRouter()
   const [title, setTitle] = useState('')
+  const [visibility, setVisibility] = useState<RoomVisibility>('OPEN')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isPending, setIsPending] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,11 +36,14 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
     setIsPending(true)
 
     try {
+      const body: Record<string, unknown> = { title: title.trim() || undefined, visibility }
+      if (password.trim()) body.password = password.trim()
+
       const res = await fetch('/api/rooms', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim() || undefined }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -44,6 +55,8 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
       const room = await res.json()
       onOpenChange(false)
       setTitle('')
+      setVisibility('OPEN')
+      setPassword('')
       router.push(`/canvas/${room.data.slug}`)
     } catch {
       toast.error('Failed to create board')
@@ -96,6 +109,74 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
               autoFocus
               disabled={isPending}
             />
+
+            <Separator />
+
+            {/* Visibility */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Visibility
+              </Label>
+              <RadioGroup
+                value={visibility}
+                onValueChange={(v) => setVisibility(v as RoomVisibility)}
+                className="flex flex-col gap-1.5"
+                disabled={isPending}
+              >
+                {(
+                  [
+                    { value: 'OPEN', label: 'Open', desc: 'Anyone with the link can join' },
+                    { value: 'VIEW_ONLY', label: 'View only', desc: 'Viewers cannot draw' },
+                    { value: 'PRIVATE', label: 'Private', desc: 'Only you can access' },
+                  ] as const
+                ).map(({ value, label, desc }) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-2.5 cursor-pointer group"
+                    htmlFor={`vis-${value}`}
+                  >
+                    <RadioGroupItem value={value} id={`vis-${value}`} />
+                    <span className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground leading-none">
+                        {label}
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-0.5">{desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <Separator />
+
+            {/* Password */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <KeyRound className="size-3" />
+                Password protection
+                <span className="normal-case font-normal">(optional)</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Leave blank for no password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isPending}
+                  className="pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+
             <DialogFooter>
               <Button type="submit" disabled={isPending} className="w-full rounded-[6px]">
                 {isPending && <Loader2 className="size-4 mr-1.5 animate-spin" />}
