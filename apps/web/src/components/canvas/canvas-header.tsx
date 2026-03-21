@@ -254,12 +254,17 @@ function SettingsPopover() {
             className="space-y-2"
           >
             {VISIBILITY_OPTIONS.map((opt) => (
-              <div key={opt.value} className="flex items-start gap-2">
+              <div key={opt.value} className="flex items-start gap-3">
                 <RadioGroupItem value={opt.value} id={`vis-${opt.value}`} className="mt-0.5" />
-                <Label htmlFor={`vis-${opt.value}`} className="cursor-pointer">
-                  <span className="text-sm font-medium">{opt.label}</span>
+                <div className="flex flex-col gap-0.5">
+                  <Label
+                    htmlFor={`vis-${opt.value}`}
+                    className="cursor-pointer text-sm font-medium leading-none"
+                  >
+                    {opt.label}
+                  </Label>
                   <p className="text-xs text-muted-foreground">{opt.description}</p>
-                </Label>
+                </div>
               </div>
             ))}
           </RadioGroup>
