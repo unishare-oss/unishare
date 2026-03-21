@@ -17,9 +17,11 @@ describe('CollabGateway', () => {
   let gateway: CollabGateway
   let roomService: {
     getOrCreate: jest.Mock
+    getDoc: jest.Mock
     registerSocket: jest.Mock
     removeSocket: jest.Mock
     getRoomForSocket: jest.Mock
+    resetIdleTimer: jest.Mock
     hasRoom: jest.Mock
     getSocketCount: jest.Mock
   }
@@ -45,10 +47,12 @@ describe('CollabGateway', () => {
     jest.clearAllMocks()
 
     roomService = {
-      getOrCreate: jest.fn().mockReturnValue(new Y.Doc()),
+      getOrCreate: jest.fn().mockResolvedValue(new Y.Doc()),
+      getDoc: jest.fn().mockReturnValue(new Y.Doc()),
       registerSocket: jest.fn(),
       removeSocket: jest.fn(),
       getRoomForSocket: jest.fn(),
+      resetIdleTimer: jest.fn(),
       hasRoom: jest.fn(),
       getSocketCount: jest.fn(),
     }
@@ -207,7 +211,7 @@ describe('CollabGateway', () => {
       const validUpdate = Buffer.from(Y.encodeStateAsUpdate(sourceDoc))
 
       const serverDoc = new Y.Doc()
-      roomService.getOrCreate.mockReturnValue(serverDoc)
+      roomService.getDoc.mockReturnValue(serverDoc)
 
       const client = makeSocket()
       const toEmit = jest.fn()
@@ -216,7 +220,8 @@ describe('CollabGateway', () => {
       gateway.handleYjsUpdate(client as never, validUpdate)
 
       expect(roomService.getRoomForSocket).toHaveBeenCalledWith('socket-1')
-      expect(roomService.getOrCreate).toHaveBeenCalledWith(slug)
+      expect(roomService.getDoc).toHaveBeenCalledWith(slug)
+      expect(roomService.resetIdleTimer).toHaveBeenCalledWith(slug)
       expect(client.to).toHaveBeenCalledWith(slug)
       expect(toEmit).toHaveBeenCalledWith('yjs-update', validUpdate)
     })
@@ -230,7 +235,7 @@ describe('CollabGateway', () => {
       gateway.handleYjsUpdate(client as never, data)
 
       expect(client.to).not.toHaveBeenCalled()
-      expect(roomService.getOrCreate).not.toHaveBeenCalled()
+      expect(roomService.getDoc).not.toHaveBeenCalled()
     })
   })
 

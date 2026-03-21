@@ -49,6 +49,8 @@ describe('CollabGateway (integration)', () => {
       }
       return Promise.resolve(null)
     }),
+    getSnapshot: jest.fn().mockResolvedValue(null),
+    saveSnapshot: jest.fn().mockResolvedValue(undefined),
   }
 
   beforeAll(async () => {
