@@ -14,6 +14,7 @@ import { CollabRepository } from './collab.repository'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
+import { RoomEntity } from './entities/room.entity'
 
 @Injectable()
 export class CollabService {
@@ -152,10 +153,13 @@ export class CollabService {
     }
   }
 
-  private toRoomResponse(room: Record<string, unknown>) {
+  private toRoomResponse(room: Record<string, unknown>): RoomEntity {
     const { passwordHash, ...rest } = room as Record<string, unknown> & {
       passwordHash?: string | null
     }
-    return { ...rest, hasPassword: passwordHash !== null && passwordHash !== undefined }
+    return {
+      ...(rest as Omit<RoomEntity, 'hasPassword'>),
+      hasPassword: passwordHash !== null && passwordHash !== undefined,
+    }
   }
 }
