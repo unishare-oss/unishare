@@ -24,7 +24,7 @@ decisions:
 metrics:
   duration: 117
   completed_date: '2026-03-21'
-  tasks_completed: 2
+  tasks_completed: 3
   files_modified: 4
 ---
 
@@ -48,20 +48,35 @@ metrics:
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Fixed radio+label stacking alignment in SettingsPopover**
+
+- **Found during:** Task 3 (human verification)
+- **Issue:** Radio option label and description text rendered inline instead of stacked; wrapping text in `<span>` inside `<Label>` caused misalignment
+- **Fix:** Replaced nested `<span>` inside `<Label>` with a `<div className="flex flex-col gap-0.5">` wrapper containing a flat `<Label>` and `<p>` as siblings, and increased gap from `gap-2` to `gap-3`
+- **Files modified:** `apps/web/src/components/canvas/canvas-header.tsx`
+- **Commit:** fe03a1a
 
 ## Verification
 
 - TypeScript compiled without errors after both tasks.
-- Human verification pending (Task 3 checkpoint).
+- Human verification approved: all 8 verification steps passed in the browser.
+  - Anonymous user on PRIVATE room sees "This board is private" gate
+  - Anonymous user on VIEW_ONLY room sees live canvas, toolbar hidden, no drawing
+  - Owner sees settings gear icon; non-owner does not
+  - Owner can toggle Open/View-only/Private via popover radio group
+  - Visibility change is saved immediately via PATCH
+  - Owner can copy room link from settings popover
 
 ## Self-Check
 
 - [x] apps/web/app/canvas/[slug]/page.tsx — modified (commit ef94ce3)
 - [x] apps/web/contexts/collab-context.tsx — modified (commit ef94ce3)
 - [x] apps/web/src/components/canvas/excalidraw-wrapper.tsx — modified (commit ef94ce3)
-- [x] apps/web/src/components/canvas/canvas-header.tsx — modified (commit 182177e)
+- [x] apps/web/src/components/canvas/canvas-header.tsx — modified (commits 182177e, fe03a1a)
 - [x] Commit ef94ce3 exists
 - [x] Commit 182177e exists
+- [x] Commit fe03a1a exists
 
 ## Self-Check: PASSED
