@@ -5,10 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
-import { PostStatus, PostType, UserRole } from '@/generated/prisma/client'
+import { PostStatus, PostType, UserRole, PostPublicationStatus } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
+import { TagsService } from '../tags/tags.service'
+import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
@@ -22,7 +24,19 @@ export class PostsService {
     private readonly postsRepository: PostsRepository,
     private readonly notificationsService: NotificationsService,
     private readonly followsService: FollowsService,
+    private readonly tagsService: TagsService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Helper method to filter for published posts only.
+   * Used in all user-facing queries to ensure soft-deleted posts never appear.
+   */
+  private wherePublished() {
+    return {
+      publicationStatus: PostPublicationStatus.PUBLISHED,
+    }
+  }
 
   async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
     if (!departmentId) {
@@ -36,11 +50,19 @@ export class PostsService {
       throw new ForbiddenException('You can only create posts in your department')
     }
 
+    // Extract tags and handle separately
+    const { tags, ...postData } = dto
+
     const shortCode = nanoid(8)
     const post = await this.postsRepository.create(
-      { shortCode, authorId: userId, ...dto },
+      { shortCode, authorId: userId, ...postData },
       { id: userId },
     )
+
+    // Add tags if provided
+    if (tags && tags.length > 0) {
+      await this.tagPost(post.id, tags)
+    }
 
     if (post.status === PostStatus.APPROVED) {
       void this.followsService
@@ -131,7 +153,17 @@ export class PostsService {
       throw new BadRequestException('Exam year can only be updated for old question posts')
     }
 
-    return this.postsRepository.update(id, dto, { id: userId })
+    // Extract tags and handle separately
+    const { tags, ...postData } = dto
+
+    const updatedPost = await this.postsRepository.update(id, postData, { id: userId })
+
+    // Update tags if provided
+    if (tags) {
+      await this.tagPost(id, tags)
+    }
+
+    return updatedPost
   }
 
   async remove(id: string, userId: string, userRole: UserRole) {
@@ -179,5 +211,219 @@ export class PostsService {
 
   toggleReaction(id: string, dto: ReactToPostDto, userId: string, role?: UserRole) {
     return this.postsRepository.toggleReaction(id, { id: userId, role }, dto.type)
+  }
+
+  /**
+   * Search posts by full-text search
+   * Searches across title and description using PostgreSQL FTS
+   */
+  async searchPosts(
+    query: string,
+    limit: number = 20,
+    page: number = 1,
+  ): Promise<{
+    results: any[]
+    total: number
+    page: number
+    limit: number
+  }> {
+    if (!query || query.trim().length === 0) {
+      return { results: [], total: 0, page, limit }
+    }
+
+    const searchQuery = query.trim()
+
+    // Search using plainto_tsquery for safety and better results
+    const results = (await this.prisma.$queryRaw`
+      SELECT
+        p.*,
+        ts_rank(p.search_vector, plainto_tsquery('english', ${searchQuery})) as relevance
+      FROM "post" p
+      WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
+        AND p.status = ${'APPROVED'}
+        AND p.publication_status = ${'PUBLISHED'}
+        AND p.deleted_at IS NULL
+      ORDER BY relevance DESC, p.created_at DESC
+      LIMIT ${limit}
+      OFFSET ${(page - 1) * limit}
+    `) as any[]
+
+    const totalResult = (await this.prisma.$queryRaw`
+      SELECT COUNT(*) as count
+      FROM "post" p
+      WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
+        AND p.status = ${'APPROVED'}
+        AND p.publication_status = ${'PUBLISHED'}
+        AND p.deleted_at IS NULL
+    `) as any[]
+
+    const total = totalResult[0]?.count || 0
+
+    return {
+      results: results.map((r) => {
+        const { relevance, ...rest } = r
+        return rest
+      }),
+      total: Number(total),
+      page,
+      limit,
+    }
+  }
+
+  /**
+   * Tag a post with multiple tags
+   * Creates tags if they don't exist
+   */
+  async tagPost(postId: string, tagNames: string[]): Promise<any> {
+    const post = await this.postsRepository.findById(postId)
+    if (!post) throw new NotFoundException('Post not found')
+
+    // Find or create all tags
+    const tags = await Promise.all(tagNames.map((name) => this.tagsService.findOrCreate(name)))
+
+    // Use transaction to delete old tags and create new ones
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing post tags
+      await tx.postTag.deleteMany({
+        where: { postId },
+      })
+
+      // Create new post tags
+      await tx.postTag.createMany({
+        data: tags.map((tag) => ({
+          postId,
+          tagId: tag.id,
+        })),
+      })
+    })
+
+    // Return post with tags
+    const updatedPost = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+    })
+
+    return updatedPost
+  }
+
+  /**
+   * Remove a tag from a post
+   */
+  async untagPost(postId: string, tagId: string): Promise<void> {
+    const postTag = await this.prisma.postTag.findUnique({
+      where: {
+        postId_tagId: {
+          postId,
+          tagId,
+        },
+      },
+    })
+
+    if (!postTag) {
+      throw new BadRequestException('Tag not associated with this post')
+    }
+
+    await this.prisma.postTag.delete({
+      where: {
+        postId_tagId: {
+          postId,
+          tagId,
+        },
+      },
+    })
+  }
+
+  /**
+   * Find posts with a specific tag
+   */
+  async findPostsByTag(
+    tagSlug: string,
+    limit: number = 20,
+    page: number = 1,
+  ): Promise<{ results: any[]; total: number }> {
+    const results = await this.prisma.post.findMany({
+      where: {
+        tags: {
+          some: {
+            tag: {
+              slug: tagSlug,
+            },
+          },
+        },
+        ...this.wherePublished(),
+        status: PostStatus.APPROVED,
+        deletedAt: null,
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+    })
+
+    const total = await this.prisma.post.count({
+      where: {
+        tags: {
+          some: {
+            tag: {
+              slug: tagSlug,
+            },
+          },
+        },
+        ...this.wherePublished(),
+        status: PostStatus.APPROVED,
+        deletedAt: null,
+      },
+    })
+
+    return {
+      results,
+      total,
+    }
+  }
+
+  /**
+   * Find posts that have all specified tags
+   */
+  async findPostsByMultipleTags(
+    tagSlugs: string[],
+    limit: number = 20,
+    page: number = 1,
+  ): Promise<any[]> {
+    if (tagSlugs.length === 0) {
+      return []
+    }
+
+    // Get posts that have all specified tags
+    const posts = await this.prisma.post.findMany({
+      where: {
+        AND: tagSlugs.map((slug) => ({
+          tags: {
+            some: {
+              tag: {
+                slug,
+              },
+            },
+          },
+        })),
+        ...this.wherePublished(),
+        status: PostStatus.APPROVED,
+        deletedAt: null,
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+    })
+
+    return posts
   }
 }

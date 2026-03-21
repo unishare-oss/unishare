@@ -5,6 +5,9 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
   Max,
   MaxLength,
   Min,
@@ -71,4 +74,15 @@ export class CreatePostDto {
   @Min(1)
   @Max(3)
   semester: number
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['Linear Algebra', 'Calculus'],
+    description: 'Array of tag names (max 5 tags)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(0)
+  @ArrayMaxSize(5)
+  tags?: string[]
 }

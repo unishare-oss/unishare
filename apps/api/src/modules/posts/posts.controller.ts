@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
-import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
+import { ApiCreatedResponse, ApiOkResponse, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UserSession } from '@/auth/auth.config'
 import { PostsService } from './posts.service'
+import { TrendingService } from '@/modules/trending/trending.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { ListPostsDto } from './dto/list-posts.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
@@ -17,7 +18,10 @@ import { PaginatedPostEntity } from './entities/paginated-post.entity'
 @ApiTags('posts')
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly trendingService: TrendingService,
+  ) {}
 
   @Post()
   @ApiCreatedResponse({ type: PostDetailEntity })
@@ -111,5 +115,92 @@ export class PostsController {
   @ResponseMessage('Post deleted successfully')
   remove(@Param('id') id: string, @Session() session: UserSession) {
     return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
+  }
+
+  @Get('search')
+  @OptionalAuth()
+  @ApiOkResponse({ description: 'Search results with pagination' })
+  @ResponseMessage('Search completed successfully')
+  search(
+    @Query('q') q: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    const pageNum = parseInt(page, 10) || 1
+    const limitNum = parseInt(limit, 10) || 20
+    return this.postsService.searchPosts(q, limitNum, pageNum)
+  }
+
+  @Get('trending')
+  @OptionalAuth()
+  @ApiQuery({
+    name: 'page',
+    type: Number,
+    required: false,
+    description: 'Page number (1-indexed)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Results per page',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        success: true,
+        data: {
+          posts: [
+            {
+              id: 'post123',
+              title: 'Linear Algebra Notes',
+              trendingScore: 42.5,
+              views: 150,
+              createdAt: '2026-03-19T12:00:00Z',
+            },
+          ],
+          total: 250,
+          page: 1,
+          limit: 20,
+        },
+      },
+    },
+  })
+  @ResponseMessage('Trending posts fetched successfully')
+  async getTrendingPosts(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ): Promise<{ success: boolean; data: any }> {
+    const pageNum = parseInt(page, 10) || 1
+    const limitNum = parseInt(limit, 10) || 20
+
+    const result = await this.trendingService.getTrendingPosts(limitNum, pageNum)
+
+    return {
+      success: true,
+      data: result,
+    }
+  }
+
+  @Post(':id/tags')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Tags added successfully')
+  addTags(
+    @Param('id') id: string,
+    @Body() dto: { tags: string[] },
+    @Session() _session: UserSession,
+  ) {
+    return this.postsService.tagPost(id, dto.tags)
+  }
+
+  @Delete(':id/tags/:tagId')
+  @ResponseMessage('Tag removed successfully')
+  removeTag(
+    @Param('id') id: string,
+    @Param('tagId') tagId: string,
+    @Session() _session: UserSession,
+  ) {
+    return this.postsService.untagPost(id, tagId)
   }
 }
