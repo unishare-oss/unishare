@@ -32,6 +32,12 @@ const trustedOrigins = [
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: isProduction,
+      domain: process.env.COOKIE_DOMAIN,
+    },
+  },
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),

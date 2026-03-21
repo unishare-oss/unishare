@@ -53,7 +53,10 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     server.use(async (socket: Socket, next: (err?: Error) => void) => {
       const cookieHeader = socket.handshake.headers.cookie ?? ''
       const cookies = parse(cookieHeader)
-      const sessionToken = cookies['better-auth.session_token']
+      const sessionToken =
+        cookies['better-auth.session_token'] ??
+        cookies['__Secure-better-auth.session_token'] ??
+        (socket.handshake.auth as Record<string, string>)?.token
 
       if (!sessionToken) {
         return next(new Error('Unauthorized'))
