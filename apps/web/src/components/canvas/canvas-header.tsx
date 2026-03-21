@@ -2,17 +2,21 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ClipboardCopy } from 'lucide-react'
+import { ClipboardCopy, Download, FileText, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useCollabPresence, type Participant } from '@/contexts/collab-context'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useCollab, useCollabPresence, type Participant } from '@/contexts/collab-context'
 import { PRESENCE_COLORS } from '@/src/lib/presence'
+import { exportPng, exportPdf } from './export-utils'
 
 /** Extract initials: "Alice Bob" → "AB", "SleepyOtter" → "SL", "A" → "A" */
 function getInitials(name: string): string {
@@ -84,6 +88,74 @@ function ParticipantAvatars() {
   )
 }
 
+function ExportDropdown() {
+  const { slug } = useParams<{ slug: string }>()
+  const { excalidrawAPI, isAnonymous } = useCollab()
+
+  const handleExportPng = async () => {
+    if (!excalidrawAPI) return
+    try {
+      await exportPng(excalidrawAPI, slug)
+      toast.success('Board exported as PNG')
+    } catch {
+      toast.error('Export failed — try again')
+    }
+  }
+
+  const handleExportPdf = async () => {
+    if (!excalidrawAPI) return
+    try {
+      await exportPdf(excalidrawAPI, slug)
+      toast.success('Board exported as PDF')
+    } catch {
+      toast.error('Export failed — try again')
+    }
+  }
+
+  const handlePostToUniShare = async () => {
+    // Implemented in Plan 03
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1" aria-label="Export board options">
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8}>
+        <DropdownMenuItem onSelect={handleExportPng}>
+          <Download className="mr-2 h-4 w-4" />
+          Export PNG
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={handleExportPdf}>
+          <FileText className="mr-2 h-4 w-4" />
+          Export PDF
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <DropdownMenuItem disabled={isAnonymous} onSelect={handlePostToUniShare}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Post to UniShare
+                </DropdownMenuItem>
+              </span>
+            </TooltipTrigger>
+            {isAnonymous && (
+              <TooltipContent>
+                <p>Sign in to post to UniShare</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function CanvasHeader() {
   const handleCopyLink = async () => {
     try {
@@ -111,12 +183,14 @@ export function CanvasHeader() {
         <span className="font-mono text-[14px] font-bold tracking-tight">Unishare</span>
       </Link>
 
-      <ParticipantAvatars />
-
-      <Button variant="default" size="sm" onClick={handleCopyLink} className="gap-1">
-        <ClipboardCopy className="h-4 w-4" />
-        Copy link
-      </Button>
+      <div className="flex items-center gap-3">
+        <ParticipantAvatars />
+        <ExportDropdown />
+        <Button variant="default" size="sm" onClick={handleCopyLink} className="gap-1">
+          <ClipboardCopy className="h-4 w-4" />
+          Copy link
+        </Button>
+      </div>
     </header>
   )
 }
