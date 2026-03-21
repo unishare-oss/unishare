@@ -127,7 +127,7 @@ Plans:
 **Goal**: Board snapshots saved to PostgreSQL, PNG/PDF export, post-to-UniShare flow
 **Depends on**: Phase 5
 **Requirements**: ROOM-03 (persistence), ROOM-04, EXPO-01, EXPO-02
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
