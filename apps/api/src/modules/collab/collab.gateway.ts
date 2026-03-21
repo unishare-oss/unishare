@@ -102,6 +102,14 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     client.data.colorIndex = colorIndex
     client.data.name = client.data.user.name
 
+    // Phase 7: compute view-only status from room visibility + user anonymous status
+    const isAnonymous = !!client.data.user.isAnonymous
+    if (room.visibility === 'PRIVATE' && isAnonymous) {
+      client.emit('error', { message: 'Room is private' })
+      return
+    }
+    client.data.isViewOnly = room.visibility === 'VIEW_ONLY' && isAnonymous
+
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
 
@@ -141,6 +149,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     @ConnectedSocket() client: Socket,
     @MessageBody() data: Buffer | Uint8Array,
   ): void {
+    if (client.data.isViewOnly) return
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     if (!slug) return
 
