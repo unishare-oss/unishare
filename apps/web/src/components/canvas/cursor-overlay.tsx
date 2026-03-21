@@ -26,28 +26,32 @@ export function CursorOverlay() {
       className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
       aria-hidden="true"
     >
-      {appState &&
-        [...remoteCursors.entries()].map(([socketId, cursor]) => {
-          const pos = sceneToOverlay(cursor.x, cursor.y, appState, containerRef)
-          // Out-of-viewport: silently hidden
-          const container = containerRef.current
-          if (!container) return null
-          const inBounds =
-            pos.x >= -16 &&
-            pos.y >= -20 &&
-            pos.x <= container.offsetWidth + 16 &&
-            pos.y <= container.offsetHeight + 20
-          if (!inBounds) return null
-          return (
-            <RemoteCursor
-              key={socketId}
-              x={pos.x}
-              y={pos.y}
-              name={cursor.name}
-              color={PRESENCE_COLORS[cursor.colorIndex % PRESENCE_COLORS.length]}
-            />
-          )
-        })}
+      {
+        appState &&
+          /* eslint-disable react-hooks/refs */
+          [...remoteCursors.entries()].map(([socketId, cursor]) => {
+            const pos = sceneToOverlay(cursor.x, cursor.y, appState, containerRef)
+            // Out-of-viewport: silently hidden
+            const container = containerRef.current
+            if (!container) return null
+            const inBounds =
+              pos.x >= -16 &&
+              pos.y >= -20 &&
+              pos.x <= container.offsetWidth + 16 &&
+              pos.y <= container.offsetHeight + 20
+            if (!inBounds) return null
+            return (
+              <RemoteCursor
+                key={socketId}
+                x={pos.x}
+                y={pos.y}
+                name={cursor.name}
+                color={PRESENCE_COLORS[cursor.colorIndex % PRESENCE_COLORS.length]}
+              />
+            )
+          })
+        /* eslint-enable react-hooks/refs */
+      }
     </div>
   )
 }

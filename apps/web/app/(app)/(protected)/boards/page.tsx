@@ -40,8 +40,8 @@ export default function BoardsPage() {
   }
 
   const handleRename = (slug: string, title: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setLocalRooms((prev) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (prev ?? rooms ?? []).map((r) => (r.slug === slug ? { ...r, title: title as any } : r)),
     )
   }
@@ -108,7 +108,9 @@ export default function BoardsPage() {
                     visibility: room.visibility,
                     createdAt: room.createdAt,
                     updatedAt: room.updatedAt,
-                    hasPassword: (room as any).hasPassword ?? false,
+                    hasPassword:
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (room as any).hasPassword ?? false,
                   }}
                   onDelete={handleDelete}
                   onRename={handleRename}
