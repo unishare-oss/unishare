@@ -23,6 +23,7 @@ export class CollabRepository {
         title: true,
         ownerId: true,
         visibility: true,
+        passwordHash: true,
       },
     })
   }
@@ -38,7 +39,10 @@ export class CollabRepository {
     await this.prisma.room.delete({ where: { slug } })
   }
 
-  async updateRoom(slug: string, data: { title?: string; visibility?: RoomVisibility }) {
+  async updateRoom(
+    slug: string,
+    data: { title?: string; visibility?: RoomVisibility; passwordHash?: string | null },
+  ) {
     return this.prisma.room.update({ where: { slug }, data })
   }
 

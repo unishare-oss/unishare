@@ -21,4 +21,7 @@ export class RoomEntity {
 
   @ApiProperty({ enum: ['OPEN', 'VIEW_ONLY', 'PRIVATE'] })
   visibility: string
+
+  @ApiProperty({ description: 'Whether room has a password set (never exposes the hash)' })
+  hasPassword: boolean
 }
