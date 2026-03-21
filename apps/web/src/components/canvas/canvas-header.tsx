@@ -1,11 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ClipboardCopy, Download, FileText, Share2 } from 'lucide-react'
+import { ClipboardCopy, Download, FileText, Settings, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,6 +166,114 @@ function ExportDropdown() {
   )
 }
 
+type RoomVisibility = 'OPEN' | 'VIEW_ONLY' | 'PRIVATE'
+
+const VISIBILITY_OPTIONS: { value: RoomVisibility; label: string; description: string }[] = [
+  { value: 'OPEN', label: 'Open', description: 'Everyone can edit' },
+  { value: 'VIEW_ONLY', label: 'View-only', description: 'Guests can view, signed-in users edit' },
+  { value: 'PRIVATE', label: 'Private', description: 'Only signed-in users can access' },
+]
+
+function SettingsPopover() {
+  const { ownerId, userId } = useCollab()
+  const { slug } = useParams<{ slug: string }>()
+  const [visibility, setVisibility] = useState<RoomVisibility>('OPEN')
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Only render for owner
+  if (userId !== ownerId || !ownerId) return null
+
+  // Fetch current visibility on first render
+  if (!isLoaded) {
+    fetch(`/api/rooms/${slug}`, { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        setVisibility(data.data?.visibility ?? 'OPEN')
+        setIsLoaded(true)
+      })
+      .catch(() => setIsLoaded(true))
+  }
+
+  const handleVisibilityChange = async (newVisibility: RoomVisibility) => {
+    const previousVisibility = visibility
+    setVisibility(newVisibility) // Optimistic update
+
+    try {
+      const res = await fetch(`/api/rooms/${slug}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visibility: newVisibility }),
+      })
+
+      if (!res.ok) {
+        setVisibility(previousVisibility) // Rollback
+        toast.error('Failed to update room settings')
+        return
+      }
+
+      toast.success(
+        newVisibility === 'OPEN'
+          ? 'Room is now open — everyone can edit'
+          : newVisibility === 'VIEW_ONLY'
+            ? 'Room is now view-only for guests'
+            : 'Room is now private',
+      )
+    } catch {
+      setVisibility(previousVisibility) // Rollback
+      toast.error('Failed to update room settings')
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success('Link copied')
+    } catch {
+      toast.error('Could not copy link')
+    }
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" aria-label="Room settings">
+          <Settings className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" sideOffset={8} className="w-72">
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-sm font-medium text-foreground">Room access</h4>
+            <p className="text-xs text-muted-foreground">Control who can view and edit</p>
+          </div>
+
+          <RadioGroup
+            value={visibility}
+            onValueChange={(val) => handleVisibilityChange(val as RoomVisibility)}
+            className="space-y-2"
+          >
+            {VISIBILITY_OPTIONS.map((opt) => (
+              <div key={opt.value} className="flex items-start gap-2">
+                <RadioGroupItem value={opt.value} id={`vis-${opt.value}`} className="mt-0.5" />
+                <Label htmlFor={`vis-${opt.value}`} className="cursor-pointer">
+                  <span className="text-sm font-medium">{opt.label}</span>
+                  <p className="text-xs text-muted-foreground">{opt.description}</p>
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+
+          <Button variant="outline" size="sm" className="w-full gap-1" onClick={handleCopyLink}>
+            <ClipboardCopy className="h-4 w-4" />
+            Copy link
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function CanvasHeader() {
   const handleCopyLink = async () => {
     try {
@@ -191,6 +303,7 @@ export function CanvasHeader() {
 
       <div className="flex items-center gap-3">
         <ParticipantAvatars />
+        <SettingsPopover />
         <ExportDropdown />
         <Button variant="default" size="sm" onClick={handleCopyLink} className="gap-1">
           <ClipboardCopy className="h-4 w-4" />
