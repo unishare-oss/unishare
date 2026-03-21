@@ -558,6 +558,96 @@
         "tags": ["posts"]
       }
     },
+    "/api/posts/search": {
+      "get": {
+        "operationId": "PostsController_search",
+        "parameters": [
+          { "name": "q", "required": true, "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "required": true, "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "required": true, "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Search results with pagination" } },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/trending": {
+      "get": {
+        "operationId": "PostsController_getTrendingPosts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page",
+            "schema": { "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": {
+                      "posts": [
+                        {
+                          "id": "post123",
+                          "title": "Linear Algebra Notes",
+                          "trendingScore": 42.5,
+                          "views": 150,
+                          "createdAt": "2026-03-19T12:00:00Z"
+                        }
+                      ],
+                      "total": 250,
+                      "page": 1,
+                      "limit": 20
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/{id}/tags": {
+      "post": {
+        "operationId": "PostsController_addTags",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/{id}/tags/{tagId}": {
+      "delete": {
+        "operationId": "PostsController_removeTag",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "tagId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["posts"]
+      }
+    },
     "/api/posts/{postId}/comments": {
       "get": {
         "operationId": "CommentsController_findAll",
@@ -709,6 +799,56 @@
         "parameters": [],
         "responses": { "200": { "description": "" } },
         "tags": ["notifications"]
+      }
+    },
+    "/api/tags/autocomplete": {
+      "get": {
+        "operationId": "TagsController_autocomplete",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Tag name prefix",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag suggestions",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TagDto" } }
+              }
+            }
+          }
+        },
+        "tags": ["Tags"]
+      }
+    },
+    "/api/tags/trending": {
+      "get": {
+        "operationId": "TagsController_trending",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Trending tags",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TagDto" } }
+              }
+            }
+          }
+        },
+        "tags": ["Tags"]
+      }
+    },
+    "/api/tags/stats": {
+      "get": {
+        "operationId": "TagsController_stats",
+        "parameters": [],
+        "responses": { "200": { "description": "Tag statistics" } },
+        "tags": ["Tags"]
       }
     },
     "/api/posts/{postId}/files/{fileId}/url": {
@@ -1050,6 +1190,12 @@
         "parameters": [
           { "name": "slug", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/JoinRoomBodyDto" } }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1061,6 +1207,148 @@
           }
         },
         "tags": ["collab"]
+      }
+    },
+    "/api/posts/{id}/report": {
+      "post": {
+        "operationId": "ReportsController_reportPost",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateReportDto" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": {
+                      "id": "report123",
+                      "postId": "post456",
+                      "userId": "user789",
+                      "reason": "SPAM",
+                      "status": "PENDING",
+                      "createdAt": "2026-03-19T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reports"]
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "operationId": "AdminReportsController_listReports",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by status",
+            "schema": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] }
+          },
+          {
+            "name": "reason",
+            "required": false,
+            "in": "query",
+            "description": "Filter by reason",
+            "schema": { "type": "string", "enum": ["SPAM", "OFFENSIVE", "COPYRIGHT", "OTHER"] }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page",
+            "schema": { "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": { "reports": [], "total": 5, "page": 1, "limit": 20 }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Admin role required" }
+        },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
+      }
+    },
+    "/api/admin/reports/{id}/approve": {
+      "patch": {
+        "operationId": "AdminReportsController_approveReport",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": { "id": "report123", "status": "APPROVED" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Admin role required" }
+        },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
+      }
+    },
+    "/api/admin/reports/{id}/reject": {
+      "patch": {
+        "operationId": "AdminReportsController_rejectReport",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": { "id": "report123", "status": "REJECTED" }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Admin role required" }
+        },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     }
   },
@@ -1265,12 +1553,22 @@
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
           "year": { "type": "number", "minimum": 1, "maximum": 6 },
-          "semester": { "type": "number", "minimum": 1, "maximum": 3 }
+          "semester": { "type": "number", "minimum": 1, "maximum": 3 },
+          "tags": {
+            "example": ["Linear Algebra", "Calculus"],
+            "description": "Array of tag names (max 5 tags)",
+            "type": "array",
+            "items": { "type": "string" }
+          }
         },
         "required": ["type", "courseId", "title", "description", "moduleNumber", "year", "semester"]
       },
       "PostType": { "type": "string", "enum": ["NOTE", "OLD_QUESTION", "ASSIGNMENT"] },
       "PostStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+      "PostPublicationStatus": {
+        "type": "string",
+        "enum": ["PUBLISHED", "PENDING_REVIEW", "REJECTED"]
+      },
       "PostAuthorDeptEntity": {
         "type": "object",
         "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
@@ -1329,6 +1627,10 @@
           "id": { "type": "string" },
           "type": { "allOf": [{ "$ref": "#/components/schemas/PostType" }] },
           "status": { "allOf": [{ "$ref": "#/components/schemas/PostStatus" }] },
+          "publicationStatus": {
+            "allOf": [{ "$ref": "#/components/schemas/PostPublicationStatus" }]
+          },
+          "trendingScore": { "type": "number" },
           "isAnonymous": { "type": "boolean", "default": false },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
@@ -1357,6 +1659,8 @@
           "id",
           "type",
           "status",
+          "publicationStatus",
+          "trendingScore",
           "isAnonymous",
           "shortCode",
           "isOwner",
@@ -1376,6 +1680,10 @@
           "id": { "type": "string" },
           "type": { "allOf": [{ "$ref": "#/components/schemas/PostType" }] },
           "status": { "allOf": [{ "$ref": "#/components/schemas/PostStatus" }] },
+          "publicationStatus": {
+            "allOf": [{ "$ref": "#/components/schemas/PostPublicationStatus" }]
+          },
+          "trendingScore": { "type": "number" },
           "isAnonymous": { "type": "boolean", "default": false },
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
@@ -1404,6 +1712,8 @@
           "id",
           "type",
           "status",
+          "publicationStatus",
+          "trendingScore",
           "isAnonymous",
           "shortCode",
           "isOwner",
@@ -1456,7 +1766,13 @@
           "examYear": { "type": "number", "minimum": 1900, "maximum": 2100 },
           "moduleNumber": { "type": "number", "minimum": 1, "maximum": 20 },
           "year": { "type": "number", "minimum": 1, "maximum": 6 },
-          "semester": { "type": "number", "minimum": 1, "maximum": 3 }
+          "semester": { "type": "number", "minimum": 1, "maximum": 3 },
+          "tags": {
+            "example": ["Linear Algebra", "Calculus"],
+            "description": "Array of tag names (max 5 tags)",
+            "type": "array",
+            "items": { "type": "string" }
+          }
         }
       },
       "CommentUserEntity": {
@@ -1521,6 +1837,18 @@
           "createdAt": { "format": "date-time", "type": "string" }
         },
         "required": ["id", "type", "message", "read", "postId", "requestId", "createdAt"]
+      },
+      "TagDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "color": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "postCount": { "type": "number" }
+        },
+        "required": ["id", "name", "slug", "color", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",
@@ -1749,7 +2077,16 @@
       "CreateRoomDto": {
         "type": "object",
         "properties": {
-          "title": { "type": "string", "description": "Optional room title", "maxLength": 120 }
+          "title": { "type": "string", "description": "Optional room title", "maxLength": 120 },
+          "visibility": {
+            "type": "string",
+            "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"],
+            "description": "Room visibility (default: OPEN)"
+          },
+          "password": {
+            "type": "string",
+            "description": "Optional password to protect room on creation"
+          }
         }
       },
       "RoomEntity": {
@@ -1761,15 +2098,34 @@
           "ownerId": { "type": "string" },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "visibility": { "type": "string", "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"] }
+          "visibility": { "type": "string", "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"] },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "Whether room has a password set (never exposes the hash)"
+          }
         },
-        "required": ["id", "slug", "ownerId", "createdAt", "updatedAt", "visibility"]
+        "required": ["id", "slug", "ownerId", "createdAt", "updatedAt", "visibility", "hasPassword"]
       },
       "UpdateRoomDto": {
         "type": "object",
         "properties": {
           "visibility": { "type": "string", "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"] },
-          "title": { "type": "string" }
+          "title": { "type": "string" },
+          "password": {
+            "type": "string",
+            "nullable": true,
+            "description": "Set/change password (string) or remove (null)"
+          }
+        }
+      },
+      "JoinRoomBodyDto": {
+        "type": "object",
+        "properties": {
+          "password": { "type": "string" },
+          "pwVerified": {
+            "type": "boolean",
+            "description": "Sentinel from sessionStorage — skip password check if true (D-22)"
+          }
         }
       },
       "JoinRoomResponseDto": {
@@ -1792,6 +2148,18 @@
           "isViewOnly",
           "ownerId"
         ]
+      },
+      "CreateReportDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": ["SPAM", "OFFENSIVE", "COPYRIGHT", "OTHER"],
+            "description": "Reason for report"
+          },
+          "comment": { "type": "string", "description": "Optional context/details for the report" }
+        },
+        "required": ["reason"]
       }
     }
   }

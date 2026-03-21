@@ -31,6 +31,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useCollab, useCollabPresence, type Participant } from '@/contexts/collab-context'
 import { PRESENCE_COLORS } from '@/src/lib/presence'
 import { exportPng, exportPdf, postToUniShare } from './export-utils'
+import {
+  useCollabControllerFindBySlug,
+  useCollabControllerUpdateRoom,
+} from '@/src/lib/api/generated/collab/collab'
 
 /** Extract initials: "Alice Bob" → "AB", "SleepyOtter" → "SL", "A" → "A" */
 function getInitials(name: string): string {
@@ -187,46 +191,32 @@ const VISIBILITY_OPTIONS: { value: RoomVisibility; label: string; description: s
 function SettingsPopover() {
   const { ownerId, userId } = useCollab()
   const { slug } = useParams<{ slug: string }>()
-  const [visibility, setVisibility] = useState<RoomVisibility>('OPEN')
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [hasPassword, setHasPassword] = useState(false)
+  const [pendingVisibility, setPendingVisibility] = useState<RoomVisibility | null>(null)
+  const [pendingHasPassword, setPendingHasPassword] = useState<boolean | null>(null)
   const [pwInputValue, setPwInputValue] = useState('')
-  const [pwSaving, setPwSaving] = useState(false)
   const pwInputRef = useRef<HTMLInputElement>(null)
 
-  // Only render for owner
-  if (userId !== ownerId || !ownerId) return null
+  const isOwner = !!(ownerId && userId === ownerId)
 
-  // Fetch current visibility on first render
-  if (!isLoaded) {
-    fetch(`/api/rooms/${slug}`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        setVisibility(data.data?.visibility ?? 'OPEN')
-        setHasPassword(data.data?.hasPassword ?? false)
-        setIsLoaded(true)
-      })
-      .catch(() => setIsLoaded(true))
-  }
+  const { data: roomData } = useCollabControllerFindBySlug(slug, {
+    query: { enabled: isOwner },
+  })
+
+  const { mutateAsync: updateVisibility } = useCollabControllerUpdateRoom()
+  const { mutateAsync: updatePassword, isPending: pwSaving } = useCollabControllerUpdateRoom()
+
+  const serverVisibility = (roomData?.data?.visibility as RoomVisibility) ?? 'OPEN'
+  const serverHasPassword = roomData?.data?.hasPassword ?? false
+  const visibility = pendingVisibility ?? serverVisibility
+  const hasPassword = pendingHasPassword ?? serverHasPassword
+
+  if (!isOwner) return null
 
   const handleVisibilityChange = async (newVisibility: RoomVisibility) => {
-    const previousVisibility = visibility
-    setVisibility(newVisibility) // Optimistic update
+    setPendingVisibility(newVisibility)
 
     try {
-      const res = await fetch(`/api/rooms/${slug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visibility: newVisibility }),
-      })
-
-      if (!res.ok) {
-        setVisibility(previousVisibility) // Rollback
-        toast.error('Failed to update room settings')
-        return
-      }
-
+      await updateVisibility({ slug, data: { visibility: newVisibility } })
       toast.success(
         newVisibility === 'OPEN'
           ? 'Room is now open — everyone can edit'
@@ -235,8 +225,9 @@ function SettingsPopover() {
             : 'Room is now private',
       )
     } catch {
-      setVisibility(previousVisibility) // Rollback
       toast.error('Failed to update room settings')
+    } finally {
+      setPendingVisibility(null)
     }
   }
 
@@ -251,60 +242,29 @@ function SettingsPopover() {
 
   const handleSetOrChangePassword = async () => {
     if (!pwInputValue.trim()) return
-    setPwSaving(true)
-    const previousHasPassword = hasPassword
-    setHasPassword(true) // optimistic
+    setPendingHasPassword(true)
 
     try {
-      const res = await fetch(`/api/rooms/${slug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwInputValue }),
-      })
-
-      if (!res.ok) {
-        setHasPassword(previousHasPassword)
-        toast.error('Failed to save password — try again')
-        setPwSaving(false)
-        return
-      }
-
-      toast.success(previousHasPassword ? 'Password updated' : 'Password set')
+      await updatePassword({ slug, data: { password: pwInputValue } })
+      toast.success(serverHasPassword ? 'Password updated' : 'Password set')
       setPwInputValue('')
     } catch {
-      setHasPassword(previousHasPassword)
       toast.error('Failed to save password — try again')
     } finally {
-      setPwSaving(false)
+      setPendingHasPassword(null)
     }
   }
 
   const handleRemovePassword = async () => {
-    setPwSaving(true)
-    setHasPassword(false) // optimistic
+    setPendingHasPassword(false)
 
     try {
-      const res = await fetch(`/api/rooms/${slug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: null }),
-      })
-
-      if (!res.ok) {
-        setHasPassword(true) // rollback
-        toast.error('Failed to remove password — try again')
-        setPwSaving(false)
-        return
-      }
-
+      await updatePassword({ slug, data: { password: null } })
       toast.success('Password removed')
     } catch {
-      setHasPassword(true)
       toast.error('Failed to remove password — try again')
     } finally {
-      setPwSaving(false)
+      setPendingHasPassword(null)
     }
   }
 

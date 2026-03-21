@@ -14,6 +14,7 @@ export class UpdateRoomDto {
   title?: string
 
   @ApiPropertyOptional({
+    type: 'string',
     nullable: true,
     description: 'Set/change password (string) or remove (null)',
   })
