@@ -25,4 +25,19 @@ export class CollabRepository {
       },
     })
   }
+
+  async saveSnapshot(slug: string, snapshot: Uint8Array): Promise<void> {
+    await this.prisma.room.update({
+      where: { slug },
+      data: { snapshot: Buffer.from(snapshot) },
+    })
+  }
+
+  async getSnapshot(slug: string): Promise<Uint8Array | null> {
+    const room = await this.prisma.room.findUnique({
+      where: { slug },
+      select: { snapshot: true },
+    })
+    return room?.snapshot ? new Uint8Array(room.snapshot) : null
+  }
 }
