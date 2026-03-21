@@ -114,7 +114,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.OWNER }}/unishare-web:latest
           build-args: |
-            API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            API_URL=${{ secrets.API_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
