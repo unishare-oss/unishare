@@ -27,6 +27,9 @@ describe('CollabService', () => {
     findBySlug: jest.Mock
     findBySlugWithVisibility: jest.Mock
     updateVisibility: jest.Mock
+    findByOwner: jest.Mock
+    deleteBySlug: jest.Mock
+    updateRoom: jest.Mock
   }
 
   const mockReq = { headers: {} } as unknown as Request
@@ -63,6 +66,9 @@ describe('CollabService', () => {
       findBySlug: jest.fn(),
       findBySlugWithVisibility: jest.fn(),
       updateVisibility: jest.fn(),
+      findByOwner: jest.fn(),
+      deleteBySlug: jest.fn(),
+      updateRoom: jest.fn(),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -300,7 +306,7 @@ describe('CollabService', () => {
   describe('updateRoom', () => {
     it('should update visibility when called by owner', async () => {
       repository.findBySlug.mockResolvedValue(mockRoom)
-      repository.updateVisibility.mockResolvedValue({ ...mockRoom, visibility: 'VIEW_ONLY' })
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, visibility: 'VIEW_ONLY' })
 
       const result = await service.updateRoom(
         'abc1234567',
@@ -308,7 +314,7 @@ describe('CollabService', () => {
         'user-1',
       )
 
-      expect(repository.updateVisibility).toHaveBeenCalledWith('abc1234567', 'VIEW_ONLY')
+      expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', { visibility: 'VIEW_ONLY' })
       expect(result.visibility).toBe('VIEW_ONLY')
     })
 
@@ -326,6 +332,83 @@ describe('CollabService', () => {
       await expect(
         service.updateRoom('nonexistent', { visibility: 'OPEN' as any }, 'user-1'),
       ).rejects.toThrow(NotFoundException)
+    })
+  })
+
+  describe('getRoomsByOwner', () => {
+    it('should call repository.findByOwner with the ownerId', async () => {
+      repository.findByOwner.mockResolvedValue([mockRoom])
+
+      await service.getRoomsByOwner('user-1')
+
+      expect(repository.findByOwner).toHaveBeenCalledWith('user-1')
+    })
+
+    it('should return the array from repository.findByOwner', async () => {
+      repository.findByOwner.mockResolvedValue([mockRoom])
+
+      const result = await service.getRoomsByOwner('user-1')
+
+      expect(result).toEqual([mockRoom])
+    })
+  })
+
+  describe('deleteRoom', () => {
+    it('should throw NotFoundException when room not found', async () => {
+      repository.findBySlug.mockResolvedValue(null)
+
+      await expect(service.deleteRoom('abc1234567', 'user-1')).rejects.toThrow(NotFoundException)
+    })
+
+    it('should throw ForbiddenException when caller is not room owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+
+      await expect(service.deleteRoom('abc1234567', 'user-999')).rejects.toThrow(ForbiddenException)
+    })
+
+    it('should call repository.deleteBySlug when caller is owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.deleteBySlug.mockResolvedValue(undefined)
+
+      await service.deleteRoom('abc1234567', 'user-1')
+
+      expect(repository.deleteBySlug).toHaveBeenCalledWith('abc1234567')
+    })
+  })
+
+  describe('updateRoom with title', () => {
+    it('should call repository.updateRoom with title only when dto has only title', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, title: 'New Title' })
+
+      await service.updateRoom('abc1234567', { title: 'New Title' }, 'user-1')
+
+      expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', { title: 'New Title' })
+    })
+
+    it('should call repository.updateRoom with both title and visibility when both present', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, title: 'New', visibility: 'PRIVATE' })
+
+      await service.updateRoom(
+        'abc1234567',
+        { title: 'New', visibility: 'PRIVATE' as any },
+        'user-1',
+      )
+
+      expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', {
+        title: 'New',
+        visibility: 'PRIVATE',
+      })
+    })
+
+    it('should return existing room without calling repository.updateRoom when dto is empty', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+
+      const result = await service.updateRoom('abc1234567', {}, 'user-1')
+
+      expect(repository.updateRoom).not.toHaveBeenCalled()
+      expect(result).toBe(mockRoom)
     })
   })
 })
