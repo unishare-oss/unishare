@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 08
 status: unknown
-last_updated: '2026-03-21T11:07:42.964Z'
+last_updated: '2026-03-21T11:14:35.388Z'
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State: UniShare Collaborative Canvas
@@ -83,6 +83,7 @@ progress:
 - [Phase 07]: isViewOnly/ownerId/userId passed as props into CollabProvider matching isAnonymous pattern from Phase 06
 - [Phase 07]: SettingsPopover fetches current visibility on mount then PATCHes on change with optimistic update + rollback
 - [Phase 08]: UpdateRoomDto fields made optional; GET /rooms placed before GET :slug; updateRoom delegates to repository.updateRoom for combined title+visibility updates
+- [Phase 08]: Orval RoomEntityTitle nullable quirk resolved with 'as any' cast; RoomCard owns PATCH/DELETE fetch with callback-based optimistic updates
 
 ## Performance Metrics
 
@@ -108,6 +109,7 @@ progress:
 | Phase 07 P03 | 117    | 2 tasks      | 4 files |
 | Phase 07 P03 | 180    | 3 tasks      | 4 files |
 | Phase 08 P01 | 124    | 2 tasks      | 5 files |
+| Phase 08 P02 | 480    | 1 tasks      | 8 files |
 
 ## Phase History
 

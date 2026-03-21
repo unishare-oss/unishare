@@ -45,10 +45,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Canvas Hub
 
 - [x] **HUB-01**: Authenticated user can see a list of their owned boards on /boards
-- [ ] **HUB-02**: User can create a new board from the boards page via a modal dialog
+- [x] **HUB-02**: User can create a new board from the boards page via a modal dialog
 - [x] **HUB-03**: User can delete, rename, and change visibility of boards from the boards page
-- [ ] **HUB-04**: Boards page is accessible from sidebar nav and mobile nav
-- [ ] **HUB-05**: Empty state with hero illustration shown when user has no boards
+- [x] **HUB-04**: Boards page is accessible from sidebar nav and mobile nav
+- [x] **HUB-05**: Empty state with hero illustration shown when user has no boards
 
 ## v2 Requirements
 
