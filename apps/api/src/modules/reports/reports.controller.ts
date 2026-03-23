@@ -11,6 +11,7 @@ import {
 import { ApiTags, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
+import { UserRole } from '@/generated/prisma/client'
 import { ReportsService } from './reports.service'
 import { CreateReportDto } from './dto/create-report.dto'
 import { ListReportsDto } from './dto/list-reports.dto'
@@ -86,7 +87,7 @@ export class AdminReportsController {
     @Query() filters: ListReportsDto,
     @Session() session: UserSession,
   ): Promise<{ success: boolean; data: any }> {
-    if (session?.user?.role !== 'admin') {
+    if (session?.user?.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Admin role required')
     }
 
@@ -122,7 +123,7 @@ export class AdminReportsController {
     @Body() body: { reason?: string },
     @Session() session: UserSession,
   ): Promise<{ success: boolean; data: ReportDetail }> {
-    if (session?.user?.role !== 'admin') {
+    if (session?.user?.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Admin role required')
     }
 
@@ -158,7 +159,7 @@ export class AdminReportsController {
     @Body() body: { reason?: string },
     @Session() session: UserSession,
   ): Promise<{ success: boolean; data: ReportDetail }> {
-    if (session?.user?.role !== 'admin') {
+    if (session?.user?.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Admin role required')
     }
 
