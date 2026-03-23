@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { ApiPost } from '@/lib/api-types'
 
 interface SearchResult {
-  results: any[]
+  results: ApiPost[]
   total: number
   page: number
   limit: number

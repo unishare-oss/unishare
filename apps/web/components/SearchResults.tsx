@@ -1,9 +1,10 @@
 'use client'
 
+import type { ApiPost } from '@/lib/api-types'
 import { PostCard } from './post-card'
 
 interface SearchResultsProps {
-  results: any[]
+  results: ApiPost[]
   total: number
   isLoading?: boolean
 }

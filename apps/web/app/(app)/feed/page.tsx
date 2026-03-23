@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -10,8 +10,9 @@ import { FilterStrip } from '@/components/feed/filter-strip'
 import { FeedHeader } from '@/components/feed/feed-header'
 import { useFeedStore, type TypeFilter } from '@/lib/store'
 import { PostFeed } from '@/components/feed/post-feed'
+import type { ApiPost } from '@/lib/api-types'
 
-export default function FeedPage() {
+function FeedContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const tagParam = searchParams.get('tag')
@@ -34,21 +35,15 @@ export default function FeedPage() {
     consumePendingFilter()
   })
 
-  const [searchQuery, setSearchQuery] = useState(tagParam ?? '')
-  const [debouncedSearch, setDebouncedSearch] = useState(tagParam ?? '')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
-  // Sync search query when ?tag= param changes (e.g. clicking different tags)
-  useEffect(() => {
-    if (tagParam !== null) {
-      setSearchQuery(tagParam)
-      setDebouncedSearch(tagParam)
-      setPage(1)
-    }
-  }, [tagParam])
+  // tagParam (from URL) takes priority over typed search query
+  const activeSearch = tagParam !== null ? tagParam : debouncedSearch
 
-  // Debounce search query — 300ms after last keystroke
+  // Debounce typed search query — 300ms after last keystroke
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
     return () => clearTimeout(t)
@@ -85,7 +80,7 @@ export default function FeedPage() {
     setPage(1)
   }
 
-  const isSearchActive = debouncedSearch.trim().length > 0
+  const isSearchActive = activeSearch.trim().length > 0
 
   const { data, isLoading } = usePostsControllerFindAll(
     {
@@ -103,15 +98,15 @@ export default function FeedPage() {
   )
 
   const { data: searchData, isLoading: searchLoading } = useQuery({
-    queryKey: ['posts', 'search', debouncedSearch, page],
+    queryKey: ['posts', 'search', activeSearch, page],
     queryFn: async () => {
       const res = await fetch(
-        `/api/posts/search?q=${encodeURIComponent(debouncedSearch)}&page=${page}&limit=10`,
+        `/api/posts/search?q=${encodeURIComponent(activeSearch)}&page=${page}&limit=10`,
         { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Search failed')
       const json = await res.json()
-      return json.data as { results: any[]; total: number; page: number; limit: number }
+      return json.data as { results: ApiPost[]; total: number; page: number; limit: number }
     },
     enabled: isSearchActive,
     placeholderData: keepPreviousData,
@@ -126,7 +121,10 @@ export default function FeedPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <FeedHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <FeedHeader
+        searchQuery={tagParam !== null ? tagParam : searchQuery}
+        onSearchChange={setSearchQuery}
+      />
       <FilterStrip
         activeFilter={activeFilter}
         onFilterChange={handleFilterChange}
@@ -150,7 +148,7 @@ export default function FeedPage() {
           <input
             type="text"
             placeholder="Search posts..."
-            value={searchQuery}
+            value={tagParam !== null ? tagParam : searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 pl-9 pr-3 bg-card border border-border rounded-[6px] text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
           />
@@ -170,5 +168,13 @@ export default function FeedPage() {
         }
       />
     </div>
+  )
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense>
+      <FeedContent />
+    </Suspense>
   )
 }

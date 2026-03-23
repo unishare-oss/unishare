@@ -99,6 +99,10 @@ export function CollabProvider({
   const lastEmitTimeRef = useRef(0)
   const unmountingRef = useRef(false)
   const kickedRef = useRef(false)
+  const onAccessRevokedRef = useRef(onAccessRevoked)
+  useEffect(() => {
+    onAccessRevokedRef.current = onAccessRevoked
+  })
 
   useEffect(() => {
     unmountingRef.current = false
@@ -184,7 +188,7 @@ export function CollabProvider({
     socket.on('room-access-revoked', () => {
       kickedRef.current = true
       toast.dismiss('collab-status')
-      onAccessRevoked?.()
+      onAccessRevokedRef.current?.()
     })
 
     socket.on('disconnect', () => {
