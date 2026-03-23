@@ -241,24 +241,34 @@ export class PostsService {
     const searchQuery = query.trim()
 
     // Use raw SQL only to get ordered IDs — avoids deserializing the Unsupported tsvector column.
-    // Full post data (with relations/tags) is then fetched via the repository using postInclude.
+    // Also matches against tag names so searching "calculus" finds posts tagged with it.
     const ranked = (await this.prisma.$queryRaw`
-      SELECT p.id,
+      SELECT DISTINCT ON (p.id) p.id,
         ts_rank(p."searchVector", plainto_tsquery('english', ${searchQuery})) as relevance
       FROM "post" p
-      WHERE p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+      LEFT JOIN "post_tag" pt ON pt."postId" = p.id
+      LEFT JOIN "tag" t ON t.id = pt."tagId"
+      WHERE (
+        p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+        OR t.name ILIKE ${'%' + searchQuery + '%'}
+      )
         AND p.status = ${'APPROVED'}
         AND p."publicationStatus" = ${'PUBLISHED'}
         AND p."deletedAt" IS NULL
-      ORDER BY relevance DESC, p."createdAt" DESC
+      ORDER BY p.id, relevance DESC, p."createdAt" DESC
       LIMIT ${limit}
       OFFSET ${(page - 1) * limit}
     `) as { id: string; relevance: number }[]
 
     const totalResult = (await this.prisma.$queryRaw`
-      SELECT COUNT(*) as count
+      SELECT COUNT(DISTINCT p.id) as count
       FROM "post" p
-      WHERE p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+      LEFT JOIN "post_tag" pt ON pt."postId" = p.id
+      LEFT JOIN "tag" t ON t.id = pt."tagId"
+      WHERE (
+        p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+        OR t.name ILIKE ${'%' + searchQuery + '%'}
+      )
         AND p.status = ${'APPROVED'}
         AND p."publicationStatus" = ${'PUBLISHED'}
         AND p."deletedAt" IS NULL
