@@ -39,6 +39,11 @@ const postInclude = (viewerId?: string): Prisma.PostInclude => ({
     },
   },
   reactions: { select: { type: true, userId: true } },
+  tags: {
+    select: {
+      tag: { select: { id: true, name: true, slug: true, color: true } },
+    },
+  },
   _count: {
     select: {
       comments: { where: { deletedAt: null } },
@@ -60,6 +65,7 @@ function mapPost<T>(
   const {
     savedBy,
     reactions,
+    tags,
     author,
     isAnonymous,
     authorId,
@@ -82,6 +88,7 @@ function mapPost<T>(
 
   const base = {
     ...rest,
+    tags: (tags ?? []).map((pt: any) => pt.tag),
     isAnonymous: isAnonymousValue,
     isOwner,
     savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,

@@ -448,6 +448,68 @@
         "tags": ["posts"]
       }
     },
+    "/api/posts/search": {
+      "get": {
+        "operationId": "PostsController_search",
+        "parameters": [
+          { "name": "q", "required": true, "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "required": true, "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "required": true, "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Search results with pagination" } },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/trending": {
+      "get": {
+        "operationId": "PostsController_getTrendingPosts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page",
+            "schema": { "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "success": true,
+                    "data": {
+                      "posts": [
+                        {
+                          "id": "post123",
+                          "title": "Linear Algebra Notes",
+                          "trendingScore": 42.5,
+                          "views": 150,
+                          "createdAt": "2026-03-19T12:00:00Z"
+                        }
+                      ],
+                      "total": 250,
+                      "page": 1,
+                      "limit": 20
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
     "/api/posts/{id}": {
       "get": {
         "operationId": "PostsController_findOne",
@@ -558,74 +620,18 @@
         "tags": ["posts"]
       }
     },
-    "/api/posts/search": {
-      "get": {
-        "operationId": "PostsController_search",
-        "parameters": [
-          { "name": "q", "required": true, "in": "query", "schema": { "type": "string" } },
-          { "name": "page", "required": true, "in": "query", "schema": { "type": "string" } },
-          { "name": "limit", "required": true, "in": "query", "schema": { "type": "string" } }
-        ],
-        "responses": { "200": { "description": "Search results with pagination" } },
-        "tags": ["posts"]
-      }
-    },
-    "/api/posts/trending": {
-      "get": {
-        "operationId": "PostsController_getTrendingPosts",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "description": "Page number (1-indexed)",
-            "schema": { "type": "number" }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Results per page",
-            "schema": { "type": "number" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "success": true,
-                    "data": {
-                      "posts": [
-                        {
-                          "id": "post123",
-                          "title": "Linear Algebra Notes",
-                          "trendingScore": 42.5,
-                          "views": 150,
-                          "createdAt": "2026-03-19T12:00:00Z"
-                        }
-                      ],
-                      "total": 250,
-                      "page": 1,
-                      "limit": 20
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": ["posts"]
-      }
-    },
     "/api/posts/{id}/tags": {
       "post": {
         "operationId": "PostsController_addTags",
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/TagPostDto" } }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -807,48 +813,30 @@
         "parameters": [
           {
             "name": "q",
-            "required": true,
+            "required": false,
             "in": "query",
             "description": "Tag name prefix",
             "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Tag suggestions",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TagDto" } }
-              }
-            }
-          }
-        },
-        "tags": ["Tags"]
+        "responses": { "200": { "description": "" } },
+        "tags": ["tags"]
       }
     },
     "/api/tags/trending": {
       "get": {
         "operationId": "TagsController_trending",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Trending tags",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TagDto" } }
-              }
-            }
-          }
-        },
-        "tags": ["Tags"]
+        "responses": { "200": { "description": "" } },
+        "tags": ["tags"]
       }
     },
     "/api/tags/stats": {
       "get": {
         "operationId": "TagsController_stats",
         "parameters": [],
-        "responses": { "200": { "description": "Tag statistics" } },
-        "tags": ["Tags"]
+        "responses": { "200": { "description": "" } },
+        "tags": ["tags"]
       }
     },
     "/api/posts/{postId}/files/{fileId}/url": {
@@ -1621,6 +1609,16 @@
         "properties": { "comments": { "type": "number" }, "savedBy": { "type": "number" } },
         "required": ["comments", "savedBy"]
       },
+      "PostTagEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "color": { "type": "string" }
+        },
+        "required": ["id", "name", "slug", "color"]
+      },
       "PostDetailEntity": {
         "type": "object",
         "properties": {
@@ -1653,7 +1651,8 @@
           "savedByCurrentUser": { "type": "boolean" },
           "views": { "type": "number" },
           "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "userReaction": { "type": "string", "nullable": true },
+          "tags": { "type": "array", "items": { "$ref": "#/components/schemas/PostTagEntity" } }
         },
         "required": [
           "id",
@@ -1671,7 +1670,8 @@
           "_count",
           "savedByCurrentUser",
           "views",
-          "reactionCounts"
+          "reactionCounts",
+          "tags"
         ]
       },
       "PostEntity": {
@@ -1706,7 +1706,8 @@
           "savedByCurrentUser": { "type": "boolean" },
           "views": { "type": "number" },
           "reactionCounts": { "type": "object", "description": "Map of ReactionType to count" },
-          "userReaction": { "type": "string", "nullable": true }
+          "userReaction": { "type": "string", "nullable": true },
+          "tags": { "type": "array", "items": { "$ref": "#/components/schemas/PostTagEntity" } }
         },
         "required": [
           "id",
@@ -1724,7 +1725,8 @@
           "_count",
           "savedByCurrentUser",
           "views",
-          "reactionCounts"
+          "reactionCounts",
+          "tags"
         ]
       },
       "PaginatedPostEntity": {
@@ -1774,6 +1776,11 @@
             "items": { "type": "string" }
           }
         }
+      },
+      "TagPostDto": {
+        "type": "object",
+        "properties": { "tags": { "type": "array", "items": { "type": "string" } } },
+        "required": ["tags"]
       },
       "CommentUserEntity": {
         "type": "object",
@@ -1837,18 +1844,6 @@
           "createdAt": { "format": "date-time", "type": "string" }
         },
         "required": ["id", "type", "message", "read", "postId", "requestId", "createdAt"]
-      },
-      "TagDto": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "slug": { "type": "string" },
-          "color": { "type": "string" },
-          "createdAt": { "format": "date-time", "type": "string" },
-          "postCount": { "type": "number" }
-        },
-        "required": ["id", "name", "slug", "color", "createdAt"]
       },
       "DownloadUrlEntity": {
         "type": "object",

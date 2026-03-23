@@ -1,6 +1,20 @@
 import { PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
+export class PostTagEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  name: string
+
+  @ApiProperty()
+  slug: string
+
+  @ApiProperty()
+  color: string
+}
+
 export class PostAuthorDeptEntity {
   @ApiProperty()
   id: string
@@ -154,6 +168,9 @@ export class PostEntity {
 
   @ApiPropertyOptional({ nullable: true, type: String })
   userReaction: string | null
+
+  @ApiProperty({ type: [PostTagEntity] })
+  tags: PostTagEntity[]
 }
 
 export class PostDetailEntity extends PostEntity {}
