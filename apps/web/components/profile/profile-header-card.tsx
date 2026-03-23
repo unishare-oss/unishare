@@ -84,7 +84,9 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>
-          <p className="font-mono text-sm text-text-muted mt-0.5">{user.email}</p>
+          <p className="font-mono text-sm text-text-muted mt-0.5 truncate" title={user.email}>
+            {user.email}
+          </p>
           {user.bio && <p className="text-sm text-foreground/80 mt-2">{user.bio}</p>}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <span className="font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border border-border rounded-[4px] text-foreground">
