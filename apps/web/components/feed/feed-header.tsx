@@ -82,7 +82,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {suggestions!.map((tag) => (
+        {(suggestions ?? []).map((tag) => (
           <Button
             key={tag.id}
             variant="ghost"
