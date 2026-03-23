@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import * as Y from 'yjs'
 import { Excalidraw, CaptureUpdateAction } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useTheme } from 'next-themes'
@@ -24,15 +25,14 @@ const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElements, ydoc, initialElements, setExcalidrawAPI, isViewOnly } = useCollab()
+  const { yElementsMap, yElementOrder, ydoc, initialElements, setExcalidrawAPI, isViewOnly } =
+    useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
-  const isApplyingRemoteRef = useRef(false)
   // Track the versionNonce fingerprint of what we last wrote to Yjs.
-  // Using a local ref (not yElements) avoids false-unchanged results when
-  // remote updates arrive and update yElements concurrently.
+  // Prevents handleChange from re-emitting remote state received via observer.
   const lastWrittenFingerprintRef = useRef<string>('')
 
   const handleAPI = useCallback(
@@ -54,46 +54,78 @@ function ExcalidrawWrapperInner() {
 
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
-      if (isApplyingRemoteRef.current) return
-
-      // Only write to Yjs when elements actually changed — Excalidraw fires onChange
-      // on every pointer event (appState changes), not just element mutations.
-      // We fingerprint using versionNonce (a random value Excalidraw bumps on each
-      // mutation) tracked against our own last write, not yElements (which can be
-      // updated by concurrent remote changes and cause false unchanged=true).
       const fingerprint = elements.map((el) => `${el.id}:${el.versionNonce}`).join('|')
       if (fingerprint === lastWrittenFingerprintRef.current) return
       lastWrittenFingerprintRef.current = fingerprint
 
       ydoc.transact(() => {
-        yElements.delete(0, yElements.length)
-        yElements.insert(0, elements as unknown[])
+        const incomingIds = new Set(elements.map((el) => el.id))
+        let changed = 0
+        for (const el of elements) {
+          const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
+          const differs =
+            !stored || stored.version !== el.version || stored.versionNonce !== el.versionNonce
+          if (differs) {
+            // Shallow-clone: Excalidraw mutates elements in-place during drawing.
+            // Storing a reference means stored.versionNonce === el.versionNonce always,
+            // so subsequent handleChange calls never detect changes. A clone snapshots
+            // the state at write time so future comparisons work correctly.
+            yElementsMap.set(el.id, { ...el })
+            changed++
+          }
+        }
+        for (const [id] of yElementsMap.entries()) {
+          if (!incomingIds.has(id)) yElementsMap.delete(id)
+        }
+        const newOrder = elements.map((el) => el.id)
+        if (newOrder.join(',') !== yElementOrder.toArray().join(',')) {
+          yElementOrder.delete(0, yElementOrder.length)
+          yElementOrder.insert(0, newOrder)
+        }
       })
     },
-    [ydoc, yElements],
+    [ydoc, yElementsMap, yElementOrder],
   )
 
   useEffect(() => {
-    const observer = () => {
+    // Only react to remote/init transactions — local transactions (our own writes)
+    // are already in Excalidraw's state and don't need updateScene.
+    const observer = (_event: unknown, transaction: Y.Transaction) => {
+      if (transaction.origin !== 'remote' && transaction.origin !== 'init') return
       if (!excalidrawAPIRef.current) return
-      isApplyingRemoteRef.current = true
-      const remoteElements = yElements.toArray() as ExcalidrawElement[]
+
+      const seen = new Set<string>()
+      const remoteElements = yElementOrder
+        .toArray()
+        .filter((id) => {
+          if (seen.has(id) || !yElementsMap.has(id)) return false
+          seen.add(id)
+          return true
+        })
+        // Clone on read: Excalidraw holds onto the object references we pass to
+        // updateScene and mutates them in-place (e.g. x/y during move). If we
+        // hand Y.Map's stored objects directly, the map's "snapshot" gets mutated
+        // too, so subsequent handleChange calls see stored.versionNonce === el.versionNonce
+        // and emit 0 changes. Cloning here keeps Y.Map's copies pristine for diffing.
+        .map((id) => ({ ...(yElementsMap.get(id) as ExcalidrawElement) }))
+
       excalidrawAPIRef.current.updateScene({
         elements: remoteElements,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
-      // Update our fingerprint to match the remote state so we don't re-emit it.
+      // Update fingerprint to match remote state so handleChange doesn't re-emit it
       lastWrittenFingerprintRef.current = remoteElements
         .map((el) => `${el.id}:${el.versionNonce}`)
         .join('|')
-      requestAnimationFrame(() => {
-        isApplyingRemoteRef.current = false
-      })
     }
 
-    yElements.observe(observer)
-    return () => yElements.unobserve(observer)
-  }, [yElements])
+    yElementsMap.observe(observer as Parameters<typeof yElementsMap.observe>[0])
+    yElementOrder.observe(observer as Parameters<typeof yElementOrder.observe>[0])
+    return () => {
+      yElementsMap.unobserve(observer as Parameters<typeof yElementsMap.unobserve>[0])
+      yElementOrder.unobserve(observer as Parameters<typeof yElementOrder.unobserve>[0])
+    }
+  }, [yElementsMap, yElementOrder])
 
   return (
     <div

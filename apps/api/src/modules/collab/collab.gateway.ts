@@ -179,12 +179,19 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     if (!slug) return
 
-    const update = Buffer.isBuffer(data) ? new Uint8Array(data) : new Uint8Array(data)
+    const update = new Uint8Array(data)
     const doc = this.collabRoomService.getDoc(slug)
     if (!doc) return
-    Y.applyUpdate(doc, update)
-    this.collabRoomService.resetIdleTimer(slug)
 
+    const mapBefore = doc.getMap('elementsMap').size
+    Y.applyUpdate(doc, update)
+    const mapAfter = doc.getMap('elementsMap').size
+    const orderAfter = doc.getArray('elementOrder').length
+    this.logger.log(
+      `[COLLAB] yjs-update from ${client.id}: ${update.length}B — mapSize ${mapBefore}→${mapAfter} order=${orderAfter} — relaying to room`,
+    )
+
+    this.collabRoomService.resetIdleTimer(slug)
     client.to(slug).emit('yjs-update', data)
   }
 }

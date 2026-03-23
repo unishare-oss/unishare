@@ -40,7 +40,8 @@ export interface CursorData {
 
 interface CollabContextValue {
   ydoc: Y.Doc
-  yElements: Y.Array<unknown>
+  yElementsMap: Y.Map<unknown>
+  yElementOrder: Y.Array<string>
   connectionStatus: ConnectionStatus
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
@@ -91,7 +92,8 @@ export function CollabProvider({
   const [isViewOnly, setIsViewOnly] = useState(isViewOnlyProp)
 
   const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
-  const [yElements] = useState<Y.Array<unknown>>(() => ydoc.getArray('elements'))
+  const [yElementsMap] = useState<Y.Map<unknown>>(() => ydoc.getMap('elementsMap'))
+  const [yElementOrder] = useState<Y.Array<string>>(() => ydoc.getArray('elementOrder'))
 
   const [remoteCursors, setRemoteCursors] = useState<Map<string, CursorData>>(new Map())
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -127,7 +129,9 @@ export function CollabProvider({
     socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
       const isReconnect = hasJoined.current
       Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
-      setInitialElements(yElements.toArray())
+      const order = yElementOrder.toArray()
+      const elements = order.map((id) => yElementsMap.get(id)).filter(Boolean)
+      setInitialElements(elements)
       setConnectionStatus('connected')
       hasJoined.current = true
       if (isReconnect) {
@@ -230,7 +234,7 @@ export function CollabProvider({
       socket.disconnect()
       ydoc.destroy()
     }
-  }, [slug, ydoc, yElements])
+  }, [slug, ydoc, yElementsMap, yElementOrder])
 
   const emitCursorMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
@@ -255,7 +259,8 @@ export function CollabProvider({
   const coreValue = useMemo<CollabContextValue>(
     () => ({
       ydoc,
-      yElements,
+      yElementsMap,
+      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
@@ -267,7 +272,8 @@ export function CollabProvider({
     }),
     [
       ydoc,
-      yElements,
+      yElementsMap,
+      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
