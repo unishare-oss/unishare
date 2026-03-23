@@ -35,6 +35,32 @@ export class CollabRoomService {
       Y.applyUpdate(doc, new Uint8Array(snapshot))
       this.logger.log(`Restored snapshot for room ${slug}`)
     }
+
+    // Lazy migration: old snapshots stored elements in Y.Array('elements').
+    // New code uses Y.Map('elementsMap') + Y.Array('elementOrder').
+    // If the map is empty but the old array has data, migrate in-place and save.
+    const oldArr = doc.getArray<Record<string, unknown>>('elements')
+    const newMap = doc.getMap<Record<string, unknown>>('elementsMap')
+    const newOrder = doc.getArray<string>('elementOrder')
+
+    if (oldArr.length > 0 && newMap.size === 0) {
+      this.logger.log(`Migrating room ${slug}: ${oldArr.length} elements from Y.Array → Y.Map`)
+      const elements = oldArr.toArray()
+      doc.transact(() => {
+        for (const el of elements) {
+          if (el && typeof el.id === 'string') {
+            newMap.set(el.id, el)
+          }
+        }
+        const ids = elements
+          .filter((el) => el && typeof el.id === 'string')
+          .map((el) => el.id as string)
+        newOrder.insert(0, ids)
+      })
+      await this.saveSnapshot(slug)
+      this.logger.log(`Migration complete for room ${slug}`)
+    }
+
     return doc
   }
 

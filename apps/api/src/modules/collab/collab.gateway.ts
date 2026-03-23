@@ -36,6 +36,9 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   private readonly logger = new Logger(CollabGateway.name)
   private readonly lastCursorEmit = new Map<string, number>()
+  private readonly pendingRelayUpdates = new Map<string, Uint8Array[]>()
+  private readonly relayTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly RELAY_BUFFER_MS = 16 // ~1 frame — merge rapid updates before broadcasting
 
   constructor(
     private readonly collabRoomService: CollabRoomService,
@@ -179,12 +182,38 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     if (!slug) return
 
-    const update = Buffer.isBuffer(data) ? new Uint8Array(data) : new Uint8Array(data)
+    const update = new Uint8Array(data)
+
+    // Reject oversized payloads to prevent abuse / memory exhaustion
+    if (update.length > 1_000_000) {
+      this.logger.warn(`Rejected oversized Yjs update (${update.length} bytes) from ${client.id}`)
+      return
+    }
+
     const doc = this.collabRoomService.getDoc(slug)
     if (!doc) return
+
+    // Apply to server doc immediately to keep authoritative state current
     Y.applyUpdate(doc, update)
     this.collabRoomService.resetIdleTimer(slug)
 
-    client.to(slug).emit('yjs-update', data)
+    // Buffer relay: merge updates within a 16ms window before broadcasting.
+    // Reduces socket frames from ~120/s to ~60/s during active drag editing.
+    const pending = this.pendingRelayUpdates.get(slug) ?? []
+    pending.push(update)
+    this.pendingRelayUpdates.set(slug, pending)
+
+    if (!this.relayTimers.has(slug)) {
+      const timer = setTimeout(() => {
+        const updates = this.pendingRelayUpdates.get(slug) ?? []
+        this.pendingRelayUpdates.delete(slug)
+        this.relayTimers.delete(slug)
+        if (updates.length === 0) return
+        const merged = updates.length === 1 ? updates[0] : Y.mergeUpdates(updates)
+        // Broadcast to all in room — sender's own update is a CRDT no-op on re-apply
+        this.server.to(slug).emit('yjs-update', Buffer.from(merged))
+      }, this.RELAY_BUFFER_MS)
+      this.relayTimers.set(slug, timer)
+    }
   }
 }

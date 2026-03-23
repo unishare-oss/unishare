@@ -18,6 +18,7 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
 const CURSOR_THROTTLE_MS = 1000 / 30 // ~33ms, 30fps max
+const YJS_EMIT_THROTTLE_MS = 50 // merge rapid drag updates before emitting
 
 export interface Participant {
   socketId: string
@@ -39,7 +40,8 @@ export interface CursorData {
 
 interface CollabContextValue {
   ydoc: Y.Doc
-  yElements: Y.Array<unknown>
+  yElementsMap: Y.Map<unknown>
+  yElementOrder: Y.Array<string>
   connectionStatus: ConnectionStatus
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
@@ -90,7 +92,8 @@ export function CollabProvider({
   const [isViewOnly, setIsViewOnly] = useState(isViewOnlyProp)
 
   const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
-  const [yElements] = useState<Y.Array<unknown>>(() => ydoc.getArray('elements'))
+  const [yElementsMap] = useState<Y.Map<unknown>>(() => ydoc.getMap('elementsMap'))
+  const [yElementOrder] = useState<Y.Array<string>>(() => ydoc.getArray('elementOrder'))
 
   const [remoteCursors, setRemoteCursors] = useState<Map<string, CursorData>>(new Map())
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -126,7 +129,10 @@ export function CollabProvider({
     socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
       const isReconnect = hasJoined.current
       Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
-      setInitialElements(yElements.toArray())
+      // Reconstruct ordered element array from the Y.Map + z-order index
+      const order = yElementOrder.toArray()
+      const elements = order.map((id) => yElementsMap.get(id)).filter(Boolean)
+      setInitialElements(elements)
       setConnectionStatus('connected')
       hasJoined.current = true
       if (isReconnect) {
@@ -199,15 +205,31 @@ export function CollabProvider({
       toast.error('Connection lost — reconnecting...', { id: 'collab-status', duration: Infinity })
     })
 
+    // Throttled Yjs emit: buffer updates for 50ms and merge before sending.
+    // During a drag, Excalidraw fires onChange at pointer-event rate (~120Hz).
+    // Merging with Y.mergeUpdates reduces socket emissions from ~120/s to ~20/s.
+    let pendingUpdates: Uint8Array[] = []
+    let emitTimer: ReturnType<typeof setTimeout> | null = null
+
     ydoc.on('update', (update: Uint8Array, origin: unknown) => {
       if (origin === 'remote' || origin === 'init') return
-      socket.emit('yjs-update', update)
+      pendingUpdates.push(update)
+      if (!emitTimer) {
+        emitTimer = setTimeout(() => {
+          const merged =
+            pendingUpdates.length === 1 ? pendingUpdates[0] : Y.mergeUpdates(pendingUpdates)
+          socket.emit('yjs-update', merged)
+          pendingUpdates = []
+          emitTimer = null
+        }, YJS_EMIT_THROTTLE_MS)
+      }
     })
 
     socket.connect()
 
     return () => {
       unmountingRef.current = true
+      if (emitTimer) clearTimeout(emitTimer)
       socketRef.current = null
       setSocketId(null)
       setParticipants([])
@@ -216,7 +238,7 @@ export function CollabProvider({
       socket.disconnect()
       ydoc.destroy()
     }
-  }, [slug, ydoc, yElements])
+  }, [slug, ydoc, yElementsMap, yElementOrder])
 
   const emitCursorMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
@@ -241,7 +263,8 @@ export function CollabProvider({
   const coreValue = useMemo<CollabContextValue>(
     () => ({
       ydoc,
-      yElements,
+      yElementsMap,
+      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
@@ -253,7 +276,8 @@ export function CollabProvider({
     }),
     [
       ydoc,
-      yElements,
+      yElementsMap,
+      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
