@@ -163,6 +163,18 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             </>
           )}
         </div>
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {post.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="font-mono text-[11px] px-2 py-0.5 rounded-[4px] bg-muted text-text-muted border border-border"
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
         {author ? (
           <Link href={`/users/${author.id}`} className="flex items-center gap-3 mt-4 group w-fit">
             <UserAvatar name={author.name} image={author.image} size="md" />
