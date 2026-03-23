@@ -17,8 +17,8 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
-const CURSOR_THROTTLE_MS = 1000 / 30 // ~33ms, 30fps max
-const YJS_EMIT_THROTTLE_MS = 50 // merge rapid drag updates before emitting
+const CURSOR_THROTTLE_MS = 1000 / 60 // ~16ms, 60fps max
+const YJS_EMIT_THROTTLE_MS = 16 // 60fps canvas updates
 
 export interface Participant {
   socketId: string

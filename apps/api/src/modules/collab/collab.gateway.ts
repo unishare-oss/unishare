@@ -22,7 +22,7 @@ const allowedOrigins = [
 ]
 
 const PRESENCE_COLORS_COUNT = 10
-const CURSOR_THROTTLE_MS = 33 // ~30fps
+const CURSOR_THROTTLE_MS = 16 // ~60fps
 
 @WebSocketGateway({
   namespace: '/collab',
@@ -38,7 +38,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   private readonly lastCursorEmit = new Map<string, number>()
   private readonly pendingRelayUpdates = new Map<string, Uint8Array[]>()
   private readonly relayTimers = new Map<string, ReturnType<typeof setTimeout>>()
-  private readonly RELAY_BUFFER_MS = 16 // ~1 frame — merge rapid updates before broadcasting
+  private readonly RELAY_BUFFER_MS = 8 // half-frame buffer — lower pipeline lag at 60fps
 
   constructor(
     private readonly collabRoomService: CollabRoomService,
