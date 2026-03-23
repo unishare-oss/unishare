@@ -137,41 +137,39 @@ export default function AdminDepartmentsPage() {
         />
       </div>
 
-      {deptModal.open && (
-        <AddDeptModal
-          value={deptName}
-          onChange={setDeptName}
-          editMode={!!deptModal.dept}
-          onClose={() => setDeptModal({ open: false })}
-          onSubmit={(name) => {
-            if (deptModal.dept) {
-              updateDept({ id: deptModal.dept.id, data: { name } })
-            } else {
-              createDept({ data: { name } })
-            }
-          }}
-        />
-      )}
+      <AddDeptModal
+        open={deptModal.open}
+        value={deptName}
+        onChange={setDeptName}
+        editMode={!!deptModal.dept}
+        onClose={() => setDeptModal({ open: false })}
+        onSubmit={(name) => {
+          if (deptModal.dept) {
+            updateDept({ id: deptModal.dept.id, data: { name } })
+          } else {
+            createDept({ data: { name } })
+          }
+        }}
+      />
 
-      {courseModal.open && (
-        <AddCourseModal
-          code={courseCode}
-          name={courseName}
-          yearLevel={courseYear}
-          editMode={!!courseModal.course}
-          onCodeChange={setCourseCode}
-          onNameChange={setCourseName}
-          onYearChange={setCourseYear}
-          onClose={() => setCourseModal({ open: false })}
-          onSubmit={(code, name, yearLevel) => {
-            if (courseModal.course) {
-              updateCourse({ id: courseModal.course.id, data: { code, name, yearLevel } })
-            } else {
-              createCourse({ data: { code, name, yearLevel, departmentId: effectiveDeptId } })
-            }
-          }}
-        />
-      )}
+      <AddCourseModal
+        open={courseModal.open}
+        code={courseCode}
+        name={courseName}
+        yearLevel={courseYear}
+        editMode={!!courseModal.course}
+        onCodeChange={setCourseCode}
+        onNameChange={setCourseName}
+        onYearChange={setCourseYear}
+        onClose={() => setCourseModal({ open: false })}
+        onSubmit={(code, name, yearLevel) => {
+          if (courseModal.course) {
+            updateCourse({ id: courseModal.course.id, data: { code, name, yearLevel } })
+          } else {
+            createCourse({ data: { code, name, yearLevel, departmentId: effectiveDeptId } })
+          }
+        }}
+      />
 
       <ConfirmDialog
         open={!!deleteDept}

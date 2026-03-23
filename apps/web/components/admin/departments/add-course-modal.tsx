@@ -1,8 +1,8 @@
 'use client'
 
-import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ const YEARS = [1, 2, 3, 4, 5, 6]
 const NO_YEAR = '__none__'
 
 interface AddCourseModalProps {
+  open: boolean
   code: string
   name: string
   yearLevel: number | null
@@ -27,6 +28,7 @@ interface AddCourseModalProps {
 }
 
 export function AddCourseModal({
+  open,
   code,
   name,
   yearLevel,
@@ -38,20 +40,11 @@ export function AddCourseModal({
   editMode,
 }: AddCourseModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-surface-dark/30" />
-      <div
-        className="relative bg-card border border-border rounded-[6px] p-6 w-full max-w-sm mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-mono text-sm font-medium text-foreground">
-            {editMode ? 'Edit Course' : 'Add Course'}
-          </h3>
-          <Button variant="ghost" size="icon-xs" onClick={onClose}>
-            <X className="size-4 text-text-muted" strokeWidth={1.5} />
-          </Button>
-        </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{editMode ? 'Edit Course' : 'Add Course'}</DialogTitle>
+        </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -122,7 +115,7 @@ export function AddCourseModal({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

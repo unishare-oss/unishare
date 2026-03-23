@@ -1,10 +1,11 @@
 'use client'
 
-import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface AddDeptModalProps {
+  open: boolean
   value: string
   onChange: (value: string) => void
   onClose: () => void
@@ -12,22 +13,20 @@ interface AddDeptModalProps {
   editMode?: boolean
 }
 
-export function AddDeptModal({ value, onChange, onClose, onSubmit, editMode }: AddDeptModalProps) {
+export function AddDeptModal({
+  open,
+  value,
+  onChange,
+  onClose,
+  onSubmit,
+  editMode,
+}: AddDeptModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-surface-dark/30" />
-      <div
-        className="relative bg-card border border-border rounded-[6px] p-6 w-full max-w-sm mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-mono text-sm font-medium text-foreground">
-            {editMode ? 'Edit Department' : 'Add Department'}
-          </h3>
-          <Button variant="ghost" size="icon-xs" onClick={onClose}>
-            <X className="size-4 text-text-muted" strokeWidth={1.5} />
-          </Button>
-        </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{editMode ? 'Edit Department' : 'Add Department'}</DialogTitle>
+        </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -63,7 +62,7 @@ export function AddDeptModal({ value, onChange, onClose, onSubmit, editMode }: A
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
