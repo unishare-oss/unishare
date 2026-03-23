@@ -53,6 +53,14 @@ function FeedContent() {
     }
   }
 
+  // When user picks a tag from autocomplete, switch to tag-filter mode
+  function handleTagSelect(tagName: string) {
+    setSearchQuery('')
+    setDebouncedSearch('')
+    setPage(1)
+    router.replace(`/feed?tag=${encodeURIComponent(tagName)}`, { scroll: false })
+  }
+
   // Debounce the actual search query (API call fires after 300ms pause)
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
@@ -145,6 +153,7 @@ function FeedContent() {
       <FeedHeader
         searchQuery={tagParam !== null ? tagParam : searchQuery}
         onSearchChange={handleSearchChange}
+        onTagSelect={handleTagSelect}
       />
       <FilterStrip
         activeFilter={activeFilter}
