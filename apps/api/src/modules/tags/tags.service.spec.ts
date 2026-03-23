@@ -137,9 +137,9 @@ describe('TagsService', () => {
   describe('validateTag', () => {
     it('should accept valid tag names', () => {
       expect(service.validateTag('Linear Algebra')).toBe(true)
-      expect(service.validateTag('C++')).toBe(true)
+      expect(service.validateTag('Computer Science')).toBe(true)
       expect(service.validateTag('AI & ML')).toBe(true)
-      expect(service.validateTag('Python (v3.11)')).toBe(true)
+      expect(service.validateTag('Python (v3)')).toBe(true)
     })
 
     it('should reject invalid tag names', () => {
