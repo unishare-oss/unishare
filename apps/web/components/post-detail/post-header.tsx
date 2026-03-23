@@ -166,12 +166,13 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {post.tags.map((tag) => (
-              <span
+              <Link
                 key={tag.id}
-                className="font-mono text-[11px] px-2 py-0.5 rounded-[4px] bg-muted text-text-muted border border-border"
+                href={`/feed?tag=${encodeURIComponent(tag.name)}`}
+                className="font-mono text-[11px] px-2 py-0.5 rounded-[4px] bg-muted text-text-muted border border-border hover:border-amber hover:text-amber transition-colors"
               >
                 {tag.name}
-              </span>
+              </Link>
             ))}
           </div>
         )}

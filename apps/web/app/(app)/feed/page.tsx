@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
@@ -12,6 +13,8 @@ import { PostFeed } from '@/components/feed/post-feed'
 
 export default function FeedPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  const tagParam = searchParams.get('tag')
   const {
     activeFilter,
     selectedDeptId,
@@ -31,10 +34,19 @@ export default function FeedPage() {
     consumePendingFilter()
   })
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState(tagParam ?? '')
+  const [debouncedSearch, setDebouncedSearch] = useState(tagParam ?? '')
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
+
+  // Sync search query when ?tag= param changes (e.g. clicking different tags)
+  useEffect(() => {
+    if (tagParam !== null) {
+      setSearchQuery(tagParam)
+      setDebouncedSearch(tagParam)
+      setPage(1)
+    }
+  }, [tagParam])
 
   // Debounce search query — 300ms after last keystroke
   useEffect(() => {
