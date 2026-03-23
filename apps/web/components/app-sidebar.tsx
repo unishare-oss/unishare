@@ -9,6 +9,7 @@ import {
   Bookmark,
   Building2,
   ShieldCheck,
+  Flag,
   Settings,
   LogOut,
   LogIn,
@@ -44,6 +45,7 @@ const authNavItems = [
 
 const adminItems = [
   { href: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
+  { href: '/admin/reports', label: 'Reports', icon: Flag },
   { href: '/admin/departments', label: 'Manage Depts', icon: Building2 },
 ]
 
