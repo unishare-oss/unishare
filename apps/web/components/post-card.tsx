@@ -131,14 +131,17 @@ export function PostCard({ post }: { post: ApiPost }) {
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {post.tags.slice(0, 4).map((tag) => (
-                <Link
+                <button
                   key={tag.id}
-                  href={`/feed?tag=${encodeURIComponent(tag.name)}`}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    router.push(`/feed?tag=${encodeURIComponent(tag.name)}`)
+                  }}
                   className="font-mono text-[10px] px-1.5 py-0.5 rounded-[4px] bg-muted text-text-muted border border-border hover:border-amber hover:text-amber transition-colors"
                 >
                   {tag.name}
-                </Link>
+                </button>
               ))}
             </div>
           )}
