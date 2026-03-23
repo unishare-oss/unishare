@@ -21,6 +21,7 @@ import { CollabModule } from './modules/collab/collab.module'
 import { TagsModule } from './modules/tags/tags.module'
 import { TrendingModule } from './modules/trending/trending.module'
 import { ReportsModule } from './modules/reports/reports.module'
+import { ChatModule } from './modules/chat/chat.module'
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ReportsModule } from './modules/reports/reports.module'
     TagsModule,
     TrendingModule,
     ReportsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
