@@ -58,6 +58,7 @@ const emptyValues: CreatePostFormValues = {
   examYear: '',
   externalUrl: '',
   files: [],
+  tags: [],
 }
 
 function postToFormValues(post: PostDetailEntity): CreatePostFormValues {
@@ -74,6 +75,7 @@ function postToFormValues(post: PostDetailEntity): CreatePostFormValues {
     examYear: post.examYear != null ? String(post.examYear) : '',
     externalUrl: post.externalUrl ?? '',
     files: [],
+    tags: post.tags?.map((t) => t.name) ?? [],
   }
 }
 
@@ -151,6 +153,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           semester: Number(formValues.semester),
           moduleNumber: Number(formValues.moduleNum),
           examYear: formValues.examYear ? Number(formValues.examYear) : undefined,
+          tags: formValues.tags.length > 0 ? formValues.tags : [],
         },
       })
 

@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { TagInput } from '@/components/TagInput'
 import type { PostType } from './type-step'
 
 const EMPTY_SELECT_VALUE = '__empty__'
@@ -255,6 +256,25 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  Tags <span className="normal-case text-text-muted">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput value={field.value} onChange={field.onChange} maxTags={5} />
+                </FormControl>
+                <FormDescription className="text-xs text-text-muted">
+                  Add up to 5 tags to help others discover your post.
+                </FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}

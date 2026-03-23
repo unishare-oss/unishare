@@ -128,6 +128,18 @@ export function PostCard({ post }: { post: ApiPost }) {
           >
             {post.title}
           </h3>
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {post.tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag.id}
+                  className="font-mono text-[10px] px-1.5 py-0.5 rounded-[4px] bg-muted text-text-muted border border-border"
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 flex-wrap">
             {author ? (
               <span

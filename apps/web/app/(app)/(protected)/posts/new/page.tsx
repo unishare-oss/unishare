@@ -91,6 +91,7 @@ const defaultValues: CreatePostFormValues = {
   examYear: '',
   externalUrl: '',
   files: [],
+  tags: [],
 }
 
 function getInvalidStep(values: CreatePostFormValues) {
@@ -193,6 +194,7 @@ export default function CreatePostPage() {
           description: formValues.description.trim(),
           isAnonymous: formValues.isAnonymous,
           externalUrl: formValues.externalUrl?.trim() || undefined,
+          tags: formValues.tags.length > 0 ? formValues.tags : undefined,
           year: Number(formValues.year),
           semester: Number(formValues.semester),
           moduleNumber: Number(formValues.moduleNum),

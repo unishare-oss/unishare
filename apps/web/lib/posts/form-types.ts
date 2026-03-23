@@ -15,4 +15,5 @@ export type CreatePostFormValues = {
   examYear: string
   externalUrl?: string
   files: File[]
+  tags: string[]
 }
