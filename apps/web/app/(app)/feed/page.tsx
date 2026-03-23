@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
@@ -14,6 +14,7 @@ import type { ApiPost } from '@/lib/api-types'
 
 function FeedContent() {
   const { user } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const tagParam = searchParams.get('tag')
   const {
@@ -40,7 +41,13 @@ function FeedContent() {
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
-  // tagParam (from URL) takes priority over typed search query
+  // When user types, clear ?tag= from URL so typed query takes over
+  function handleSearchChange(value: string) {
+    if (tagParam !== null) router.replace('/feed')
+    setSearchQuery(value)
+  }
+
+  // tagParam (from URL) takes priority — but once user types, tagParam is cleared
   const activeSearch = tagParam !== null ? tagParam : debouncedSearch
 
   // Debounce typed search query — 300ms after last keystroke
@@ -123,7 +130,7 @@ function FeedContent() {
     <div className="flex flex-col min-h-screen">
       <FeedHeader
         searchQuery={tagParam !== null ? tagParam : searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={handleSearchChange}
       />
       <FilterStrip
         activeFilter={activeFilter}
@@ -149,7 +156,7 @@ function FeedContent() {
             type="text"
             placeholder="Search posts..."
             value={tagParam !== null ? tagParam : searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full h-9 pl-9 pr-3 bg-card border border-border rounded-[6px] text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
           />
         </div>
