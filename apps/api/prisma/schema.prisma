@@ -41,6 +41,8 @@ model User {
   reports                 Report[]                 @relation("ReportsSubmitted")
   adminActions            AdminAction[]            @relation("AdminActions")
   rooms                   Room[]
+  chatParticipants        ChatRoomParticipant[]
+  chatMessages            ChatMessage[]
 
   @@map("user")
 }
@@ -456,4 +458,64 @@ model AdminAction {
 
   @@index([createdAt])
   @@map("admin_action")
+}
+
+enum ChatRoomType {
+  DM
+  GROUP
+}
+
+enum ChatMessageType {
+  TEXT
+  IMAGE
+  LINK
+  SYSTEM
+}
+
+model ChatRoom {
+  id           String                @id @default(cuid())
+  type         ChatRoomType          @default(DM)
+  name         String? // Group name (null for DMs)
+  imageUrl     String? // Group icon
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  participants ChatRoomParticipant[]
+  messages     ChatMessage[]
+
+  @@map("chat_room")
+}
+
+model ChatRoomParticipant {
+  id         String   @id @default(cuid())
+  roomId     String
+  userId     String
+  lastReadAt DateTime @default(now())
+  joinedAt   DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("chat_room_participant")
+}
+
+model ChatMessage {
+  id        String          @id @default(cuid())
+  roomId    String
+  userId    String? // Nullable for generic system messages
+  type      ChatMessageType @default(TEXT)
+  content   String?         @db.Text
+  imageUrl  String? // For type IMAGE
+  linkUrl   String? // For type LINK
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_message")
 }
