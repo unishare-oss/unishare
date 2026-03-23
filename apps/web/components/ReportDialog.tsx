@@ -51,16 +51,12 @@ export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
   }
 
   return (
-    <>
+    <div onClick={(e) => e.stopPropagation()}>
       <Button
         variant="ghost"
         size="icon-sm"
         className="shrink-0 mt-1 hover:bg-background text-text-muted hover:text-destructive"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setOpen(true)
-        }}
+        onClick={() => setOpen(true)}
         aria-label="Report post"
       >
         <Flag className="size-4" strokeWidth={1.5} />
@@ -110,6 +106,6 @@ export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
           </Button>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
