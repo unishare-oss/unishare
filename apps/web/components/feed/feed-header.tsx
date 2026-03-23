@@ -25,7 +25,9 @@ interface FeedHeaderProps {
 function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderProps) {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState(searchQuery)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     setInputValue(searchQuery)
@@ -43,7 +45,21 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
     staleTime: 10_000,
   })
 
-  const showDropdown = open && (suggestions?.length ?? 0) > 0
+  const items = suggestions ?? []
+  const showDropdown = open && items.length > 0
+
+  // Reset active index when suggestions change
+  useEffect(() => {
+    setActiveIndex(-1)
+  }, [suggestions])
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIndex >= 0 && listRef.current) {
+      const el = listRef.current.children[activeIndex] as HTMLElement
+      el?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [activeIndex])
 
   function handleChange(value: string) {
     setInputValue(value)
@@ -54,7 +70,29 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
   function handleSelect(tag: TagSuggestion) {
     setInputValue(tag.name)
     setOpen(false)
+    setActiveIndex(-1)
     onTagSelect(tag.name)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showDropdown) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => Math.min(i + 1, items.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault()
+      handleSelect(items[activeIndex])
+    } else if (e.key === 'Tab' && activeIndex >= 0) {
+      e.preventDefault()
+      handleSelect(items[activeIndex])
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+      setActiveIndex(-1)
+    }
   }
 
   return (
@@ -72,7 +110,10 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
             value={inputValue}
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => setOpen(true)}
-            onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+            onKeyDown={handleKeyDown}
+            aria-expanded={showDropdown}
+            aria-activedescendant={activeIndex >= 0 ? `tag-option-${activeIndex}` : undefined}
+            aria-autocomplete="list"
             className="pl-9"
           />
         </div>
@@ -82,22 +123,26 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {(suggestions ?? []).map((tag) => (
-          <Button
-            key={tag.id}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 font-normal"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              handleSelect(tag)
-            }}
-          >
-            <Hash className="size-3 text-muted-foreground shrink-0" strokeWidth={2} />
-            <span>{tag.name}</span>
-            <span className="ml-auto text-xs text-muted-foreground">{tag.postCount}</span>
-          </Button>
-        ))}
+        <ul ref={listRef} role="listbox">
+          {items.map((tag, i) => (
+            <li key={tag.id} id={`tag-option-${i}`} role="option" aria-selected={i === activeIndex}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`w-full justify-start gap-2 font-normal ${i === activeIndex ? 'bg-accent' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  handleSelect(tag)
+                }}
+                onMouseEnter={() => setActiveIndex(i)}
+              >
+                <Hash className="size-3 text-muted-foreground shrink-0" strokeWidth={2} />
+                <span>{tag.name}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{tag.postCount}</span>
+              </Button>
+            </li>
+          ))}
+        </ul>
       </PopoverContent>
     </Popover>
   )
