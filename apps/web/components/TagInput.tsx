@@ -78,22 +78,24 @@ export function TagInput({ value, onChange, maxTags = 5 }: TagInputProps) {
           />
 
           {isOpen && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg z-10">
+            <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-[6px] border border-border bg-card shadow-md z-10">
               {(suggestions as TagSuggestion[]).map((suggestion: TagSuggestion) => (
                 <button
                   key={suggestion.id}
                   onClick={() => handleAddTag(suggestion.name)}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                  className="w-full text-left px-3 py-2 hover:bg-muted text-sm text-foreground"
                 >
                   {suggestion.name}
-                  <span className="ml-2 text-xs text-gray-500">({suggestion.postCount || 0})</span>
+                  <span className="ml-2 text-xs text-text-muted">
+                    ({suggestion.postCount || 0})
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
           {isLoading && inputValue && (
-            <div className="absolute top-full left-0 right-0 mt-1 rounded-md border border-gray-200 bg-white p-2 text-sm text-gray-600">
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-[6px] border border-border bg-card p-2 text-sm text-text-muted">
               Loading suggestions...
             </div>
           )}
@@ -101,7 +103,7 @@ export function TagInput({ value, onChange, maxTags = 5 }: TagInputProps) {
       )}
 
       {value.length >= maxTags && (
-        <p className="text-xs text-gray-500">Maximum {maxTags} tags reached</p>
+        <p className="text-xs text-text-muted">Maximum {maxTags} tags reached</p>
       )}
     </div>
   )
