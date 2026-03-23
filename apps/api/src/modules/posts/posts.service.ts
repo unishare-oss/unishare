@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
@@ -20,6 +21,8 @@ import { ReactToPostDto } from './dto/react-to-post.dto'
 
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name)
+
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly notificationsService: NotificationsService,
@@ -296,37 +299,22 @@ export class PostsService {
   }
 
   private async applyTags(postId: string, tagNames: string[]): Promise<any> {
-    const tags = await Promise.all(tagNames.map((name) => this.tagsService.findOrCreate(name)))
+    this.logger.debug(`applyTags called: postId=${postId}, tags=${JSON.stringify(tagNames)}`)
+    try {
+      const tags = await Promise.all(tagNames.map((name) => this.tagsService.findOrCreate(name)))
 
-    // Use transaction to delete old tags and create new ones
-    await this.prisma.$transaction(async (tx) => {
-      // Delete existing post tags
-      await tx.postTag.deleteMany({
-        where: { postId },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.postTag.deleteMany({ where: { postId } })
+        await tx.postTag.createMany({
+          data: tags.map((tag) => ({ postId, tagId: tag.id })),
+        })
       })
 
-      // Create new post tags
-      await tx.postTag.createMany({
-        data: tags.map((tag) => ({
-          postId,
-          tagId: tag.id,
-        })),
-      })
-    })
-
-    // Return post with tags
-    const updatedPost = await this.prisma.post.findUnique({
-      where: { id: postId },
-      include: {
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
-    })
-
-    return updatedPost
+      this.logger.debug(`applyTags succeeded: saved ${tags.length} tags for post ${postId}`)
+    } catch (err) {
+      this.logger.error(`applyTags failed for post ${postId}`, err)
+      throw err
+    }
   }
 
   /**

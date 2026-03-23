@@ -49,6 +49,17 @@ export function TagInput({ value, onChange, maxTags = 5 }: TagInputProps) {
       e.preventDefault()
       handleAddTag(inputValue.trim())
     }
+    if (e.key === 'Escape') {
+      setIsOpen(false)
+    }
+  }
+
+  const handleBlur = () => {
+    // Commit any pending typed text as a tag on blur
+    if (inputValue.trim()) {
+      handleAddTag(inputValue.trim())
+    }
+    setTimeout(() => setIsOpen(false), 150)
   }
 
   return (
@@ -69,11 +80,12 @@ export function TagInput({ value, onChange, maxTags = 5 }: TagInputProps) {
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Add tags (type to search)..."
+            placeholder="Type a tag and press Enter..."
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFocus={() => setIsOpen(true)}
+            onBlur={handleBlur}
             className="w-full"
           />
 
