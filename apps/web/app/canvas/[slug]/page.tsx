@@ -113,7 +113,7 @@ export default function CanvasPage() {
         <h1 className="text-xl font-semibold text-foreground">This board is private</h1>
         <p className="text-sm text-muted-foreground">Sign in to access this board.</p>
         <Button asChild variant="default">
-          <Link href="/sign-in">Sign In</Link>
+          <Link href="/login">Sign In</Link>
         </Button>
       </div>
     )
