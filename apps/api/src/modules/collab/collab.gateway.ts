@@ -115,6 +115,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       return
     }
     client.data.isViewOnly = room.visibility === 'VIEW_ONLY' && isAnonymous
+    client.data.ownerId = room.ownerId
 
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
@@ -138,6 +139,21 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       name: client.data.name,
       colorIndex,
     })
+  }
+
+  async notifyVisibilityChanged(slug: string, visibility: string): Promise<void> {
+    const sockets = await this.server.in(slug).fetchSockets()
+    for (const socket of sockets) {
+      const isAnonymous = !!socket.data.user?.isAnonymous
+      if (visibility === 'PRIVATE' && isAnonymous) {
+        socket.emit('error', { message: 'Room is private' })
+        socket.disconnect()
+        continue
+      }
+      const newIsViewOnly = visibility === 'VIEW_ONLY' && isAnonymous
+      socket.data.isViewOnly = newIsViewOnly
+      socket.emit('room-settings-changed', { visibility, isViewOnly: newIsViewOnly })
+    }
   }
 
   @SubscribeMessage('cursor-move')

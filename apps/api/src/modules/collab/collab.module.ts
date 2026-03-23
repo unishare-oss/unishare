@@ -8,6 +8,6 @@ import { CollabRoomService } from './collab.room.service'
 @Module({
   controllers: [CollabController],
   providers: [CollabService, CollabRepository, CollabGateway, CollabRoomService],
-  exports: [CollabService],
+  exports: [CollabService, CollabGateway],
 })
 export class CollabModule {}

@@ -77,7 +77,7 @@ const CollabPresenceContext = createContext<CollabPresenceContextValue | null>(n
 export function CollabProvider({
   slug,
   isAnonymous,
-  isViewOnly,
+  isViewOnly: isViewOnlyProp,
   ownerId,
   userId,
   children,
@@ -85,6 +85,7 @@ export function CollabProvider({
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const [initialElements, setInitialElements] = useState<unknown[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
+  const [isViewOnly, setIsViewOnly] = useState(isViewOnlyProp)
 
   const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
   const [yElements] = useState<Y.Array<unknown>>(() => ydoc.getArray('elements'))
@@ -167,6 +168,13 @@ export function CollabProvider({
           if (!existing) return prev
           return new Map(prev).set(cursorId, { ...existing, x, y })
         })
+      },
+    )
+
+    socket.on(
+      'room-settings-changed',
+      ({ isViewOnly: newIsViewOnly }: { visibility: string; isViewOnly: boolean }) => {
+        setIsViewOnly(newIsViewOnly)
       },
     )
 

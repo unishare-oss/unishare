@@ -11,6 +11,7 @@ import type { Request, Response } from 'express'
 import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
 import { CollabRepository } from './collab.repository'
+import { CollabGateway } from './collab.gateway'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
@@ -18,7 +19,10 @@ import { RoomEntity } from './entities/room.entity'
 
 @Injectable()
 export class CollabService {
-  constructor(private readonly collabRepository: CollabRepository) {}
+  constructor(
+    private readonly collabRepository: CollabRepository,
+    private readonly collabGateway: CollabGateway,
+  ) {}
 
   async createRoom(dto: CreateRoomDto, ownerId: string) {
     const slug = nanoid(10)
@@ -73,6 +77,9 @@ export class CollabService {
     }
     if (Object.keys(updateData).length === 0) return this.toRoomResponse(room)
     const updated = await this.collabRepository.updateRoom(slug, updateData)
+    if (updateData.visibility !== undefined) {
+      await this.collabGateway.notifyVisibilityChanged(slug, updateData.visibility)
+    }
     return this.toRoomResponse(updated)
   }
 
