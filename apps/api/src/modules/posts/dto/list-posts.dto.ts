@@ -45,4 +45,9 @@ export class ListPostsDto extends PaginationDto {
   @IsOptional()
   @IsString()
   authorId?: string
+
+  @ApiPropertyOptional({ description: 'Filter by tag slug (exact match)' })
+  @IsOptional()
+  @IsString()
+  tagSlug?: string
 }

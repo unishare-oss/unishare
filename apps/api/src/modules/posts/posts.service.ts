@@ -101,6 +101,7 @@ export class PostsService {
       type,
       status,
       authorId,
+      tagSlug,
       ...pagination
     } = query
 
@@ -119,6 +120,7 @@ export class PostsService {
       ...(Object.keys(courseWhere).length > 0 && { course: courseWhere }),
       ...(authorId && { authorId }),
       ...(authorId && !isPrivileged && !isViewingOwnPosts && { isAnonymous: false }),
+      ...(tagSlug && { tags: { some: { tag: { slug: tagSlug } } } }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 

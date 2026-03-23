@@ -386,7 +386,14 @@
             "in": "query",
             "schema": { "$ref": "#/components/schemas/PostStatus" }
           },
-          { "name": "authorId", "required": false, "in": "query", "schema": { "type": "string" } }
+          { "name": "authorId", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "tagSlug",
+            "required": false,
+            "in": "query",
+            "description": "Filter by tag slug (exact match)",
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": {

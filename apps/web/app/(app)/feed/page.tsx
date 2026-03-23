@@ -53,9 +53,6 @@ function FeedContent() {
     }
   }
 
-  // tagParam (from URL) takes priority — but once user types, tagParam is cleared
-  const activeSearch = tagParam !== null ? tagParam : debouncedSearch
-
   // Debounce the actual search query (API call fires after 300ms pause)
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
@@ -93,7 +90,17 @@ function FeedContent() {
     setPage(1)
   }
 
-  const isSearchActive = activeSearch.trim().length > 0
+  // tagParam drives a tag filter on the regular feed endpoint (fast exact match)
+  // debouncedSearch drives the FTS search endpoint
+  const tagSlug = tagParam
+    ? tagParam
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]/g, '')
+    : undefined
+  const isTagActive = tagSlug != null
+  const isSearchActive = !isTagActive && debouncedSearch.trim().length > 0
 
   const { data, isLoading } = usePostsControllerFindAll(
     {
@@ -102,6 +109,7 @@ function FeedContent() {
       departmentId: effectiveDeptId || undefined,
       yearLevel: selectedYear ?? undefined,
       moduleNumber: selectedModuleNumber ?? undefined,
+      tagSlug: tagSlug || undefined,
       page,
       limit: 10,
     },
@@ -111,10 +119,10 @@ function FeedContent() {
   )
 
   const { data: searchData, isLoading: searchLoading } = useQuery({
-    queryKey: ['posts', 'search', activeSearch, page],
+    queryKey: ['posts', 'search', debouncedSearch, page],
     queryFn: async () => {
       const res = await fetch(
-        `/api/posts/search?q=${encodeURIComponent(activeSearch)}&page=${page}&limit=10`,
+        `/api/posts/search?q=${encodeURIComponent(debouncedSearch)}&page=${page}&limit=10`,
         { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Search failed')
