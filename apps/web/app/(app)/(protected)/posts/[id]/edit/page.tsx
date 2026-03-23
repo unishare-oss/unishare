@@ -104,6 +104,10 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
   useEffect(() => {
     if (post) {
+      if (!post.isOwner) {
+        router.replace(`/posts/${id}`)
+        return
+      }
       form.reset(postToFormValues(post))
       setNewFiles([])
       setRemovedFileIds(new Set())
@@ -175,7 +179,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  if (isLoading || !post) {
+  if (isLoading || !post || !post.isOwner) {
     return (
       <div className="flex min-h-screen flex-col">
         <PageHeader title="Edit Post" />
