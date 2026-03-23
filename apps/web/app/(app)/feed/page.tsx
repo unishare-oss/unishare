@@ -6,7 +6,7 @@ import { Search } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
-import { FilterStrip } from '@/components/feed/filter-strip'
+import { FilterStrip, type SortType } from '@/components/feed/filter-strip'
 import { FeedHeader } from '@/components/feed/feed-header'
 import { useFeedStore, type TypeFilter } from '@/lib/store'
 import { PostFeed } from '@/components/feed/post-feed'
@@ -40,6 +40,7 @@ function FeedContent() {
   const [searchQuery, setSearchQuery] = useState(qParam ?? '')
   const [debouncedSearch, setDebouncedSearch] = useState(qParam ?? '')
   const [page, setPage] = useState(1)
+  const [sortType, setSortType] = useState<SortType>('recent')
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
   // When user types, clear ?tag= and instantly update ?q= in the URL
@@ -98,6 +99,11 @@ function FeedContent() {
     setPage(1)
   }
 
+  function handleSortChange(sort: SortType) {
+    setSortType(sort)
+    setPage(1)
+  }
+
   // tagParam drives a tag filter on the regular feed endpoint (fast exact match)
   // debouncedSearch drives the FTS search endpoint
   const tagSlug = tagParam
@@ -109,6 +115,8 @@ function FeedContent() {
     : undefined
   const isTagActive = tagSlug != null
   const isSearchActive = !isTagActive && debouncedSearch.trim().length > 0
+
+  const isTrendingActive = sortType === 'trending'
 
   const { data, isLoading } = usePostsControllerFindAll(
     {
@@ -122,7 +130,11 @@ function FeedContent() {
       limit: 10,
     },
     {
-      query: { select: (r) => r.data, placeholderData: keepPreviousData, enabled: !isSearchActive },
+      query: {
+        select: (r) => r.data,
+        placeholderData: keepPreviousData,
+        enabled: !isSearchActive && !isTrendingActive,
+      },
     },
   )
 
@@ -141,12 +153,37 @@ function FeedContent() {
     placeholderData: keepPreviousData,
   })
 
-  const items = isSearchActive ? (searchData?.results ?? []) : (data?.items ?? [])
-  const totalPages = isSearchActive
-    ? Math.ceil((searchData?.total ?? 0) / 10)
-    : (data?.totalPages ?? 1)
-  const currentPage = isSearchActive ? (searchData?.page ?? 1) : (data?.page ?? 1)
-  const loading = isSearchActive ? searchLoading : isLoading
+  const { data: trendingData, isLoading: trendingLoading } = useQuery({
+    queryKey: ['posts', 'trending', page],
+    queryFn: async () => {
+      const res = await fetch(`/api/posts/trending?page=${page}&limit=10`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to fetch trending posts')
+      const json = await res.json()
+      return json.data as { posts: ApiPost[]; total: number; page: number; limit: number }
+    },
+    enabled: isTrendingActive,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000, // 5 min — scores refresh every 5 min server-side
+  })
+
+  const items = isTrendingActive
+    ? (trendingData?.posts ?? [])
+    : isSearchActive
+      ? (searchData?.results ?? [])
+      : (data?.items ?? [])
+  const totalPages = isTrendingActive
+    ? Math.ceil((trendingData?.total ?? 0) / 10)
+    : isSearchActive
+      ? Math.ceil((searchData?.total ?? 0) / 10)
+      : (data?.totalPages ?? 1)
+  const currentPage = isTrendingActive
+    ? (trendingData?.page ?? 1)
+    : isSearchActive
+      ? (searchData?.page ?? 1)
+      : (data?.page ?? 1)
+  const loading = isTrendingActive ? trendingLoading : isSearchActive ? searchLoading : isLoading
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -166,6 +203,8 @@ function FeedContent() {
         onCourseChange={handleCourseChange}
         selectedModuleNumber={selectedModuleNumber}
         onModuleChange={handleModuleChange}
+        sortType={sortType}
+        onSortChange={handleSortChange}
       />
 
       {/* Mobile search */}
@@ -192,9 +231,11 @@ function FeedContent() {
         totalPages={totalPages}
         onPageChange={setPage}
         emptyDescription={
-          isSearchActive
-            ? 'No posts matched your search.'
-            : 'Try adjusting your filters or search query.'
+          isTrendingActive
+            ? 'No trending posts yet. Check back soon!'
+            : isSearchActive
+              ? 'No posts matched your search.'
+              : 'Try adjusting your filters or search query.'
         }
       />
     </div>

@@ -12,6 +12,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
+import { ReportDialog } from '@/components/ReportDialog'
 import {
   usePostsControllerSavePost,
   usePostsControllerUnsavePost,
@@ -198,18 +199,21 @@ export function PostCard({ post }: { post: ApiPost }) {
             </span>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0 mt-1 hover:bg-background"
-          onClick={handleSave}
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
-        >
-          <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-            strokeWidth={1.5}
-          />
-        </Button>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          {isAuthenticated && !post.isOwner && <ReportDialog postId={post.id} />}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="hover:bg-background"
+            onClick={handleSave}
+            aria-label={isSaved ? 'Unsave post' : 'Save post'}
+          >
+            <Bookmark
+              className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+              strokeWidth={1.5}
+            />
+          </Button>
+        </div>
       </article>
     </Link>
   )

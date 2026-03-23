@@ -13,6 +13,10 @@ import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/cou
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
 
+import { TrendingUp, Clock } from 'lucide-react'
+
+export type SortType = 'recent' | 'trending'
+
 export const typeFilters: TypeFilter[] = ['ALL', ...Object.values(PostType)]
 
 const typeFilterLabel: Record<TypeFilter, string> = {
@@ -33,6 +37,8 @@ interface FilterStripProps {
   onCourseChange: (courseId: string) => void
   selectedModuleNumber: number | null
   onModuleChange: (moduleNumber: number | null) => void
+  sortType?: SortType
+  onSortChange?: (sort: SortType) => void
 }
 
 const ALL = '__all__'
@@ -48,6 +54,8 @@ export function FilterStrip({
   onCourseChange,
   selectedModuleNumber,
   onModuleChange,
+  sortType = 'recent',
+  onSortChange,
 }: FilterStripProps) {
   const { data: departments } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
@@ -107,99 +115,133 @@ export function FilterStrip({
             onClick={() => onFilterChange(filter)}
             className={cn(
               'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2 shrink-0',
-              activeFilter === filter
-                ? 'border-amber text-amber font-medium'
-                : 'border-transparent text-text-muted hover:text-foreground',
+              sortType === 'trending'
+                ? 'border-transparent text-text-muted/40 cursor-default'
+                : activeFilter === filter
+                  ? 'border-amber text-amber font-medium'
+                  : 'border-transparent text-text-muted hover:text-foreground',
             )}
+            disabled={sortType === 'trending'}
           >
             {typeFilterLabel[filter]}
           </button>
         ))}
+
+        {onSortChange && (
+          <div className="ml-auto flex items-center gap-0.5 shrink-0 pl-2">
+            <button
+              onClick={() => onSortChange('recent')}
+              className={cn(
+                'flex items-center gap-1 font-mono text-xs uppercase tracking-wider px-3 py-1.5 border-b-2 transition-colors duration-150',
+                sortType === 'recent'
+                  ? 'border-amber text-amber font-medium'
+                  : 'border-transparent text-text-muted hover:text-foreground',
+              )}
+            >
+              <Clock className="size-3" strokeWidth={1.5} />
+              Recent
+            </button>
+            <button
+              onClick={() => onSortChange('trending')}
+              className={cn(
+                'flex items-center gap-1 font-mono text-xs uppercase tracking-wider px-3 py-1.5 border-b-2 transition-colors duration-150',
+                sortType === 'trending'
+                  ? 'border-amber text-amber font-medium'
+                  : 'border-transparent text-text-muted hover:text-foreground',
+              )}
+            >
+              <TrendingUp className="size-3" strokeWidth={1.5} />
+              Trending
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
-        <div className="min-w-0">
-          <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-            <SelectTrigger
-              size="sm"
-              className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
-              title={selectedDeptLabel}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All departments</SelectItem>
-              {(departments ?? []).map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {sortType !== 'trending' && (
+        <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
+          <div className="min-w-0">
+            <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
+              <SelectTrigger
+                size="sm"
+                className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
+                title={selectedDeptLabel}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value={ALL}>All departments</SelectItem>
+                {(departments ?? []).map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="min-w-0">
-          <Select
-            value={selectedYear === null ? ALL : String(selectedYear)}
-            onValueChange={handleYearChange}
-          >
-            <SelectTrigger
-              size="sm"
-              className="font-mono text-xs text-text-muted w-full lg:w-24"
-              title={selectedYearLabel}
+          <div className="min-w-0">
+            <Select
+              value={selectedYear === null ? ALL : String(selectedYear)}
+              onValueChange={handleYearChange}
             >
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All years</SelectItem>
-              {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  Year {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              <SelectTrigger
+                size="sm"
+                className="font-mono text-xs text-text-muted w-full lg:w-24"
+                title={selectedYearLabel}
+              >
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value={ALL}>All years</SelectItem>
+                {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    Year {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="min-w-0">
-          <Select
-            value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
-            onValueChange={handleModuleChange}
-          >
-            <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-28">
-              <SelectValue placeholder="Module" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All modules</SelectItem>
-              {[1, 2, 3].map((m) => (
-                <SelectItem key={m} value={String(m)}>
-                  Module {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="col-span-2 min-w-0">
-          <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-            <SelectTrigger
-              size="sm"
-              className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
-              title={selectedCourseLabel}
+          <div className="min-w-0">
+            <Select
+              value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
+              onValueChange={handleModuleChange}
             >
-              <SelectValue placeholder="Course" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All courses</SelectItem>
-              {filteredCourses.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.code} — {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full lg:w-28">
+                <SelectValue placeholder="Module" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value={ALL}>All modules</SelectItem>
+                {[1, 2, 3].map((m) => (
+                  <SelectItem key={m} value={String(m)}>
+                    Module {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-2 min-w-0">
+            <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
+              <SelectTrigger
+                size="sm"
+                className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
+                title={selectedCourseLabel}
+              >
+                <SelectValue placeholder="Course" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value={ALL}>All courses</SelectItem>
+                {filteredCourses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} — {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
