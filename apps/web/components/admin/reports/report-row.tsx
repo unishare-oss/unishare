@@ -5,28 +5,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { TypeBadge } from '@/components/post-card'
+import type { ReportDetail, ReportDetailStatus } from '@/src/lib/api/generated/unishareAPI.schemas'
 import type { ReportStatusFilter } from './reports-header'
 
-export interface ReportItem {
-  id: string
-  reason: string
-  comment?: string | null
-  status: ReportStatusFilter
-  createdAt: string
-  post: {
-    id: string
-    title?: string | null
-    type: string
-    course: { code: string; department: { name: string } }
-    author?: { id: string; name: string } | null
-  }
-  reporter?: { id: string; name: string } | null
-  adminAction?: {
-    action: string
-    reason?: string | null
-    createdAt: string
-  } | null
-}
+export type { ReportDetail }
 
 const REASON_LABELS: Record<string, string> = {
   SPAM: 'Spam',
@@ -35,7 +17,7 @@ const REASON_LABELS: Record<string, string> = {
   OTHER: 'Other',
 }
 
-function StatusIcon({ status }: { status: ReportStatusFilter }) {
+function StatusIcon({ status }: { status: ReportDetailStatus }) {
   if (status === 'APPROVED')
     return <CheckCircle2 className="size-4 text-success" strokeWidth={1.5} />
   if (status === 'REJECTED')
@@ -44,7 +26,7 @@ function StatusIcon({ status }: { status: ReportStatusFilter }) {
 }
 
 interface ReportRowProps {
-  report: ReportItem
+  report: ReportDetail
   expanded: boolean
   onToggle: () => void
   onApprove: () => void
@@ -71,24 +53,23 @@ export function ReportRow({
           expanded && 'bg-muted',
         )}
       >
-        {/* Status icon */}
         <div className="absolute left-4 top-5">
           <StatusIcon status={report.status} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <TypeBadge type={report.post.type} />
+            {report.post?.type && <TypeBadge type={report.post.type} />}
             <span className="font-mono text-[13px] text-amber font-medium">
-              {report.post.course.code}
+              {report.post?.course.code}
             </span>
             <span className="text-text-muted text-[13px]">·</span>
             <span className="text-text-muted text-[13px]">
-              {report.post.course.department.name}
+              {report.post?.course.department.name}
             </span>
           </div>
           <p className="text-sm font-medium text-foreground line-clamp-1 mb-1">
-            {report.post.title ?? '(Untitled)'}
+            {report.post?.title ?? '(Untitled)'}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 font-mono text-[11px] px-1.5 py-0.5 rounded-[4px] bg-muted border border-border text-text-muted">
@@ -114,7 +95,6 @@ export function ReportRow({
 
       {expanded && (
         <div className="px-12 pb-5 bg-muted/50 border-t border-border space-y-4">
-          {/* Report comment */}
           {report.comment && (
             <div className="pt-4">
               <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1">
@@ -126,10 +106,9 @@ export function ReportRow({
             </div>
           )}
 
-          {/* Post link */}
           <div className={report.comment ? '' : 'pt-4'}>
             <a
-              href={`/posts/${report.post.id}`}
+              href={`/posts/${report.post?.id}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -139,7 +118,6 @@ export function ReportRow({
             </a>
           </div>
 
-          {/* Admin action info (for processed reports) */}
           {report.adminAction && (
             <div className="text-xs font-mono text-text-muted space-y-0.5">
               <p>
@@ -152,7 +130,6 @@ export function ReportRow({
             </div>
           )}
 
-          {/* Action buttons for pending */}
           {isPending && (
             <div className="flex items-center gap-2 pt-1">
               <Button

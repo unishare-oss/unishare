@@ -1220,21 +1220,7 @@
           "201": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "success": true,
-                    "data": {
-                      "id": "report123",
-                      "postId": "post456",
-                      "userId": "user789",
-                      "reason": "SPAM",
-                      "status": "PENDING",
-                      "createdAt": "2026-03-19T12:00:00Z"
-                    }
-                  }
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           }
         },
@@ -1279,18 +1265,12 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {
-                  "example": {
-                    "success": true,
-                    "data": { "reports": [], "total": 5, "page": 1, "limit": 20 }
-                  }
-                }
+                "schema": { "$ref": "#/components/schemas/PaginatedReportsEntity" }
               }
             }
           },
           "403": { "description": "Admin role required" }
         },
-        "security": [{ "bearer": [] }],
         "tags": ["admin"]
       }
     },
@@ -1304,19 +1284,11 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "success": true,
-                    "data": { "id": "report123", "status": "APPROVED" }
-                  }
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
           "403": { "description": "Admin role required" }
         },
-        "security": [{ "bearer": [] }],
         "tags": ["admin"]
       }
     },
@@ -1330,19 +1302,11 @@
           "200": {
             "description": "",
             "content": {
-              "application/json": {
-                "schema": {
-                  "example": {
-                    "success": true,
-                    "data": { "id": "report123", "status": "REJECTED" }
-                  }
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
           "403": { "description": "Admin role required" }
         },
-        "security": [{ "bearer": [] }],
         "tags": ["admin"]
       }
     }
@@ -2162,6 +2126,88 @@
           "comment": { "type": "string", "description": "Optional context/details for the report" }
         },
         "required": ["reason"]
+      },
+      "ReportPostDepartmentEntity": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      },
+      "ReportPostCourseEntity": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "department": { "$ref": "#/components/schemas/ReportPostDepartmentEntity" }
+        },
+        "required": ["code", "department"]
+      },
+      "ReportPostAuthorEntity": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["id", "name"]
+      },
+      "ReportPostEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string", "nullable": true },
+          "type": { "type": "string" },
+          "course": { "$ref": "#/components/schemas/ReportPostCourseEntity" },
+          "author": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ReportPostAuthorEntity" }]
+          }
+        },
+        "required": ["id", "type", "course"]
+      },
+      "ReportReporterEntity": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["id", "name"]
+      },
+      "ReportAdminActionEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "action": { "type": "string" },
+          "reason": { "type": "string", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" }
+        },
+        "required": ["id", "action", "createdAt"]
+      },
+      "ReportDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "postId": { "type": "string" },
+          "userId": { "type": "string" },
+          "reason": { "type": "string", "enum": ["SPAM", "OFFENSIVE", "COPYRIGHT", "OTHER"] },
+          "comment": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "post": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ReportPostEntity" }]
+          },
+          "reporter": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ReportReporterEntity" }]
+          },
+          "adminAction": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/ReportAdminActionEntity" }]
+          }
+        },
+        "required": ["id", "postId", "userId", "reason", "status", "createdAt"]
+      },
+      "PaginatedReportsEntity": {
+        "type": "object",
+        "properties": {
+          "reports": { "type": "array", "items": { "$ref": "#/components/schemas/ReportDetail" } },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" }
+        },
+        "required": ["reports", "total", "page", "limit"]
       }
     }
   }

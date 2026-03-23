@@ -8,13 +8,10 @@ import {
   useAdminReportsControllerRejectReport,
   getAdminReportsControllerListReportsQueryKey,
 } from '@/src/lib/api/generated/admin/admin'
-import {
-  AdminReportsControllerListReportsStatus,
-  AdminReportsControllerListReportsReason,
-} from '@/src/lib/api/generated/unishareAPI.schemas'
+import { AdminReportsControllerListReportsStatus } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ReportsHeader, type ReportStatusFilter } from '@/components/admin/reports/reports-header'
-import { ReportRow, type ReportItem } from '@/components/admin/reports/report-row'
+import { ReportRow } from '@/components/admin/reports/report-row'
 
 export default function ReportsPage() {
   const [activeFilter, setActiveFilter] = useState<ReportStatusFilter>('PENDING')
@@ -45,12 +42,8 @@ export default function ReportsPage() {
     mutation: { onSuccess: invalidate },
   })
 
-  // The generated client returns data: unknown — cast to the shape we know the API returns
-  const rawList = listData as unknown as { reports: ReportItem[]; total: number } | undefined
-  const rawPending = pendingData as unknown as { total: number } | undefined
-
-  const reports: ReportItem[] = rawList?.reports ?? []
-  const pendingCount = rawPending?.total ?? 0
+  const reports = listData?.reports ?? []
+  const pendingCount = pendingData?.total ?? 0
   const isActioning = approving || rejecting
 
   return (
