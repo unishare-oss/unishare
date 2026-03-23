@@ -198,6 +198,7 @@ export default function CanvasPage() {
       isViewOnly={isViewOnly}
       ownerId={ownerId}
       userId={userId}
+      onAccessRevoked={() => setJoinState('private')}
     >
       <CanvasInner />
     </CollabProvider>

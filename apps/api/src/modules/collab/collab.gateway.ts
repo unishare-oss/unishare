@@ -146,7 +146,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     for (const socket of sockets) {
       const isAnonymous = !!socket.data.user?.isAnonymous
       if (visibility === 'PRIVATE' && isAnonymous) {
-        socket.emit('error', { message: 'Room is private' })
+        socket.emit('room-access-revoked', { reason: 'Room is now private' })
         socket.disconnect()
         continue
       }

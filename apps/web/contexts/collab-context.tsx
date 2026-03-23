@@ -68,6 +68,7 @@ interface CollabProviderProps {
   isViewOnly: boolean
   ownerId: string | null
   userId: string | null
+  onAccessRevoked?: () => void
   children: ReactNode
 }
 
@@ -80,6 +81,7 @@ export function CollabProvider({
   isViewOnly: isViewOnlyProp,
   ownerId,
   userId,
+  onAccessRevoked,
   children,
 }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
@@ -96,6 +98,7 @@ export function CollabProvider({
   const socketRef = useRef<ReturnType<typeof io> | null>(null)
   const lastEmitTimeRef = useRef(0)
   const unmountingRef = useRef(false)
+  const kickedRef = useRef(false)
 
   useEffect(() => {
     unmountingRef.current = false
@@ -178,8 +181,14 @@ export function CollabProvider({
       },
     )
 
+    socket.on('room-access-revoked', () => {
+      kickedRef.current = true
+      toast.dismiss('collab-status')
+      onAccessRevoked?.()
+    })
+
     socket.on('disconnect', () => {
-      if (unmountingRef.current) return
+      if (unmountingRef.current || kickedRef.current) return
       setConnectionStatus('disconnected')
       setParticipants([])
       setRemoteCursors(new Map())

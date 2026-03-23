@@ -34,7 +34,9 @@ import { exportPng, exportPdf, postToUniShare } from './export-utils'
 import {
   useCollabControllerFindBySlug,
   useCollabControllerUpdateRoom,
+  getCollabControllerFindBySlugQueryKey,
 } from '@/src/lib/api/generated/collab/collab'
+import { useQueryClient } from '@tanstack/react-query'
 
 /** Extract initials: "Alice Bob" → "AB", "SleepyOtter" → "SL", "A" → "A" */
 function getInitials(name: string): string {
@@ -191,6 +193,7 @@ const VISIBILITY_OPTIONS: { value: RoomVisibility; label: string; description: s
 function SettingsPopover() {
   const { ownerId, userId } = useCollab()
   const { slug } = useParams<{ slug: string }>()
+  const queryClient = useQueryClient()
   const [pendingVisibility, setPendingVisibility] = useState<RoomVisibility | null>(null)
   const [pendingHasPassword, setPendingHasPassword] = useState<boolean | null>(null)
   const [pwInputValue, setPwInputValue] = useState('')
@@ -217,6 +220,7 @@ function SettingsPopover() {
 
     try {
       await updateVisibility({ slug, data: { visibility: newVisibility } })
+      await queryClient.invalidateQueries({ queryKey: getCollabControllerFindBySlugQueryKey(slug) })
       toast.success(
         newVisibility === 'OPEN'
           ? 'Room is now open — everyone can edit'
