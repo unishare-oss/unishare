@@ -64,7 +64,10 @@ export class PostsService {
       await this.applyTags(post.id, tags)
     }
 
-    if (post.status === PostStatus.APPROVED) {
+    // Re-fetch so the response includes any applied tags
+    const created = await this.postsRepository.findById(post.id, { id: userId })
+
+    if (created?.status === PostStatus.APPROVED) {
       void this.followsService
         .getFollowerIds(userId)
         .then((followerIds) =>
@@ -77,7 +80,7 @@ export class PostsService {
         )
     }
 
-    return post
+    return created ?? post
   }
 
   async findAll(query: ListPostsDto, user?: { role?: UserRole; id?: string }) {
@@ -163,7 +166,8 @@ export class PostsService {
       await this.applyTags(id, tags)
     }
 
-    return updatedPost
+    // Re-fetch so the response includes updated tags
+    return (await this.postsRepository.findById(id, { id: userId })) ?? updatedPost
   }
 
   async remove(id: string, userId: string, userRole: UserRole) {
