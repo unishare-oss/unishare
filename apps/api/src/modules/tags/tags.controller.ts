@@ -1,40 +1,32 @@
 import { Controller, Get, Query } from '@nestjs/common'
-import { ApiQuery, ApiResponse } from '@nestjs/swagger'
+import { ApiQuery, ApiTags } from '@nestjs/swagger'
+import { OptionalAuth } from '@thallesp/nestjs-better-auth'
+import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { TagsService } from './tags.service'
-import { TagDto } from './dto/tag.dto'
 
+@ApiTags('tags')
 @Controller('tags')
+@OptionalAuth()
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
   @Get('autocomplete')
-  @ApiQuery({ name: 'q', required: true, type: String, description: 'Tag name prefix' })
-  @ApiResponse({ status: 200, description: 'Tag suggestions', type: [TagDto] })
-  async autocomplete(@Query('q') q: string): Promise<any> {
-    const suggestions = await this.tagsService.autocomplete(q, 10)
-    return {
-      success: true,
-      data: suggestions,
-    }
+  @ApiQuery({ name: 'q', required: false, type: String, description: 'Tag name prefix' })
+  @ResponseMessage('Tag suggestions fetched successfully')
+  autocomplete(@Query('q') q: string) {
+    if (!q?.trim()) return []
+    return this.tagsService.autocomplete(q.trim(), 10)
   }
 
   @Get('trending')
-  @ApiResponse({ status: 200, description: 'Trending tags', type: [TagDto] })
-  async trending(): Promise<any> {
-    const tags = await this.tagsService.getTrendingTags(10)
-    return {
-      success: true,
-      data: tags,
-    }
+  @ResponseMessage('Trending tags fetched successfully')
+  trending() {
+    return this.tagsService.getTrendingTags(10)
   }
 
   @Get('stats')
-  @ApiResponse({ status: 200, description: 'Tag statistics' })
-  async stats(): Promise<any> {
-    const stats = await this.tagsService.getTagStats()
-    return {
-      success: true,
-      data: stats,
-    }
+  @ResponseMessage('Tag statistics fetched successfully')
+  stats() {
+    return this.tagsService.getTagStats()
   }
 }

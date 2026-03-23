@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
-import { keepPreviousData } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
 import { FilterStrip } from '@/components/feed/filter-strip'
@@ -32,8 +32,15 @@ export default function FeedPage() {
   })
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
+
+  // Debounce search query — 300ms after last keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
 
   useEffect(() => {
     if (!hasSelectedYear && user?.yearLevel) {
@@ -66,6 +73,8 @@ export default function FeedPage() {
     setPage(1)
   }
 
+  const isSearchActive = debouncedSearch.trim().length > 0
+
   const { data, isLoading } = usePostsControllerFindAll(
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
@@ -76,17 +85,32 @@ export default function FeedPage() {
       page,
       limit: 10,
     },
-    { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
+    {
+      query: { select: (r) => r.data, placeholderData: keepPreviousData, enabled: !isSearchActive },
+    },
   )
 
-  const items = data?.items ?? []
-  const filteredItems = searchQuery
-    ? items.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.course.code.toLowerCase().includes(searchQuery.toLowerCase()),
+  const { data: searchData, isLoading: searchLoading } = useQuery({
+    queryKey: ['posts', 'search', debouncedSearch, page],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/posts/search?q=${encodeURIComponent(debouncedSearch)}&page=${page}&limit=10`,
+        { credentials: 'include' },
       )
-    : items
+      if (!res.ok) throw new Error('Search failed')
+      const json = await res.json()
+      return json.data as { results: any[]; total: number; page: number; limit: number }
+    },
+    enabled: isSearchActive,
+    placeholderData: keepPreviousData,
+  })
+
+  const items = isSearchActive ? (searchData?.results ?? []) : (data?.items ?? [])
+  const totalPages = isSearchActive
+    ? Math.ceil((searchData?.total ?? 0) / 10)
+    : (data?.totalPages ?? 1)
+  const currentPage = isSearchActive ? (searchData?.page ?? 1) : (data?.page ?? 1)
+  const loading = isSearchActive ? searchLoading : isLoading
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -122,12 +146,16 @@ export default function FeedPage() {
       </div>
 
       <PostFeed
-        posts={filteredItems}
-        loading={isLoading}
-        page={data?.page ?? 1}
-        totalPages={data?.totalPages ?? 1}
+        posts={items}
+        loading={loading}
+        page={currentPage}
+        totalPages={totalPages}
         onPageChange={setPage}
-        emptyDescription="Try adjusting your filters or search query."
+        emptyDescription={
+          isSearchActive
+            ? 'No posts matched your search.'
+            : 'Try adjusting your filters or search query.'
+        }
       />
     </div>
   )

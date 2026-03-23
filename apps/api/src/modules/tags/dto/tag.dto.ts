@@ -23,6 +23,6 @@ export class TagDto {
   createdAt: Date
 
   @ApiPropertyOptional({ required: false })
-  @Expose({ name: '_count' })
+  @Expose()
   postCount?: number
 }

@@ -61,7 +61,7 @@ export class PostsService {
 
     // Add tags if provided
     if (tags && tags.length > 0) {
-      await this.tagPost(post.id, tags)
+      await this.applyTags(post.id, tags)
     }
 
     if (post.status === PostStatus.APPROVED) {
@@ -160,7 +160,7 @@ export class PostsService {
 
     // Update tags if provided
     if (tags) {
-      await this.tagPost(id, tags)
+      await this.applyTags(id, tags)
     }
 
     return updatedPost
@@ -233,17 +233,18 @@ export class PostsService {
 
     const searchQuery = query.trim()
 
-    // Search using plainto_tsquery for safety and better results
+    // Search using plainto_tsquery for safety and better results.
+    // Column names must be quoted — Prisma stores them as camelCase in PostgreSQL.
     const results = (await this.prisma.$queryRaw`
       SELECT
         p.*,
-        ts_rank(p.search_vector, plainto_tsquery('english', ${searchQuery})) as relevance
+        ts_rank(p."searchVector", plainto_tsquery('english', ${searchQuery})) as relevance
       FROM "post" p
-      WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
+      WHERE p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
         AND p.status = ${'APPROVED'}
-        AND p.publication_status = ${'PUBLISHED'}
-        AND p.deleted_at IS NULL
-      ORDER BY relevance DESC, p.created_at DESC
+        AND p."publicationStatus" = ${'PUBLISHED'}
+        AND p."deletedAt" IS NULL
+      ORDER BY relevance DESC, p."createdAt" DESC
       LIMIT ${limit}
       OFFSET ${(page - 1) * limit}
     `) as any[]
@@ -251,13 +252,13 @@ export class PostsService {
     const totalResult = (await this.prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM "post" p
-      WHERE p.search_vector @@ plainto_tsquery('english', ${searchQuery})
+      WHERE p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
         AND p.status = ${'APPROVED'}
-        AND p.publication_status = ${'PUBLISHED'}
-        AND p.deleted_at IS NULL
+        AND p."publicationStatus" = ${'PUBLISHED'}
+        AND p."deletedAt" IS NULL
     `) as any[]
 
-    const total = totalResult[0]?.count || 0
+    const total = Number(totalResult[0]?.count ?? 0n)
 
     return {
       results: results.map((r) => {
@@ -274,11 +275,25 @@ export class PostsService {
    * Tag a post with multiple tags
    * Creates tags if they don't exist
    */
-  async tagPost(postId: string, tagNames: string[]): Promise<any> {
+  async tagPost(
+    postId: string,
+    tagNames: string[],
+    userId: string,
+    userRole: UserRole,
+  ): Promise<any> {
     const post = await this.postsRepository.findById(postId)
     if (!post) throw new NotFoundException('Post not found')
+    if (
+      post.authorId !== userId &&
+      userRole !== UserRole.ADMIN &&
+      userRole !== UserRole.MODERATOR
+    ) {
+      throw new ForbiddenException('Only the post author can modify tags')
+    }
+    return this.applyTags(postId, tagNames)
+  }
 
-    // Find or create all tags
+  private async applyTags(postId: string, tagNames: string[]): Promise<any> {
     const tags = await Promise.all(tagNames.map((name) => this.tagsService.findOrCreate(name)))
 
     // Use transaction to delete old tags and create new ones
@@ -315,7 +330,22 @@ export class PostsService {
   /**
    * Remove a tag from a post
    */
-  async untagPost(postId: string, tagId: string): Promise<void> {
+  async untagPost(
+    postId: string,
+    tagId: string,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    const post = await this.postsRepository.findById(postId)
+    if (!post) throw new NotFoundException('Post not found')
+    if (
+      post.authorId !== userId &&
+      userRole !== UserRole.ADMIN &&
+      userRole !== UserRole.MODERATOR
+    ) {
+      throw new ForbiddenException('Only the post author can remove tags')
+    }
+
     const postTag = await this.prisma.postTag.findUnique({
       where: {
         postId_tagId: {

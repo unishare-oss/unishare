@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
+import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
+import { ApiProperty } from '@nestjs/swagger'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -14,6 +16,17 @@ import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
 import { PostDetailEntity } from './entities/post.entity'
 import { PaginatedPostEntity } from './entities/paginated-post.entity'
+
+class TagPostDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MinLength(2, { each: true })
+  @MaxLength(50, { each: true })
+  @Matches(/^[a-z0-9\s\-&()]+$/i, { each: true, message: 'Invalid tag name' })
+  tags: string[]
+}
 
 @ApiTags('posts')
 @Controller('posts')
@@ -57,64 +70,6 @@ export class PostsController {
       role: session?.user?.role as UserRole | undefined,
       id: session?.user?.id,
     })
-  }
-
-  @Get(':id')
-  @OptionalAuth()
-  @ApiOkResponse({ type: PostDetailEntity })
-  @ResponseMessage('Post fetched successfully')
-  findOne(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.findOne(id, {
-      role: session?.user?.role as UserRole | undefined,
-      id: session?.user?.id,
-    })
-  }
-
-  @Post(':id/save')
-  @ResponseMessage('Post saved successfully')
-  savePost(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.savePost(id, session.user.id)
-  }
-
-  @Delete(':id/save')
-  @ResponseMessage('Post unsaved successfully')
-  unsavePost(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.unsavePost(id, session.user.id)
-  }
-
-  @Post(':id/react')
-  @ApiOkResponse({ type: PostDetailEntity })
-  @ResponseMessage('Reaction updated')
-  react(@Param('id') id: string, @Body() dto: ReactToPostDto, @Session() session: UserSession) {
-    return this.postsService.toggleReaction(id, dto, session.user.id, session.user.role as UserRole)
-  }
-
-  @Patch(':id/status')
-  @Roles(['MODERATOR', 'ADMIN'])
-  @ApiOkResponse({ type: PostDetailEntity })
-  @ResponseMessage('Post status updated successfully')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdatePostStatusDto,
-    @Session() session: UserSession,
-  ) {
-    return this.postsService.updateStatus(id, dto, {
-      id: session.user.id,
-      role: session.user.role as UserRole,
-    })
-  }
-
-  @Patch(':id')
-  @ApiOkResponse({ type: PostDetailEntity })
-  @ResponseMessage('Post updated successfully')
-  update(@Param('id') id: string, @Body() dto: UpdatePostDto, @Session() session: UserSession) {
-    return this.postsService.update(id, dto, session.user.id)
-  }
-
-  @Delete(':id')
-  @ResponseMessage('Post deleted successfully')
-  remove(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
   }
 
   @Get('search')
@@ -183,15 +138,69 @@ export class PostsController {
     }
   }
 
+  @Get(':id')
+  @OptionalAuth()
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Post fetched successfully')
+  findOne(@Param('id') id: string, @Session() session: UserSession) {
+    return this.postsService.findOne(id, {
+      role: session?.user?.role as UserRole | undefined,
+      id: session?.user?.id,
+    })
+  }
+
+  @Post(':id/save')
+  @ResponseMessage('Post saved successfully')
+  savePost(@Param('id') id: string, @Session() session: UserSession) {
+    return this.postsService.savePost(id, session.user.id)
+  }
+
+  @Delete(':id/save')
+  @ResponseMessage('Post unsaved successfully')
+  unsavePost(@Param('id') id: string, @Session() session: UserSession) {
+    return this.postsService.unsavePost(id, session.user.id)
+  }
+
+  @Post(':id/react')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Reaction updated')
+  react(@Param('id') id: string, @Body() dto: ReactToPostDto, @Session() session: UserSession) {
+    return this.postsService.toggleReaction(id, dto, session.user.id, session.user.role as UserRole)
+  }
+
+  @Patch(':id/status')
+  @Roles(['MODERATOR', 'ADMIN'])
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Post status updated successfully')
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdatePostStatusDto,
+    @Session() session: UserSession,
+  ) {
+    return this.postsService.updateStatus(id, dto, {
+      id: session.user.id,
+      role: session.user.role as UserRole,
+    })
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Post updated successfully')
+  update(@Param('id') id: string, @Body() dto: UpdatePostDto, @Session() session: UserSession) {
+    return this.postsService.update(id, dto, session.user.id)
+  }
+
+  @Delete(':id')
+  @ResponseMessage('Post deleted successfully')
+  remove(@Param('id') id: string, @Session() session: UserSession) {
+    return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
+  }
+
   @Post(':id/tags')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Tags added successfully')
-  addTags(
-    @Param('id') id: string,
-    @Body() dto: { tags: string[] },
-    @Session() _session: UserSession,
-  ) {
-    return this.postsService.tagPost(id, dto.tags)
+  addTags(@Param('id') id: string, @Body() dto: TagPostDto, @Session() session: UserSession) {
+    return this.postsService.tagPost(id, dto.tags, session.user.id, session.user.role as UserRole)
   }
 
   @Delete(':id/tags/:tagId')
@@ -199,8 +208,8 @@ export class PostsController {
   removeTag(
     @Param('id') id: string,
     @Param('tagId') tagId: string,
-    @Session() _session: UserSession,
+    @Session() session: UserSession,
   ) {
-    return this.postsService.untagPost(id, tagId)
+    return this.postsService.untagPost(id, tagId, session.user.id, session.user.role as UserRole)
   }
 }
