@@ -87,7 +87,7 @@ export class ReportsService {
       this.prisma.report.update({ where: { id: reportId }, data: { status: 'APPROVED' } }),
       this.prisma.post.update({
         where: { id: report.postId },
-        data: { publicationStatus: 'REJECTED' },
+        data: { publicationStatus: 'REJECTED', deletedAt: new Date() },
       }),
       this.prisma.adminAction.create({ data: { reportId, adminId, action: 'approve', reason } }),
     ])

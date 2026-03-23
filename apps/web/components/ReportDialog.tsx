@@ -51,7 +51,7 @@ export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
   }
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -106,6 +106,6 @@ export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
           </Button>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

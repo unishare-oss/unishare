@@ -29,17 +29,17 @@ export class AdminReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get()
-  @Roles(['ADMIN'])
+  @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: PaginatedReportsEntity })
-  @ApiForbiddenResponse({ description: 'Admin role required' })
+  @ApiForbiddenResponse({ description: 'Admin or moderator role required' })
   async listReports(@Query() filters: ListReportsDto) {
     return this.reportsService.listReports(filters)
   }
 
   @Patch(':id/approve')
-  @Roles(['ADMIN'])
+  @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: ReportDetail })
-  @ApiForbiddenResponse({ description: 'Admin role required' })
+  @ApiForbiddenResponse({ description: 'Admin or moderator role required' })
   async approveReport(
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
@@ -49,9 +49,9 @@ export class AdminReportsController {
   }
 
   @Patch(':id/reject')
-  @Roles(['ADMIN'])
+  @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: ReportDetail })
-  @ApiForbiddenResponse({ description: 'Admin role required' })
+  @ApiForbiddenResponse({ description: 'Admin or moderator role required' })
   async rejectReport(
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
