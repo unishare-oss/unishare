@@ -42,28 +42,24 @@ function FeedContent() {
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
-  // When user types, clear ?tag= and update ?q= in the URL (debounced)
+  // When user types, clear ?tag= and instantly update ?q= in the URL
   function handleSearchChange(value: string) {
-    if (tagParam !== null) router.replace('/feed')
     setSearchQuery(value)
+    const q = value.trim()
+    if (q) {
+      router.replace(`/feed?q=${encodeURIComponent(q)}`, { scroll: false })
+    } else {
+      router.replace('/feed', { scroll: false })
+    }
   }
 
   // tagParam (from URL) takes priority — but once user types, tagParam is cleared
   const activeSearch = tagParam !== null ? tagParam : debouncedSearch
 
-  // Debounce typed search and sync to URL as ?q=
+  // Debounce the actual search query (API call fires after 300ms pause)
   useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      const q = searchQuery.trim()
-      if (q) {
-        router.replace(`/feed?q=${encodeURIComponent(q)}`, { scroll: false })
-      } else if (qParam !== null) {
-        router.replace('/feed', { scroll: false })
-      }
-    }, 300)
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   useEffect(() => {
