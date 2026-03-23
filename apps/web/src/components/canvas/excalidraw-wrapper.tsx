@@ -24,13 +24,16 @@ const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElementsMap, yElementOrder, ydoc, initialElements, setExcalidrawAPI, isViewOnly } =
-    useCollab()
+  const { yElements, ydoc, initialElements, setExcalidrawAPI, isViewOnly } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
   const isApplyingRemoteRef = useRef(false)
+  // Track the versionNonce fingerprint of what we last wrote to Yjs.
+  // Using a local ref (not yElements) avoids false-unchanged results when
+  // remote updates arrive and update yElements concurrently.
+  const lastWrittenFingerprintRef = useRef<string>('')
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -53,71 +56,44 @@ function ExcalidrawWrapperInner() {
     (elements: readonly ExcalidrawElement[]) => {
       if (isApplyingRemoteRef.current) return
 
+      // Only write to Yjs when elements actually changed — Excalidraw fires onChange
+      // on every pointer event (appState changes), not just element mutations.
+      // We fingerprint using versionNonce (a random value Excalidraw bumps on each
+      // mutation) tracked against our own last write, not yElements (which can be
+      // updated by concurrent remote changes and cause false unchanged=true).
+      const fingerprint = elements.map((el) => `${el.id}:${el.versionNonce}`).join('|')
+      if (fingerprint === lastWrittenFingerprintRef.current) return
+      lastWrittenFingerprintRef.current = fingerprint
+
       ydoc.transact(() => {
-        // Sync changed/added elements. Use version+versionNonce together:
-        // version is monotonic (bumped on every mutation), versionNonce is random
-        // but using both catches undo (version can decrease) correctly.
-        const incomingIds = new Set(elements.map((el) => el.id))
-        for (const el of elements) {
-          const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
-          if (!stored || stored.version !== el.version || stored.versionNonce !== el.versionNonce) {
-            yElementsMap.set(el.id, el)
-          }
-        }
-
-        // Remove elements deleted from the scene
-        for (const [id] of yElementsMap.entries()) {
-          if (!incomingIds.has(id)) {
-            yElementsMap.delete(id)
-          }
-        }
-
-        // Sync z-order only when it actually changed
-        const newOrder = elements.map((el) => el.id)
-        if (newOrder.join(',') !== yElementOrder.toArray().join(',')) {
-          yElementOrder.delete(0, yElementOrder.length)
-          yElementOrder.insert(0, newOrder)
-        }
-      }, 'local')
+        yElements.delete(0, yElements.length)
+        yElements.insert(0, elements as unknown[])
+      })
     },
-    [ydoc, yElementsMap, yElementOrder],
+    [ydoc, yElements],
   )
 
   useEffect(() => {
     const observer = () => {
       if (!excalidrawAPIRef.current) return
       isApplyingRemoteRef.current = true
-
-      // Reconstruct ordered element array, deduplicating any z-order conflicts
-      // that can occur when two users concurrently reorder elements (Y.Array LWW).
-      const seen = new Set<string>()
-      const elements = yElementOrder
-        .toArray()
-        .filter((id) => {
-          if (seen.has(id) || !yElementsMap.has(id)) return false
-          seen.add(id)
-          return true
-        })
-        .map((id) => yElementsMap.get(id) as ExcalidrawElement)
-
+      const remoteElements = yElements.toArray() as ExcalidrawElement[]
       excalidrawAPIRef.current.updateScene({
-        elements,
+        elements: remoteElements,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
-
-      // Synchronous reset — using requestAnimationFrame creates a window where
-      // handleChange fires before the flag clears, causing remote updates to be
-      // re-emitted as local changes.
-      isApplyingRemoteRef.current = false
+      // Update our fingerprint to match the remote state so we don't re-emit it.
+      lastWrittenFingerprintRef.current = remoteElements
+        .map((el) => `${el.id}:${el.versionNonce}`)
+        .join('|')
+      requestAnimationFrame(() => {
+        isApplyingRemoteRef.current = false
+      })
     }
 
-    yElementsMap.observe(observer)
-    yElementOrder.observe(observer)
-    return () => {
-      yElementsMap.unobserve(observer)
-      yElementOrder.unobserve(observer)
-    }
-  }, [yElementsMap, yElementOrder])
+    yElements.observe(observer)
+    return () => yElements.unobserve(observer)
+  }, [yElements])
 
   return (
     <div
