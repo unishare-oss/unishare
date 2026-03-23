@@ -17,6 +17,7 @@ function FeedContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tagParam = searchParams.get('tag')
+  const qParam = searchParams.get('q')
   const {
     activeFilter,
     selectedDeptId,
@@ -36,12 +37,12 @@ function FeedContent() {
     consumePendingFilter()
   })
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState(qParam ?? '')
+  const [debouncedSearch, setDebouncedSearch] = useState(qParam ?? '')
   const [page, setPage] = useState(1)
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
-  // When user types, clear ?tag= from URL so typed query takes over
+  // When user types, clear ?tag= and update ?q= in the URL (debounced)
   function handleSearchChange(value: string) {
     if (tagParam !== null) router.replace('/feed')
     setSearchQuery(value)
@@ -50,10 +51,19 @@ function FeedContent() {
   // tagParam (from URL) takes priority — but once user types, tagParam is cleared
   const activeSearch = tagParam !== null ? tagParam : debouncedSearch
 
-  // Debounce typed search query — 300ms after last keystroke
+  // Debounce typed search and sync to URL as ?q=
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      const q = searchQuery.trim()
+      if (q) {
+        router.replace(`/feed?q=${encodeURIComponent(q)}`, { scroll: false })
+      } else if (qParam !== null) {
+        router.replace('/feed', { scroll: false })
+      }
+    }, 300)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   useEffect(() => {
