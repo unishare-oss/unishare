@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { TypeBadge } from '@/components/post-card'
 import type { ReportDetail, ReportDetailStatus } from '@/src/lib/api/generated/unishareAPI.schemas'
-import type { ReportStatusFilter } from './reports-header'
 
 export type { ReportDetail }
 
@@ -98,7 +97,7 @@ export function ReportRow({
           {report.comment && (
             <div className="pt-4">
               <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1">
-                Reporter's note
+                Reporter&apos;s note
               </p>
               <p className="text-sm text-foreground bg-card border border-border rounded-[6px] px-3 py-2">
                 {report.comment}

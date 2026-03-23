@@ -60,7 +60,6 @@ function ExcalidrawWrapperInner() {
 
       ydoc.transact(() => {
         const incomingIds = new Set(elements.map((el) => el.id))
-        let changed = 0
         for (const el of elements) {
           const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
           const differs =
@@ -71,7 +70,6 @@ function ExcalidrawWrapperInner() {
             // so subsequent handleChange calls never detect changes. A clone snapshots
             // the state at write time so future comparisons work correctly.
             yElementsMap.set(el.id, { ...el })
-            changed++
           }
         }
         for (const [id] of yElementsMap.entries()) {
