@@ -82,6 +82,7 @@ export class CreatePostDto {
   })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
   @ArrayMinSize(0)
   @ArrayMaxSize(5)
   tags?: string[]

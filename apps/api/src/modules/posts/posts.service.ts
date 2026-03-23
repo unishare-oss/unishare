@@ -233,11 +233,10 @@ export class PostsService {
 
     const searchQuery = query.trim()
 
-    // Search using plainto_tsquery for safety and better results.
-    // Column names must be quoted — Prisma stores them as camelCase in PostgreSQL.
-    const results = (await this.prisma.$queryRaw`
-      SELECT
-        p.*,
+    // Use raw SQL only to get ordered IDs — avoids deserializing the Unsupported tsvector column.
+    // Full post data (with relations/tags) is then fetched via the repository using postInclude.
+    const ranked = (await this.prisma.$queryRaw`
+      SELECT p.id,
         ts_rank(p."searchVector", plainto_tsquery('english', ${searchQuery})) as relevance
       FROM "post" p
       WHERE p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
@@ -247,7 +246,7 @@ export class PostsService {
       ORDER BY relevance DESC, p."createdAt" DESC
       LIMIT ${limit}
       OFFSET ${(page - 1) * limit}
-    `) as any[]
+    `) as { id: string; relevance: number }[]
 
     const totalResult = (await this.prisma.$queryRaw`
       SELECT COUNT(*) as count
@@ -256,19 +255,18 @@ export class PostsService {
         AND p.status = ${'APPROVED'}
         AND p."publicationStatus" = ${'PUBLISHED'}
         AND p."deletedAt" IS NULL
-    `) as any[]
+    `) as { count: bigint }[]
 
     const total = Number(totalResult[0]?.count ?? 0n)
 
-    return {
-      results: results.map((r) => {
-        const { relevance, ...rest } = r
-        return rest
-      }),
-      total: Number(total),
-      page,
-      limit,
-    }
+    const orderedIds = ranked.map((r) => r.id)
+    const posts = await this.postsRepository.findByIds(orderedIds)
+
+    // Preserve the relevance ordering from the raw query
+    const postsById = new Map(posts.map((p) => [p.id, p]))
+    const results = orderedIds.map((id) => postsById.get(id)).filter(Boolean)
+
+    return { results, total, page, limit }
   }
 
   /**

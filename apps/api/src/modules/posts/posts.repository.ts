@@ -139,6 +139,14 @@ export class PostsRepository {
     return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
   }
 
+  async findByIds(ids: string[], viewer?: ViewerContext) {
+    const posts = await this.prisma.post.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      include: postInclude(viewer?.id),
+    })
+    return posts.map((p) => mapPost(p, viewer))
+  }
+
   async findById(id: string, viewer?: ViewerContext) {
     const post = await this.prisma.post.findUnique({
       where: { id, deletedAt: null },
