@@ -130,7 +130,7 @@ export function PostCard({ post }: { post: ApiPost }) {
           </h3>
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {post.tags.slice(0, 4).map((tag) => (
+              {post.tags.map((tag) => (
                 <button
                   key={tag.id}
                   onClick={(e) => {
