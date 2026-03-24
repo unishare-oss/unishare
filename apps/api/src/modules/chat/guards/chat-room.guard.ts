@@ -1,12 +1,23 @@
-import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common'
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common'
 import { Socket } from 'socket.io'
 import { ChatService } from '../chat.service'
+import { WsException } from '@nestjs/websockets'
 
 @Injectable()
 export class ChatRoomGuard implements CanActivate {
   private readonly logger = new Logger(ChatRoomGuard.name)
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    @Inject(forwardRef(() => ChatService))
+    private readonly chatService: ChatService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<Socket>()
@@ -21,14 +32,14 @@ export class ChatRoomGuard implements CanActivate {
       return false
     }
 
-    try {
-      // ChatService.getRoom throws NotFound/Forbidden if user is not participant
-      await this.chatService.getRoom(roomId, userId)
-      return true
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      this.logger.warn(`Access denied for user ${userId} to room ${roomId}: ${message}`)
-      return false
+    const room = await this.chatService.getRoom(roomId, userId)
+
+    if (!room) {
+      throw new WsException('You are not a member of this room')
     }
+
+    client.data.room = room
+
+    return true
   }
 }
