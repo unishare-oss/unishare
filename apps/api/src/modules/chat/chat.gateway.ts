@@ -8,11 +8,15 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets'
-import { Logger, UseGuards } from '@nestjs/common'
+import { Logger, UseGuards, UseFilters } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
 import { ChatService } from './chat.service'
 import { ChatRoomGuard } from './guards/chat-room.guard'
+import { ChatWsExceptionFilter } from './filters/ws-exception.filter'
+import { OnEvent } from '@nestjs/event-emitter'
+import { ChatMessageEntity } from './entities/chat-message.entity'
+import { ChatRoomParticipantEntity } from './entities/chat-room.entity'
 
 const allowedOrigins = [
   'http://localhost:3000',
@@ -23,6 +27,7 @@ const allowedOrigins = [
   namespace: '/chat',
   cors: { origin: allowedOrigins, credentials: true },
 })
+@UseFilters(ChatWsExceptionFilter)
 export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server
   private readonly logger = new Logger(ChatGateway.name)
@@ -31,8 +36,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   afterInit(server: Server) {
     server.use(async (socket: Socket, next: (err?: Error) => void) => {
-      this.logger.log(`Incoming handshake from ${socket.id}`)
-
       const session = await auth.api.getSession({
         headers: new Headers(socket.handshake.headers as any),
       })
@@ -50,7 +53,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   handleConnection(client: Socket) {
-    this.logger.log(`✅ Connection established! Socket ID: ${client.id}`)
+    this.logger.log(`Connection established! Socket ID: ${client.id}`)
 
     // Join personal room for global notifications
     const userId = client.data.user.id
@@ -70,9 +73,27 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ): Promise<void> {
     // Access is already verified by ChatRoomGuard
     await client.join(roomId)
-    this.logger.log(`✅ User ${client.data.user.id} joined chat room: ${roomId}`)
+    this.logger.log(`User ${client.data.user.id} joined chat room: ${roomId}`)
 
     // Notify client success
     client.emit('room-joined', { roomId })
+  }
+
+  @OnEvent('chat.message_sent')
+  async handleMessageSentEvent(payload: {
+    roomId: string
+    message: ChatMessageEntity
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, message, participants } = payload
+
+    this.server.to(roomId).emit('receive-message', message)
+
+    participants.forEach((participant) => {
+      this.server.to(`user-${participant.userId}`).emit('new-message-notification', {
+        roomId,
+        message,
+      })
+    })
   }
 }

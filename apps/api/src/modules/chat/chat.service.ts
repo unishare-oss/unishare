@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
+import { ChatRoomType } from '@/generated/prisma/client'
 import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
-import { ChatMessageType, ChatRoomType } from '@/generated/prisma/client'
+import { EventEmitter2 } from '@nestjs/event-emitter'
+import { SendMessageDto } from './dto/send-message.dto'
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly repository: ChatRepository) {}
+  constructor(
+    private readonly repository: ChatRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getRooms(userId: string) {
     return this.repository.findRoomsByUserId(userId)
@@ -21,10 +26,7 @@ export class ChatService {
 
   async getMessages(roomId: string, userId: string, options: CursorPaginationOptions) {
     // Verify user is participant
-    const room = await this.repository.findRoomById(roomId, userId)
-    if (!room) {
-      throw new ForbiddenException('Not a participant of this chat room')
-    }
+    await this.getRoom(roomId, userId)
     return this.repository.findMessages(roomId, options)
   }
 
@@ -46,27 +48,24 @@ export class ChatService {
     return this.repository.createRoom(type, allParticipantIds, name)
   }
 
-  async sendMessage(
-    roomId: string,
-    userId: string,
-    data: {
-      content?: string
-      type?: ChatMessageType
-      imageUrl?: string
-      linkUrl?: string
-    },
-  ) {
-    // Verify participant
-    const room = await this.repository.findRoomById(roomId, userId)
-    if (!room) {
-      throw new ForbiddenException('Not a participant of this chat room')
-    }
+  async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
+    // Verify participant and get room details
+    const room = await this.getRoom(roomId, userId)
 
-    return this.repository.createMessage({
+    // 1. Persist to database
+    const message = await this.repository.createMessage({
       roomId,
       userId,
       ...data,
     })
+
+    this.eventEmitter.emit('chat.message_sent', {
+      roomId,
+      message,
+      participants: room.participants,
+    })
+
+    return message
   }
 
   async markAsRead(roomId: string, userId: string) {
