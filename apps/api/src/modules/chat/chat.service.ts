@@ -8,16 +8,16 @@ import { SendMessageDto } from './dto/send-message.dto'
 @Injectable()
 export class ChatService {
   constructor(
-    private readonly repository: ChatRepository,
+    private readonly chatRepository: ChatRepository,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getRooms(userId: string) {
-    return this.repository.findRoomsByUserId(userId)
+    return this.chatRepository.findRoomsByUserId(userId)
   }
 
   async getRoom(id: string, userId: string) {
-    const room = await this.repository.findRoomById(id, userId)
+    const room = await this.chatRepository.findRoomById(id, userId)
     if (!room) {
       throw new NotFoundException('Chat room not found or access denied')
     }
@@ -27,7 +27,7 @@ export class ChatService {
   async getMessages(roomId: string, userId: string, options: CursorPaginationOptions) {
     // Verify user is participant
     await this.getRoom(roomId, userId)
-    return this.repository.findMessages(roomId, options)
+    return this.chatRepository.findMessages(roomId, options)
   }
 
   async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
@@ -39,13 +39,13 @@ export class ChatService {
       }
 
       const otherUserId = allParticipantIds.find((id) => id !== creatorId)
-      const existingRoom = await this.repository.findDirectMessageRoom(creatorId, otherUserId!)
+      const existingRoom = await this.chatRepository.findDirectMessageRoom(creatorId, otherUserId!)
       if (existingRoom) {
-        return this.repository.findRoomById(existingRoom.id)
+        return this.chatRepository.findRoomById(existingRoom.id)
       }
     }
 
-    return this.repository.createRoom(type, allParticipantIds, name)
+    return this.chatRepository.createRoom(type, allParticipantIds, name)
   }
 
   async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
@@ -53,7 +53,7 @@ export class ChatService {
     const room = await this.getRoom(roomId, userId)
 
     // 1. Persist to database
-    const message = await this.repository.createMessage({
+    const message = await this.chatRepository.createMessage({
       roomId,
       userId,
       ...data,
@@ -69,6 +69,6 @@ export class ChatService {
   }
 
   async markAsRead(roomId: string, userId: string) {
-    return this.repository.markAsRead(roomId, userId)
+    return this.chatRepository.markAsRead(roomId, userId)
   }
 }

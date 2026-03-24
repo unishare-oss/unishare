@@ -24,7 +24,7 @@ export async function paginateWithCursor<T extends { id: string }>(
 
   const queryArgs: any = {
     ...args,
-    take: direction === 'asc' ? take : -take,
+    take,
     orderBy: { [cursorField]: direction },
   }
 
