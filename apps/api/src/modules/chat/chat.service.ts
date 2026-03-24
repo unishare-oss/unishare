@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
-import { ChatRoomType, ChatMessageType } from '@prisma/client'
 import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
+import { ChatMessageType, ChatRoomType } from '@/generated/prisma/client'
 
 @Injectable()
 export class ChatService {

@@ -1,6 +1,6 @@
 import { IsEnum, IsArray, IsString, IsOptional, ArrayMinSize } from 'class-validator'
-import { ChatRoomType } from '@prisma/client'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { ChatRoomType } from '@/generated/prisma/client'
 
 export class CreateRoomDto {
   @ApiProperty({ enum: ChatRoomType })
