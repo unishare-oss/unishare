@@ -8,11 +8,10 @@ import {
 import { useAuth } from '@/contexts/auth-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Send, Hash, Loader2 } from 'lucide-react'
+import { Hash, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
+import { ChatInput } from './chat-input'
 
 interface ChatWindowProps {
   roomId: string
@@ -99,9 +98,9 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
                 {!isMe && (
                   <div className="w-8">
                     {showAvatar && (
-                      <Avatar className="h-8 w-8 mb-1 border shadow-sm">
+                      <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
                         <AvatarImage src={msg.user?.image || ''} />
-                        <AvatarFallback className="text-[10px]">
+                        <AvatarFallback className="text-[10px] rounded-none bg-border text-foreground font-mono font-medium">
                           {msg.user?.name?.[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -138,30 +137,7 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      <div className="p-4 border-t bg-background/95 backdrop-blur sticky bottom-0">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
-          <Input
-            placeholder="Type a message..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            className="flex-1 rounded-full px-4"
-          />
-          <Button
-            size="icon"
-            onClick={handleSend}
-            disabled={!content.trim() || isSending}
-            className="rounded-full h-10 w-10 shrink-0"
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
+      <ChatInput value={content} onChange={setContent} onSend={handleSend} isLoading={isSending} />
     </div>
   )
 }
