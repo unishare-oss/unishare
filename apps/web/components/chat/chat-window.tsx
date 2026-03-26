@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   useChatControllerGetMessages,
   useChatControllerGetRoom,
@@ -13,7 +14,9 @@ import type {
 import { useAuth } from '@/contexts/auth-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Loader2, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { ArrowLeft, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ChatInput } from './chat-input'
@@ -51,10 +54,12 @@ interface ChatWindowProps {
 
 export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
   const [socketMessages, setSocketMessages] = useState<ChatMessageEntity[]>([])
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { data: roomResponse } = useChatControllerGetRoom(roomId)
   const room = roomResponse?.data
@@ -83,8 +88,11 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
 
   const messages = useMemo(() => {
     const socketIds = new Set(socketMessages.map((m) => m.id))
-    return [...initialMsgs.filter((m) => !socketIds.has(m.id)), ...socketMessages]
-  }, [initialMsgs, socketMessages])
+    const merged = [...initialMsgs.filter((m) => !socketIds.has(m.id)), ...socketMessages]
+    if (!searchQuery.trim()) return merged
+    const q = searchQuery.toLowerCase()
+    return merged.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
+  }, [initialMsgs, socketMessages, searchQuery])
 
   useEffect(() => {
     if (lastSocketMessage && lastSocketMessage.roomId === roomId) {
@@ -111,22 +119,26 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
     setContent('')
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat Header */}
       <div className="flex items-center justify-between border-b pr-3 bg-background/95 backdrop-blur">
-        <ChatHeader user={headerUser} />
-        <button
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="md:hidden ml-1"
+            onClick={() => router.push('/chat')}
+            aria-label="Back to chats"
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <ChatHeader user={headerUser} />
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={() => setInfoPaneOpen((v) => !v)}
-          className="p-1.5 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
           aria-label="Toggle info pane"
         >
           {infoPaneOpen ? (
@@ -134,67 +146,71 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
           ) : (
             <PanelRightOpen className="size-4" strokeWidth={1.5} />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Body: messages + optional info pane */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
         {/* Messages Area */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <ScrollArea ref={scrollRef} className="flex-1 p-4">
-            <div className="flex flex-col gap-4 max-w-4xl mx-auto">
-              {messages.map((msg, i) => {
-                const isMe = msg.userId === user?.id
-                const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
+          {isLoading ? (
+            <ChatMessagesSkeleton />
+          ) : (
+            <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
+              <div className="flex flex-col gap-4 max-w-6xl mx-auto">
+                {messages.map((msg, i) => {
+                  const isMe = msg.userId === user?.id
+                  const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
 
-                return (
-                  <div
-                    key={msg.id || i}
-                    className={cn('flex items-end gap-2', isMe ? 'flex-row-reverse' : 'flex-row')}
-                  >
-                    {!isMe && (
-                      <div className="w-8">
-                        {showAvatar && (
-                          <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
-                            <AvatarImage src={msg.user?.image || ''} />
-                            <AvatarFallback className="text-[10px] rounded-none bg-border text-foreground font-mono font-medium">
-                              {msg.user?.name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    )}
-
+                  return (
                     <div
-                      className={cn(
-                        'max-w-[70%] px-3 py-2 rounded-2xl text-[13px] shadow-sm transition-all',
-                        isMe
-                          ? 'bg-primary text-primary-foreground rounded-br-sm'
-                          : 'bg-muted text-foreground rounded-bl-sm',
-                      )}
+                      key={msg.id || i}
+                      className={cn('flex items-end gap-2', isMe ? 'flex-row-reverse' : 'flex-row')}
                     >
-                      {!isMe && showAvatar && (
-                        <span className="text-[10px] font-semibold block mb-1 opacity-70">
-                          {msg.user?.name}
-                        </span>
+                      {!isMe && (
+                        <div className="w-8">
+                          {showAvatar && (
+                            <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
+                              <AvatarImage src={msg.user?.image || ''} />
+                              <AvatarFallback className="text-[10px] rounded-none bg-border text-foreground font-mono font-medium">
+                                {msg.user?.name?.[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
                       )}
-                      <p className="whitespace-pre-wrap break-words">
-                        {renderWithLinks(msg.content ?? '', isMe)}
-                      </p>
-                      <span
+
+                      <div
                         className={cn(
-                          'text-[9px] block mt-1 opacity-60',
-                          isMe ? 'text-right' : 'text-left',
+                          'max-w-[70%] px-3 py-2 rounded-2xl text-[13px] shadow-sm transition-all',
+                          isMe
+                            ? 'bg-primary text-primary-foreground rounded-br-sm'
+                            : 'bg-muted text-foreground rounded-bl-sm',
                         )}
                       >
-                        {format(new Date(msg.createdAt), 'HH:mm')}
-                      </span>
+                        {!isMe && showAvatar && (
+                          <span className="text-[10px] font-semibold block mb-1 opacity-70">
+                            {msg.user?.name}
+                          </span>
+                        )}
+                        <p className="whitespace-pre-wrap break-words">
+                          {renderWithLinks(msg.content ?? '', isMe)}
+                        </p>
+                        <span
+                          className={cn(
+                            'text-[9px] block mt-1 opacity-60',
+                            isMe ? 'text-right' : 'text-left',
+                          )}
+                        >
+                          {format(new Date(msg.createdAt), 'HH:mm')}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </ScrollArea>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+          )}
 
           <ChatInput
             value={content}
@@ -207,11 +223,18 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
         {/* Info Pane */}
         <div
           className={cn(
-            'border-l bg-background/95 overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0',
+            'border-l bg-background/95 overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0 h-full',
             infoPaneOpen ? 'w-64' : 'w-0',
           )}
         >
-          <ChatInfoPane room={room} messages={messages} currentUserId={user?.id} />
+          <ChatInfoPane
+            room={room}
+            messages={messages}
+            currentUserId={user?.id}
+            isOpen={infoPaneOpen}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
         </div>
       </div>
     </div>
