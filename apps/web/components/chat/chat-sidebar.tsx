@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Users, MessageSquare } from 'lucide-react'
 import { useMemo } from 'react'
 
@@ -23,6 +23,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { session } = useAuth()
   const currentUserId = session?.user?.id
 
@@ -104,8 +105,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 key={room.id}
                 onClick={() => router.push(`/chat/${room.id}`)}
                 className={cn(
-                  'flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
-                  isSelected && 'bg-accent',
+                  'relative flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
+                  isSelected &&
+                    'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
               >
                 <Avatar className="h-10 w-10 rounded-[6px]">
@@ -146,7 +148,11 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 <button
                   key={user.id}
                   onClick={() => router.push(`/chat/new/${user.id}`)}
-                  className="flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group"
+                  className={cn(
+                    'relative flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group',
+                    pathname === `/chat/new/${user.id}` &&
+                      'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
+                  )}
                 >
                   <Avatar className="h-10 w-10 rounded-[6px]">
                     <AvatarImage src={user.image || ''} alt={user.name} />
