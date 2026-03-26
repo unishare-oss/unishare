@@ -82,7 +82,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   }
 
   return (
-    <Card className="h-full border-none rounded-none backdrop-blur bg-background/95 py-2">
+    <Card className="h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2">
       <div className=" h-14 border-b flex items-center px-4 bg-background/95 backdrop-blur sticky top-0 z-10 font-bold">
         Messages
       </div>
