@@ -1,10 +1,11 @@
 'use client'
 
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
+import { ChatPageTransition } from '@/components/chat/chat-page-transition'
 
 export default function ChatPage() {
   return (
-    <>
+    <ChatPageTransition direction="back">
       {/* Mobile: show the full conversation list */}
       <div className="md:hidden flex-1 flex flex-col h-full">
         <ChatSidebar />
@@ -29,6 +30,6 @@ export default function ChatPage() {
         <h3 className="text-lg font-semibold text-foreground">Your Messages</h3>
         <p className="text-sm max-w-[200px] mt-1">Select a conversation to start chatting.</p>
       </div>
-    </>
+    </ChatPageTransition>
   )
 }
