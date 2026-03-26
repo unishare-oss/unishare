@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useParams, useRouter } from 'next/navigation'
 import {
   LayoutList,
   FileText,
@@ -20,7 +20,9 @@ import {
   MessageSquarePlus,
   Github,
   LayoutGrid,
+  ChevronLeft,
 } from 'lucide-react'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
@@ -55,6 +57,7 @@ const adminOnlyItems = [{ href: '/admin/users', label: 'Users', icon: Users }]
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const params = useParams()
   const router = useRouter()
   const { session } = useAuth()
   const user = session?.user
@@ -62,6 +65,8 @@ export function AppSidebar() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
   const navItems = user ? authNavItems : publicNavItems
+  const isChat = pathname.startsWith('/chat')
+  const selectedRoomId = isChat ? (params?.roomId as string | undefined) : undefined
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -83,80 +88,97 @@ export function AppSidebar() {
         </span>
       </div>
 
-      <nav className="flex flex-col gap-0.5 px-3 flex-1">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          return (
+      {isChat ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-3 py-2 border-b">
             <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
-                isActive
-                  ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
-                  : 'text-text-muted hover:text-foreground hover:bg-muted',
-              )}
+              href="/feed"
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-text-muted hover:text-foreground hover:bg-muted rounded-[6px] transition-all duration-200"
             >
-              <span
-                className={cn(
-                  'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
-                  isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
-                )}
-              />
-              <item.icon
-                className={cn(
-                  'size-4 transition-colors duration-200',
-                  isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
-                )}
-                strokeWidth={1.5}
-              />
-              {item.label}
+              <ChevronLeft className="size-4 shrink-0" strokeWidth={1.5} />
+              Back
             </Link>
-          )
-        })}
-
-        {user && <NotificationsBell />}
-
-        {isAdmin && (
-          <>
-            <div className="mt-6 mb-2 px-3">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                Admin
-              </span>
-            </div>
-            {[...adminItems, ...(isSuperAdmin ? adminOnlyItems : [])].map((item) => {
-              const isActive = pathname.startsWith(item.href)
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
+          </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <ChatSidebar selectedRoomId={selectedRoomId} />
+          </div>
+        </div>
+      ) : (
+        <nav className="flex flex-col gap-0.5 px-3 flex-1">
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+                  isActive
+                    ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
+                    : 'text-text-muted hover:text-foreground hover:bg-muted',
+                )}
+              >
+                <span
                   className={cn(
-                    'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
-                    isActive
-                      ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
-                      : 'text-text-muted hover:text-foreground hover:bg-muted',
+                    'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+                    isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
                   )}
-                >
-                  <span
+                />
+                <item.icon
+                  className={cn(
+                    'size-4 transition-colors duration-200',
+                    isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+                  )}
+                  strokeWidth={1.5}
+                />
+                {item.label}
+              </Link>
+            )
+          })}
+
+          {user && <NotificationsBell />}
+
+          {isAdmin && (
+            <>
+              <div className="mt-6 mb-2 px-3">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                  Admin
+                </span>
+              </div>
+              {[...adminItems, ...(isSuperAdmin ? adminOnlyItems : [])].map((item) => {
+                const isActive = pathname.startsWith(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
                     className={cn(
-                      'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
-                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
+                      'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+                      isActive
+                        ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
+                        : 'text-text-muted hover:text-foreground hover:bg-muted',
                     )}
-                  />
-                  <item.icon
-                    className={cn(
-                      'size-4 transition-colors duration-200',
-                      isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
-                    )}
-                    strokeWidth={1.5}
-                  />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </>
-        )}
-      </nav>
+                  >
+                    <span
+                      className={cn(
+                        'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
+                      )}
+                    />
+                    <item.icon
+                      className={cn(
+                        'size-4 transition-colors duration-200',
+                        isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+                      )}
+                      strokeWidth={1.5}
+                    />
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </>
+          )}
+        </nav>
+      )}
 
       <div className="px-4 py-2">
         <a
