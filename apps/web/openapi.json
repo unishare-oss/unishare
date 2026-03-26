@@ -1269,7 +1269,7 @@
               }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
       }
@@ -1287,7 +1287,7 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
       }
@@ -1305,9 +1305,128 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
+      }
+    },
+    "/api/chat/rooms": {
+      "get": {
+        "operationId": "ChatController_getRooms",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ChatRoomEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["chat"]
+      },
+      "post": {
+        "operationId": "ChatController_createRoom",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateRoomDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}": {
+      "get": {
+        "operationId": "ChatController_getRoom",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}/messages": {
+      "get": {
+        "operationId": "ChatController_getMessages",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "default": 20, "type": "number" }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "schema": { "default": "desc", "type": "string", "enum": ["asc", "desc"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedMessagesEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["chat"]
+      },
+      "post": {
+        "operationId": "ChatController_sendMessage",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SendMessageDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatMessageEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}/read": {
+      "post": {
+        "operationId": "ChatController_markAsRead",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["chat"]
       }
     }
   },
@@ -2043,17 +2162,11 @@
       "CreateRoomDto": {
         "type": "object",
         "properties": {
-          "title": { "type": "string", "description": "Optional room title", "maxLength": 120 },
-          "visibility": {
-            "type": "string",
-            "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"],
-            "description": "Room visibility (default: OPEN)"
-          },
-          "password": {
-            "type": "string",
-            "description": "Optional password to protect room on creation"
-          }
-        }
+          "type": { "type": "string", "enum": ["DM", "GROUP"] },
+          "participantIds": { "type": "array", "items": { "type": "string" } },
+          "name": { "type": "string" }
+        },
+        "required": ["type", "participantIds"]
       },
       "RoomEntity": {
         "type": "object",
@@ -2208,6 +2321,84 @@
           "limit": { "type": "number" }
         },
         "required": ["reports", "total", "page", "limit"]
+      },
+      "ChatMessageUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "object", "nullable": true }
+        },
+        "required": ["id", "name"]
+      },
+      "ChatRoomParticipantEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "roomId": { "type": "string" },
+          "userId": { "type": "string" },
+          "lastReadAt": { "format": "date-time", "type": "string" },
+          "joinedAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+        },
+        "required": ["id", "roomId", "userId", "lastReadAt", "joinedAt", "user"]
+      },
+      "ChatMessageEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "roomId": { "type": "string" },
+          "userId": { "type": "object", "nullable": true },
+          "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
+          "content": { "type": "object", "nullable": true },
+          "imageUrl": { "type": "object", "nullable": true },
+          "linkUrl": { "type": "object", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+        },
+        "required": ["id", "roomId", "type", "createdAt", "updatedAt"]
+      },
+      "ChatRoomEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["DM", "GROUP"] },
+          "name": { "type": "object", "nullable": true },
+          "imageUrl": { "type": "object", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "participants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatRoomParticipantEntity" }
+          },
+          "messages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessageEntity" }
+          }
+        },
+        "required": ["id", "type", "createdAt", "updatedAt", "participants"]
+      },
+      "PaginatedMessagesEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessageEntity" }
+          },
+          "nextCursor": { "type": "object", "nullable": true },
+          "hasMore": { "type": "boolean" }
+        },
+        "required": ["items", "hasMore"]
+      },
+      "SendMessageDto": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" },
+          "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
+          "imageUrl": { "type": "string" },
+          "linkUrl": { "type": "string" }
+        }
       }
     }
   }

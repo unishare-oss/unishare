@@ -35,11 +35,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main
         className={
           showLoader
-            ? 'invisible pointer-events-none min-h-screen pb-16 md:ml-60 md:pb-0'
-            : 'min-h-screen pb-16 md:ml-60 md:pb-0'
+            ? 'invisible pointer-events-none min-h-screen pb-16 md:ml-72 md:pb-0'
+            : 'min-h-screen pb-16 md:ml-72 md:pb-0'
         }
         aria-hidden={showLoader}
       >
+        {' '}
         {children}
       </main>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>

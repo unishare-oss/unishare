@@ -16,6 +16,7 @@ import {
   Users,
   BarChart2,
   Palette,
+  MessageSquare,
   MessageSquarePlus,
   Github,
   LayoutGrid,
@@ -35,6 +36,7 @@ const publicNavItems = [
 
 const authNavItems = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },
@@ -67,7 +69,7 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-60 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30">
+    <aside className="hidden md:flex flex-col w-72 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <Image
           src="/icon.svg"
