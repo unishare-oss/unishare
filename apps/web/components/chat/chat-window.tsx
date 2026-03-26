@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import {
   useChatControllerGetMessages,
   useChatControllerGetRoom,
   useChatControllerSendMessage,
 } from '@/src/lib/api/generated/chat/chat'
+import type {
+  ChatMessageEntity,
+  ChatRoomParticipantEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -49,13 +53,15 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
   const { user } = useAuth()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
-  const [messages, setMessages] = useState<any[]>([])
+  const [socketMessages, setSocketMessages] = useState<ChatMessageEntity[]>([])
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
 
   const { data: roomResponse } = useChatControllerGetRoom(roomId)
   const room = roomResponse?.data
 
-  const otherParticipant = room?.participants?.find((p: any) => p.userId !== user?.id)
+  const otherParticipant = room?.participants?.find(
+    (p: ChatRoomParticipantEntity) => p.userId !== user?.id,
+  )
   const targetUser = otherParticipant?.user
 
   const headerUser = targetUser
@@ -73,15 +79,17 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
 
   const { mutate: sendMessage, isPending: isSending } = useChatControllerSendMessage()
 
-  useEffect(() => {
-    if (initialMessages?.data?.items) {
-      setMessages(initialMessages.data.items)
-    }
-  }, [initialMessages])
+  const initialMsgs = useMemo(() => initialMessages?.data?.items ?? [], [initialMessages])
+
+  const messages = useMemo(() => {
+    const socketIds = new Set(socketMessages.map((m) => m.id))
+    return [...initialMsgs.filter((m) => !socketIds.has(m.id)), ...socketMessages]
+  }, [initialMsgs, socketMessages])
 
   useEffect(() => {
     if (lastSocketMessage && lastSocketMessage.roomId === roomId) {
-      setMessages((prev) => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSocketMessages((prev) => {
         if (prev.find((m) => m.id === lastSocketMessage.id)) return prev
         return [...prev, lastSocketMessage]
       })

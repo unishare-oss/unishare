@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsUrl } from 'class-validator'
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiPropertyOptional } from '@nestjs/swagger'
 import { ChatMessageType } from '@/generated/prisma/client'
 
 export class SendMessageDto {

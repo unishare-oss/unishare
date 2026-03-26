@@ -21,7 +21,7 @@ export function ChatHeader({ user, isNew }: ChatHeaderProps) {
     if (user?.lastSeenAt) {
       try {
         return `Last seen ${formatDistanceToNow(new Date(user.lastSeenAt), { addSuffix: true })}`
-      } catch (e) {
+      } catch {
         return 'Offline'
       }
     }

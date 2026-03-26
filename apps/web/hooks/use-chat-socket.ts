@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '@/contexts/auth-context'
 
@@ -51,7 +51,6 @@ export function useChatSocket() {
   }
 
   return {
-    socket: socketRef.current,
     isConnected,
     lastMessage,
     joinRoom,

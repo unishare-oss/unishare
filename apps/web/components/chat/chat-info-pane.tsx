@@ -8,6 +8,8 @@ import { Bell, BellOff, LogOut, Trash2, Link2, Users, ImageIcon, Info } from 'lu
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
+
 interface ChatInfoPaneProps {
   room?: ChatRoomEntity
   messages: ChatMessageEntity[]
@@ -20,8 +22,6 @@ export function ChatInfoPane({ room, messages, currentUserId }: ChatInfoPaneProp
 
   const displayName = otherParticipant?.user?.name ?? (room?.name as string) ?? 'Chat Room'
   const displayImage = otherParticipant?.user?.image ?? (room?.imageUrl as string) ?? ''
-
-  const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
 
   const sharedPhotos = useMemo(
     () => messages.filter((m) => m.type === 'IMAGE' && m.imageUrl),

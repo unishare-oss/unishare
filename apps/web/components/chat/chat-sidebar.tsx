@@ -14,7 +14,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
-import { Users, MessageSquare, Globe } from 'lucide-react'
+import { Users, MessageSquare } from 'lucide-react'
 import { useMemo } from 'react'
 
 interface ChatSidebarProps {
