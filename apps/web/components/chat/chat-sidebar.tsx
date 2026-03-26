@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Globe } from 'lucide-react'
 import { useMemo } from 'react'
@@ -103,7 +104,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 key={room.id}
                 onClick={() => router.push(`/chat/${room.id}`)}
                 className={cn(
-                  'flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50',
+                  'flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
                   isSelected && 'bg-accent',
                 )}
               >
@@ -115,9 +116,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium truncate text-[13px]">
-                      {room.name || 'Chat Room'}
-                    </span>
+                    <span className="font-medium truncate text-sm">{room.name || 'Chat Room'}</span>
                     {lastMessage && (
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
                         {formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: false })}
@@ -125,7 +124,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     )}
                   </div>
                   {lastMessage && (
-                    <p className="text-xs text-muted-foreground truncate opacity-70">
+                    <p className="text-xs text-muted-foreground truncate opacity-70 mt-0.5">
                       {lastMessage.content}
                     </p>
                   )}
@@ -137,11 +136,17 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           {/* New Conversations (Network) */}
           {networkUsers.length > 0 && (
             <>
+              {rooms.length > 0 && <Separator className="my-2" />}
+              <div className="px-4 py-2 mt-2">
+                <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Users className="h-3 w-3" /> Network
+                </h3>
+              </div>
               {networkUsers.map((user) => (
                 <button
                   key={user.id}
                   onClick={() => router.push(`/chat/new/${user.id}`)}
-                  className="flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50 group"
+                  className="flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group"
                 >
                   <Avatar className="h-10 w-10 rounded-[6px]">
                     <AvatarImage src={user.image || ''} alt={user.name} />
@@ -150,9 +155,11 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 overflow-hidden">
-                    <span className="font-medium truncate text-[13px] block">{user.name}</span>
-                    <span className="text-[10px] text-muted-foreground capitalize">
-                      {user.relationship === 'mutual' ? 'Mutual connection' : user.relationship}
+                    <span className="font-medium truncate text-sm block">{user.name}</span>
+                    <span className="text-xs text-muted-foreground mt-0.5 block">
+                      {user.relationship === 'mutual'
+                        ? 'Mutual connection • Say hello!'
+                        : 'Start a conversation'}
                     </span>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">

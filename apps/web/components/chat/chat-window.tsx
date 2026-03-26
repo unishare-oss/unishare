@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   useChatControllerGetMessages,
+  useChatControllerGetRoom,
   useChatControllerSendMessage,
 } from '@/src/lib/api/generated/chat/chat'
 import { useAuth } from '@/contexts/auth-context'
@@ -12,6 +13,7 @@ import { Hash, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ChatInput } from './chat-input'
+import { ChatHeader } from './chat-header'
 
 interface ChatWindowProps {
   roomId: string
@@ -23,6 +25,24 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
   const [messages, setMessages] = useState<any[]>([])
+
+  const { data: roomResponse } = useChatControllerGetRoom(roomId)
+  const room = roomResponse?.data
+
+  console.log(room)
+
+  // Find the other participant for the header
+  const otherParticipant = room?.participants?.find((p: any) => p.userId !== user?.id)
+  const targetUser = otherParticipant?.user
+
+  // Fake status data for now as requested
+  const mockUser = targetUser
+    ? {
+        ...targetUser,
+        isActive: Math.random() > 0.5,
+        lastSeenAt: new Date(Date.now() - 3600000).toISOString(),
+      }
+    : undefined
 
   const { data: initialMessages, isLoading } = useChatControllerGetMessages(roomId, {
     limit: 50,
@@ -76,12 +96,7 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat Header */}
-      <div className="h-14 border-b flex items-center px-4 bg-background/95 backdrop-blur sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <Hash className="h-5 w-5 text-muted-foreground" />
-          <span className="font-semibold text-sm tracking-tight">Chat Room</span>
-        </div>
-      </div>
+      <ChatHeader user={mockUser} />
 
       {/* Messages Area */}
       <ScrollArea ref={scrollRef} className="flex-1 p-4">

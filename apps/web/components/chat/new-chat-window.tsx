@@ -8,8 +8,9 @@ import {
   useChatControllerSendMessage,
 } from '@/src/lib/api/generated/chat/chat'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User as UserIcon, Loader2 } from 'lucide-react'
+import { ChatHeader } from './chat-header'
 import { ChatInput } from './chat-input'
+import { Loader2 } from 'lucide-react'
 
 interface NewChatWindowProps {
   targetUserId: string
@@ -66,22 +67,7 @@ export function NewChatWindow({ targetUserId }: NewChatWindowProps) {
   return (
     <div className="flex flex-col h-full bg-background pt-2">
       {/* Header */}
-      <div className="h-14 border-b flex items-center px-4 bg-background/95 backdrop-blur py-5">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8 rounded-[6px]">
-            <AvatarImage src={targetUser?.image || ''} />
-            <AvatarFallback className="rounded-none bg-border text-foreground font-mono font-medium">
-              <UserIcon className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm tracking-tight">{targetUser?.name}</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              New Conversation
-            </span>
-          </div>
-        </div>
-      </div>
+      <ChatHeader user={targetUser} isNew />
 
       {/* Empty Messages Area */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
