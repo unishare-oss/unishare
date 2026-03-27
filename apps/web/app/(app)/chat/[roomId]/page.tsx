@@ -18,7 +18,11 @@ export default function ChatRoomPage({ params }: { params: Promise<{ roomId: str
 
   return (
     <ChatPageTransition direction="forward">
-      <UnifiedChatWindow roomId={roomId} key={roomId} lastSocketMessage={lastMessage} />
+      <UnifiedChatWindow
+        roomId={roomId}
+        key={roomId}
+        lastSocketMessage={lastMessage ?? undefined}
+      />
     </ChatPageTransition>
   )
 }

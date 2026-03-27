@@ -1489,6 +1489,144 @@
         "responses": { "201": { "description": "" } },
         "tags": ["chat"]
       }
+    },
+    "/api/reading-lists": {
+      "post": {
+        "operationId": "ReadingListsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateReadingListDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "get": {
+        "operationId": "ReadingListsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReadingListEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}": {
+      "get": {
+        "operationId": "ReadingListsController_findOne",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "put": {
+        "operationId": "ReadingListsController_update",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateReadingListDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "delete": {
+        "operationId": "ReadingListsController_remove",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}/posts": {
+      "get": {
+        "operationId": "ReadingListsController_getListPosts",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "type": "number" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}/posts/{postId}": {
+      "post": {
+        "operationId": "ReadingListsController_addPost",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "delete": {
+        "operationId": "ReadingListsController_removePost",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["reading-lists"]
+      }
     }
   },
   "info": {
@@ -2489,6 +2627,47 @@
           "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
           "imageUrl": { "type": "string" },
           "linkUrl": { "type": "string" }
+        }
+      },
+      "CreateReadingListDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Finals Revision" },
+          "description": { "type": "string", "example": "Materials for final exam prep" },
+          "isPublic": { "type": "boolean", "default": false }
+        },
+        "required": ["name"]
+      },
+      "ReadingListEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "isPublic": { "type": "boolean" },
+          "postCount": { "type": "number" },
+          "postIds": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "id",
+          "userId",
+          "name",
+          "isPublic",
+          "postCount",
+          "postIds",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateReadingListDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Finals Revision" },
+          "description": { "type": "string", "example": "Materials for final exam prep" },
+          "isPublic": { "type": "boolean", "default": false }
         }
       }
     }
