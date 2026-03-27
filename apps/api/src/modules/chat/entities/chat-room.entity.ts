@@ -29,10 +29,10 @@ export class ChatRoomEntity {
   @ApiProperty({ enum: ChatRoomType })
   type: ChatRoomType
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   name: string | null
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   imageUrl: string | null
 
   @ApiProperty()

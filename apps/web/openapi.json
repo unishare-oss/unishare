@@ -1121,7 +1121,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateRoomDto" } }
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCollabRoomDto" } }
           }
         },
         "responses": {
@@ -2179,14 +2179,20 @@
         },
         "required": ["postId"]
       },
-      "CreateRoomDto": {
+      "CreateCollabRoomDto": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["DM", "GROUP"] },
-          "participantIds": { "type": "array", "items": { "type": "string" } },
-          "name": { "type": "string" }
-        },
-        "required": ["type", "participantIds"]
+          "title": { "type": "string", "description": "Optional room title", "maxLength": 120 },
+          "visibility": {
+            "type": "string",
+            "enum": ["OPEN", "VIEW_ONLY", "PRIVATE"],
+            "description": "Room visibility (default: OPEN)"
+          },
+          "password": {
+            "type": "string",
+            "description": "Optional password to protect room on creation"
+          }
+        }
       },
       "RoomEntity": {
         "type": "object",
@@ -2384,8 +2390,8 @@
         "properties": {
           "id": { "type": "string" },
           "type": { "type": "string", "enum": ["DM", "GROUP"] },
-          "name": { "type": "object", "nullable": true },
-          "imageUrl": { "type": "object", "nullable": true },
+          "name": { "type": "string", "nullable": true },
+          "imageUrl": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
           "participants": {
@@ -2410,6 +2416,15 @@
           "hasMore": { "type": "boolean" }
         },
         "required": ["items", "hasMore"]
+      },
+      "CreateRoomDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["DM", "GROUP"] },
+          "participantIds": { "type": "array", "items": { "type": "string" } },
+          "name": { "type": "string" }
+        },
+        "required": ["type", "participantIds"]
       },
       "SendMessageDto": {
         "type": "object",
