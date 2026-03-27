@@ -9,7 +9,6 @@ interface ChatInputProps {
   onChange: (value: string) => void
   onSend: () => void
   disabled?: boolean
-  isLoading?: boolean
   placeholder?: string
 }
 
@@ -18,7 +17,6 @@ export function ChatInput({
   onChange,
   onSend,
   disabled,
-  isLoading,
   placeholder = 'Type a message...',
 }: ChatInputProps) {
   return (
@@ -29,16 +27,10 @@ export function ChatInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onSend()}
-          disabled={disabled || isLoading}
           className="flex-1"
         />
-        <Button
-          size="icon"
-          onClick={onSend}
-          disabled={!value.trim() || disabled || isLoading}
-          className="h-10 w-10 shrink-0"
-        >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        <Button size="icon" onClick={onSend} className="h-10 w-10 shrink-0">
+          <Send className="h-4 w-4" />
         </Button>
       </div>
     </div>
