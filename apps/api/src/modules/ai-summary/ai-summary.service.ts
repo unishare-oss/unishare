@@ -80,11 +80,17 @@ export class AiSummaryService {
 
       if (!post) return
 
-      const file = post.files.find((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
-      if (!file) return
+      const supportedFiles = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
+      if (supportedFiles.length === 0) return
 
-      const text = await this.extractText(file.key, file.mimeType)
-      if (!text.trim()) return
+      const textParts = await Promise.all(
+        supportedFiles.map((f) => this.extractText(f.key, f.mimeType).catch(() => '')),
+      )
+      const text = textParts
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .join('\n\n')
+      if (!text) return
 
       const summary = await this.callLlm(SUMMARY_PROMPT, text, 300)
       if (!summary) return
