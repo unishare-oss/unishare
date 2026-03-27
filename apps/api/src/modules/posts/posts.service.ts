@@ -232,6 +232,14 @@ export class PostsService {
     return this.postsRepository.findSaved({ id: userId }, query)
   }
 
+  getReadingListPosts(
+    listId: string,
+    query: PaginationDto,
+    viewer?: { id?: string; role?: UserRole },
+  ) {
+    return this.postsRepository.findByReadingList(listId, viewer ?? {}, query)
+  }
+
   toggleReaction(id: string, dto: ReactToPostDto, userId: string, role?: UserRole) {
     return this.postsRepository.toggleReaction(id, { id: userId, role }, dto.type)
   }

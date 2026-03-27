@@ -43,6 +43,7 @@ model User {
   rooms                   Room[]
   chatParticipants        ChatRoomParticipant[]
   chatMessages            ChatMessage[]
+  readingLists            ReadingList[]
 
   @@map("user")
 }
@@ -109,6 +110,7 @@ model Post {
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
   reports             Report[]                 @relation("PostReports")
+  readingListItems    ReadingListPost[]
 
   @@index([authorId])
   @@index([courseId])
@@ -189,6 +191,33 @@ model SavedPost {
   @@id([userId, postId])
   @@index([postId])
   @@map("saved_post")
+}
+
+model ReadingList {
+  id          String            @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts       ReadingListPost[]
+
+  @@index([userId])
+  @@map("reading_list")
+}
+
+model ReadingListPost {
+  listId  String
+  postId  String
+  addedAt DateTime    @default(now())
+  list    ReadingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  post    Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([listId, postId])
+  @@index([postId])
+  @@map("reading_list_post")
 }
 
 model Session {
