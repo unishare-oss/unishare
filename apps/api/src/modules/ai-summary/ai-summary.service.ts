@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { PrismaService } from '@/prisma/prisma.service'
+import { TagsService } from '../tags/tags.service'
 import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 
@@ -15,7 +16,7 @@ const SUPPORTED_MIME_TYPES = [
 
 const MAX_TEXT_CHARS = 6000
 
-const SYSTEM_PROMPT = `You are summarizing an academic document for university students.
+const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
 Respond with exactly this format — no extra text, no markdown headers:
 
 One sentence describing what this document is (e.g. "Past paper for ENG301 covering chapters 4–7 from the 2023 finals.").
@@ -24,6 +25,17 @@ One sentence describing what this document is (e.g. "Past paper for ENG301 cover
 • Key topic or concept covered
 
 Use 3 bullet points. Be specific about subject matter — not generic. No fluff.`
+
+const TAGGING_PROMPT = `You are tagging an academic document for a university file-sharing platform.
+Based on the summary provided, suggest 3 to 5 short academic subject tags.
+
+Rules:
+- Each tag is 2–40 characters, lowercase, letters/numbers/spaces/hyphens only
+- Tags should reflect the academic subject, course type, or key topic (e.g. "calculus", "data structures", "past paper", "lab report")
+- Do NOT use tags like "academic", "university", "document", or "study material"
+- Respond with ONLY a comma-separated list of tags, nothing else
+
+Example output: linear algebra, matrices, past paper, engineering mathematics`
 
 @Injectable()
 export class AiSummaryService {
@@ -35,6 +47,7 @@ export class AiSummaryService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly tagsService: TagsService,
   ) {
     this.provider = (config.get<string>('AI_SUMMARY_PROVIDER') as AiProvider) || null
 
@@ -58,7 +71,11 @@ export class AiSummaryService {
     try {
       const post = await this.prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, files: { select: { key: true, mimeType: true } } },
+        select: {
+          id: true,
+          files: { select: { key: true, mimeType: true } },
+          tags: { select: { tagId: true } },
+        },
       })
 
       if (!post) return
@@ -69,7 +86,7 @@ export class AiSummaryService {
       const text = await this.extractText(file.key, file.mimeType)
       if (!text.trim()) return
 
-      const summary = await this.generateSummary(text)
+      const summary = await this.callLlm(SUMMARY_PROMPT, text, 300)
       if (!summary) return
 
       await this.prisma.post.update({
@@ -78,8 +95,39 @@ export class AiSummaryService {
       })
 
       this.logger.log(`Summarized post ${postId}`)
+
+      // Auto-tag only if post has no existing tags
+      if (post.tags.length === 0) {
+        await this.autoTagPost(postId, summary)
+      }
     } catch (err) {
       this.logger.warn(`Failed to summarize post ${postId}: ${(err as Error).message}`)
+    }
+  }
+
+  private async autoTagPost(postId: string, summary: string): Promise<void> {
+    try {
+      const raw = await this.callLlm(TAGGING_PROMPT, summary, 100)
+      if (!raw) return
+
+      const tagNames = raw
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t.length >= 2 && t.length <= 40 && this.tagsService.validateTag(t))
+        .slice(0, 5)
+
+      if (tagNames.length === 0) return
+
+      const tags = await Promise.all(tagNames.map((name) => this.tagsService.findOrCreate(name)))
+
+      await this.prisma.postTag.createMany({
+        data: tags.map((tag) => ({ postId, tagId: tag.id })),
+        skipDuplicates: true,
+      })
+
+      this.logger.log(`Auto-tagged post ${postId} with: ${tagNames.join(', ')}`)
+    } catch (err) {
+      this.logger.warn(`Failed to auto-tag post ${postId}: ${(err as Error).message}`)
     }
   }
 
@@ -108,20 +156,28 @@ export class AiSummaryService {
     return text.slice(0, MAX_TEXT_CHARS)
   }
 
-  private async generateSummary(text: string): Promise<string | null> {
+  private async callLlm(
+    systemPrompt: string,
+    userContent: string,
+    maxTokens: number,
+  ): Promise<string | null> {
     switch (this.provider) {
       case 'groq':
-        return this.callGroq(text)
+        return this.callGroq(systemPrompt, userContent, maxTokens)
       case 'gemini':
-        return this.callGemini(text)
+        return this.callGemini(systemPrompt, userContent)
       case 'ollama':
-        return this.callOllama(text)
+        return this.callOllama(systemPrompt, userContent, maxTokens)
       default:
         return null
     }
   }
 
-  private async callGroq(text: string): Promise<string | null> {
+  private async callGroq(
+    systemPrompt: string,
+    userContent: string,
+    maxTokens: number,
+  ): Promise<string | null> {
     const { default: Groq } = await import('groq-sdk')
     const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
     const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
@@ -129,30 +185,34 @@ export class AiSummaryService {
     const response = await client.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
       ],
-      max_tokens: 300,
+      max_tokens: maxTokens,
     })
 
     return response.choices[0]?.message?.content?.trim() ?? null
   }
 
-  private async callGemini(text: string): Promise<string | null> {
+  private async callGemini(systemPrompt: string, userContent: string): Promise<string | null> {
     const { GoogleGenerativeAI } = await import('@google/generative-ai')
     const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
     const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
 
     const genModel = genAI.getGenerativeModel({
       model,
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: systemPrompt,
     })
 
-    const result = await genModel.generateContent(text)
+    const result = await genModel.generateContent(userContent)
     return result.response.text().trim() || null
   }
 
-  private async callOllama(text: string): Promise<string | null> {
+  private async callOllama(
+    systemPrompt: string,
+    userContent: string,
+    maxTokens: number,
+  ): Promise<string | null> {
     const endpoint = this.config.get('AI_SUMMARY_ENDPOINT') ?? 'http://localhost:11434'
     const model = this.config.get('AI_SUMMARY_MODEL') || 'llama3.2'
 
@@ -163,10 +223,10 @@ export class AiSummaryService {
         model,
         stream: false,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: text },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent },
         ],
-        options: { num_predict: 300 },
+        options: { num_predict: maxTokens },
       }),
     })
 
