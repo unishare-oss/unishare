@@ -37,6 +37,25 @@ Rules:
 
 Example output: linear algebra, matrices, past paper, engineering mathematics`
 
+const SCREENING_PROMPT = `You are a content moderator for a university academic file-sharing platform.
+Review the following post and determine if it contains any of these issues:
+1. Exam cheating materials (full answer sheets, leaked exams not from past papers, solutions intended to be submitted as original work)
+2. Clearly inappropriate, offensive, or harmful content
+3. Completely off-topic (not academic, not related to university study)
+4. Obvious copyright infringement (verbatim copy of a published textbook)
+
+If the content appears SAFE, respond with exactly: SAFE
+If the content has an issue, respond with exactly: FLAG: [brief one-sentence reason]
+
+Do NOT flag content for:
+- Normal past papers, revision notes, lecture notes, assignments
+- Legitimate study materials even if they contain answers or solutions
+- Minor quality issues
+
+Examples:
+SAFE
+FLAG: Contains what appears to be a complete leaked exam with answer keys intended for cheating.`
+
 @Injectable()
 export class AiSummaryService {
   private readonly logger = new Logger(AiSummaryService.name)
@@ -134,6 +153,55 @@ export class AiSummaryService {
       this.logger.log(`Auto-tagged post ${postId} with: ${tagNames.join(', ')}`)
     } catch (err) {
       this.logger.warn(`Failed to auto-tag post ${postId}: ${(err as Error).message}`)
+    }
+  }
+
+  async screenContent(postId: string): Promise<void> {
+    if (!this.provider) return
+
+    try {
+      const post = await this.prisma.post.findUnique({
+        where: { id: postId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          files: { select: { key: true, mimeType: true } },
+        },
+      })
+
+      if (!post) return
+
+      const parts: string[] = []
+      if (post.title) parts.push(`Title: ${post.title}`)
+      if (post.description) parts.push(`Description: ${post.description}`)
+
+      // Include file text if available (first supported file only — quick scan)
+      const supportedFile = post.files.find((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
+      if (supportedFile) {
+        const fileText = await this.extractText(supportedFile.key, supportedFile.mimeType).catch(
+          () => '',
+        )
+        if (fileText.trim()) parts.push(`File content excerpt:\n${fileText}`)
+      }
+
+      if (parts.length === 0) return
+
+      const input = parts.join('\n\n')
+      const result = await this.callLlm(SCREENING_PROMPT, input, 100)
+      if (!result) return
+
+      const trimmed = result.trim()
+      if (trimmed.toUpperCase().startsWith('FLAG:')) {
+        const reason = trimmed.slice(5).trim()
+        await this.prisma.post.update({
+          where: { id: postId },
+          data: { contentWarning: reason },
+        })
+        this.logger.warn(`Content warning set on post ${postId}: ${reason}`)
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to screen post ${postId}: ${(err as Error).message}`)
     }
   }
 
