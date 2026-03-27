@@ -215,6 +215,9 @@ export class PostsService {
     if (!post.isOwner && role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
       throw new ForbiddenException('You do not own this post')
     }
+    if (post.summary) {
+      throw new BadRequestException('Summary already exists')
+    }
     void this.aiSummaryService.summarizePost(id)
     return post
   }
