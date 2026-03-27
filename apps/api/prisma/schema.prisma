@@ -96,6 +96,7 @@ model Post {
   publicationStatus   PostPublicationStatus    @default(PUBLISHED)
   summary             String?
   summarizedAt        DateTime?
+  contentWarning      String?
   comments            Comment[]
   files               File[]
   notifications       Notification[]
