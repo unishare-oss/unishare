@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '@/contexts/auth-context'
+import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -10,7 +11,7 @@ export function useChatSocket() {
   const { session } = useAuth()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [lastMessage, setLastMessage] = useState<any>(null)
+  const [lastMessage, setLastMessage] = useState<ChatMessageEntity | null>(null)
 
   useEffect(() => {
     if (!session) return

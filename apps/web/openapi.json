@@ -2353,7 +2353,7 @@
         "properties": {
           "id": { "type": "string" },
           "name": { "type": "string" },
-          "image": { "type": "object", "nullable": true }
+          "image": { "type": "string", "nullable": true }
         },
         "required": ["id", "name"]
       },
@@ -2374,11 +2374,11 @@
         "properties": {
           "id": { "type": "string" },
           "roomId": { "type": "string" },
-          "userId": { "type": "object", "nullable": true },
+          "userId": { "type": "string", "nullable": true },
           "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
-          "content": { "type": "object", "nullable": true },
-          "imageUrl": { "type": "object", "nullable": true },
-          "linkUrl": { "type": "object", "nullable": true },
+          "content": { "type": "string", "nullable": true },
+          "imageUrl": { "type": "string", "nullable": true },
+          "linkUrl": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
           "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
@@ -2412,7 +2412,7 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/ChatMessageEntity" }
           },
-          "nextCursor": { "type": "object", "nullable": true },
+          "nextCursor": { "type": "string", "nullable": true },
           "hasMore": { "type": "boolean" }
         },
         "required": ["items", "hasMore"]

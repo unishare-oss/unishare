@@ -20,9 +20,6 @@ export default defineConfig({
           useMutation: true,
         },
       },
-      // Fix nullable string types
-      tsconfig: './tsconfig.json',
-      prettier: true,
     },
   },
 })
