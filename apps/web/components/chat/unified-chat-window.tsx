@@ -121,8 +121,77 @@ export function UnifiedChatWindow({
   // Create room mutation (only for new chats)
   const { mutateAsync: createRoom } = useChatControllerCreateRoom({
     mutation: {
-      onSuccess: () => {
+      onMutate: async (variables) => {
+        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
+
+        // Cancel outgoing refetches
+        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
+
+        // Snapshot previous value for rollback
+        const previousRooms = queryClient.getQueryData(roomsQueryKey)
+
+        const tempId = 'temp-room-' + Date.now()
+
+        // Optimistically add room to cache
+        queryClient.setQueryData(roomsQueryKey, (old: any) => {
+          if (!old?.data?.items) return old
+
+          const optimisticRoom = {
+            id: tempId,
+            type: variables.data.type,
+            name: variables.data.name || null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            participants:
+              variables.data.participantIds?.map((id) => ({
+                userId: id,
+                user: id === targetUserId ? targetUser : user,
+              })) || [],
+            user: user,
+          }
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              items: [optimisticRoom, ...old.data.items],
+            },
+          }
+        })
+
+        return { previousRooms, roomsQueryKey, tempId }
+      },
+      onSuccess: (data, _variables, context) => {
+        if (!context?.roomsQueryKey) return
+
+        const realRoom = data.data
+
+        // Replace optimistic room with real one
+        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
+          if (!old?.data?.items) return old
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              items: old.data.items.map((item: any) => {
+                if (item.id === context.tempId) {
+                  return realRoom
+                }
+                return item
+              }),
+            },
+          }
+        })
+
+        // Refresh to ensure consistency
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      },
+      onError: (_error, _variables, context) => {
+        // Rollback on error
+        if (context?.previousRooms) {
+          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
+        }
       },
     },
   })
@@ -138,13 +207,15 @@ export function UnifiedChatWindow({
           direction: 'asc',
         })
 
+        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
+
         // Cancel outgoing refetches
         await queryClient.cancelQueries({ queryKey: messagesQueryKey })
+        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
 
-        // Snapshot previous value for rollback
+        // Snapshot previous values for rollback
         const previousMessages = queryClient.getQueryData(messagesQueryKey)
-
-        //TODO: need to do opt update for room as well
+        const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
         const tempId = 'temp-' + Date.now()
 
@@ -180,13 +251,46 @@ export function UnifiedChatWindow({
           }
         })
 
-        return { previousMessages, messagesQueryKey, tempId }
+        // Optimistically update room in sidebar (move to top + update preview)
+        queryClient.setQueryData(roomsQueryKey, (old: any) => {
+          if (!old?.data?.items) return old
+
+          const currentRoom = old.data.items.find((r: any) => r.id === roomId)
+          if (!currentRoom) return old
+
+          const updatedRoom = {
+            ...currentRoom,
+            updatedAt: new Date().toISOString(),
+            messages: [
+              {
+                id: tempId,
+                content: variables.data.content,
+                type: variables.data.type,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }
+
+          // Remove room from current position and add to top
+          const otherRooms = old.data.items.filter((r: any) => r.id !== roomId)
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              items: [updatedRoom, ...otherRooms],
+            },
+          }
+        })
+
+        return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey, tempId }
       },
       onSuccess: (data, variables, context) => {
         if (!context?.messagesQueryKey) return
 
         const realMessage = data.data
 
+        // Replace optimistic message with real one in chat window
         queryClient.setQueryData(context.messagesQueryKey, (old: any) => {
           if (!old?.data?.items) return old
 
@@ -205,6 +309,35 @@ export function UnifiedChatWindow({
           }
         })
 
+        // Replace optimistic message with real one in room preview
+        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
+          if (!old?.data?.items) return old
+
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              items: old.data.items.map((room: any) => {
+                if (room.id === roomId) {
+                  return {
+                    ...room,
+                    updatedAt: realMessage.createdAt,
+                    messages: [
+                      {
+                        id: realMessage.id,
+                        content: realMessage.content,
+                        type: realMessage.type,
+                        createdAt: realMessage.createdAt,
+                      },
+                    ],
+                  }
+                }
+                return room
+              }),
+            },
+          }
+        })
+
         // still refresh room list (optional but recommended)
         queryClient.invalidateQueries({
           queryKey: getChatControllerGetRoomsQueryKey(),
@@ -214,6 +347,9 @@ export function UnifiedChatWindow({
         // Rollback on error
         if (context?.previousMessages && roomId) {
           queryClient.setQueryData(context.messagesQueryKey, context.previousMessages)
+        }
+        if (context?.previousRooms) {
+          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
         }
       },
     },
@@ -422,7 +558,7 @@ export function UnifiedChatWindow({
             <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
               <div className="flex flex-col gap-4 max-w-6xl mx-auto">
                 {/* Conversation Start Header */}
-                {messages.length === 0 && displayUser && (
+                {displayUser && (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <Avatar className="h-20 w-20 mb-4 rounded-[6px]">
                       <AvatarImage src={displayUser.image || ''} />
