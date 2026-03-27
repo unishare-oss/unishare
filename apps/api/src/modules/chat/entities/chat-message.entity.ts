@@ -8,7 +8,7 @@ export class ChatMessageUserEntity {
   @ApiProperty()
   name: string
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   image: string | null
 }
 
@@ -19,19 +19,19 @@ export class ChatMessageEntity {
   @ApiProperty()
   roomId: string
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   userId: string | null
 
   @ApiProperty({ enum: ChatMessageType })
   type: ChatMessageType
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   content: string | null
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   imageUrl: string | null
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   linkUrl: string | null
 
   @ApiProperty()
@@ -48,7 +48,7 @@ export class PaginatedMessagesEntity {
   @ApiProperty({ type: [ChatMessageEntity] })
   items: ChatMessageEntity[]
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   nextCursor: string | null
 
   @ApiProperty()
