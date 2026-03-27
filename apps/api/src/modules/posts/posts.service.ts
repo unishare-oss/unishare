@@ -71,16 +71,14 @@ export class PostsService {
     const created = await this.postsRepository.findById(post.id, { id: userId })
 
     if (created?.status === PostStatus.APPROVED) {
-      void this.followsService
-        .getFollowerIds(userId)
-        .then((followerIds) =>
-          this.notificationsService.notifyFollowersNewPost(
-            post.id,
-            post.author?.name ?? 'Someone',
-            post.title,
-            followerIds,
-          ),
-        )
+      void this.followsService.getFollowers(userId).then((followers) =>
+        this.notificationsService.notifyFollowersNewPost(
+          post.id,
+          post.author?.name ?? 'Someone',
+          post.title,
+          followers.map((f) => f.id),
+        ),
+      )
     }
 
     return created ?? post
@@ -192,16 +190,14 @@ export class PostsService {
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
     void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
     if (dto.status === PostStatus.APPROVED) {
-      void this.followsService
-        .getFollowerIds(post.authorId)
-        .then((followerIds) =>
-          this.notificationsService.notifyFollowersNewPost(
-            id,
-            post.author?.name ?? 'Someone',
-            post.title,
-            followerIds,
-          ),
-        )
+      void this.followsService.getFollowers(post.authorId).then((followers) =>
+        this.notificationsService.notifyFollowersNewPost(
+          id,
+          post.author?.name ?? 'Someone',
+          post.title,
+          followers.map((f) => f.id),
+        ),
+      )
     }
     return updated
   }

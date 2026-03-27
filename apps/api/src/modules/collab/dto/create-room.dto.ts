@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger'
 import { IsEnum, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator'
 import { RoomVisibility } from '@/generated/prisma/client'
 
-export class CreateRoomDto {
+export class CreateCollabRoomDto {
   @ApiPropertyOptional({ description: 'Optional room title', maxLength: 120 })
   @IsOptional()
   @IsString()
