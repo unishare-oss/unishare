@@ -23,6 +23,7 @@ import { TagsModule } from './modules/tags/tags.module'
 import { TrendingModule } from './modules/trending/trending.module'
 import { ReportsModule } from './modules/reports/reports.module'
 import { ChatModule } from './modules/chat/chat.module'
+import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ChatModule } from './modules/chat/chat.module'
     TrendingModule,
     ReportsModule,
     ChatModule,
+    AiSummaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

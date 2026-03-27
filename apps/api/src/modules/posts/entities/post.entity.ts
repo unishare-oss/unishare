@@ -121,6 +121,12 @@ export class PostEntity {
   @ApiPropertyOptional({ nullable: true, type: String })
   externalUrl: string | null
 
+  @ApiPropertyOptional({ nullable: true, type: String })
+  summary: string | null
+
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  summarizedAt: Date | null
+
   @ApiPropertyOptional({ nullable: true, type: Number })
   examYear: number | null
 

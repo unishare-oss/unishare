@@ -15,6 +15,7 @@ import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
 import { RelatedPosts } from '@/components/post-detail/related-posts'
 import { PostReactions } from '@/components/post-detail/post-reactions'
+import { PostSummary } from '@/components/post-detail/post-summary'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
@@ -83,6 +84,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             onDelete={handleDeletePost}
             isDeleting={isDeleting}
           />
+          <PostSummary post={post} />
           <PostFiles post={post} />
           <PostReactions post={post} />
           <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
