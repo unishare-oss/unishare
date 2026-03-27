@@ -83,13 +83,13 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
           </motion.span>
         </button>
 
-        {isOwner && !isPending && (
+        {isOwner && isPending && (
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={() => triggerSummarize({ id: post.id })}
             disabled={isRegenerating}
-            aria-label="Regenerate summary"
+            aria-label="Generate summary"
           >
             <RefreshCw
               className={`size-3.5 text-text-muted ${isRegenerating ? 'animate-spin' : ''}`}
