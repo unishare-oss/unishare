@@ -6,11 +6,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   usePostsControllerSummarize,
   getPostsControllerFindOneQueryKey,
-  usePostsControllerFindOne,
 } from '@/src/lib/api/generated/posts/posts'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -30,15 +28,6 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
   const queryClient = useQueryClient()
 
   const hasSupportedFile = post.files?.some((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
-
-  usePostsControllerFindOne(post.id, {
-    query: {
-      enabled: !!hasSupportedFile && !post.summary,
-      refetchInterval: 3000,
-      refetchIntervalInBackground: false,
-      select: (r) => r.data,
-    },
-  })
 
   const { mutate: triggerSummarize, isPending: isRegenerating } = usePostsControllerSummarize({
     mutation: {
@@ -101,7 +90,7 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
           </button>
         </CollapsibleTrigger>
 
-        {/* Content — Framer Motion handles the animation, not CollapsibleContent */}
+        {/* Content */}
         <AnimatePresence initial={false}>
           {open && (
             <motion.div
@@ -114,10 +103,8 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
             >
               <div className="px-4 pb-3">
                 {isPending ? (
-                  <div className="space-y-2 pt-1">
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-4/5" />
-                    <Skeleton className="h-3 w-3/5" />
+                  <div className="flex items-center gap-2 pt-1 text-text-muted">
+                    <p className="text-xs">Summary not available.</p>
                   </div>
                 ) : (
                   <>
