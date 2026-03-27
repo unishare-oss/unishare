@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -10,6 +11,11 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
+      {/* Mobile: ChatSidebar always in background */}
+      <div className="md:hidden absolute inset-0 flex flex-col">
+        <ChatSidebar />
+      </div>
+
       <AnimatePresence mode="wait" initial={false}>
         <div key={pathname} className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {/* On mobile, slide in/out. On desktop, no transform (md:translate-x-0). */}

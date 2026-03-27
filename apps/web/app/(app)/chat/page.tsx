@@ -1,17 +1,10 @@
 'use client'
 
-import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatPageTransition } from '@/components/chat/chat-page-transition'
 
 export default function ChatPage() {
   return (
     <ChatPageTransition direction="back">
-      {/* Mobile: show the full conversation list */}
-      <div className="md:hidden flex-1 flex flex-col h-full">
-        <ChatSidebar />
-      </div>
-
-      {/* Desktop: empty state (sidebar is in AppSidebar) */}
       <div className="hidden md:flex flex-1 flex-col items-center justify-center text-muted-foreground p-8 text-center">
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
           <svg

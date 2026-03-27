@@ -84,7 +84,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2">
+    <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
       <ScrollArea className="flex-1">
         <div className="flex flex-col pb-20">
           {/* Active Conversations */}
