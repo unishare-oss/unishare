@@ -15,6 +15,6 @@ import { PostsService } from './posts.service'
   imports: [NotificationsModule, FollowsModule, TagsModule, TrendingModule, AiSummaryModule],
   controllers: [PostsController, CommentsController],
   providers: [PostsService, PostsRepository, CommentsService, CommentsRepository],
-  exports: [PostsService],
+  exports: [PostsService, PostsRepository],
 })
 export class PostsModule {}

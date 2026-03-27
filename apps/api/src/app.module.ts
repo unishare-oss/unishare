@@ -24,6 +24,7 @@ import { TrendingModule } from './modules/trending/trending.module'
 import { ReportsModule } from './modules/reports/reports.module'
 import { ChatModule } from './modules/chat/chat.module'
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
+import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
     ReportsModule,
     ChatModule,
     AiSummaryModule,
+    ReadingListsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
