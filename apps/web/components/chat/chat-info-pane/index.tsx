@@ -47,8 +47,8 @@ export function ChatInfoPane({
   const otherParticipant =
     room?.type === 'DM' ? room.participants?.find((p) => p.userId !== currentUserId) : null
 
-  const displayName = otherParticipant?.user?.name ?? (room?.name as string) ?? 'Chat Room'
-  const displayImage = otherParticipant?.user?.image ?? (room?.imageUrl as string) ?? ''
+  const displayName = otherParticipant?.user?.name ?? room?.name ?? 'Chat Room'
+  const displayImage = otherParticipant?.user?.image ?? room?.imageUrl ?? ''
 
   const sharedPhotos = useMemo(
     () => messages.filter((m) => m.type === 'IMAGE' && m.imageUrl),
@@ -112,8 +112,8 @@ export function ChatInfoPane({
             {view === 'overview' && (
               <OverviewPane
                 room={room}
-                displayName={displayName}
-                displayImage={displayImage}
+                displayName={displayName ?? 'Chat Room'}
+                displayImage={displayImage ?? ''}
                 isLoading={isLoading}
                 searchQuery={searchQuery}
                 onSearchChange={onSearchChange}

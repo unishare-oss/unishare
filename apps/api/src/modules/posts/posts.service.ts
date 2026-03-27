@@ -210,6 +210,15 @@ export class PostsService {
     return this.postsRepository.savePost(postId, userId)
   }
 
+  async regenerateSummary(id: string, userId: string, role: UserRole) {
+    const post = await this.findOne(id, { id: userId, role })
+    if (!post.isOwner && role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
+      throw new ForbiddenException('You do not own this post')
+    }
+    void this.aiSummaryService.summarizePost(id)
+    return post
+  }
+
   unsavePost(postId: string, userId: string) {
     return this.postsRepository.unsavePost(postId, userId)
   }
