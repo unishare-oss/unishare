@@ -94,6 +94,8 @@ model Post {
   searchVector        Unsupported("tsvector")?
   trendingScore       Float                    @default(0)
   publicationStatus   PostPublicationStatus    @default(PUBLISHED)
+  summary             String?
+  summarizedAt        DateTime?
   comments            Comment[]
   files               File[]
   notifications       Notification[]

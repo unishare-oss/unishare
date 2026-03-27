@@ -11,6 +11,7 @@ import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
+import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -29,6 +30,7 @@ export class PostsService {
     private readonly followsService: FollowsService,
     private readonly tagsService: TagsService,
     private readonly prisma: PrismaService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   /**
@@ -79,6 +81,7 @@ export class PostsService {
           followers.map((f) => f.id),
         ),
       )
+      // void this.aiSummaryService.summarizePost(post.id)
     }
 
     return created ?? post
@@ -198,6 +201,7 @@ export class PostsService {
           followers.map((f) => f.id),
         ),
       )
+      void this.aiSummaryService.summarizePost(id)
     }
     return updated
   }
