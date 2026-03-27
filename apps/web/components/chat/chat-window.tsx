@@ -223,7 +223,7 @@ export function ChatWindow({ roomId, lastSocketMessage }: ChatWindowProps) {
         {/* Info Pane */}
         <div
           className={cn(
-            'border-l bg-background/95 overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0 h-full',
+            'relative border-l bg-background/95 overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0 h-full',
             infoPaneOpen ? 'w-64' : 'w-0',
           )}
         >
