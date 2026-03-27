@@ -99,6 +99,10 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           {rooms.map((room) => {
             const lastMessage = room.messages?.[0]
             const isSelected = selectedRoomId === room.id
+            const otherParticipant =
+              room.type === 'DM' ? room.participants?.find((p) => p.userId !== currentUserId) : null
+            const displayName = otherParticipant?.user?.name ?? room.name ?? 'Chat Room'
+            const displayImage = otherParticipant?.user?.image ?? room.imageUrl ?? ''
 
             return (
               <button
@@ -111,14 +115,14 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 )}
               >
                 <Avatar className="h-10 w-10 rounded-[6px]">
-                  <AvatarImage src={room.imageUrl || ''} alt={room.name || 'Room'} />
+                  <AvatarImage src={displayImage} alt={displayName} />
                   <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
-                    {(room.name || 'CH').substring(0, 2).toUpperCase()}
+                    {displayName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium truncate text-sm">{room.name || 'Chat Room'}</span>
+                    <span className="font-medium truncate text-sm">{displayName}</span>
                     {lastMessage && (
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
                         {formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: false })}
