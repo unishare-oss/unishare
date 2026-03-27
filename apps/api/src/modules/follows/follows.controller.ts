@@ -4,6 +4,7 @@ import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { FollowsService } from './follows.service'
+import { FollowUserEntity } from './entities/follow-user.entity'
 
 @ApiTags('follows')
 @Controller('users')
@@ -25,12 +26,14 @@ export class FollowsController {
   }
 
   @Get(':id/followers')
+  @ApiOkResponse({ type: [FollowUserEntity] })
   @ResponseMessage('Followers fetched successfully')
   getFollowers(@Param('id') id: string) {
     return this.followsService.getFollowers(id)
   }
 
   @Get(':id/following')
+  @ApiOkResponse({ type: [FollowUserEntity] })
   @ResponseMessage('Following list fetched successfully')
   getFollowing(@Param('id') id: string) {
     return this.followsService.getFollowing(id)

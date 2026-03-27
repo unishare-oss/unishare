@@ -239,7 +239,19 @@
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FollowUserEntity" }
+                }
+              }
+            }
+          }
+        },
         "tags": ["follows"]
       }
     },
@@ -249,7 +261,19 @@
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FollowUserEntity" }
+                }
+              }
+            }
+          }
+        },
         "tags": ["follows"]
       }
     },
@@ -636,6 +660,23 @@
             "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePostStatusDto" } }
           }
         },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/{id}/summarize": {
+      "post": {
+        "operationId": "PostsController_summarize",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1595,6 +1636,15 @@
           "departmentId": { "type": "string", "nullable": true, "maxLength": 50 },
           "enrollmentYear": { "type": "number", "nullable": true, "minimum": 1950, "maximum": 2100 }
         }
+      },
+      "FollowUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name"]
       },
       "CreateDepartmentDto": {
         "type": "object",
