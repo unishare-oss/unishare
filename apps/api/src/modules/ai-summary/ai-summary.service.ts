@@ -28,16 +28,23 @@ One sentence describing what this document is (e.g. "Past paper for ENG301 cover
 
 Use 3 to 7 bullet points depending on how much content there is. Be specific about subject matter — not generic. No fluff.`
 
-const TAGGING_PROMPT = `You are tagging an academic document for a university file-sharing platform.
+function buildTaggingPrompt(existingTags: string[]): string {
+  const tagList = existingTags.length > 0 ? existingTags.join(', ') : 'none yet'
+  return `You are tagging an academic document for a university file-sharing platform.
 Based on the summary provided, suggest 3 to 5 short academic subject tags.
 
 Rules:
 - Each tag is 2–40 characters, lowercase, letters/numbers/spaces/hyphens only
 - Tags should reflect the academic subject, course type, or key topic (e.g. "calculus", "data structures", "past paper", "lab report")
 - Do NOT use tags like "academic", "university", "document", or "study material"
+- PREFER reusing tags from the existing tag list below rather than inventing new ones
+- Only create a new tag if none of the existing tags are a good match
 - Respond with ONLY a comma-separated list of tags, nothing else
 
+Existing tags: ${tagList}
+
 Example output: linear algebra, matrices, past paper, engineering mathematics`
+}
 
 const SCREENING_PROMPT = `You are a content moderator for a university academic file-sharing platform.
 Review the following post and determine if it contains any of these issues:
@@ -134,7 +141,10 @@ export class AiSummaryService {
 
   private async autoTagPost(postId: string, summary: string): Promise<void> {
     try {
-      const raw = await this.callLlm(TAGGING_PROMPT, summary, 100)
+      const existingTags = await this.prisma.tag.findMany({ select: { name: true } })
+      const existingTagNames = existingTags.map((t) => t.name)
+
+      const raw = await this.callLlm(buildTaggingPrompt(existingTagNames), summary, 100)
       if (!raw) return
 
       const tagNames = raw
@@ -265,6 +275,7 @@ export class AiSummaryService {
         { role: 'user', content: userContent },
       ],
       max_tokens: maxTokens,
+      temperature: 0,
     })
 
     return response.choices[0]?.message?.content?.trim() ?? null
@@ -278,6 +289,7 @@ export class AiSummaryService {
     const genModel = genAI.getGenerativeModel({
       model,
       systemInstruction: systemPrompt,
+      generationConfig: { temperature: 0 },
     })
 
     const result = await genModel.generateContent(userContent)
@@ -302,7 +314,7 @@ export class AiSummaryService {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userContent },
         ],
-        options: { num_predict: maxTokens },
+        options: { num_predict: maxTokens, temperature: 0 },
       }),
     })
 
