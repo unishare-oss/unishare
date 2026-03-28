@@ -23,8 +23,10 @@ One sentence describing what this document is (e.g. "Past paper for ENG301 cover
 • Key topic or concept covered
 • Key topic or concept covered
 • Key topic or concept covered
+• Key topic or concept covered
+• Key topic or concept covered
 
-Use 3 bullet points. Be specific about subject matter — not generic. No fluff.`
+Use 3 to 7 bullet points depending on how much content there is. Be specific about subject matter — not generic. No fluff.`
 
 const TAGGING_PROMPT = `You are tagging an academic document for a university file-sharing platform.
 Based on the summary provided, suggest 3 to 5 short academic subject tags.
@@ -111,7 +113,7 @@ export class AiSummaryService {
         .join('\n\n')
       if (!text) return
 
-      const summary = await this.callLlm(SUMMARY_PROMPT, text, 300)
+      const summary = await this.callLlm(SUMMARY_PROMPT, text, 500)
       if (!summary) return
 
       await this.prisma.post.update({
