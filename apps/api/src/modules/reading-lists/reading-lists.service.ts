@@ -20,6 +20,15 @@ export class ReadingListsService {
     return this.mapList(list)
   }
 
+  async findPublicForUser(userId: string) {
+    const lists = await this.prisma.readingList.findMany({
+      where: { userId, isPublic: true },
+      orderBy: { updatedAt: 'desc' },
+      include: { _count: { select: { posts: true } }, posts: { select: { postId: true } } },
+    })
+    return lists.map(this.mapList)
+  }
+
   async findAllForUser(userId: string) {
     const lists = await this.prisma.readingList.findMany({
       where: { userId },
