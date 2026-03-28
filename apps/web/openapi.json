@@ -1531,6 +1531,28 @@
         "tags": ["reading-lists"]
       }
     },
+    "/api/reading-lists/user/{userId}/public": {
+      "get": {
+        "operationId": "ReadingListsController_findPublicByUser",
+        "parameters": [
+          { "name": "userId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReadingListEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      }
+    },
     "/api/reading-lists/{id}": {
       "get": {
         "operationId": "ReadingListsController_findOne",
@@ -1744,6 +1766,7 @@
           "commentCount": { "type": "number" },
           "savedCount": { "type": "number" },
           "followerCount": { "type": "number" },
+          "followingCount": { "type": "number" },
           "isFollowing": { "type": "boolean", "nullable": true }
         },
         "required": [
@@ -1757,7 +1780,8 @@
           "postCount",
           "commentCount",
           "savedCount",
-          "followerCount"
+          "followerCount",
+          "followingCount"
         ]
       },
       "UpdateProfileDto": {
