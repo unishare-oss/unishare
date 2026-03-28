@@ -17,9 +17,12 @@ export function PostBreadcrumb({ courseCode, courseName, title }: PostBreadcrumb
         Feed
       </Link>
       <ChevronRight className="size-3 text-text-muted" strokeWidth={1.5} />
-      <span className="font-mono text-xs text-text-muted">
+      <Link
+        href={`/feed?q=${encodeURIComponent(courseCode)}`}
+        className="font-mono text-xs text-text-muted hover:text-foreground transition-colors duration-150"
+      >
         {courseCode} - {courseName}
-      </span>
+      </Link>
       <ChevronRight className="size-3 text-text-muted" strokeWidth={1.5} />
       <span className="font-mono text-xs text-foreground truncate max-w-[200px]">{title}</span>
     </nav>

@@ -16,7 +16,7 @@ import { CommentSection } from '@/components/post-detail/comment-section'
 import { RelatedPosts } from '@/components/post-detail/related-posts'
 import { PostReactions } from '@/components/post-detail/post-reactions'
 import { PostSummary } from '@/components/post-detail/post-summary'
-import { LoadingSpinner } from '@/components/shared/loading-spinner'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,8 +57,23 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Post" />
-        <div className="flex-1 bg-card flex items-center justify-center">
-          <LoadingSpinner className="size-20" />
+        <div className="flex-1 bg-card">
+          <div className="max-w-240 mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
+            <Skeleton className="h-3 w-48" />
+            <div className="space-y-3 pt-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Skeleton className="size-10 rounded-full" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
         </div>
       </div>
     )
@@ -68,10 +83,9 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Post" />
+      <PageHeader title={post.title ?? 'Post'} />
 
       <div className="flex-1 bg-card">
-        {/* g change later */}
         <div className="max-w-240 mx-auto px-4 py-4 md:px-6 md:py-6">
           <PostBreadcrumb
             courseCode={post.course.code}
