@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter, usePathname } from 'next/navigation'
@@ -125,7 +125,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     <span className="font-medium truncate text-sm">{displayName}</span>
                     {lastMessage && (
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
-                        {formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: false })}
+                        {format(new Date(lastMessage.createdAt), 'h:mm a')}
                       </span>
                     )}
                   </div>
