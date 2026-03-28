@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, Link2, Pencil, Trash2, Check, Eye } from 'lucide-react'
+import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -131,10 +131,17 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
       )}
 
       {post.status === 'PENDING' && (
-        <div className="mb-6 bg-amber-subtle border border-amber/50 px-4 py-3 rounded-[6px]">
+        <div className="mb-4 bg-amber-subtle border border-amber/50 px-4 py-3 rounded-[6px]">
           <p className="text-sm text-amber font-medium">
             This post is pending review and is only visible to you.
           </p>
+        </div>
+      )}
+
+      {post.contentWarning && (
+        <div className="mb-4 bg-destructive/8 border border-destructive/30 px-4 py-3 rounded-[6px]">
+          <p className="text-sm font-medium text-destructive mb-0.5">Content warning</p>
+          <p className="text-sm text-destructive/80">{post.contentWarning}</p>
         </div>
       )}
 
@@ -225,6 +232,12 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             <span className="inline-flex items-center gap-1.5">
               <Bookmark className="size-3.5" strokeWidth={1.5} />
               {post._count.savedBy.toLocaleString()} {pluralize(post._count.savedBy, 'save')}
+            </span>
+          )}
+          {post._count.comments > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <MessageSquare className="size-3.5" strokeWidth={1.5} />
+              {post._count.comments.toLocaleString()} {pluralize(post._count.comments, 'comment')}
             </span>
           )}
         </div>

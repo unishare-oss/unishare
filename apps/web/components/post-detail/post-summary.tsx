@@ -39,7 +39,9 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
 
   if (!hasSupportedFile) return null
 
-  const isPending = !post.summary
+  const noSummary = !post.summary
+  const isRecent = Date.now() - new Date(post.createdAt).getTime() < 5 * 60 * 1000
+  const isGenerating = noSummary && isRecent
   const lines =
     post.summary
       ?.split('\n')
@@ -51,46 +53,40 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="rounded-lg border border-border bg-muted/40 mt-4 overflow-hidden">
-        {/* Header — entire bar is the trigger */}
-        <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between px-4 py-3 group cursor-pointer">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-amber" strokeWidth={1.5} />
-              <span className="font-mono text-[11px] font-medium text-amber uppercase tracking-wide">
-                AI Summary
-              </span>
-              <motion.span
-                animate={{ rotate: open ? 180 : 0 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="ml-1 flex"
-              >
-                <ChevronDown
-                  className="size-3.5 text-text-muted group-hover:text-foreground transition-colors"
-                  strokeWidth={1.5}
-                />
-              </motion.span>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <CollapsibleTrigger className="flex items-center gap-1.5 group cursor-pointer flex-1 text-left">
+            <Sparkles className="size-3.5 text-amber" strokeWidth={1.5} />
+            <span className="font-mono text-[11px] font-medium text-amber uppercase tracking-wide">
+              AI Summary
+            </span>
+            <motion.span
+              animate={{ rotate: open ? 180 : 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="ml-1 flex"
+            >
+              <ChevronDown
+                className="size-3.5 text-text-muted group-hover:text-foreground transition-colors"
+                strokeWidth={1.5}
+              />
+            </motion.span>
+          </CollapsibleTrigger>
 
-            {isOwner && isPending && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => triggerSummarize({ id: post.id })}
-                  disabled={isRegenerating}
-                  aria-label="Generate summary"
-                >
-                  <RefreshCw
-                    className={`size-3.5 text-text-muted ${isRegenerating ? 'animate-spin' : ''}`}
-                    strokeWidth={1.5}
-                  />
-                </Button>
-              </div>
-            )}
-          </button>
-        </CollapsibleTrigger>
-
-        {/* Content */}
+          {isOwner && noSummary && !isGenerating && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => triggerSummarize({ id: post.id })}
+              disabled={isRegenerating}
+              aria-label="Generate summary"
+            >
+              <RefreshCw
+                className={`size-3.5 text-text-muted ${isRegenerating ? 'animate-spin' : ''}`}
+                strokeWidth={1.5}
+              />
+            </Button>
+          )}
+        </div>
         <AnimatePresence initial={false}>
           {open && (
             <motion.div
@@ -102,9 +98,11 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
               style={{ overflow: 'hidden' }}
             >
               <div className="px-4 pb-3">
-                {isPending ? (
+                {noSummary ? (
                   <div className="flex items-center gap-2 pt-1 text-text-muted">
-                    <p className="text-xs">Summary not available.</p>
+                    <p className="text-xs">
+                      {isGenerating ? 'Generating summary…' : 'Summary not available.'}
+                    </p>
                   </div>
                 ) : (
                   <>
