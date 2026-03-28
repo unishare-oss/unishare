@@ -110,8 +110,10 @@ export function SearchSelect({
     }
 
     if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault()
-      handleSelect(allItems[activeIndex].value)
+      if (allItems[activeIndex]) {
+        e.preventDefault()
+        handleSelect(allItems[activeIndex].value)
+      }
       return
     }
 
