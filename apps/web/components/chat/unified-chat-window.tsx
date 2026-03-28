@@ -253,33 +253,35 @@ export function UnifiedChatWindow({
 
         // Optimistically update room in sidebar (move to top + update preview)
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
+          if (!old?.data) return old
 
-          const currentRoom = old.data.items.find((r: any) => r.id === roomId)
+          const currentRoom = old.data.find((r: ChatRoomEntity) => r.id === roomId)
           if (!currentRoom) return old
 
-          const updatedRoom = {
+          console.log(currentRoom)
+
+          // Create optimistic message matching ChatMessageEntity structure
+          const optimisticMessage: Partial<ChatMessageEntity> = {
+            id: tempId,
+            roomId: roomId,
+            userId: user?.id || null,
+            content: variables.data.content || null,
+            type: variables.data.type as any,
+            createdAt: new Date().toISOString(),
+          }
+
+          const updatedRoom: ChatRoomEntity = {
             ...currentRoom,
             updatedAt: new Date().toISOString(),
-            messages: [
-              {
-                id: tempId,
-                content: variables.data.content,
-                type: variables.data.type,
-                createdAt: new Date().toISOString(),
-              },
-            ],
+            messages: [optimisticMessage],
           }
 
           // Remove room from current position and add to top
-          const otherRooms = old.data.items.filter((r: any) => r.id !== roomId)
+          const otherRooms = old.data.filter((r: ChatRoomEntity) => r.id !== roomId)
 
           return {
             ...old,
-            data: {
-              ...old.data,
-              items: [updatedRoom, ...otherRooms],
-            },
+            data: [updatedRoom, ...otherRooms],
           }
         })
 
@@ -311,36 +313,28 @@ export function UnifiedChatWindow({
 
         // Replace optimistic message with real one in room preview
         queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
+          if (!old?.data) return old
 
           return {
             ...old,
-            data: {
-              ...old.data,
-              items: old.data.items.map((room: any) => {
-                if (room.id === roomId) {
-                  return {
-                    ...room,
-                    updatedAt: realMessage.createdAt,
-                    messages: [
-                      {
-                        id: realMessage.id,
-                        content: realMessage.content,
-                        type: realMessage.type,
-                        createdAt: realMessage.createdAt,
-                      },
-                    ],
-                  }
+            data: old.data.map((room: any) => {
+              if (room.id === roomId) {
+                return {
+                  ...room,
+                  updatedAt: realMessage.createdAt,
+                  messages: [
+                    {
+                      id: realMessage.id,
+                      content: realMessage.content,
+                      type: realMessage.type,
+                      createdAt: realMessage.createdAt,
+                    },
+                  ],
                 }
-                return room
-              }),
-            },
+              }
+              return room
+            }),
           }
-        })
-
-        // still refresh room list (optional but recommended)
-        queryClient.invalidateQueries({
-          queryKey: getChatControllerGetRoomsQueryKey(),
         })
       },
       onError: (_error, _variables, context) => {
