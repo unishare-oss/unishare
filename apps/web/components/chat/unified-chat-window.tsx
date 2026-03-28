@@ -1,13 +1,9 @@
-'use client'
-
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerGetMessages,
   useChatControllerGetRoom,
-  useChatControllerSendMessage,
-  useChatControllerCreateRoom,
   getChatControllerGetMessagesQueryKey,
   getChatControllerGetRoomsQueryKey,
   getChatControllerGetRoomQueryKey,
@@ -19,41 +15,18 @@ import type {
   ChatRoomEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
+import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowLeft, PanelRightOpen, PanelRightClose } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
 import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
 import { ChatInfoPane } from './chat-info-pane'
+import { ChatMessageBubble } from './chat-message-bubble'
 import { Loader2 } from 'lucide-react'
-
-const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
-
-function renderWithLinks(text: string, isMe: boolean) {
-  const parts = text.split(URL_REGEX)
-  const urls = text.match(URL_REGEX) ?? []
-  return parts.flatMap((part, i) => [
-    part,
-    urls[i] ? (
-      <a
-        key={i}
-        href={urls[i]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          'underline underline-offset-2 break-all hover:opacity-80',
-          isMe ? 'text-primary-foreground/90' : 'text-primary',
-        )}
-      >
-        {urls[i]}
-      </a>
-    ) : null,
-  ])
-}
 
 interface UnifiedChatWindowProps {
   roomId?: string
@@ -119,235 +92,10 @@ export function UnifiedChatWindow({
   )
 
   // Create room mutation (only for new chats)
-  const { mutateAsync: createRoom } = useChatControllerCreateRoom({
-    mutation: {
-      onMutate: async (variables) => {
-        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
-
-        // Cancel outgoing refetches
-        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
-
-        // Snapshot previous value for rollback
-        const previousRooms = queryClient.getQueryData(roomsQueryKey)
-
-        const tempId = 'temp-room-' + Date.now()
-
-        // Optimistically add room to cache
-        queryClient.setQueryData(roomsQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
-
-          const optimisticRoom = {
-            id: tempId,
-            type: variables.data.type,
-            name: variables.data.name || null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            participants:
-              variables.data.participantIds?.map((id) => ({
-                userId: id,
-                user: id === targetUserId ? targetUser : user,
-              })) || [],
-            user: user,
-          }
-
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              items: [optimisticRoom, ...old.data.items],
-            },
-          }
-        })
-
-        return { previousRooms, roomsQueryKey, tempId }
-      },
-      onSuccess: (data, _variables, context) => {
-        if (!context?.roomsQueryKey) return
-
-        const realRoom = data.data
-
-        // Replace optimistic room with real one
-        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
-
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              items: old.data.items.map((item: any) => {
-                if (item.id === context.tempId) {
-                  return realRoom
-                }
-                return item
-              }),
-            },
-          }
-        })
-
-        // Refresh to ensure consistency
-        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
-      },
-      onError: (_error, _variables, context) => {
-        // Rollback on error
-        if (context?.previousRooms) {
-          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
-        }
-      },
-    },
-  })
+  const { mutateAsync: createRoom } = useCreateRoom({ user, targetUser, targetUserId })
 
   // Send message mutation
-  const { mutate: sendMessage, isPending: isSending } = useChatControllerSendMessage({
-    mutation: {
-      onMutate: async (variables) => {
-        if (!roomId) return
-
-        const messagesQueryKey = getChatControllerGetMessagesQueryKey(roomId, {
-          limit: 50,
-          direction: 'asc',
-        })
-
-        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
-
-        // Cancel outgoing refetches
-        await queryClient.cancelQueries({ queryKey: messagesQueryKey })
-        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
-
-        // Snapshot previous values for rollback
-        const previousMessages = queryClient.getQueryData(messagesQueryKey)
-        const previousRooms = queryClient.getQueryData(roomsQueryKey)
-
-        const tempId = 'temp-' + Date.now()
-
-        // Optimistically add message to cache
-        queryClient.setQueryData(messagesQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
-
-          const optimisticMessage: ChatMessageEntity = {
-            id: tempId,
-            roomId: variables.id,
-            userId: user?.id || null,
-            type: variables.data.type as any,
-            content: variables.data.content || null,
-            imageUrl: null,
-            linkUrl: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            user: user
-              ? {
-                  id: user.id,
-                  name: user.name,
-                  image: user.image,
-                }
-              : undefined,
-          }
-
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              items: [...old.data.items, optimisticMessage],
-            },
-          }
-        })
-
-        // Optimistically update room in sidebar (move to top + update preview)
-        queryClient.setQueryData(roomsQueryKey, (old: any) => {
-          if (!old?.data) return old
-
-          const currentRoom = old.data.find((r: ChatRoomEntity) => r.id === roomId)
-          if (!currentRoom) return old
-
-          console.log(currentRoom)
-
-          // Create optimistic message matching ChatMessageEntity structure
-          const optimisticMessage: Partial<ChatMessageEntity> = {
-            id: tempId,
-            roomId: roomId,
-            userId: user?.id || null,
-            content: variables.data.content || null,
-            type: variables.data.type as any,
-            createdAt: new Date().toISOString(),
-          }
-
-          const updatedRoom: ChatRoomEntity = {
-            ...currentRoom,
-            updatedAt: new Date().toISOString(),
-            messages: [optimisticMessage],
-          }
-
-          // Remove room from current position and add to top
-          const otherRooms = old.data.filter((r: ChatRoomEntity) => r.id !== roomId)
-
-          return {
-            ...old,
-            data: [updatedRoom, ...otherRooms],
-          }
-        })
-
-        return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey, tempId }
-      },
-      onSuccess: (data, variables, context) => {
-        if (!context?.messagesQueryKey) return
-
-        const realMessage = data.data
-
-        // Replace optimistic message with real one in chat window
-        queryClient.setQueryData(context.messagesQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
-
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              items: old.data.items.map((item: any) => {
-                // Replace ONLY the optimistic message
-                if (item.id === context.tempId) {
-                  return realMessage
-                }
-                return item
-              }),
-            },
-          }
-        })
-
-        // Replace optimistic message with real one in room preview
-        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
-          if (!old?.data) return old
-
-          return {
-            ...old,
-            data: old.data.map((room: any) => {
-              if (room.id === roomId) {
-                return {
-                  ...room,
-                  updatedAt: realMessage.createdAt,
-                  messages: [
-                    {
-                      id: realMessage.id,
-                      content: realMessage.content,
-                      type: realMessage.type,
-                      createdAt: realMessage.createdAt,
-                    },
-                  ],
-                }
-              }
-              return room
-            }),
-          }
-        })
-      },
-      onError: (_error, _variables, context) => {
-        // Rollback on error
-        if (context?.previousMessages && roomId) {
-          queryClient.setQueryData(context.messagesQueryKey, context.previousMessages)
-        }
-        if (context?.previousRooms) {
-          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
-        }
-      },
-    },
-  })
+  const { mutate: sendMessage, isPending: isSending } = useSendMessage({ roomId, user })
 
   const initialMsgs = useMemo(() => initialMessages?.data?.items ?? [], [initialMessages])
 
@@ -573,49 +321,13 @@ export function UnifiedChatWindow({
                   const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
 
                   return (
-                    <div
+                    <ChatMessageBubble
                       key={msg.id || i}
-                      className={cn('flex items-end gap-2', isMe ? 'flex-row-reverse' : 'flex-row')}
-                    >
-                      {!isMe && (
-                        <div className="w-8">
-                          {showAvatar && (
-                            <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
-                              <AvatarImage src={msg.user?.image || ''} />
-                              <AvatarFallback className="text-[10px] rounded-none bg-border text-foreground font-mono font-medium">
-                                {msg.user?.name?.[0]?.toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                        </div>
-                      )}
-
-                      <div
-                        className={cn(
-                          'max-w-[70%] px-3 py-2 rounded-2xl text-[13px] shadow-sm transition-all',
-                          isMe
-                            ? 'bg-primary text-primary-foreground rounded-br-sm'
-                            : 'bg-muted text-foreground rounded-bl-sm',
-                        )}
-                      >
-                        {!isMe && showAvatar && (
-                          <span className="text-[10px] font-semibold block mb-1 opacity-70">
-                            {msg.user?.name}
-                          </span>
-                        )}
-                        <p className="whitespace-pre-wrap break-words">
-                          {renderWithLinks(msg.content ?? '', isMe)}
-                        </p>
-                        <span
-                          className={cn(
-                            'text-[9px] block mt-1 opacity-60',
-                            isMe ? 'text-right' : 'text-left',
-                          )}
-                        >
-                          {format(new Date(msg.createdAt), 'HH:mm')}
-                        </span>
-                      </div>
-                    </div>
+                      message={msg}
+                      isMe={isMe}
+                      showAvatar={showAvatar}
+                      currentUserId={user?.id}
+                    />
                   )
                 })}
               </div>
