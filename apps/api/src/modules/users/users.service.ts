@@ -16,11 +16,12 @@ export class UsersService {
   async findById(id: string, viewerId?: string) {
     const user = await this.usersRepository.findById(id)
     if (!user) throw new NotFoundException('User not found')
-    const [followerCount, isFollowing] = await Promise.all([
+    const [followerCount, followingCount, isFollowing] = await Promise.all([
       this.followsService.countFollowers(id),
+      this.followsService.countFollowing(id),
       viewerId && viewerId !== id ? this.followsService.isFollowing(viewerId, id) : null,
     ])
-    return this.toProfileView(user, followerCount, isFollowing)
+    return this.toProfileView(user, followerCount, followingCount, isFollowing)
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
@@ -52,6 +53,7 @@ export class UsersService {
       [key: string]: unknown
     },
     followerCount = 0,
+    followingCount = 0,
     isFollowing: boolean | null = null,
   ) {
     const { _count, departmentId, ...rest } = user
@@ -64,6 +66,7 @@ export class UsersService {
       commentCount: _count?.comments ?? 0,
       savedCount: _count?.savedPosts ?? 0,
       followerCount,
+      followingCount,
       isFollowing,
     }
 

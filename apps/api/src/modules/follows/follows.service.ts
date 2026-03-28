@@ -31,4 +31,8 @@ export class FollowsService {
   countFollowers(followingId: string) {
     return this.followsRepository.countFollowers(followingId)
   }
+
+  countFollowing(followerId: string) {
+    return this.followsRepository.countFollowing(followerId)
+  }
 }

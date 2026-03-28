@@ -44,6 +44,14 @@ export class ReadingListsController {
     return this.readingListsService.findAllForUser(session.user.id)
   }
 
+  @Get('user/:userId/public')
+  @OptionalAuth()
+  @ApiOkResponse({ type: [ReadingListEntity] })
+  @ResponseMessage('Public reading lists fetched')
+  findPublicByUser(@Param('userId') userId: string) {
+    return this.readingListsService.findPublicForUser(userId)
+  }
+
   @Get(':id')
   @OptionalAuth()
   @ApiOkResponse({ type: ReadingListEntity })

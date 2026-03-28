@@ -60,4 +60,8 @@ export class FollowsRepository {
   countFollowers(followingId: string) {
     return this.prisma.follow.count({ where: { followingId } })
   }
+
+  countFollowing(followerId: string) {
+    return this.prisma.follow.count({ where: { followerId } })
+  }
 }
