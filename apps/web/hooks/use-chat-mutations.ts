@@ -14,6 +14,7 @@ import {
   addMessageToInfiniteCache,
   replaceMessageInInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
+import { useRouter } from 'next/navigation'
 
 interface UseSendMessageOptions {
   roomId?: string
@@ -162,6 +163,7 @@ interface UseCreateRoomOptions {
 
 export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomOptions) {
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   return useChatControllerCreateRoom({
     mutation: {
@@ -227,8 +229,8 @@ export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomO
           }
         })
 
-        // Refresh to ensure consistency
-        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        // Redirect to the new room
+        router.push(`/chat/${data.data.id}`)
       },
       onError: (_error, _variables, context) => {
         // Rollback on error

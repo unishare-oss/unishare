@@ -6,7 +6,6 @@ import {
   useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
   getChatControllerGetMessagesInfiniteQueryKey,
-  getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
 import type {
@@ -234,33 +233,23 @@ export function UnifiedChatWindow({
     if (!content.trim()) return
 
     const messageContent = content
-    setContent('') // Clear input immediately
+    setContent('')
 
     if (isNewChat && targetUserId) {
       try {
-        const roomRes = await createRoom({
+        await createRoom({
           data: {
             type: 'DM',
             participantIds: [targetUserId],
             name: targetUser?.name,
+            initialMessage: messageContent,
           },
-        })
-
-        const newRoomId = roomRes.data.id
-
-        // Redirect to the new room
-        router.push(`/chat/${newRoomId}`)
-
-        sendMessage({
-          id: newRoomId,
-          data: { content: messageContent, type: 'TEXT' },
         })
       } catch (error) {
         console.error('Failed to start conversation:', error)
-        setContent(messageContent) // Restore content on error
+        setContent(messageContent)
       }
     } else if (roomId) {
-      // Existing room - just send message
       sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
     }
   }
