@@ -17,6 +17,7 @@ import type {
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
+import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
@@ -161,33 +162,9 @@ export function UnifiedChatWindow({
     })
 
     // Add socket message to the first page (most recent)
-    queryClient.setQueryData(messagesQueryKey, (old: any) => {
-      if (!old?.pages) return old
-
-      const firstPage = old.pages[0]
-      if (!firstPage?.data?.items) return old
-
-      // Check if message already exists
-      const exists = firstPage.data.items.some(
-        (m: ChatMessageEntity) => m.id === lastSocketMessage.id,
-      )
-      if (exists) return old
-
-      // Add to the beginning of first page (newest messages)
-      return {
-        ...old,
-        pages: [
-          {
-            ...firstPage,
-            data: {
-              ...firstPage.data,
-              items: [lastSocketMessage, ...firstPage.data.items],
-            },
-          },
-          ...old.pages.slice(1),
-        ],
-      }
-    })
+    queryClient.setQueryData(messagesQueryKey, (old: any) =>
+      addMessageToInfiniteCache(old, lastSocketMessage),
+    )
   }, [lastSocketMessage, roomId, queryClient, user])
 
   // Auto-scroll to bottom only for new messages (not when loading more)

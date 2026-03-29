@@ -10,6 +10,10 @@ import type {
   ChatRoomEntity,
   UserProfileEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import {
+  addMessageToInfiniteCache,
+  replaceMessageInInfiniteCache,
+} from '@/lib/utils/infinite-query-cache'
 
 interface UseSendMessageOptions {
   roomId?: string
@@ -41,48 +45,29 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         const tempId = 'temp-' + Date.now()
 
+        const optimisticMessage: ChatMessageEntity = {
+          id: tempId,
+          roomId: variables.id,
+          userId: user?.id || null,
+          type: variables.data.type as any,
+          content: variables.data.content || null,
+          imageUrl: null,
+          linkUrl: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: user
+            ? {
+                id: user.id,
+                name: user.name,
+                image: user.image,
+              }
+            : undefined,
+        }
+
         // Optimistically add message to cache (infinite query structure)
-        queryClient.setQueryData(messagesQueryKey, (old: any) => {
-          console.log(old)
-          if (!old?.pages) return old
-
-          const firstPage = old.pages[0]
-          if (!firstPage?.data?.items) return old
-
-          const optimisticMessage: ChatMessageEntity = {
-            id: tempId,
-            roomId: variables.id,
-            userId: user?.id || null,
-            type: variables.data.type as any,
-            content: variables.data.content || null,
-            imageUrl: null,
-            linkUrl: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            user: user
-              ? {
-                  id: user.id,
-                  name: user.name,
-                  image: user.image,
-                }
-              : undefined,
-          }
-
-          // Add to beginning of first page (newest messages)
-          return {
-            ...old,
-            pages: [
-              {
-                ...firstPage,
-                data: {
-                  ...firstPage.data,
-                  items: [optimisticMessage, ...firstPage.data.items],
-                },
-              },
-              ...old.pages.slice(1),
-            ],
-          }
-        })
+        queryClient.setQueryData(messagesQueryKey, (old: any) =>
+          addMessageToInfiniteCache(old, optimisticMessage),
+        )
 
         // Optimistically update room in sidebar (move to top + update preview)
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
@@ -124,30 +109,9 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
         const realMessage = data.data
 
         // Replace optimistic message with real one in chat window
-        queryClient.setQueryData(context.messagesQueryKey, (old: any) => {
-          if (!old?.pages) return old
-
-          return {
-            ...old,
-            pages: old.pages.map((page: any, index: number) => {
-              if (index !== 0) return page // Only update first page (newest)
-
-              return {
-                ...page,
-                data: {
-                  ...page.data,
-                  items: page.data.items.map((item: any) => {
-                    // Replace ONLY the optimistic message
-                    if (item.id === context.tempId) {
-                      return realMessage
-                    }
-                    return item
-                  }),
-                },
-              }
-            }),
-          }
-        })
+        queryClient.setQueryData(context.messagesQueryKey, (old: any) =>
+          replaceMessageInInfiniteCache(old, context.tempId, realMessage),
+        )
 
         // Replace optimistic message with real one in room preview
         queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
