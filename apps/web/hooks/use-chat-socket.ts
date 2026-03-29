@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -12,6 +13,7 @@ export function useChatSocket() {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<ChatMessageEntity | null>(null)
+  const hasConnectedRef = useRef(false)
 
   useEffect(() => {
     if (!session) return
@@ -23,13 +25,19 @@ export function useChatSocket() {
     socketRef.current = socket
 
     socket.on('connect', () => {
+      if (hasConnectedRef.current) {
+        toast.success('Reconnected to chat')
+      }
+      hasConnectedRef.current = true
       setIsConnected(true)
-      console.log('Chat socket connected')
     })
 
     socket.on('disconnect', () => {
       setIsConnected(false)
-      console.log('Chat socket disconnected')
+    })
+
+    socket.on('connect_error', () => {
+      setIsConnected(false)
     })
 
     socket.on('receive-message', (message: any) => {
@@ -38,6 +46,7 @@ export function useChatSocket() {
 
     socket.on('error', (error: any) => {
       console.error('Chat socket error:', error)
+      toast.error('Chat connection error. Messages may not be delivered.')
     })
 
     return () => {

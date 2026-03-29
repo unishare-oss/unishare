@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowLeft, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { cn } from '@/lib/utils'
@@ -33,12 +33,14 @@ interface UnifiedChatWindowProps {
   roomId?: string
   targetUserId?: string
   lastSocketMessage?: ChatMessageEntity
+  isConnected?: boolean
 }
 
 export function UnifiedChatWindow({
   roomId,
   targetUserId,
   lastSocketMessage,
+  isConnected = true,
 }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
   const router = useRouter()
@@ -357,6 +359,14 @@ export function UnifiedChatWindow({
           )}
         </Button>
       </div>
+
+      {/* Disconnected banner */}
+      {roomId && !isConnected && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
+          <WifiOff className="size-3 shrink-0" />
+          <span>Reconnecting… Messages may be delayed.</span>
+        </div>
+      )}
 
       {/* Body: messages + optional info pane */}
       <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
