@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { InView, useInView } from 'react-intersection-observer'
+import { useInView } from 'react-intersection-observer'
 import {
   useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
   getChatControllerGetMessagesInfiniteQueryKey,
-  getChatControllerGetRoomsQueryKey,
   getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
@@ -17,6 +16,7 @@ import type {
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
+import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
@@ -49,8 +49,6 @@ export function UnifiedChatWindow({
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const previousScrollHeightRef = useRef<number>(0)
-  const isLoadingMoreRef = useRef(false)
 
   const isNewChat = !roomId && !!targetUserId
 
@@ -110,40 +108,20 @@ export function UnifiedChatWindow({
   // Intersection observer for loading more messages
   const { ref: loadMoreRef, inView } = useInView()
 
+  // Scroll position restoration hook
+  const { prepareForLoad, isLoadingMore } = useScrollPositionRestore({
+    scrollRef,
+    isFetchingNextPage,
+  })
+
   // Load more when scroll trigger is in view
   useEffect(() => {
     // Don't trigger if we're already loading or just finished loading
-    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMoreRef.current) {
-      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        // Save scroll height before fetching
-        previousScrollHeightRef.current = scrollContainer.scrollHeight
-        isLoadingMoreRef.current = true
-      }
+    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMore.current) {
+      prepareForLoad()
       fetchNextPage()
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  // Restore scroll position after loading older messages
-  useEffect(() => {
-    if (!isFetchingNextPage && isLoadingMoreRef.current) {
-      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        const currentScrollHeight = scrollContainer.scrollHeight
-        const heightDifference = currentScrollHeight - previousScrollHeightRef.current
-
-        // Adjust scroll position to maintain visual position + scroll down past trigger
-        if (heightDifference > 0) {
-          scrollContainer.scrollTop += heightDifference
-        }
-
-        // Wait a bit before allowing next fetch to avoid immediate retrigger
-        setTimeout(() => {
-          isLoadingMoreRef.current = false
-        }, 300)
-      }
-    }
-  }, [isFetchingNextPage])
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
 
   // Create room mutation (only for new chats)
   const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
@@ -214,7 +192,7 @@ export function UnifiedChatWindow({
 
   // Auto-scroll to bottom only for new messages (not when loading more)
   useEffect(() => {
-    if (scrollRef.current && !isLoadingMoreRef.current) {
+    if (scrollRef.current && !isLoadingMore.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
         // Only auto-scroll if user is near bottom (within 100px)
@@ -227,7 +205,7 @@ export function UnifiedChatWindow({
         }
       }
     }
-  }, [messages])
+  }, [messages, isLoadingMore])
 
   // Create mock room for new chats (info pane display)
   const mockRoom: ChatRoomEntity | undefined =
