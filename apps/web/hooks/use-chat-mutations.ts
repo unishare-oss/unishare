@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerSendMessage,
   useChatControllerCreateRoom,
-  getChatControllerGetMessagesQueryKey,
+  getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
@@ -24,9 +24,9 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
       onMutate: async (variables) => {
         if (!roomId) return
 
-        const messagesQueryKey = getChatControllerGetMessagesQueryKey(roomId, {
+        const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
           limit: 50,
-          direction: 'asc',
+          direction: 'desc',
         })
 
         const roomsQueryKey = getChatControllerGetRoomsQueryKey()
@@ -41,9 +41,13 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         const tempId = 'temp-' + Date.now()
 
-        // Optimistically add message to cache
+        // Optimistically add message to cache (infinite query structure)
         queryClient.setQueryData(messagesQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
+          console.log(old)
+          if (!old?.pages) return old
+
+          const firstPage = old.pages[0]
+          if (!firstPage?.data?.items) return old
 
           const optimisticMessage: ChatMessageEntity = {
             id: tempId,
@@ -64,12 +68,19 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
               : undefined,
           }
 
+          // Add to beginning of first page (newest messages)
           return {
             ...old,
-            data: {
-              ...old.data,
-              items: [...old.data.items, optimisticMessage],
-            },
+            pages: [
+              {
+                ...firstPage,
+                data: {
+                  ...firstPage.data,
+                  items: [optimisticMessage, ...firstPage.data.items],
+                },
+              },
+              ...old.pages.slice(1),
+            ],
           }
         })
 
@@ -114,20 +125,27 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         // Replace optimistic message with real one in chat window
         queryClient.setQueryData(context.messagesQueryKey, (old: any) => {
-          if (!old?.data?.items) return old
+          if (!old?.pages) return old
 
           return {
             ...old,
-            data: {
-              ...old.data,
-              items: old.data.items.map((item: any) => {
-                // Replace ONLY the optimistic message
-                if (item.id === context.tempId) {
-                  return realMessage
-                }
-                return item
-              }),
-            },
+            pages: old.pages.map((page: any, index: number) => {
+              if (index !== 0) return page // Only update first page (newest)
+
+              return {
+                ...page,
+                data: {
+                  ...page.data,
+                  items: page.data.items.map((item: any) => {
+                    // Replace ONLY the optimistic message
+                    if (item.id === context.tempId) {
+                      return realMessage
+                    }
+                    return item
+                  }),
+                },
+              }
+            }),
           }
         })
 

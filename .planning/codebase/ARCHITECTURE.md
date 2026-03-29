@@ -7,6 +7,7 @@
 **Overall:** Monorepo with a decoupled Frontend (Next.js) and Backend (NestJS).
 
 **Key Characteristics:**
+
 - **Monorepo:** Managed with Turborepo and pnpm workspaces.
 - **Backend Architecture:** Modular NestJS with a Controller-Service-Repository pattern.
 - **Frontend Architecture:** Next.js App Router with React Query for data fetching and Zustand for client-side state.
@@ -14,6 +15,7 @@
 ## Layers
 
 **API Layer (Backend):**
+
 - Purpose: Handles HTTP requests, validation, and orchestration.
 - Location: `apps/api/src/modules/`
 - Contains: Controllers, Services, Repositories, and DTOs.
@@ -21,11 +23,13 @@
 - Used by: Web frontend and potentially external clients.
 
 **Data Access Layer (Backend):**
+
 - Purpose: Abstract database operations.
 - Location: `apps/api/src/prisma/` and module-specific `*.repository.ts` files.
 - Contains: Prisma client and repository classes.
 
 **Client Layer (Frontend):**
+
 - Purpose: User interface and client-side logic.
 - Location: `apps/web/app/` and `apps/web/components/`
 - Contains: React components, hooks, and App Router pages.
@@ -42,25 +46,30 @@
 6. **Response:** Data flows back through the service and controller, intercepted by `ResponseInterceptor` to wrap it in a standard `ApiResponse` format.
 
 **State Management:**
+
 - Server state is managed by React Query.
 - Client-side persistent state (like filters or UI preferences) is handled by Zustand in `apps/web/lib/store.ts`.
 
 ## Key Abstractions
 
 **Repositories:**
+
 - Purpose: Encapsulate Prisma queries and provide a clean API to services.
 - Examples: `apps/api/src/modules/posts/posts.repository.ts`
 
 **Base API Fetcher:**
+
 - Purpose: Standardized fetch implementation with error handling for the frontend.
 - Location: `apps/web/src/lib/api/fetcher.ts`
 
 ## Entry Points
 
 **API Main:**
+
 - Location: `apps/api/src/main.ts`
 - Triggers: Starts the NestJS server.
 
 **Web App:**
+
 - Location: `apps/web/app/layout.tsx` and `page.tsx`
 - Triggers: Entry point for the Next.js application.

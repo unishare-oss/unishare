@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { useInView } from 'react-intersection-observer'
 import {
-  useChatControllerGetMessages,
+  useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
-  getChatControllerGetMessagesQueryKey,
+  getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
   getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
@@ -79,17 +80,41 @@ export function UnifiedChatWindow({
       }
     : undefined
 
-  // Fetch messages (only if roomId exists)
-  const { data: initialMessages, isLoading: messagesLoading } = useChatControllerGetMessages(
+  // Fetch messages with infinite scroll (only if roomId exists)
+  const {
+    data: messagesData,
+    isLoading: messagesLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useChatControllerGetMessagesInfinite(
     roomId || '',
     {
       limit: 50,
-      direction: 'asc',
+      direction: 'desc', // Fetch newest first, will reverse for display
     },
     {
-      query: { enabled: !!roomId },
+      query: {
+        enabled: !!roomId,
+        getNextPageParam: (lastPage) => {
+          return lastPage.data.hasMore ? lastPage.data.nextCursor : undefined
+        },
+      },
     },
   )
+
+  // Intersection observer for loading more messages
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    rootMargin: '100px',
+  })
+
+  // Load more when scroll trigger is in view
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage()
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   // Create room mutation (only for new chats)
   const { mutateAsync: createRoom } = useCreateRoom({ user, targetUser, targetUserId })
@@ -97,7 +122,11 @@ export function UnifiedChatWindow({
   // Send message mutation
   const { mutate: sendMessage, isPending: isSending } = useSendMessage({ roomId, user })
 
-  const initialMsgs = useMemo(() => initialMessages?.data?.items ?? [], [initialMessages])
+  // Flatten all pages and reverse to show oldest first
+  const initialMsgs = useMemo(() => {
+    if (!messagesData?.pages) return []
+    return messagesData.pages.flatMap((page) => page.data.items).reverse() // Reverse because we fetch desc but display asc
+  }, [messagesData])
 
   const messages = useMemo(() => {
     if (!searchQuery.trim()) return initialMsgs
@@ -115,28 +144,40 @@ export function UnifiedChatWindow({
     )
       return
 
-    const messagesQueryKey = getChatControllerGetMessagesQueryKey(roomId, {
+    const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
       limit: 50,
-      direction: 'asc',
+      direction: 'desc',
     })
 
-    // Add socket message directly to cache
+    // Add socket message to the first page (most recent)
     queryClient.setQueryData(messagesQueryKey, (old: any) => {
-      if (!old?.data?.items) return old
+      if (!old?.pages) return old
+
+      const firstPage = old.pages[0]
+      if (!firstPage?.data?.items) return old
 
       // Check if message already exists
-      const exists = old.data.items.some((m: ChatMessageEntity) => m.id === lastSocketMessage.id)
+      const exists = firstPage.data.items.some(
+        (m: ChatMessageEntity) => m.id === lastSocketMessage.id,
+      )
       if (exists) return old
 
+      // Add to the beginning of first page (newest messages)
       return {
         ...old,
-        data: {
-          ...old.data,
-          items: [...old.data.items, lastSocketMessage],
-        },
+        pages: [
+          {
+            ...firstPage,
+            data: {
+              ...firstPage.data,
+              items: [lastSocketMessage, ...firstPage.data.items],
+            },
+          },
+          ...old.pages.slice(1),
+        ],
       }
     })
-  }, [lastSocketMessage, roomId, queryClient])
+  }, [lastSocketMessage, roomId, queryClient, user])
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -200,36 +241,43 @@ export function UnifiedChatWindow({
           // Prefetch room data
           queryClient.setQueryData(getChatControllerGetRoomQueryKey(newRoomId), roomRes)
 
-          // Set optimistic message in cache
+          // Set optimistic message in cache (for infinite query)
           queryClient.setQueryData(
-            getChatControllerGetMessagesQueryKey(newRoomId, {
+            getChatControllerGetMessagesInfiniteQueryKey(newRoomId, {
               limit: 50,
-              direction: 'asc',
+              direction: 'desc',
             }),
             {
-              data: {
-                items: [
-                  {
-                    id: 'temp-' + Date.now(),
-                    roomId: newRoomId,
-                    userId: session?.user?.id,
-                    type: 'TEXT',
-                    content: messageContent,
-                    imageUrl: null,
-                    linkUrl: null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    user: session?.user
-                      ? {
-                          id: session.user.id,
-                          name: session.user.name,
-                          image: session.user.image,
-                        }
-                      : undefined,
+              pages: [
+                {
+                  data: {
+                    items: [
+                      {
+                        id: 'temp-' + Date.now(),
+                        roomId: newRoomId,
+                        userId: session?.user?.id,
+                        type: 'TEXT',
+                        content: messageContent,
+                        imageUrl: null,
+                        linkUrl: null,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        user: session?.user
+                          ? {
+                              id: session.user.id,
+                              name: session.user.name,
+                              image: session.user.image,
+                            }
+                          : undefined,
+                      },
+                    ],
+                    hasMore: false,
+                    nextCursor: null,
                   },
-                ],
-                hasMore: false,
-              },
+                  status: 200,
+                },
+              ],
+              pageParams: [undefined],
             },
           )
 
@@ -299,8 +347,17 @@ export function UnifiedChatWindow({
           ) : (
             <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
               <div className="flex flex-col gap-4 max-w-6xl mx-auto">
+                {/* Load more trigger (at top for loading older messages) */}
+                {hasNextPage && (
+                  <div ref={loadMoreRef} className="flex justify-center py-2">
+                    {isFetchingNextPage && (
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                )}
+
                 {/* Conversation Start Header */}
-                {displayUser && (
+                {displayUser && !hasNextPage && (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <Avatar className="h-20 w-20 mb-4 rounded-[6px]">
                       <AvatarImage src={displayUser.image || ''} />
