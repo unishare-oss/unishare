@@ -238,7 +238,6 @@ export function UnifiedChatWindow({
 
     if (isNewChat && targetUserId) {
       try {
-        // Create room (optimistic update handled by useCreateRoom mutation)
         const roomRes = await createRoom({
           data: {
             type: 'DM',
@@ -252,7 +251,6 @@ export function UnifiedChatWindow({
         // Redirect to the new room
         router.push(`/chat/${newRoomId}`)
 
-        // Send message (optimistic update handled by useSendMessage mutation)
         sendMessage({
           id: newRoomId,
           data: { content: messageContent, type: 'TEXT' },
