@@ -131,8 +131,8 @@ export function ChatInfoPane({
                   {isLoading
                     ? [1, 2, 3].map((i) => (
                         <div key={i} className="flex items-center gap-2.5 py-1.5">
-                          <Skeleton className="h-8 w-8 rounded-[4px] shrink-0" />
-                          <Skeleton className="h-3 w-28 rounded-[4px]" />
+                          <Skeleton className="h-8 w-8 rounded-[4px] shrink-0 bg-muted" />
+                          <Skeleton className="h-3 w-28 rounded-[4px] bg-muted" />
                         </div>
                       ))
                     : room.participants?.map((p) => (
