@@ -39,7 +39,7 @@ const publicNavItems = [
 
 const authNavItems = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
-  // { href: '/chat', label: 'Chat', icon: MessageSquare }, // temporarily disabled
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },

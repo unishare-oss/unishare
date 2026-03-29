@@ -33,7 +33,7 @@ const guestTabs = [
 
 const primaryAuthTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
-  // { href: '/chat', label: 'Chat', icon: MessageSquare }, // temporarily disabled
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/my-posts', label: 'Posts', icon: FileText },
   { href: '/notifications', label: 'Notifs', icon: Bell },
 ]
