@@ -230,7 +230,6 @@ export function UnifiedChatWindow({
 
   const displayRoom = existingRoom || mockRoom
 
-  //TODO: opt this
   const handleSend = async () => {
     if (!content.trim()) return
 
@@ -238,73 +237,30 @@ export function UnifiedChatWindow({
     setContent('') // Clear input immediately
 
     if (isNewChat && targetUserId) {
-      // Create room first, then send message
-      createRoom({
-        data: {
-          type: 'DM',
-          participantIds: [targetUserId],
-          name: targetUser?.name,
-        },
-      })
-        .then(async (roomRes) => {
-          const newRoomId = roomRes.data.id
-
-          // Prefetch room data
-          queryClient.setQueryData(getChatControllerGetRoomQueryKey(newRoomId), roomRes)
-
-          // Set optimistic message in cache (for infinite query)
-          queryClient.setQueryData(
-            getChatControllerGetMessagesInfiniteQueryKey(newRoomId, {
-              limit: 50,
-              direction: 'desc',
-            }),
-            {
-              pages: [
-                {
-                  data: {
-                    items: [
-                      {
-                        id: 'temp-' + Date.now(),
-                        roomId: newRoomId,
-                        userId: session?.user?.id,
-                        type: 'TEXT',
-                        content: messageContent,
-                        imageUrl: null,
-                        linkUrl: null,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        user: session?.user
-                          ? {
-                              id: session.user.id,
-                              name: session.user.name,
-                              image: session.user.image,
-                            }
-                          : undefined,
-                      },
-                    ],
-                    hasMore: false,
-                    nextCursor: null,
-                  },
-                  status: 200,
-                },
-              ],
-              pageParams: [undefined],
-            },
-          )
-
-          // Redirect immediately
-          router.push(`/chat/${newRoomId}`)
-
-          // Send message in background
-          sendMessage({
-            id: newRoomId,
-            data: { content: messageContent, type: 'TEXT' },
-          })
+      try {
+        // Create room (optimistic update handled by useCreateRoom mutation)
+        const roomRes = await createRoom({
+          data: {
+            type: 'DM',
+            participantIds: [targetUserId],
+            name: targetUser?.name,
+          },
         })
-        .catch((error) => {
-          console.error('Failed to start conversation:', error)
-          setContent(messageContent) // Restore content on error
+
+        const newRoomId = roomRes.data.id
+
+        // Redirect to the new room
+        router.push(`/chat/${newRoomId}`)
+
+        // Send message (optimistic update handled by useSendMessage mutation)
+        sendMessage({
+          id: newRoomId,
+          data: { content: messageContent, type: 'TEXT' },
         })
+      } catch (error) {
+        console.error('Failed to start conversation:', error)
+        setContent(messageContent) // Restore content on error
+      }
     } else if (roomId) {
       // Existing room - just send message
       sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
