@@ -13,7 +13,6 @@ export function useChatSocket() {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<ChatMessageEntity | null>(null)
-  const hasConnectedRef = useRef(false)
 
   useEffect(() => {
     if (!session) return
@@ -25,10 +24,6 @@ export function useChatSocket() {
     socketRef.current = socket
 
     socket.on('connect', () => {
-      if (hasConnectedRef.current) {
-        toast.success('Reconnected to chat')
-      }
-      hasConnectedRef.current = true
       setIsConnected(true)
     })
 
