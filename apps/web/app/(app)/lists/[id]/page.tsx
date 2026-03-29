@@ -8,6 +8,7 @@ import {
   useReadingListsControllerFindOne,
   useReadingListsControllerGetListPosts,
 } from '@/src/lib/api/generated/reading-lists/reading-lists'
+import type { PaginatedPostEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { PostFeed } from '@/components/feed/post-feed'
 import { PageHeader } from '@/components/shared/page-header'
 
@@ -19,11 +20,12 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     query: { select: (r) => r.data },
   })
 
-  const { data: postsData, isLoading } = useReadingListsControllerGetListPosts(
+  const { data: postsRaw, isLoading } = useReadingListsControllerGetListPosts(
     id,
     { page, limit: 20 },
-    { query: { select: (r) => r.data, placeholderData: keepPreviousData } },
+    { query: { placeholderData: keepPreviousData } },
   )
+  const postsData = postsRaw?.data as PaginatedPostEntity | undefined
 
   return (
     <div className="flex flex-col min-h-screen">
