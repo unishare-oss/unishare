@@ -12,7 +12,7 @@ import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
-import { CreateRoomDto } from './dto/create-room.dto'
+import { CreateCollabRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
 import { RoomEntity } from './entities/room.entity'
@@ -24,7 +24,7 @@ export class CollabService {
     private readonly collabGateway: CollabGateway,
   ) {}
 
-  async createRoom(dto: CreateRoomDto, ownerId: string) {
+  async createRoom(dto: CreateCollabRoomDto, ownerId: string) {
     const slug = nanoid(10)
     const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : undefined
     const room = await this.collabRepository.create({

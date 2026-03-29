@@ -39,3 +39,9 @@ export interface PaginatedResult<T> {
   limit: number
   totalPages: number
 }
+
+export interface CursorPaginatedResult<T> {
+  items: T[]
+  nextCursor: string | null
+  hasMore: boolean
+}

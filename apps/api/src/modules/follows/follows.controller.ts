@@ -1,9 +1,10 @@
-import { Controller, Delete, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
 import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { FollowsService } from './follows.service'
+import { FollowUserEntity } from './entities/follow-user.entity'
 
 @ApiTags('follows')
 @Controller('users')
@@ -22,5 +23,19 @@ export class FollowsController {
   @ApiNoContentResponse()
   unfollow(@Param('id') id: string, @Session() session: UserSession) {
     return this.followsService.unfollow(session.user.id, id)
+  }
+
+  @Get(':id/followers')
+  @ApiOkResponse({ type: [FollowUserEntity] })
+  @ResponseMessage('Followers fetched successfully')
+  getFollowers(@Param('id') id: string) {
+    return this.followsService.getFollowers(id)
+  }
+
+  @Get(':id/following')
+  @ApiOkResponse({ type: [FollowUserEntity] })
+  @ResponseMessage('Following list fetched successfully')
+  getFollowing(@Param('id') id: string) {
+    return this.followsService.getFollowing(id)
   }
 }

@@ -11,6 +11,7 @@ import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
+import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -29,6 +30,7 @@ export class PostsService {
     private readonly followsService: FollowsService,
     private readonly tagsService: TagsService,
     private readonly prisma: PrismaService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   /**
@@ -71,17 +73,18 @@ export class PostsService {
     const created = await this.postsRepository.findById(post.id, { id: userId })
 
     if (created?.status === PostStatus.APPROVED) {
-      void this.followsService
-        .getFollowerIds(userId)
-        .then((followerIds) =>
-          this.notificationsService.notifyFollowersNewPost(
-            post.id,
-            post.author?.name ?? 'Someone',
-            post.title,
-            followerIds,
-          ),
-        )
+      void this.followsService.getFollowers(userId).then((followers) =>
+        this.notificationsService.notifyFollowersNewPost(
+          post.id,
+          post.author?.name ?? 'Someone',
+          post.title,
+          followers.map((f) => f.id),
+        ),
+      )
+      // void this.aiSummaryService.summarizePost(post.id)
     }
+
+    void this.aiSummaryService.screenContent(post.id)
 
     return created ?? post
   }
@@ -192,16 +195,15 @@ export class PostsService {
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
     void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
     if (dto.status === PostStatus.APPROVED) {
-      void this.followsService
-        .getFollowerIds(post.authorId)
-        .then((followerIds) =>
-          this.notificationsService.notifyFollowersNewPost(
-            id,
-            post.author?.name ?? 'Someone',
-            post.title,
-            followerIds,
-          ),
-        )
+      void this.followsService.getFollowers(post.authorId).then((followers) =>
+        this.notificationsService.notifyFollowersNewPost(
+          id,
+          post.author?.name ?? 'Someone',
+          post.title,
+          followers.map((f) => f.id),
+        ),
+      )
+      void this.aiSummaryService.summarizePost(id)
     }
     return updated
   }
@@ -210,12 +212,32 @@ export class PostsService {
     return this.postsRepository.savePost(postId, userId)
   }
 
+  async regenerateSummary(id: string, userId: string, role: UserRole) {
+    const post = await this.findOne(id, { id: userId, role })
+    if (!post.isOwner && role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
+      throw new ForbiddenException('You do not own this post')
+    }
+    if (post.summary) {
+      throw new BadRequestException('Summary already exists')
+    }
+    void this.aiSummaryService.summarizePost(id)
+    return post
+  }
+
   unsavePost(postId: string, userId: string) {
     return this.postsRepository.unsavePost(postId, userId)
   }
 
   getSavedPosts(userId: string, query: PaginationDto) {
     return this.postsRepository.findSaved({ id: userId }, query)
+  }
+
+  getReadingListPosts(
+    listId: string,
+    query: PaginationDto,
+    viewer?: { id?: string; role?: UserRole },
+  ) {
+    return this.postsRepository.findByReadingList(listId, viewer ?? {}, query)
   }
 
   toggleReaction(id: string, dto: ReactToPostDto, userId: string, role?: UserRole) {

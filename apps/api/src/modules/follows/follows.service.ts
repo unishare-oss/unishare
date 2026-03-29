@@ -20,11 +20,19 @@ export class FollowsService {
     return this.followsRepository.isFollowing(followerId, followingId)
   }
 
-  getFollowerIds(followingId: string) {
-    return this.followsRepository.getFollowerIds(followingId)
+  getFollowers(followingId: string) {
+    return this.followsRepository.getFollowers(followingId)
+  }
+
+  getFollowing(followerId: string) {
+    return this.followsRepository.getFollowing(followerId)
   }
 
   countFollowers(followingId: string) {
     return this.followsRepository.countFollowers(followingId)
+  }
+
+  countFollowing(followerId: string) {
+    return this.followsRepository.countFollowing(followerId)
   }
 }
