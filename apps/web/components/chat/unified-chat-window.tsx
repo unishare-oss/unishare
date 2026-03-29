@@ -124,7 +124,7 @@ export function UnifiedChatWindow({
   })
 
   // Send message mutation
-  const { mutate: sendMessage, isPending: isSending } = useSendMessage({ roomId, user })
+  const { mutate: sendMessage } = useSendMessage({ roomId, user })
 
   // Flatten all pages and reverse to show oldest first
   const initialMsgs = useMemo(() => {
@@ -415,7 +415,7 @@ export function UnifiedChatWindow({
             value={content}
             onChange={setContent}
             onSend={handleSend}
-            disabled={isSending || isCreating}
+            disabled={isCreating}
             placeholder={isNewChat ? 'Say hello...' : undefined}
           />
         </div>
