@@ -254,4 +254,17 @@ export class PostsRepository {
     )
     return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
   }
+
+  async findByReadingList(listId: string, viewer: ViewerContext, pagination: PaginationDto) {
+    const result = await paginate(
+      this.prisma.post,
+      {
+        where: { readingListItems: { some: { listId } }, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
+        include: postInclude(viewer?.id),
+      },
+      pagination,
+    )
+    return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
+  }
 }

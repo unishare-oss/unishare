@@ -1,6 +1,15 @@
 'use client'
 
-import { ChevronDown, ChevronUp, Link2, FileText, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  FileText,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, calcYearLevel } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
@@ -59,6 +68,15 @@ export function ModerationRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <TypeBadge type={post.type} />
+            {post.contentWarning && (
+              <span
+                title={post.contentWarning}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wide bg-destructive/10 text-destructive border border-destructive/20"
+              >
+                <AlertTriangle className="size-2.5" strokeWidth={2} />
+                AI Flag
+              </span>
+            )}
           </div>
           <p className="text-sm font-medium text-foreground truncate mt-1">{post.title}</p>
         </div>
@@ -119,6 +137,20 @@ export function ModerationRow({
       {expanded && (
         <div className="bg-muted px-6 py-5 border-t border-border">
           <div className="max-w-[640px]">
+            {post.contentWarning && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 mb-4">
+                <AlertTriangle
+                  className="size-4 text-destructive mt-0.5 shrink-0"
+                  strokeWidth={1.5}
+                />
+                <div>
+                  <p className="font-mono text-[11px] font-medium text-destructive uppercase tracking-wide mb-0.5">
+                    AI Content Flag
+                  </p>
+                  <p className="text-sm text-destructive/90">{post.contentWarning}</p>
+                </div>
+              </div>
+            )}
             {post.description && (
               <p className="text-sm text-foreground leading-relaxed mb-4">{post.description}</p>
             )}

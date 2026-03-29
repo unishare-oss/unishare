@@ -43,8 +43,11 @@ export default function AdminUsersPage() {
     },
   })
 
-  const allUsers = useMemo(() => data?.users ?? [], [data?.users])
-  const total = data?.total ?? allUsers.length
+  const allUsers = useMemo(
+    () => (data?.users ?? []).filter((u) => !u.email?.endsWith('@guest.unishare.app')),
+    [data?.users],
+  )
+  const total = allUsers.length
 
   const bannedCount = useMemo(() => allUsers.filter((u) => u.banned).length, [allUsers])
 

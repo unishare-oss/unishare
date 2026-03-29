@@ -1,15 +1,19 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotificationStream } from '@/hooks/use-notifications'
+import { cn } from '@/lib/utils'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth()
+  const pathname = usePathname()
+  const isChat = pathname.startsWith('/chat')
 
   useNotificationStream(isAuthenticated)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
@@ -33,11 +37,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AppSidebar />
       </div>
       <main
-        className={
-          showLoader
-            ? 'invisible pointer-events-none min-h-screen pb-16 md:ml-60 md:pb-0'
-            : 'min-h-screen pb-16 md:ml-60 md:pb-0'
-        }
+        className={cn(
+          showLoader ? 'invisible pointer-events-none' : '',
+          isChat ? 'h-screen overflow-hidden md:ml-72' : 'min-h-screen pb-16 md:ml-72 md:pb-0',
+        )}
         aria-hidden={showLoader}
       >
         {children}

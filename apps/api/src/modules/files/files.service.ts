@@ -7,6 +7,7 @@ import {
 import { UserRole } from '@/generated/prisma/client'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
+import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { FilesRepository } from './files.repository'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
 
@@ -16,6 +17,7 @@ export class FilesService {
     private readonly filesRepository: FilesRepository,
     private readonly storageService: StorageService,
     private readonly postsService: PostsService,
+    private readonly aiSummaryService: AiSummaryService,
   ) {}
 
   async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
@@ -30,6 +32,11 @@ export class FilesService {
     if (!exists) throw new BadRequestException('File has not been uploaded yet')
 
     const file = await this.filesRepository.create(postId, dto)
+
+    if (post.status === 'APPROVED') {
+      void this.aiSummaryService.summarizePost(postId)
+    }
+
     const { postId: _postId, ...rest } = file
     return rest
   }

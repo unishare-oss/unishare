@@ -7,7 +7,7 @@ export class StatsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   countUsers() {
-    return this.prisma.user.count()
+    return this.prisma.user.count({ where: { isAnonymous: false } })
   }
 
   countPosts() {

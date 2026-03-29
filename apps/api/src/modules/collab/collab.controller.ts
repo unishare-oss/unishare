@@ -16,7 +16,7 @@ import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UserSession } from '@/auth/auth.config'
 import type { Request, Response } from 'express'
 import { CollabService } from './collab.service'
-import { CreateRoomDto } from './dto/create-room.dto'
+import { CreateCollabRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
 import { RoomEntity } from './entities/room.entity'
@@ -30,7 +30,7 @@ export class CollabController {
   @Post()
   @ApiCreatedResponse({ type: RoomEntity })
   @ResponseMessage('Room created successfully')
-  create(@Body() dto: CreateRoomDto, @Session() session: UserSession) {
+  create(@Body() dto: CreateCollabRoomDto, @Session() session: UserSession) {
     return this.collabService.createRoom(dto, session.user.id)
   }
 

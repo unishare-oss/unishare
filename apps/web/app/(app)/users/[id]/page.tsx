@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
+import { Globe } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import {
@@ -11,20 +12,38 @@ import {
   useFollowsControllerFollow,
   useFollowsControllerUnfollow,
 } from '@/src/lib/api/generated/follows/follows'
+import { useReadingListsControllerFindPublicByUser } from '@/src/lib/api/generated/reading-lists/reading-lists'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
 import { Button } from '@/components/ui/button'
+import { FollowersDialog } from '@/components/profile/followers-dialog'
+import { cn } from '@/lib/utils'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 import { pluralize } from '@/lib/utils'
+import Link from 'next/link'
 
-function StatItem({ label, value }: { label: string; value: number }) {
+type FollowDialog = 'followers' | 'following' | null
+type ProfileTab = 'posts' | 'lists'
+
+function StatButton({
+  label,
+  value,
+  onClick,
+}: {
+  label: string
+  value: number
+  onClick?: () => void
+}) {
   return (
-    <div className="text-center">
+    <button
+      onClick={onClick}
+      className={cn('text-center', onClick && 'hover:opacity-70 transition-opacity cursor-pointer')}
+    >
       <p className="text-lg font-semibold text-foreground">{value}</p>
       <p className="font-mono text-[10px] uppercase tracking-wider text-text-muted">{label}</p>
-    </div>
+    </button>
   )
 }
 
@@ -34,12 +53,16 @@ function PublicProfileHeader({
   onFollow,
   onUnfollow,
   isPending,
+  onOpenFollowers,
+  onOpenFollowing,
 }: {
   user: UserProfileEntity
   isSelf: boolean
   onFollow: () => void
   onUnfollow: () => void
   isPending: boolean
+  onOpenFollowers: () => void
+  onOpenFollowing: () => void
 }) {
   const joinedYear = user.createdAt ? new Date(user.createdAt).getFullYear() : null
 
@@ -87,19 +110,17 @@ function PublicProfileHeader({
         </div>
       </div>
       <div className="flex gap-6 mt-5 pt-5 border-t border-border">
-        <StatItem label={pluralize(user.postCount ?? 0, 'Post')} value={user.postCount ?? 0} />
-        <StatItem
+        <StatButton label={pluralize(user.postCount ?? 0, 'Post')} value={user.postCount ?? 0} />
+        <StatButton
           label={pluralize(user.commentCount ?? 0, 'Comment')}
           value={user.commentCount ?? 0}
         />
-        <StatItem
-          label={pluralize(user.savedCount ?? 0, 'Saved', 'Saved')}
-          value={user.savedCount ?? 0}
-        />
-        <StatItem
+        <StatButton
           label={pluralize(user.followerCount ?? 0, 'Follower')}
           value={user.followerCount ?? 0}
+          onClick={onOpenFollowers}
         />
+        <StatButton label="Following" value={user.followingCount ?? 0} onClick={onOpenFollowing} />
       </div>
     </div>
   )
@@ -107,17 +128,12 @@ function PublicProfileHeader({
 
 function UserPosts({ userId }: { userId: string }) {
   const [page, setPage] = useState(1)
-
   const { data } = usePostsControllerFindAll(
     { authorId: userId, page, limit: 20 },
     { query: { select: (r) => r.data } },
   )
-
   return (
     <div className="border border-border rounded-[6px] bg-card overflow-hidden">
-      <div className="px-6 py-3 border-b border-border">
-        <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Posts</h3>
-      </div>
       <PostFeed
         posts={data?.items ?? []}
         page={data?.page ?? 1}
@@ -129,17 +145,57 @@ function UserPosts({ userId }: { userId: string }) {
   )
 }
 
+function UserLists({ userId }: { userId: string }) {
+  const { data: lists } = useReadingListsControllerFindPublicByUser(userId, {
+    query: { select: (r) => r.data },
+  })
+
+  if (!lists?.length) {
+    return (
+      <div className="border border-border rounded-[6px] bg-card px-6 py-10 text-center">
+        <p className="text-sm text-text-muted">No public lists yet.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-3">
+      {lists.map((list) => (
+        <Link
+          key={list.id}
+          href={`/lists/${list.id}`}
+          className="border border-border rounded-[6px] bg-card px-5 py-4 hover:bg-muted transition-colors flex items-center justify-between gap-4"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Globe className="size-3.5 text-text-muted shrink-0" strokeWidth={1.5} />
+              <span className="font-medium text-sm text-foreground truncate">{list.name}</span>
+            </div>
+            {list.description && (
+              <p className="text-xs text-text-muted mt-1 truncate">{list.description}</p>
+            )}
+          </div>
+          <span className="font-mono text-xs text-text-muted shrink-0">
+            {list.postCount} {pluralize(list.postCount, 'post')}
+          </span>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
 export default function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { user: me } = useAuth()
   const qc = useQueryClient()
+  const [followDialog, setFollowDialog] = useState<FollowDialog>(null)
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts')
 
   const { data: user } = useUsersControllerGetById(id, {
     query: { select: (r) => r.data },
   })
 
   const queryKey = getUsersControllerGetByIdQueryKey(id)
-
   type UserResponse = { data: UserProfileEntity }
 
   const optimisticToggle = (following: boolean) => ({
@@ -174,6 +230,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   })
 
   const isSelf = !!me && me.id === id
+  const tabs: { key: ProfileTab; label: string }[] = [
+    { key: 'posts', label: 'Posts' },
+    { key: 'lists', label: 'Lists' },
+  ]
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -188,8 +248,37 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
                 onFollow={() => follow({ id })}
                 onUnfollow={() => unfollow({ id })}
                 isPending={followPending || unfollowPending}
+                onOpenFollowers={() => setFollowDialog('followers')}
+                onOpenFollowing={() => setFollowDialog('following')}
               />
-              <UserPosts userId={id} />
+
+              {/* Tabs */}
+              <div className="flex items-center gap-1 border-b border-border mb-4">
+                {tabs.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setActiveTab(t.key)}
+                    className={cn(
+                      'font-mono text-xs uppercase tracking-wider px-4 py-3 border-b-2 transition-colors',
+                      activeTab === t.key
+                        ? 'border-amber text-amber font-medium'
+                        : 'border-transparent text-text-muted hover:text-foreground',
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === 'posts' && <UserPosts userId={id} />}
+              {activeTab === 'lists' && <UserLists userId={id} />}
+
+              <FollowersDialog
+                userId={id}
+                type={followDialog ?? 'followers'}
+                open={followDialog !== null}
+                onClose={() => setFollowDialog(null)}
+              />
             </>
           )}
         </div>

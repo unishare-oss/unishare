@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useParams, useRouter } from 'next/navigation'
 import {
   LayoutList,
   FileText,
@@ -16,16 +16,20 @@ import {
   Users,
   BarChart2,
   Palette,
+  MessageSquare,
   MessageSquarePlus,
   Github,
   LayoutGrid,
+  ChevronLeft,
 } from 'lucide-react'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
+import { AnimatePresence, motion } from 'framer-motion'
 
 const publicNavItems = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
@@ -35,6 +39,7 @@ const publicNavItems = [
 
 const authNavItems = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/my-posts', label: 'My Posts', icon: FileText },
   { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },
@@ -53,6 +58,7 @@ const adminOnlyItems = [{ href: '/admin/users', label: 'Users', icon: Users }]
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const params = useParams()
   const router = useRouter()
   const { session } = useAuth()
   const user = session?.user
@@ -60,6 +66,8 @@ export function AppSidebar() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
   const navItems = user ? authNavItems : publicNavItems
+  const isChat = pathname.startsWith('/chat')
+  const selectedRoomId = isChat ? (params?.roomId as string | undefined) : undefined
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -67,7 +75,7 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-60 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30">
+    <aside className="hidden md:flex flex-col w-72 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30 overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <Image
           src="/icon.svg"
@@ -81,48 +89,39 @@ export function AppSidebar() {
         </span>
       </div>
 
-      <nav className="flex flex-col gap-0.5 px-3 flex-1">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
-                isActive
-                  ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
-                  : 'text-text-muted hover:text-foreground hover:bg-muted',
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
-                  isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
-                )}
-              />
-              <item.icon
-                className={cn(
-                  'size-4 transition-colors duration-200',
-                  isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
-                )}
-                strokeWidth={1.5}
-              />
-              {item.label}
-            </Link>
-          )
-        })}
-
-        {user && <NotificationsBell />}
-
-        {isAdmin && (
-          <>
-            <div className="mt-6 mb-2 px-3">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                Admin
-              </span>
+      <AnimatePresence mode="wait" initial={false}>
+        {isChat ? (
+          <motion.div
+            key="chat-sidebar"
+            className="flex-1 flex flex-col overflow-hidden"
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -16 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <div className="px-3 py-2 border-b">
+              <Link
+                href="/feed"
+                className="flex items-center gap-2 px-2 py-1.5 text-sm text-text-muted hover:text-foreground hover:bg-muted rounded-[6px] transition-all duration-200"
+              >
+                <ChevronLeft className="size-4 shrink-0" strokeWidth={1.5} />
+                Back
+              </Link>
             </div>
-            {[...adminItems, ...(isSuperAdmin ? adminOnlyItems : [])].map((item) => {
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <ChatSidebar selectedRoomId={selectedRoomId} />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.nav
+            key="main-nav"
+            className="flex flex-col gap-0.5 px-3 flex-1"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            {navItems.map((item) => {
               const isActive = pathname.startsWith(item.href)
               return (
                 <Link
@@ -152,9 +151,51 @@ export function AppSidebar() {
                 </Link>
               )
             })}
-          </>
+
+            {user && <NotificationsBell />}
+
+            {isAdmin && (
+              <>
+                <div className="mt-6 mb-2 px-3">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
+                    Admin
+                  </span>
+                </div>
+                {[...adminItems, ...(isSuperAdmin ? adminOnlyItems : [])].map((item) => {
+                  const isActive = pathname.startsWith(item.href)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+                        isActive
+                          ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
+                          : 'text-text-muted hover:text-foreground hover:bg-muted',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
+                        )}
+                      />
+                      <item.icon
+                        className={cn(
+                          'size-4 transition-colors duration-200',
+                          isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+                        )}
+                        strokeWidth={1.5}
+                      />
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </>
+            )}
+          </motion.nav>
         )}
-      </nav>
+      </AnimatePresence>
 
       <div className="px-4 py-2">
         <a

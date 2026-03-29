@@ -233,6 +233,50 @@
         "tags": ["follows"]
       }
     },
+    "/api/users/{id}/followers": {
+      "get": {
+        "operationId": "FollowsController_getFollowers",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FollowUserEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["follows"]
+      }
+    },
+    "/api/users/{id}/following": {
+      "get": {
+        "operationId": "FollowsController_getFollowing",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FollowUserEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["follows"]
+      }
+    },
     "/api/departments": {
       "post": {
         "operationId": "DepartmentsController_create",
@@ -616,6 +660,23 @@
             "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePostStatusDto" } }
           }
         },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PostDetailEntity" } }
+            }
+          }
+        },
+        "tags": ["posts"]
+      }
+    },
+    "/api/posts/{id}/summarize": {
+      "post": {
+        "operationId": "PostsController_summarize",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -1101,7 +1162,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateRoomDto" } }
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateCollabRoomDto" } }
           }
         },
         "responses": {
@@ -1269,7 +1330,7 @@
               }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
       }
@@ -1287,7 +1348,7 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
       }
@@ -1305,9 +1366,288 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ReportDetail" } }
             }
           },
-          "403": { "description": "Admin role required" }
+          "403": { "description": "Admin or moderator role required" }
         },
         "tags": ["admin"]
+      }
+    },
+    "/api/chat/rooms": {
+      "get": {
+        "operationId": "ChatController_getRooms",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ChatRoomEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["chat"]
+      },
+      "post": {
+        "operationId": "ChatController_createRoom",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateRoomDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}": {
+      "get": {
+        "operationId": "ChatController_getRoom",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}/messages": {
+      "get": {
+        "operationId": "ChatController_getMessages",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "cursor", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "default": 20, "type": "number" }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "schema": { "default": "desc", "type": "string", "enum": ["asc", "desc"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedMessagesEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["chat"]
+      },
+      "post": {
+        "operationId": "ChatController_sendMessage",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SendMessageDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatMessageEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/rooms/{id}/read": {
+      "post": {
+        "operationId": "ChatController_markAsRead",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "201": { "description": "" } },
+        "tags": ["chat"]
+      }
+    },
+    "/api/reading-lists": {
+      "post": {
+        "operationId": "ReadingListsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateReadingListDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "get": {
+        "operationId": "ReadingListsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReadingListEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/user/{userId}/public": {
+      "get": {
+        "operationId": "ReadingListsController_findPublicByUser",
+        "parameters": [
+          { "name": "userId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReadingListEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}": {
+      "get": {
+        "operationId": "ReadingListsController_findOne",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "put": {
+        "operationId": "ReadingListsController_update",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateReadingListDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "delete": {
+        "operationId": "ReadingListsController_remove",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}/posts": {
+      "get": {
+        "operationId": "ReadingListsController_getListPosts",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "type": "number" }
+          }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["reading-lists"]
+      }
+    },
+    "/api/reading-lists/{id}/posts/{postId}": {
+      "post": {
+        "operationId": "ReadingListsController_addPost",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ReadingListEntity" } }
+            }
+          }
+        },
+        "tags": ["reading-lists"]
+      },
+      "delete": {
+        "operationId": "ReadingListsController_removePost",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
+          { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["reading-lists"]
       }
     }
   },
@@ -1426,6 +1766,7 @@
           "commentCount": { "type": "number" },
           "savedCount": { "type": "number" },
           "followerCount": { "type": "number" },
+          "followingCount": { "type": "number" },
           "isFollowing": { "type": "boolean", "nullable": true }
         },
         "required": [
@@ -1439,7 +1780,8 @@
           "postCount",
           "commentCount",
           "savedCount",
-          "followerCount"
+          "followerCount",
+          "followingCount"
         ]
       },
       "UpdateProfileDto": {
@@ -1456,6 +1798,15 @@
           "departmentId": { "type": "string", "nullable": true, "maxLength": 50 },
           "enrollmentYear": { "type": "number", "nullable": true, "minimum": 1950, "maximum": 2100 }
         }
+      },
+      "FollowUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name"]
       },
       "CreateDepartmentDto": {
         "type": "object",
@@ -1604,6 +1955,9 @@
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
           "externalUrl": { "type": "string", "nullable": true },
+          "summary": { "type": "string", "nullable": true },
+          "summarizedAt": { "format": "date-time", "type": "string", "nullable": true },
+          "contentWarning": { "type": "string", "nullable": true },
           "examYear": { "type": "number", "nullable": true },
           "moduleNumber": { "type": "number", "nullable": true },
           "year": { "type": "number", "nullable": true },
@@ -1659,6 +2013,9 @@
           "title": { "type": "string", "nullable": true },
           "description": { "type": "string", "nullable": true },
           "externalUrl": { "type": "string", "nullable": true },
+          "summary": { "type": "string", "nullable": true },
+          "summarizedAt": { "format": "date-time", "type": "string", "nullable": true },
+          "contentWarning": { "type": "string", "nullable": true },
           "examYear": { "type": "number", "nullable": true },
           "moduleNumber": { "type": "number", "nullable": true },
           "year": { "type": "number", "nullable": true },
@@ -2040,7 +2397,7 @@
         },
         "required": ["postId"]
       },
-      "CreateRoomDto": {
+      "CreateCollabRoomDto": {
         "type": "object",
         "properties": {
           "title": { "type": "string", "description": "Optional room title", "maxLength": 120 },
@@ -2208,6 +2565,134 @@
           "limit": { "type": "number" }
         },
         "required": ["reports", "total", "page", "limit"]
+      },
+      "ChatMessageUserEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "image": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name"]
+      },
+      "ChatRoomParticipantEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "roomId": { "type": "string" },
+          "userId": { "type": "string" },
+          "lastReadAt": { "format": "date-time", "type": "string" },
+          "joinedAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+        },
+        "required": ["id", "roomId", "userId", "lastReadAt", "joinedAt", "user"]
+      },
+      "ChatMessageEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "roomId": { "type": "string" },
+          "userId": { "type": "string", "nullable": true },
+          "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
+          "content": { "type": "string", "nullable": true },
+          "imageUrl": { "type": "string", "nullable": true },
+          "linkUrl": { "type": "string", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+        },
+        "required": ["id", "roomId", "type", "createdAt", "updatedAt"]
+      },
+      "ChatRoomEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["DM", "GROUP"] },
+          "name": { "type": "string", "nullable": true },
+          "imageUrl": { "type": "string", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "participants": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatRoomParticipantEntity" }
+          },
+          "messages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessageEntity" }
+          }
+        },
+        "required": ["id", "type", "createdAt", "updatedAt", "participants"]
+      },
+      "PaginatedMessagesEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessageEntity" }
+          },
+          "nextCursor": { "type": "string", "nullable": true },
+          "hasMore": { "type": "boolean" }
+        },
+        "required": ["items", "hasMore"]
+      },
+      "CreateRoomDto": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["DM", "GROUP"] },
+          "participantIds": { "type": "array", "items": { "type": "string" } },
+          "name": { "type": "string" }
+        },
+        "required": ["type", "participantIds"]
+      },
+      "SendMessageDto": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" },
+          "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
+          "imageUrl": { "type": "string" },
+          "linkUrl": { "type": "string" }
+        }
+      },
+      "CreateReadingListDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Finals Revision" },
+          "description": { "type": "string", "example": "Materials for final exam prep" },
+          "isPublic": { "type": "boolean", "default": false }
+        },
+        "required": ["name"]
+      },
+      "ReadingListEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "isPublic": { "type": "boolean" },
+          "postCount": { "type": "number" },
+          "postIds": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "id",
+          "userId",
+          "name",
+          "isPublic",
+          "postCount",
+          "postIds",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateReadingListDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Finals Revision" },
+          "description": { "type": "string", "example": "Materials for final exam prep" },
+          "isPublic": { "type": "boolean", "default": false }
+        }
       }
     }
   }

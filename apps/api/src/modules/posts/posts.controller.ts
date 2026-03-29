@@ -196,6 +196,13 @@ export class PostsController {
     return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
   }
 
+  @Post(':id/summarize')
+  @ApiOkResponse({ type: PostDetailEntity })
+  @ResponseMessage('Summary generation started')
+  summarize(@Param('id') id: string, @Session() session: UserSession) {
+    return this.postsService.regenerateSummary(id, session.user.id, session.user.role as UserRole)
+  }
+
   @Post(':id/tags')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Tags added successfully')
