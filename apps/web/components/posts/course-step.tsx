@@ -1,15 +1,8 @@
 'use client'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-
-const EMPTY_SELECT_VALUE = '__empty__'
+import { useMemo } from 'react'
+import { SearchSelect } from '@/components/ui/search-select'
 
 interface CourseStepProps {
   selectedYear: string
@@ -33,17 +26,23 @@ export function CourseStep({
     { query: { enabled: !!departmentId, select: (r) => r.data } },
   )
 
-  const allCourses = coursesData?.items ?? []
   const loading = meLoading || coursesLoading
 
   const selectedYearNumber = Number(selectedYear)
   const hasSelectedYear = selectedYear !== '' && !Number.isNaN(selectedYearNumber)
 
-  const filteredCourses = hasSelectedYear
-    ? allCourses.filter(
-        (course) => course.yearLevel == null || course.yearLevel === selectedYearNumber,
-      )
-    : []
+  const courseOptions = useMemo(() => {
+    const allCourses = coursesData?.items ?? []
+
+    if (!hasSelectedYear) return []
+
+    return allCourses
+      .filter((course) => course.yearLevel == null || course.yearLevel === selectedYearNumber)
+      .map((course) => ({
+        value: course.id,
+        label: `${course.code} — ${course.name}`,
+      }))
+  }, [coursesData, hasSelectedYear, selectedYearNumber])
 
   return (
     <div>
@@ -54,22 +53,15 @@ export function CourseStep({
           <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
             Year
           </label>
-          <Select
-            value={selectedYear || EMPTY_SELECT_VALUE}
-            onValueChange={(value) => onYearChange(value === EMPTY_SELECT_VALUE ? '' : value)}
-          >
-            <SelectTrigger className="w-full h-[42px] bg-card border-border rounded-[6px] text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
-              <SelectValue placeholder="Select year..." />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={EMPTY_SELECT_VALUE}>Select year...</SelectItem>
-              {[1, 2, 3, 4, 5, 6].map((year) => (
-                <SelectItem key={year} value={String(year)}>
-                  Year {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchSelect
+            options={[1, 2, 3, 4, 5, 6].map((year) => ({
+              value: String(year),
+              label: `Year ${year}`,
+            }))}
+            value={selectedYear}
+            onChange={onYearChange}
+            placeholder="Select year..."
+          />
         </div>
 
         <div>
@@ -87,35 +79,14 @@ export function CourseStep({
               in your profile to select a course.
             </p>
           ) : (
-            <>
-              <Select
-                value={selectedCourse || EMPTY_SELECT_VALUE}
-                onValueChange={(value) => onCourseChange(value === EMPTY_SELECT_VALUE ? '' : value)}
-              >
-                <SelectTrigger
-                  className="w-full h-[42px] bg-card border-border rounded-[6px] text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber"
-                  disabled={!hasSelectedYear}
-                >
-                  <SelectValue
-                    placeholder={hasSelectedYear ? 'Select course...' : 'Select year first...'}
-                  />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value={EMPTY_SELECT_VALUE}>Select course...</SelectItem>
-                  {filteredCourses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      {course.code} — {course.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {hasSelectedYear && filteredCourses.length === 0 && (
-                <p className="font-mono text-xs text-text-muted mt-2">
-                  No courses found for Year {selectedYearNumber}.
-                </p>
-              )}
-            </>
+            <SearchSelect
+              options={courseOptions}
+              value={selectedCourse}
+              onChange={onCourseChange}
+              placeholder="Select course..."
+              disabledPlaceholder="Select year first..."
+              disabled={!hasSelectedYear}
+            />
           )}
         </div>
       </div>
