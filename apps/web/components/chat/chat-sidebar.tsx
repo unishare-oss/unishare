@@ -51,12 +51,45 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
 
-  const handleStartDm = async (userId: string) => {
+  const handleStartDm = async (
+    userId: string,
+    user: { id: string; name: string; image?: string | null },
+  ) => {
     setPendingUserId(userId)
+
+    // Optimistically insert room into sidebar cache
+    const roomsQueryKey = getChatControllerGetRoomsQueryKey()
+    const tempId = `temp-dm-${userId}`
+    queryClient.setQueryData(roomsQueryKey, (old: any) => {
+      if (!old?.data) return old
+      const alreadyExists = old.data.some((r: any) => r.id === tempId)
+      if (alreadyExists) return old
+      const optimisticRoom = {
+        id: tempId,
+        type: 'DM',
+        name: user.name,
+        imageUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        participants: [
+          { id: `temp-p-${userId}`, roomId: tempId, userId, user },
+          { id: `temp-p-me`, roomId: tempId, userId: currentUserId, user: session?.user },
+        ],
+        messages: [],
+      }
+      return { ...old, data: [optimisticRoom, ...old.data] }
+    })
+
     try {
       const res = await chatControllerGetOrCreateDmRoom(userId)
-      await queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      await queryClient.invalidateQueries({ queryKey: roomsQueryKey })
       router.push(`/chat/${res.data.id}`)
+    } catch {
+      // Roll back on failure
+      queryClient.setQueryData(roomsQueryKey, (old: any) => {
+        if (!old?.data) return old
+        return { ...old, data: old.data.filter((r: any) => r.id !== tempId) }
+      })
     } finally {
       setPendingUserId(null)
     }
@@ -170,7 +203,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
               {networkUsers.map((user) => (
                 <button
                   key={user.id}
-                  onClick={() => handleStartDm(user.id)}
+                  onClick={() =>
+                    handleStartDm(user.id, { id: user.id, name: user.name, image: user.image })
+                  }
                   disabled={pendingUserId === user.id}
                   className={cn(
                     'relative flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group disabled:opacity-60',
