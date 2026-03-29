@@ -112,7 +112,8 @@ export function UnifiedChatWindow({
 
   // Load more when scroll trigger is in view
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
+    // Don't trigger if we're already loading or just finished loading
+    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMoreRef.current) {
       const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
         // Save scroll height before fetching
@@ -131,12 +132,15 @@ export function UnifiedChatWindow({
         const currentScrollHeight = scrollContainer.scrollHeight
         const heightDifference = currentScrollHeight - previousScrollHeightRef.current
 
-        // Adjust scroll position to maintain visual position
+        // Adjust scroll position to maintain visual position + scroll down past trigger
         if (heightDifference > 0) {
           scrollContainer.scrollTop += heightDifference
         }
 
-        isLoadingMoreRef.current = false
+        // Wait a bit before allowing next fetch to avoid immediate retrigger
+        setTimeout(() => {
+          isLoadingMoreRef.current = false
+        }, 300)
       }
     }
   }, [isFetchingNextPage])
