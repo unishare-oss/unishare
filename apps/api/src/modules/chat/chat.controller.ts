@@ -21,6 +21,13 @@ export class ChatController {
     return this.chatService.getRooms(session.user.id)
   }
 
+  @Get('rooms/dm/:userId')
+  @ApiOkResponse({ type: ChatRoomEntity })
+  @ResponseMessage('DM room fetched successfully')
+  getOrCreateDmRoom(@Param('userId') userId: string, @Session() session: UserSession) {
+    return this.chatService.getOrCreateDmRoom(session.user.id, userId)
+  }
+
   @Get('rooms/:id')
   @ApiOkResponse({ type: ChatRoomEntity })
   @ResponseMessage('Chat room fetched successfully')

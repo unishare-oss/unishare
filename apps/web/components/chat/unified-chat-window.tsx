@@ -6,16 +6,13 @@ import {
   useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
   getChatControllerGetMessagesInfiniteQueryKey,
-  getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
-import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
 import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
-  ChatRoomEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
-import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
+import { useSendMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -31,15 +28,13 @@ import { ChatMessageBubble } from './chat-message-bubble'
 import { Loader2 } from 'lucide-react'
 
 interface UnifiedChatWindowProps {
-  roomId?: string
-  targetUserId?: string
+  roomId: string
   lastSocketMessage?: ChatMessageEntity
   isConnected?: boolean
 }
 
 export function UnifiedChatWindow({
   roomId,
-  targetUserId,
   lastSocketMessage,
   isConnected = true,
 }: UnifiedChatWindowProps) {
@@ -51,29 +46,18 @@ export function UnifiedChatWindow({
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const isNewChat = !roomId && !!targetUserId
-
-  // Fetch existing room data (only if roomId exists)
-  const { data: roomResponse } = useChatControllerGetRoom(roomId || '', {
+  // Fetch room data
+  const { data: roomResponse } = useChatControllerGetRoom(roomId, {
     query: { enabled: !!roomId },
   })
 
-  const existingRoom = roomResponse?.data
-
-  // Fetch target user data (only for new chats)
-  const { data: userResponse, isLoading: userLoading } = useUsersControllerGetById(
-    targetUserId || '',
-    {
-      query: { enabled: isNewChat },
-    },
-  )
-  const targetUser = userResponse?.data
+  const room = roomResponse?.data
 
   // Determine the other participant
-  const otherParticipant = existingRoom?.participants?.find(
+  const otherParticipant = room?.participants?.find(
     (p: ChatRoomParticipantEntity) => p.userId !== user?.id,
   )
-  const displayUser = isNewChat ? targetUser : otherParticipant?.user
+  const displayUser = otherParticipant?.user
 
   const headerUser = displayUser
     ? {
@@ -91,10 +75,10 @@ export function UnifiedChatWindow({
     hasNextPage,
     isFetchingNextPage,
   } = useChatControllerGetMessagesInfinite(
-    roomId || '',
+    roomId,
     {
       limit: 50,
-      direction: 'desc', // Fetch newest first, will reverse for display
+      direction: 'desc',
     },
     {
       query: {
@@ -123,13 +107,6 @@ export function UnifiedChatWindow({
       fetchNextPage()
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
-
-  // Create room mutation (only for new chats)
-  const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
-    user,
-    targetUser,
-    targetUserId,
-  })
 
   // Send message mutation
   const { mutate: sendMessage } = useSendMessage({ roomId, user })
@@ -184,93 +161,12 @@ export function UnifiedChatWindow({
     }
   }, [messages, isLoadingMore])
 
-  // Create mock room for new chats (info pane display)
-  const mockRoom: ChatRoomEntity | undefined =
-    isNewChat && targetUser
-      ? {
-          id: 'new-room-' + targetUserId,
-          type: 'DM',
-          name: targetUser.name,
-          imageUrl: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          participants: [
-            {
-              id: 'mock-participant-' + targetUserId,
-              roomId: 'new-room-' + targetUserId,
-              userId: targetUserId || '',
-              lastReadAt: new Date().toISOString(),
-              joinedAt: new Date().toISOString(),
-              user: {
-                id: targetUser.id,
-                name: targetUser.name,
-                image: targetUser.image,
-              },
-            },
-            ...(user
-              ? [
-                  {
-                    id: 'mock-participant-me',
-                    roomId: 'new-room-' + targetUserId,
-                    userId: user.id,
-                    lastReadAt: new Date().toISOString(),
-                    joinedAt: new Date().toISOString(),
-                    user: {
-                      id: user.id,
-                      name: user.name,
-                      image: user.image,
-                    },
-                  },
-                ]
-              : []),
-          ],
-          messages: [],
-        }
-      : undefined
-
-  const displayRoom = existingRoom || mockRoom
-
-  const handleSend = async () => {
-    if (!content.trim()) return
-
+  // Remove mock room logic — room is always fetched from server now
+  const handleSend = () => {
+    if (!content.trim() || !roomId) return
     const messageContent = content
-    setContent('') // Clear input immediately
-
-    if (isNewChat && targetUserId) {
-      try {
-        const roomRes = await createRoom({
-          data: {
-            type: 'DM',
-            participantIds: [targetUserId],
-            name: targetUser?.name,
-          },
-        })
-
-        const newRoomId = roomRes.data.id
-
-        // Redirect to the new room
-        router.push(`/chat/${newRoomId}`)
-
-        sendMessage({
-          id: newRoomId,
-          data: { content: messageContent, type: 'TEXT' },
-        })
-      } catch (error) {
-        console.error('Failed to start conversation:', error)
-        setContent(messageContent) // Restore content on error
-      }
-    } else if (roomId) {
-      // Existing room - just send message
-      sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
-    }
-  }
-
-  if ((isNewChat && userLoading) || (!isNewChat && !roomId)) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
+    setContent('')
+    sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
   }
 
   return (
@@ -287,7 +183,7 @@ export function UnifiedChatWindow({
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <ChatHeader user={headerUser} isNew={isNewChat} />
+          <ChatHeader user={headerUser} isNew={false} />
         </div>
         <Button
           variant="ghost"
@@ -304,7 +200,7 @@ export function UnifiedChatWindow({
       </div>
 
       {/* Disconnected banner */}
-      {roomId && !isConnected && (
+      {!isConnected && (
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
           <WifiOff className="size-3 shrink-0" />
           <span>Reconnecting… Messages may be delayed.</span>
@@ -364,13 +260,7 @@ export function UnifiedChatWindow({
             </ScrollArea>
           )}
 
-          <ChatInput
-            value={content}
-            onChange={setContent}
-            onSend={handleSend}
-            disabled={isCreating}
-            placeholder={isNewChat ? 'Say hello...' : undefined}
-          />
+          <ChatInput value={content} onChange={setContent} onSend={handleSend} />
         </div>
 
         {/* Info Pane */}
@@ -381,7 +271,7 @@ export function UnifiedChatWindow({
           )}
         >
           <ChatInfoPane
-            room={displayRoom}
+            room={room}
             messages={messages}
             currentUserId={session?.user?.id}
             isOpen={infoPaneOpen}

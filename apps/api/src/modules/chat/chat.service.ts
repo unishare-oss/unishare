@@ -30,6 +30,14 @@ export class ChatService {
     return this.chatRepository.findMessages(roomId, options)
   }
 
+  async getOrCreateDmRoom(currentUserId: string, targetUserId: string) {
+    const existing = await this.chatRepository.findDirectMessageRoom(currentUserId, targetUserId)
+    if (existing) {
+      return this.chatRepository.findRoomById(existing.id)
+    }
+    return this.chatRepository.createRoom(ChatRoomType.DM, [currentUserId, targetUserId])
+  }
+
   async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
     const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
+import { chatControllerGetOrCreateDmRoom } from '@/src/lib/api/generated/chat/chat'
 import {
   useFollowsControllerGetFollowing,
   useFollowsControllerGetFollowers,
@@ -15,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter, usePathname } from 'next/navigation'
 import { Users, MessageSquare } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 interface ChatSidebarProps {
   selectedRoomId?: string
@@ -42,6 +43,18 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
       query: { enabled: !!currentUserId },
     },
   )
+
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null)
+
+  const handleStartDm = async (userId: string) => {
+    setPendingUserId(userId)
+    try {
+      const res = await chatControllerGetOrCreateDmRoom(userId)
+      router.push(`/chat/${res.data.id}`)
+    } finally {
+      setPendingUserId(null)
+    }
+  }
 
   const rooms = roomsResponse?.data || []
 
@@ -151,10 +164,11 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
               {networkUsers.map((user) => (
                 <button
                   key={user.id}
-                  onClick={() => router.push(`/chat/new/${user.id}`)}
+                  onClick={() => handleStartDm(user.id)}
+                  disabled={pendingUserId === user.id}
                   className={cn(
-                    'relative flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group',
-                    pathname === `/chat/new/${user.id}` &&
+                    'relative flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50 group disabled:opacity-60',
+                    pathname === `/chat/${user.id}` &&
                       'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                   )}
                 >
