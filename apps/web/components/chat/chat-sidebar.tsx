@@ -77,7 +77,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     return (
       <div className="flex flex-col gap-2 p-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          <Skeleton key={i} className="h-16 w-full rounded-lg bg-muted" />
         ))}
       </div>
     )

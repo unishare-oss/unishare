@@ -69,9 +69,9 @@ export function OverviewPane({
           <div className="flex flex-col items-center gap-2 px-4 py-6 border-b">
             {isLoading ? (
               <>
-                <Skeleton className="h-14 w-14 rounded-xl" />
-                <Skeleton className="h-3 w-24 rounded-[4px] mt-1" />
-                <Skeleton className="h-2.5 w-16 rounded-[4px]" />
+                <Skeleton className="h-14 w-14 rounded-xl bg-muted" />
+                <Skeleton className="h-3 w-24 rounded-[4px] mt-1 bg-muted" />
+                <Skeleton className="h-2.5 w-16 rounded-[4px] bg-muted" />
               </>
             ) : (
               <>

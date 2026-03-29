@@ -21,10 +21,10 @@ export function ChatMessagesSkeleton() {
             key={i}
             className={cn('flex items-end gap-2', item.isMe ? 'flex-row-reverse' : 'flex-row')}
           >
-            {!item.isMe && <Skeleton className="h-8 w-8 rounded-[6px] shrink-0" />}
+            {!item.isMe && <Skeleton className="h-8 w-8 rounded-[6px] shrink-0 bg-muted" />}
             <Skeleton
               className={cn(
-                'h-9 rounded-2xl',
+                'h-9 rounded-2xl bg-muted',
                 item.w,
                 item.isMe ? 'rounded-br-sm' : 'rounded-bl-sm',
               )}
