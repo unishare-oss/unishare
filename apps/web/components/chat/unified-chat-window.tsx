@@ -45,6 +45,17 @@ export function UnifiedChatWindow({
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showDisconnected, setShowDisconnected] = useState(false)
+
+  // Only show disconnected banner after 5s of being offline
+  useEffect(() => {
+    if (isConnected) {
+      setShowDisconnected(false)
+      return
+    }
+    const timer = setTimeout(() => setShowDisconnected(true), 5000)
+    return () => clearTimeout(timer)
+  }, [isConnected])
 
   // Fetch room data
   const { data: roomResponse } = useChatControllerGetRoom(roomId, {
@@ -200,7 +211,7 @@ export function UnifiedChatWindow({
       </div>
 
       {/* Disconnected banner */}
-      {!isConnected && (
+      {showDisconnected && (
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
           <WifiOff className="size-3 shrink-0" />
           <span>Reconnecting… Messages may be delayed.</span>
