@@ -94,7 +94,7 @@ export class ChatRepository {
       },
       {
         ...options,
-        cursorField: 'createdAt', // Use createdAt for chat history pagination
+        cursorField: 'id', // Use id for cursor (guaranteed unique)
       },
     )
   }
