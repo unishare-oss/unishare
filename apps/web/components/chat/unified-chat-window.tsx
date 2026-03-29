@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { useInView } from 'react-intersection-observer'
+import { InView, useInView } from 'react-intersection-observer'
 import {
   useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
@@ -49,6 +49,8 @@ export function UnifiedChatWindow({
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const previousScrollHeightRef = useRef<number>(0)
+  const isLoadingMoreRef = useRef(false)
 
   const isNewChat = !roomId && !!targetUserId
 
@@ -106,17 +108,38 @@ export function UnifiedChatWindow({
   )
 
   // Intersection observer for loading more messages
-  const { ref: loadMoreRef, inView } = useInView({
-    threshold: 0,
-    rootMargin: '100px',
-  })
+  const { ref: loadMoreRef, inView } = useInView()
 
   // Load more when scroll trigger is in view
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
+      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+      if (scrollContainer) {
+        // Save scroll height before fetching
+        previousScrollHeightRef.current = scrollContainer.scrollHeight
+        isLoadingMoreRef.current = true
+      }
       fetchNextPage()
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  // Restore scroll position after loading older messages
+  useEffect(() => {
+    if (!isFetchingNextPage && isLoadingMoreRef.current) {
+      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+      if (scrollContainer) {
+        const currentScrollHeight = scrollContainer.scrollHeight
+        const heightDifference = currentScrollHeight - previousScrollHeightRef.current
+
+        // Adjust scroll position to maintain visual position
+        if (heightDifference > 0) {
+          scrollContainer.scrollTop += heightDifference
+        }
+
+        isLoadingMoreRef.current = false
+      }
+    }
+  }, [isFetchingNextPage])
 
   // Create room mutation (only for new chats)
   const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
@@ -185,12 +208,19 @@ export function UnifiedChatWindow({
     })
   }, [lastSocketMessage, roomId, queryClient, user])
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom only for new messages (not when loading more)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isLoadingMoreRef.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        // Only auto-scroll if user is near bottom (within 100px)
+        const isNearBottom =
+          scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight <
+          100
+
+        if (isNearBottom) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight
+        }
       }
     }
   }, [messages])
