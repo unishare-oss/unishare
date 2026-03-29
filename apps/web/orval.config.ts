@@ -18,6 +18,8 @@ export default defineConfig({
         query: {
           useQuery: true,
           useMutation: true,
+          useInfinite: true,
+          useInfiniteQueryParam: 'cursor',
         },
       },
     },
