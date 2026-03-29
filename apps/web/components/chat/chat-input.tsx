@@ -26,11 +26,11 @@ export function ChatInput({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && onSend()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && !disabled && onSend()}
           className="flex-1"
         />
-        <Button size="icon" onClick={onSend} className="h-10 w-10 shrink-0">
-          <Send className="h-4 w-4" />
+        <Button size="icon" onClick={onSend} disabled={disabled} className="h-10 w-10 shrink-0">
+          {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>

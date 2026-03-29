@@ -1,11 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsUrl } from 'class-validator'
+import { IsString, IsOptional, IsEnum, IsUrl, ValidateIf, IsNotEmpty } from 'class-validator'
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { ChatMessageType } from '@/generated/prisma/client'
 
 export class SendMessageDto {
   @ApiPropertyOptional()
+  @ValidateIf((o) => !o.imageUrl && !o.linkUrl)
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   content?: string
 
   @ApiPropertyOptional({ enum: ChatMessageType })

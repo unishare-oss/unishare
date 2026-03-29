@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '@/contexts/auth-context'
 import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -45,11 +45,11 @@ export function useChatSocket() {
     }
   }, [session])
 
-  const joinRoom = (roomId: string) => {
+  const joinRoom = useCallback((roomId: string) => {
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }
-  }
+  }, [])
 
   return {
     isConnected,

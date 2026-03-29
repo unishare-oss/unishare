@@ -117,7 +117,11 @@ export function UnifiedChatWindow({
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
   // Create room mutation (only for new chats)
-  const { mutateAsync: createRoom } = useCreateRoom({ user, targetUser, targetUserId })
+  const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
+    user,
+    targetUser,
+    targetUserId,
+  })
 
   // Send message mutation
   const { mutate: sendMessage, isPending: isSending } = useSendMessage({ roomId, user })
@@ -212,6 +216,22 @@ export function UnifiedChatWindow({
                 image: targetUser.image,
               },
             },
+            ...(user
+              ? [
+                  {
+                    id: 'mock-participant-me',
+                    roomId: 'new-room-' + targetUserId,
+                    userId: user.id,
+                    lastReadAt: new Date().toISOString(),
+                    joinedAt: new Date().toISOString(),
+                    user: {
+                      id: user.id,
+                      name: user.name,
+                      image: user.image,
+                    },
+                  },
+                ]
+              : []),
           ],
           messages: [],
         }
@@ -395,6 +415,7 @@ export function UnifiedChatWindow({
             value={content}
             onChange={setContent}
             onSend={handleSend}
+            disabled={isSending || isCreating}
             placeholder={isNewChat ? 'Say hello...' : undefined}
           />
         </div>
