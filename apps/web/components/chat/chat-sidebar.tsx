@@ -1,7 +1,10 @@
 'use client'
 
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
-import { chatControllerGetOrCreateDmRoom } from '@/src/lib/api/generated/chat/chat'
+import {
+  chatControllerGetOrCreateDmRoom,
+  getChatControllerGetRoomsQueryKey,
+} from '@/src/lib/api/generated/chat/chat'
 import {
   useFollowsControllerGetFollowing,
   useFollowsControllerGetFollowers,
@@ -15,6 +18,7 @@ import { format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter, usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Users, MessageSquare } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -25,6 +29,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
   const { session } = useAuth()
   const currentUserId = session?.user?.id
 
@@ -50,6 +55,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     setPendingUserId(userId)
     try {
       const res = await chatControllerGetOrCreateDmRoom(userId)
+      await queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
       router.push(`/chat/${res.data.id}`)
     } finally {
       setPendingUserId(null)
