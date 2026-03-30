@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -24,12 +25,14 @@ export function useChatSocket() {
 
     socket.on('connect', () => {
       setIsConnected(true)
-      console.log('Chat socket connected')
     })
 
     socket.on('disconnect', () => {
       setIsConnected(false)
-      console.log('Chat socket disconnected')
+    })
+
+    socket.on('connect_error', () => {
+      setIsConnected(false)
     })
 
     socket.on('receive-message', (message: any) => {
@@ -38,6 +41,7 @@ export function useChatSocket() {
 
     socket.on('error', (error: any) => {
       console.error('Chat socket error:', error)
+      toast.error('Chat connection error. Messages may not be delivered.')
     })
 
     return () => {
@@ -45,11 +49,11 @@ export function useChatSocket() {
     }
   }, [session])
 
-  const joinRoom = (roomId: string) => {
+  const joinRoom = useCallback((roomId: string) => {
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }
-  }
+  }, [])
 
   return {
     isConnected,

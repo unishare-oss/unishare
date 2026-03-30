@@ -2640,7 +2640,8 @@
         "properties": {
           "type": { "type": "string", "enum": ["DM", "GROUP"] },
           "participantIds": { "type": "array", "items": { "type": "string" } },
-          "name": { "type": "string" }
+          "name": { "type": "string" },
+          "initialMessage": { "type": "string" }
         },
         "required": ["type", "participantIds"]
       },

@@ -84,11 +84,11 @@ export function OverviewPane({
                 <div className="text-center">
                   <p className="font-semibold text-sm">{displayName}</p>
                   <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
-                    {room!.type === 'DM'
+                    {room?.type === 'DM'
                       ? 'Direct Message'
-                      : `Group · ${room!.participants?.length ?? 0} members`}
+                      : `Group · ${room?.participants?.length ?? 0} members`}
                   </p>
-                  {room!.createdAt && (
+                  {room?.createdAt && (
                     <p className="text-[10px] text-muted-foreground mt-1">
                       Created {formatDistanceToNow(new Date(room!.createdAt), { addSuffix: true })}
                     </p>

@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 
 export default function ChatRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params)
-  const { joinRoom, lastMessage } = useChatSocket()
+  const { joinRoom, lastMessage, isConnected } = useChatSocket()
 
   useEffect(() => {
     if (roomId) {
@@ -22,6 +22,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ roomId: str
         roomId={roomId}
         key={roomId}
         lastSocketMessage={lastMessage ?? undefined}
+        isConnected={isConnected}
       />
     </ChatPageTransition>
   )

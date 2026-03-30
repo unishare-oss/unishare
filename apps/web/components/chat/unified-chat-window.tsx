@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { useInView } from 'react-intersection-observer'
 import {
-  useChatControllerGetMessages,
+  useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
-  getChatControllerGetMessagesQueryKey,
-  getChatControllerGetRoomsQueryKey,
-  getChatControllerGetRoomQueryKey,
+  getChatControllerGetMessagesInfiniteQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import { useUsersControllerGetById } from '@/src/lib/api/generated/users/users'
 import type {
@@ -16,9 +15,11 @@ import type {
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
+import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
+import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ArrowLeft, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { cn } from '@/lib/utils'
@@ -32,12 +33,14 @@ interface UnifiedChatWindowProps {
   roomId?: string
   targetUserId?: string
   lastSocketMessage?: ChatMessageEntity
+  isConnected?: boolean
 }
 
 export function UnifiedChatWindow({
   roomId,
   targetUserId,
   lastSocketMessage,
+  isConnected = true,
 }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
   const router = useRouter()
@@ -79,25 +82,62 @@ export function UnifiedChatWindow({
       }
     : undefined
 
-  // Fetch messages (only if roomId exists)
-  const { data: initialMessages, isLoading: messagesLoading } = useChatControllerGetMessages(
+  // Fetch messages with infinite scroll (only if roomId exists)
+  const {
+    data: messagesData,
+    isLoading: messagesLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useChatControllerGetMessagesInfinite(
     roomId || '',
     {
       limit: 50,
-      direction: 'asc',
+      direction: 'desc', // Fetch newest first, will reverse for display
     },
     {
-      query: { enabled: !!roomId },
+      query: {
+        enabled: !!roomId,
+        getNextPageParam: (lastPage) => {
+          return lastPage.data.hasMore ? lastPage.data.nextCursor : undefined
+        },
+      },
     },
   )
 
+  // Intersection observer for loading more messages
+  const { ref: loadMoreRef, inView } = useInView()
+
+  // Scroll position restoration hook
+  const { prepareForLoad, isLoadingMore } = useScrollPositionRestore({
+    scrollRef,
+    isFetchingNextPage,
+  })
+
+  // Load more when scroll trigger is in view
+  useEffect(() => {
+    // Don't trigger if we're already loading or just finished loading
+    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMore.current) {
+      prepareForLoad()
+      fetchNextPage()
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
+
   // Create room mutation (only for new chats)
-  const { mutateAsync: createRoom } = useCreateRoom({ user, targetUser, targetUserId })
+  const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
+    user,
+    targetUser,
+    targetUserId,
+  })
 
   // Send message mutation
-  const { mutate: sendMessage, isPending: isSending } = useSendMessage({ roomId, user })
+  const { mutate: sendMessage } = useSendMessage({ roomId, user })
 
-  const initialMsgs = useMemo(() => initialMessages?.data?.items ?? [], [initialMessages])
+  // Flatten all pages and reverse to show oldest first
+  const initialMsgs = useMemo(() => {
+    if (!messagesData?.pages) return []
+    return messagesData.pages.flatMap((page) => page.data.items).reverse() // Reverse because we fetch desc but display asc
+  }, [messagesData])
 
   const messages = useMemo(() => {
     if (!searchQuery.trim()) return initialMsgs
@@ -115,38 +155,33 @@ export function UnifiedChatWindow({
     )
       return
 
-    const messagesQueryKey = getChatControllerGetMessagesQueryKey(roomId, {
+    const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
       limit: 50,
-      direction: 'asc',
+      direction: 'desc',
     })
 
-    // Add socket message directly to cache
-    queryClient.setQueryData(messagesQueryKey, (old: any) => {
-      if (!old?.data?.items) return old
+    // Add socket message to the first page (most recent)
+    queryClient.setQueryData(messagesQueryKey, (old: any) =>
+      addMessageToInfiniteCache(old, lastSocketMessage),
+    )
+  }, [lastSocketMessage, roomId, queryClient, user])
 
-      // Check if message already exists
-      const exists = old.data.items.some((m: ChatMessageEntity) => m.id === lastSocketMessage.id)
-      if (exists) return old
-
-      return {
-        ...old,
-        data: {
-          ...old.data,
-          items: [...old.data.items, lastSocketMessage],
-        },
-      }
-    })
-  }, [lastSocketMessage, roomId, queryClient])
-
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom only for new messages (not when loading more)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isLoadingMore.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        // Only auto-scroll if user is near bottom (within 100px)
+        const isNearBottom =
+          scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight <
+          100
+
+        if (isNearBottom) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight
+        }
       }
     }
-  }, [messages])
+  }, [messages, isLoadingMore])
 
   // Create mock room for new chats (info pane display)
   const mockRoom: ChatRoomEntity | undefined =
@@ -171,6 +206,22 @@ export function UnifiedChatWindow({
                 image: targetUser.image,
               },
             },
+            ...(user
+              ? [
+                  {
+                    id: 'mock-participant-me',
+                    roomId: 'new-room-' + targetUserId,
+                    userId: user.id,
+                    lastReadAt: new Date().toISOString(),
+                    joinedAt: new Date().toISOString(),
+                    user: {
+                      id: user.id,
+                      name: user.name,
+                      image: user.image,
+                    },
+                  },
+                ]
+              : []),
           ],
           messages: [],
         }
@@ -178,76 +229,27 @@ export function UnifiedChatWindow({
 
   const displayRoom = existingRoom || mockRoom
 
-  //TODO: opt this
   const handleSend = async () => {
     if (!content.trim()) return
 
     const messageContent = content
-    setContent('') // Clear input immediately
+    setContent('')
 
     if (isNewChat && targetUserId) {
-      // Create room first, then send message
-      createRoom({
-        data: {
-          type: 'DM',
-          participantIds: [targetUserId],
-          name: targetUser?.name,
-        },
-      })
-        .then(async (roomRes) => {
-          const newRoomId = roomRes.data.id
-
-          // Prefetch room data
-          queryClient.setQueryData(getChatControllerGetRoomQueryKey(newRoomId), roomRes)
-
-          // Set optimistic message in cache
-          queryClient.setQueryData(
-            getChatControllerGetMessagesQueryKey(newRoomId, {
-              limit: 50,
-              direction: 'asc',
-            }),
-            {
-              data: {
-                items: [
-                  {
-                    id: 'temp-' + Date.now(),
-                    roomId: newRoomId,
-                    userId: session?.user?.id,
-                    type: 'TEXT',
-                    content: messageContent,
-                    imageUrl: null,
-                    linkUrl: null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    user: session?.user
-                      ? {
-                          id: session.user.id,
-                          name: session.user.name,
-                          image: session.user.image,
-                        }
-                      : undefined,
-                  },
-                ],
-                hasMore: false,
-              },
-            },
-          )
-
-          // Redirect immediately
-          router.push(`/chat/${newRoomId}`)
-
-          // Send message in background
-          sendMessage({
-            id: newRoomId,
-            data: { content: messageContent, type: 'TEXT' },
-          })
+      try {
+        await createRoom({
+          data: {
+            type: 'DM',
+            participantIds: [targetUserId],
+            name: targetUser?.name,
+            initialMessage: messageContent,
+          },
         })
-        .catch((error) => {
-          console.error('Failed to start conversation:', error)
-          setContent(messageContent) // Restore content on error
-        })
+      } catch (error) {
+        console.error('Failed to start conversation:', error)
+        setContent(messageContent)
+      }
     } else if (roomId) {
-      // Existing room - just send message
       sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
     }
   }
@@ -290,6 +292,14 @@ export function UnifiedChatWindow({
         </Button>
       </div>
 
+      {/* Disconnected banner */}
+      {roomId && !isConnected && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
+          <WifiOff className="size-3 shrink-0" />
+          <span>Reconnecting… Messages may be delayed.</span>
+        </div>
+      )}
+
       {/* Body: messages + optional info pane */}
       <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
         {/* Messages Area */}
@@ -299,8 +309,17 @@ export function UnifiedChatWindow({
           ) : (
             <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
               <div className="flex flex-col gap-4 max-w-6xl mx-auto">
+                {/* Load more trigger (at top for loading older messages) */}
+                {hasNextPage && (
+                  <div ref={loadMoreRef} className="flex justify-center py-2">
+                    {isFetchingNextPage && (
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                )}
+
                 {/* Conversation Start Header */}
-                {displayUser && (
+                {displayUser && !hasNextPage && (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <Avatar className="h-20 w-20 mb-4 rounded-[6px]">
                       <AvatarImage src={displayUser.image || ''} />
@@ -338,6 +357,7 @@ export function UnifiedChatWindow({
             value={content}
             onChange={setContent}
             onSend={handleSend}
+            disabled={isCreating}
             placeholder={isNewChat ? 'Say hello...' : undefined}
           />
         </div>
