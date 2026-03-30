@@ -40,6 +40,11 @@ export const metadata: Metadata = {
   icons: {
     apple: '/android-chrome-192x192.png',
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
   openGraph: {
     title: 'Unishare — Student Resource Sharing',
     description:
@@ -69,9 +74,28 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  const appUrl = process.env.APP_URL ?? 'https://share.psstee.dev'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Unishare',
+    url: appUrl,
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${appUrl}/feed?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="theme-unishare"

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
   title: 'Reports',
+  robots: { index: false, follow: false },
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
