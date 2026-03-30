@@ -1,7 +1,16 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Terms of Service' }
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'Read the terms and conditions governing your use of the Unishare platform.',
+  openGraph: {
+    title: 'Terms of Service | Unishare',
+    description: 'Read the terms and conditions governing your use of the Unishare platform.',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Unishare' }],
+  },
+}
 
 export default function TermsPage() {
   return (

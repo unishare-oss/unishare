@@ -19,7 +19,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ),
   title: {
     template: '%s | Unishare',
     default: 'Unishare — Student Resource Sharing',
@@ -38,6 +40,25 @@ export const metadata: Metadata = {
   icons: {
     apple: '/android-chrome-192x192.png',
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
+  openGraph: {
+    title: 'Unishare — Student Resource Sharing',
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Unishare' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Unishare — Student Resource Sharing',
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    images: ['/og-image.png'],
+  },
 }
 
 export const viewport: Viewport = {
@@ -53,9 +74,28 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  const appUrl = process.env.APP_URL ?? 'https://share.psstee.dev'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Unishare',
+    url: appUrl,
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${appUrl}/feed?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="theme-unishare"

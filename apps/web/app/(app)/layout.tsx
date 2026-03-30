@@ -7,6 +7,8 @@ export const metadata: Metadata = {
     absolute: 'Feed | Unishare',
     template: '%s | Unishare',
   },
+  description:
+    'Browse lecture notes, past papers, and study guides shared by students on Unishare.',
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {

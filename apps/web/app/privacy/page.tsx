@@ -1,7 +1,16 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Privacy Policy' }
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Learn how Unishare collects, uses, and protects your personal information.',
+  openGraph: {
+    title: 'Privacy Policy | Unishare',
+    description: 'Learn how Unishare collects, uses, and protects your personal information.',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Unishare' }],
+  },
+}
 
 export default function PrivacyPage() {
   return (
