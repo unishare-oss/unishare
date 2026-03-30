@@ -246,7 +246,7 @@ export class PostsService {
 
   /**
    * Search posts by full-text search
-   * Searches across title and description using PostgreSQL FTS
+   * Searches across title, description, and course code using PostgreSQL FTS
    */
   async searchPosts(
     query: string,
@@ -265,15 +265,18 @@ export class PostsService {
     const searchQuery = query.trim()
 
     // Use raw SQL only to get ordered IDs — avoids deserializing the Unsupported tsvector column.
-    // Also matches against tag names so searching "calculus" finds posts tagged with it.
+    // Uses 'simple' dictionary (no stemming) so alphanumeric course codes like "csc217" are
+    // preserved and match correctly. Also falls back to ILIKE on course code and tag name.
     const ranked = (await this.prisma.$queryRaw`
       SELECT DISTINCT ON (p.id) p.id,
-        ts_rank(p."searchVector", plainto_tsquery('english', ${searchQuery})) as relevance
+        ts_rank(p."searchVector", plainto_tsquery('simple', ${searchQuery})) as relevance
       FROM "post" p
+      LEFT JOIN "course" c ON c.id = p."courseId"
       LEFT JOIN "post_tag" pt ON pt."postId" = p.id
       LEFT JOIN "tag" t ON t.id = pt."tagId"
       WHERE (
-        p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+        p."searchVector" @@ plainto_tsquery('simple', ${searchQuery})
+        OR c.code ILIKE ${'%' + searchQuery + '%'}
         OR t.name ILIKE ${'%' + searchQuery + '%'}
       )
         AND p.status = ${'APPROVED'}
@@ -287,10 +290,12 @@ export class PostsService {
     const totalResult = (await this.prisma.$queryRaw`
       SELECT COUNT(DISTINCT p.id) as count
       FROM "post" p
+      LEFT JOIN "course" c ON c.id = p."courseId"
       LEFT JOIN "post_tag" pt ON pt."postId" = p.id
       LEFT JOIN "tag" t ON t.id = pt."tagId"
       WHERE (
-        p."searchVector" @@ plainto_tsquery('english', ${searchQuery})
+        p."searchVector" @@ plainto_tsquery('simple', ${searchQuery})
+        OR c.code ILIKE ${'%' + searchQuery + '%'}
         OR t.name ILIKE ${'%' + searchQuery + '%'}
       )
         AND p.status = ${'APPROVED'}
