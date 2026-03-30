@@ -1,12 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import { TrendingService } from './trending.service'
 
 @Injectable()
-export class TrendingScheduler {
+export class TrendingScheduler implements OnModuleInit {
   private readonly logger = new Logger(TrendingScheduler.name)
 
   constructor(private readonly trendingService: TrendingService) {}
+
+  async onModuleInit() {
+    await this.trendingService.refreshTrendingScores()
+  }
 
   /**
    * Refresh trending scores every 5 minutes.
