@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ReactNode, useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
 
 interface ChatPageTransitionProps {
   children: ReactNode
@@ -24,7 +25,7 @@ export function ChatPageTransition({ children, direction = 'forward' }: ChatPage
 
   return (
     <motion.div
-      className="flex flex-col h-full w-full"
+      className={cn('flex flex-col h-full w-full', direction === 'forward' && 'bg-background')}
       initial={{ x: direction === 'forward' ? '100%' : '-30%', opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: direction === 'forward' ? '-30%' : '100%', opacity: 0 }}

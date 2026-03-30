@@ -2,15 +2,17 @@
 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 
 export function DetailPane({
   title,
   onBack,
+  onClose,
   children,
 }: {
   title: string
   onBack: () => void
+  onClose?: () => void
   children: React.ReactNode
 }) {
   return (
@@ -19,7 +21,12 @@ export function DetailPane({
         <Button variant="ghost" size="icon-xs" onClick={onBack} className="shrink-0">
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="text-sm font-semibold">{title}</span>
+        <span className="text-sm font-semibold flex-1">{title}</span>
+        {onClose && (
+          <Button variant="ghost" size="icon-xs" className="md:hidden" onClick={onClose}>
+            <X className="size-4" />
+          </Button>
+        )}
       </div>
       <ScrollArea className="flex-1">{children}</ScrollArea>
     </div>

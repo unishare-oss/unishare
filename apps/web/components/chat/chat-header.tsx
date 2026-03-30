@@ -29,7 +29,7 @@ export function ChatHeader({ user, isNew }: ChatHeaderProps) {
   }
 
   return (
-    <div className="flex items-center p-3.5 bg-background/95 backdrop-blur">
+    <div className="flex items-center p-3.5 bg-background">
       <div className="flex items-center gap-3">
         <Avatar className="h-8 w-8 rounded-[6px]">
           <AvatarImage src={user?.image || ''} />

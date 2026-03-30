@@ -20,7 +20,7 @@ export function ChatInput({
   placeholder = 'Type a message...',
 }: ChatInputProps) {
   return (
-    <div className="p-3.5 border-t bg-background/95 backdrop-blur sticky bottom-0">
+    <div className="p-3.5 border-t bg-background sticky bottom-0">
       <div className="flex items-center gap-2 max-w-4xl mx-auto">
         <Input
           placeholder={placeholder}

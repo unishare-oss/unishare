@@ -265,7 +265,7 @@ export function UnifiedChatWindow({
 
   if ((isNewChat && userLoading) || (!isNewChat && !roomId)) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -274,7 +274,7 @@ export function UnifiedChatWindow({
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat Header */}
-      <div className="flex items-center justify-between border-b pr-3 bg-background/95 backdrop-blur">
+      <div className="flex items-center justify-between border-b pr-3 bg-background">
         <div className="flex items-center">
           <Button
             variant="ghost"
@@ -378,8 +378,8 @@ export function UnifiedChatWindow({
         {/* Info Pane */}
         <div
           className={cn(
-            'relative border-l bg-background/95 overflow-hidden transition-all duration-300 ease-in-out flex-shrink-0 h-full',
-            infoPaneOpen ? 'w-64' : 'w-0',
+            'fixed inset-y-0 right-0 z-50 w-full bg-background shadow-2xl transition-transform duration-300 ease-in-out md:relative md:inset-auto md:z-0 md:translate-x-0 md:shadow-none md:border-l md:transition-[width]',
+            infoPaneOpen ? 'translate-x-0 md:w-64' : 'translate-x-full md:w-0',
           )}
         >
           <ChatInfoPane
@@ -389,6 +389,7 @@ export function UnifiedChatWindow({
             isOpen={infoPaneOpen}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            onClose={() => setInfoPaneOpen(false)}
           />
         </div>
       </div>

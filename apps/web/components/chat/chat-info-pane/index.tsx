@@ -20,6 +20,7 @@ interface ChatInfoPaneProps {
   isOpen: boolean
   searchQuery: string
   onSearchChange: (q: string) => void
+  onClose?: () => void
 }
 
 export function ChatInfoPane({
@@ -29,6 +30,7 @@ export function ChatInfoPane({
   isOpen,
   searchQuery,
   onSearchChange,
+  onClose,
 }: ChatInfoPaneProps) {
   const [view, setView] = useState<PaneView>('overview')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
@@ -122,11 +124,12 @@ export function ChatInfoPane({
                 linksCount={sharedLinks.length}
                 photosPreviews={sharedPhotos.slice(0, 3).map((m) => m.imageUrl as string)}
                 onNavigate={navigate}
+                onClose={onClose}
               />
             )}
 
             {view === 'members' && (
-              <DetailPane title="Members" onBack={goBack}>
+              <DetailPane title="Members" onBack={goBack} onClose={onClose}>
                 <div className="flex flex-col gap-1 px-4 py-3">
                   {isLoading
                     ? [1, 2, 3].map((i) => (
@@ -162,7 +165,7 @@ export function ChatInfoPane({
             )}
 
             {view === 'photos' && (
-              <DetailPane title="Photos" onBack={goBack}>
+              <DetailPane title="Photos" onBack={goBack} onClose={onClose}>
                 <div className="px-4 py-3">
                   {sharedPhotos.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-4 text-center">No photos yet</p>
@@ -189,7 +192,7 @@ export function ChatInfoPane({
             )}
 
             {view === 'links' && (
-              <DetailPane title="Links" onBack={goBack}>
+              <DetailPane title="Links" onBack={goBack} onClose={onClose}>
                 <div className="flex flex-col gap-1 px-4 py-3">
                   {sharedLinks.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-4 text-center">No links yet</p>
@@ -215,7 +218,7 @@ export function ChatInfoPane({
             )}
 
             {view === 'settings' && (
-              <DetailPane title="Settings" onBack={goBack}>
+              <DetailPane title="Settings" onBack={goBack} onClose={onClose}>
                 <div className="flex flex-col gap-1 px-3 py-3">
                   {[
                     { icon: Bell, label: 'Mute notifications' },
