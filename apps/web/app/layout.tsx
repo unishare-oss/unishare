@@ -38,6 +38,20 @@ export const metadata: Metadata = {
   icons: {
     apple: '/android-chrome-192x192.png',
   },
+  openGraph: {
+    title: 'Unishare — Student Resource Sharing',
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Unishare' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Unishare — Student Resource Sharing',
+    description:
+      "Every lecture note, past paper, and study guide — shared by students who've been there.",
+    images: ['/og-image.png'],
+  },
 }
 
 export const viewport: Viewport = {
