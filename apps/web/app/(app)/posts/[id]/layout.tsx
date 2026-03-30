@@ -59,7 +59,7 @@ export default async function Layout({
   const { id } = await params
   const post = await getPost(id)
 
-  const title = post?.title ?? `${post?.course?.code} — ${post?.course?.name}` ?? 'Post'
+  const title = post ? (post.title ?? `${post.course.code} — ${post.course.name}`) : 'Post'
   const description = post?.description?.slice(0, 160) ?? ''
 
   const jsonLd = post
