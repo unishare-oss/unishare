@@ -21,6 +21,13 @@ export default defineConfig({
           useInfinite: true,
           useInfiniteQueryParam: 'cursor',
         },
+        operations: {
+          AdminReportsController_listReports: {
+            query: {
+              useInfiniteQueryParam: 'page',
+            },
+          },
+        },
       },
     },
   },
