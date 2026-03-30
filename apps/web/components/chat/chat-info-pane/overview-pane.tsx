@@ -23,6 +23,7 @@ interface OverviewPaneProps {
   linksCount: number
   photosPreviews: string[]
   onNavigate: (view: PaneView) => void
+  onClose?: () => void
 }
 
 export function OverviewPane({
@@ -37,14 +38,15 @@ export function OverviewPane({
   linksCount,
   photosPreviews,
   onNavigate,
+  onClose,
 }: OverviewPaneProps) {
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
-        <div className="flex flex-col w-64">
+        <div className="flex flex-col w-full md:w-64">
           {/* Search */}
-          <div className="px-3 py-2 border-b">
-            <div className="relative">
+          <div className="px-3 py-2 border-b flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="Search messages…"
@@ -63,6 +65,11 @@ export function OverviewPane({
                 </Button>
               )}
             </div>
+            {onClose && (
+              <Button variant="ghost" size="icon-xs" className="md:hidden" onClick={onClose}>
+                <X className="size-4" />
+              </Button>
+            )}
           </div>
 
           {/* About */}
