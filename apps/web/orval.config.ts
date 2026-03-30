@@ -19,13 +19,14 @@ export default defineConfig({
           useQuery: true,
           useMutation: true,
           useInfinite: true,
-          useInfiniteQueryParam: 'cursor',
+          useInfiniteQueryParam: 'page',
         },
         operations: {
-          AdminReportsController_listReports: {
-            query: {
-              useInfiniteQueryParam: 'page',
-            },
+          ChatController_getMessages: {
+            query: { useInfiniteQueryParam: 'cursor' },
+          },
+          TagsController_autocomplete: {
+            query: { useInfinite: false },
           },
         },
       },
