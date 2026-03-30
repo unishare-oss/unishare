@@ -53,11 +53,8 @@ export function UnifiedChatWindow({
 
   // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
   useEffect(() => {
-    if (isConnected) {
-      setShowDisconnected(false)
-      return
-    }
-    const timer = setTimeout(() => setShowDisconnected(true), 5000)
+    const delay = isConnected ? 0 : 5000
+    const timer = setTimeout(() => setShowDisconnected(!isConnected), delay)
     return () => clearTimeout(timer)
   }, [isConnected])
 
