@@ -17,7 +17,7 @@ import { TrendingUp, Clock } from 'lucide-react'
 
 export type SortType = 'recent' | 'trending'
 
-export const typeFilters: TypeFilter[] = ['ALL', ...Object.values(PostType)]
+export const typeFilters: TypeFilter[] = ['ALL', PostType.NOTE, PostType.ASSIGNMENT]
 
 const typeFilterLabel: Record<TypeFilter, string> = {
   ALL: 'ALL',
