@@ -49,6 +49,17 @@ export function UnifiedChatWindow({
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showDisconnected, setShowDisconnected] = useState(false)
+
+  // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
+  useEffect(() => {
+    if (isConnected) {
+      setShowDisconnected(false)
+      return
+    }
+    const timer = setTimeout(() => setShowDisconnected(true), 5000)
+    return () => clearTimeout(timer)
+  }, [isConnected])
 
   const isNewChat = !roomId && !!targetUserId
 
@@ -293,7 +304,7 @@ export function UnifiedChatWindow({
       </div>
 
       {/* Disconnected banner */}
-      {roomId && !isConnected && (
+      {showDisconnected && (
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
           <WifiOff className="size-3 shrink-0" />
           <span>Reconnecting… Messages may be delayed.</span>
@@ -329,8 +340,11 @@ export function UnifiedChatWindow({
                     </Avatar>
                     <h2 className="text-xl font-bold">{displayUser.name}</h2>
                     <p className="text-sm text-muted-foreground max-w-xs mt-2">
-                      This is the beginning of your conversation with {displayUser.name}. Send a
-                      message to start chatting.
+                      This is the beginning of your conversation with {displayUser.name}.
+                      {!messages
+                        ? `Send a
+                      message to start chatting.`
+                        : ''}
                     </p>
                   </div>
                 )}
