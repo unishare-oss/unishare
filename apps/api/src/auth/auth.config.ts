@@ -102,6 +102,29 @@ export const auth = betterAuth({
         input: false,
         returned: true,
       },
+      consentGivenAt: {
+        type: 'date',
+        required: false,
+        input: true,
+        returned: true,
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // For OAuth signups, consent is implied by the "By signing in, you agree to..."
+        // notice shown before the OAuth buttons. We record the timestamp here since
+        // OAuth flows don't go through signUp.email() where clients can pass the field.
+        after: async (user) => {
+          if (!user.consentGivenAt) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { consentGivenAt: new Date() },
+            })
+          }
+        },
+      },
     },
   },
 })

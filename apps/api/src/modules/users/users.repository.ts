@@ -18,6 +18,62 @@ export class UsersRepository {
     },
   } as const
 
+  exportData(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        bio: true,
+        image: true,
+        enrollmentYear: true,
+        createdAt: true,
+        consentGivenAt: true,
+        department: { select: { id: true, name: true } },
+        posts: {
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            type: true,
+            status: true,
+            createdAt: true,
+            course: { select: { id: true, name: true, code: true } },
+          },
+        },
+        comments: {
+          where: { deletedAt: null },
+          select: { id: true, content: true, postId: true, createdAt: true },
+        },
+        reactions: {
+          select: { postId: true, type: true },
+        },
+        savedPosts: {
+          select: { postId: true, savedAt: true },
+        },
+        following: {
+          select: { following: { select: { id: true, name: true } }, createdAt: true },
+        },
+        followers: {
+          select: { follower: { select: { id: true, name: true } }, createdAt: true },
+        },
+        readingLists: {
+          select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            posts: { select: { postId: true, addedAt: true } },
+          },
+        },
+        postRequests: {
+          select: { id: true, title: true, description: true, createdAt: true },
+        },
+      },
+    })
+  }
+
   findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

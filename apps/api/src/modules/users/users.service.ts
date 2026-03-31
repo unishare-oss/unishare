@@ -13,6 +13,10 @@ export class UsersService {
     private readonly followsService: FollowsService,
   ) {}
 
+  async exportData(id: string) {
+    return this.usersRepository.exportData(id)
+  }
+
   async findById(id: string, viewerId?: string) {
     const user = await this.usersRepository.findById(id)
     if (!user) throw new NotFoundException('User not found')

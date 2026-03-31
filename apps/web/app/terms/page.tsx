@@ -30,8 +30,12 @@ export default function TermsPage() {
           <section>
             <h2 className="font-semibold mb-2">1. Acceptance</h2>
             <p className="text-text-secondary">
-              By accessing or using Unishare, you agree to be bound by these Terms of Service. If
-              you do not agree, do not use the platform.
+              By accessing or using Unishare, you agree to be bound by these Terms of Service and
+              our{' '}
+              <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              . If you do not agree, do not use the platform.
             </p>
           </section>
 
@@ -60,9 +64,10 @@ export default function TermsPage() {
             <ul className="list-disc pl-5 flex flex-col gap-1 text-text-secondary">
               <li>Upload content you do not have rights to share</li>
               <li>Harass, abuse, or harm other users</li>
-              <li>Attempt to gain unauthorized access to other accounts or systems</li>
+              <li>Attempt to gain unauthorised access to other accounts or systems</li>
               <li>Use the platform to distribute malware or harmful content</li>
               <li>Impersonate other users or university staff</li>
+              <li>Collect other users&apos; personal data without their consent</li>
             </ul>
           </section>
 
@@ -75,7 +80,20 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="font-semibold mb-2">6. Disclaimer</h2>
+            <h2 className="font-semibold mb-2">6. Personal Data and Privacy</h2>
+            <p className="text-text-secondary">
+              Your use of this platform is governed by our{' '}
+              <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              , which describes how we collect, use, and protect your personal data in accordance
+              with Thailand&apos;s Personal Data Protection Act B.E. 2562 (PDPA). By creating an
+              account, you consent to the data practices described therein.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-semibold mb-2">7. Disclaimer</h2>
             <p className="text-text-secondary">
               Unishare is provided as-is. We do not guarantee the accuracy, completeness, or
               usefulness of any content shared on the platform. Use at your own discretion.
@@ -83,7 +101,15 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="font-semibold mb-2">7. Changes</h2>
+            <h2 className="font-semibold mb-2">8. Governing Law</h2>
+            <p className="text-text-secondary">
+              These terms are governed by the laws of Thailand. Any disputes shall be subject to the
+              jurisdiction of the Thai courts.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-semibold mb-2">9. Changes</h2>
             <p className="text-text-secondary">
               We may update these terms at any time. Continued use of the platform after changes
               constitutes acceptance of the new terms.

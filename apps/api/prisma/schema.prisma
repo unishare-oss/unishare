@@ -24,6 +24,7 @@ model User {
   isAnonymous             Boolean?                 @default(false)
   bio                     String?
   enrollmentYear          Int?
+  consentGivenAt          DateTime?
   accounts                Account[]
   comments                Comment[]
   notifications           Notification[]
@@ -119,6 +120,7 @@ model Post {
   @@index([trendingScore])
   @@index([publicationStatus])
   @@index([createdAt])
+  @@index([searchVector], type: Gin)
   @@map("post")
 }
 

@@ -19,14 +19,36 @@ import { authClient } from '@/src/lib/auth/client'
 export function DangerZoneCard() {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/export`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `unishare-my-data-${Date.now()}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // silently ignore — browser will show nothing downloaded
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true)
-    setError('')
+    setDeleteError('')
     const { error } = await authClient.deleteUser({ callbackURL: '/login' })
     if (error) {
-      setError(error.message ?? 'Failed to delete account')
+      setDeleteError(error.message ?? 'Failed to delete account')
       setDeleting(false)
     } else {
       router.replace('/login')
@@ -40,6 +62,21 @@ export function DangerZoneCard() {
           Danger Zone
         </h3>
       </div>
+
+      {/* Download my data */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="text-sm font-medium text-foreground">Download my data</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            Export a copy of your personal data (PDPA right to data portability).
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
+          {downloading ? 'Preparing...' : 'Download'}
+        </Button>
+      </div>
+
+      {/* Delete account */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-foreground">Delete account</p>
@@ -61,7 +98,7 @@ export function DangerZoneCard() {
                 deleted.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {error && <p className="text-xs text-destructive px-1">{error}</p>}
+            {deleteError && <p className="text-xs text-destructive px-1">{deleteError}</p>}
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
