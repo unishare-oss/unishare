@@ -299,7 +299,7 @@ export default function LoginPage() {
                   >
                     Privacy Policy
                   </Link>
-                  , and consent to the collection and use of my personal data.
+                  .
                 </label>
               </div>
               {signUpForm.formState.errors.consentAccepted && (
