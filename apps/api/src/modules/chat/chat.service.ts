@@ -67,7 +67,52 @@ export class ChatService {
         message,
         participants: room.participants,
       })
+
+      // Refetch room with the newly created message included
+      return this.chatRepository.findRoomById(room.id)
     }
+
+    return room
+  }
+
+  async createDM(creatorId: string, otherUserId: string, initialMessage?: string) {
+    // Check for existing DM room
+    const existingRoom = await this.chatRepository.findDirectMessageRoom(creatorId, otherUserId)
+    if (existingRoom) {
+      return this.chatRepository.findRoomById(existingRoom.id)
+    }
+
+    // Create new DM room
+    const room = await this.chatRepository.createRoom(ChatRoomType.DM, [creatorId, otherUserId])
+
+    // Send initial message if provided
+    if (initialMessage) {
+      const message = await this.chatRepository.createMessage({
+        roomId: room.id,
+        userId: creatorId,
+        content: initialMessage,
+        type: 'TEXT',
+      })
+
+      this.eventEmitter.emit('chat.message_sent', {
+        roomId: room.id,
+        message,
+        participants: room.participants,
+      })
+
+      // Refetch room with the newly created message included
+      return this.chatRepository.findRoomById(room.id)
+    }
+
+    return room
+  }
+
+  async createGroup(creatorId: string, name: string, participantIds: string[]) {
+    // Ensure creator is in the participant list
+    const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
+
+    // Create group room
+    const room = await this.chatRepository.createRoom(ChatRoomType.GROUP, allParticipantIds, name)
 
     return room
   }
