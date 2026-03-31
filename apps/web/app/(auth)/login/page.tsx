@@ -56,8 +56,8 @@ const signUpSchema = z
     email: z.email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    consentAccepted: z.literal(true, {
-      errorMap: () => ({ message: 'You must accept the Terms and Privacy Policy' }),
+    consentAccepted: z.boolean().refine((val) => val === true, {
+      message: 'You must accept the Terms and Privacy Policy to create an account',
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -85,7 +85,7 @@ export default function LoginPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      consentAccepted: undefined,
+      consentAccepted: false,
     },
   })
 
@@ -137,9 +137,7 @@ export default function LoginPage() {
 
         <blockquote className="max-w-lg">
           <p className="text-[30px] font-light leading-snug text-[#F7F3EE] tracking-tight text-balance">
-            {
-              'Every lecture note, past paper, and study guide \u2014 shared by students who\u2019ve been there.'
-            }
+            {'Every lecture note and study guide \u2014 shared by students who\u2019ve been there.'}
           </p>
         </blockquote>
 
