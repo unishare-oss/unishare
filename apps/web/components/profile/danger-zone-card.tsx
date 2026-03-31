@@ -25,11 +25,13 @@ export function DangerZoneCard() {
   async function handleDownload() {
     setDownloading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/export`, {
+      const res = await fetch(`/api/users/me/export`, {
         credentials: 'include',
       })
       if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
+      const json = await res.json()
+      const payload = json.data ?? json
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
