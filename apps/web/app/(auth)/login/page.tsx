@@ -56,6 +56,9 @@ const signUpSchema = z
     email: z.email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
+    consentAccepted: z.literal(true, {
+      errorMap: () => ({ message: 'You must accept the Terms and Privacy Policy' }),
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -77,7 +80,13 @@ export default function LoginPage() {
 
   const signUpForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      consentAccepted: undefined,
+    },
   })
 
   const activeForm = mode === 'signin' ? signInForm : signUpForm
@@ -101,7 +110,12 @@ export default function LoginPage() {
 
   async function onSignUp(values: SignUpValues) {
     setServerError('')
-    const { error } = await authClient.signUp.email(values)
+    const { error } = await authClient.signUp.email({
+      name: values.name,
+      email: values.email,
+      password: values.password,
+      consentGivenAt: new Date(),
+    } as Parameters<typeof authClient.signUp.email>[0])
     if (error) setServerError(error.message ?? 'Failed to create account')
     else router.replace('/')
   }
@@ -265,6 +279,36 @@ export default function LoginPage() {
                   </p>
                 )}
               </div>
+              <div className="flex items-start gap-2.5 pt-1">
+                <input
+                  type="checkbox"
+                  id="consentAccepted"
+                  className="mt-0.5 shrink-0 accent-foreground cursor-pointer"
+                  {...signUpForm.register('consentAccepted')}
+                />
+                <label
+                  htmlFor="consentAccepted"
+                  className="text-xs text-text-secondary leading-relaxed cursor-pointer"
+                >
+                  I have read and agree to the{' '}
+                  <Link href="/terms" className="underline hover:text-foreground transition-colors">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link
+                    href="/privacy"
+                    className="underline hover:text-foreground transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                  , and consent to the collection and use of my personal data.
+                </label>
+              </div>
+              {signUpForm.formState.errors.consentAccepted && (
+                <p className="text-xs text-destructive">
+                  {signUpForm.formState.errors.consentAccepted.message}
+                </p>
+              )}
               {serverError && <p className="text-xs text-destructive">{serverError}</p>}
               <Button type="submit" disabled={loading} className="w-full h-10.5 mt-1">
                 {loading ? 'Please wait...' : 'Create account'}
@@ -293,14 +337,19 @@ export default function LoginPage() {
           </div>
 
           <p className="text-xs text-text-muted text-center mt-4">
-            By signing in, you agree to our{' '}
-            <Link href="/terms" className="underline hover:text-foreground transition-colors">
-              Terms
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
+            {mode === 'signup' && (
+              <>
+                OAuth sign-up implies consent to our{' '}
+                <Link href="/terms" className="underline hover:text-foreground transition-colors">
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+                  Privacy Policy
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       </div>

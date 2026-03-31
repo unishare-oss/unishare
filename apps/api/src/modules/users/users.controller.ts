@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Res } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
+import type { Response } from 'express'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
@@ -18,6 +19,15 @@ export class UsersController {
   @ResponseMessage('Profile fetched successfully')
   getMe(@Session() session: UserSession) {
     return this.usersService.findById(session.user.id)
+  }
+
+  @Get('me/export')
+  async exportMyData(@Session() session: UserSession, @Res() res: Response) {
+    const data = await this.usersService.exportData(session.user.id)
+    const filename = `unishare-data-${session.user.id}-${Date.now()}.json`
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.send(JSON.stringify(data, null, 2))
   }
 
   @Get(':id')
