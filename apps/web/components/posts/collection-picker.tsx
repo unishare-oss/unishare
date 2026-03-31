@@ -23,6 +23,7 @@ import {
   getPostsControllerFindAllQueryKey,
   getPostsControllerFindOneQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
+import type { ReadingListEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import type { ApiPost } from '@/lib/api-types'
 
 interface CollectionPickerProps {
@@ -30,6 +31,8 @@ interface CollectionPickerProps {
   align?: 'start' | 'end' | 'center'
   className?: string
 }
+
+type ListsResponse = { data: ReadingListEntity[] }
 
 export function CollectionPicker({ post, align = 'end', className }: CollectionPickerProps) {
   const { isAuthenticated } = useAuth()
@@ -40,6 +43,9 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
   const [open, setOpen] = useState(false)
   const [newListName, setNewListName] = useState('')
   const [showNewList, setShowNewList] = useState(false)
+  const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null)
+
+  const listsQueryKey = getReadingListsControllerFindAllQueryKey()
 
   const { data: listsData, isLoading: listsLoading } = useReadingListsControllerFindAll({
     query: { enabled: isAuthenticated && open },
@@ -52,60 +58,85 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
   const { mutate: removePost } = useReadingListsControllerRemovePost()
   const { mutate: createList, isPending: creatingList } = useReadingListsControllerCreate()
 
-  const isSaved = isAuthenticated ? !!post.savedByCurrentUser : isGuestSaved
+  const isSaved = optimisticSaved ?? (isAuthenticated ? !!post.savedByCurrentUser : isGuestSaved)
   const isInAnyList = lists.some((l) => l.postIds.includes(post.id))
   const showFilled = isSaved || isInAnyList
 
   function invalidatePosts() {
-    queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
-    queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }),
+    ])
   }
 
-  function invalidateLists() {
-    queryClient.invalidateQueries({ queryKey: getReadingListsControllerFindAllQueryKey() })
+  function optimisticToggleList(listId: string, adding: boolean) {
+    queryClient.setQueryData<ListsResponse>(listsQueryKey, (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        data: old.data.map((l) =>
+          l.id !== listId
+            ? l
+            : {
+                ...l,
+                postIds: adding
+                  ? [...l.postIds, post.id]
+                  : l.postIds.filter((id) => id !== post.id),
+                postCount: l.postCount + (adding ? 1 : -1),
+              },
+        ),
+      }
+    })
   }
 
   function handleAllSavedToggle() {
-    if (isSaved) {
+    const next = !isSaved
+    setOptimisticSaved(next)
+    if (!next) {
       unsavePost(
         { id: post.id },
         {
-          onSuccess: () => {
-            invalidatePosts()
-            toast.success('Removed from saved')
+          onSuccess: () => invalidatePosts().then(() => setOptimisticSaved(null)),
+          onError: () => {
+            setOptimisticSaved(!next)
+            toast.error('Could not remove from saved')
           },
-          onError: () => toast.error('Could not update'),
         },
       )
     } else {
       savePost(
         { id: post.id },
         {
-          onSuccess: () => {
-            invalidatePosts()
-            toast.success('Saved')
+          onSuccess: () => invalidatePosts().then(() => setOptimisticSaved(null)),
+          onError: () => {
+            setOptimisticSaved(!next)
+            toast.error('Could not save post')
           },
-          onError: () => toast.error('Could not update'),
         },
       )
     }
   }
 
   function handleListToggle(listId: string, inList: boolean) {
+    optimisticToggleList(listId, !inList)
     if (inList) {
       removePost(
         { id: listId, postId: post.id },
         {
-          onSuccess: invalidateLists,
-          onError: () => toast.error('Could not update collection'),
+          onError: () => {
+            optimisticToggleList(listId, true) // rollback
+            toast.error('Could not remove from collection')
+          },
         },
       )
     } else {
       addPost(
         { id: listId, postId: post.id },
         {
-          onSuccess: invalidateLists,
-          onError: () => toast.error('Could not update collection'),
+          onError: () => {
+            optimisticToggleList(listId, false) // rollback
+            toast.error('Could not add to collection')
+          },
         },
       )
     }
@@ -119,11 +150,12 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
       {
         onSuccess: (res) => {
           const newList = res.data
+          queryClient.invalidateQueries({ queryKey: listsQueryKey })
           addPost(
             { id: newList.id, postId: post.id },
             {
               onSuccess: () => {
-                invalidateLists()
+                queryClient.invalidateQueries({ queryKey: listsQueryKey })
                 toast.success(`Added to "${name}"`)
               },
               onError: () => toast.error('Could not add to collection'),
@@ -148,7 +180,6 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
           e.preventDefault()
           e.stopPropagation()
           toggleSaved(post as ApiPost)
-          toast.success(isGuestSaved ? 'Removed from saved' : 'Saved')
         }}
         aria-label={isGuestSaved ? 'Unsave post' : 'Save post'}
       >
@@ -167,10 +198,6 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
           variant="ghost"
           size="icon-sm"
           className={cn('hover:bg-background', className)}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
           aria-label="Save to collection"
         >
           <Bookmark

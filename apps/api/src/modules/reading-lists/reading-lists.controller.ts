@@ -1,16 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common'
-import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common'
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -87,8 +76,7 @@ export class ReadingListsController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
+  @ResponseMessage('Reading list deleted')
   remove(@Param('id') id: string, @Session() session: UserSession) {
     return this.readingListsService.remove(id, session.user.id)
   }
@@ -105,8 +93,7 @@ export class ReadingListsController {
   }
 
   @Delete(':id/posts/:postId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiNoContentResponse()
+  @ResponseMessage('Post removed from reading list')
   removePost(
     @Param('id') id: string,
     @Param('postId') postId: string,
