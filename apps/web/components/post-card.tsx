@@ -2,10 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bookmark, FileText, MessageSquare } from 'lucide-react'
+import { FileText, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { cn, calcYearLevel, pluralize } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { UserAvatar } from '@/components/shared/user-avatar'
@@ -13,11 +11,7 @@ import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
 import { ReportDialog } from '@/components/ReportDialog'
-import {
-  usePostsControllerSavePost,
-  usePostsControllerUnsavePost,
-  getPostsControllerFindAllQueryKey,
-} from '@/src/lib/api/generated/posts/posts'
+import { CollectionPicker } from '@/components/posts/collection-picker'
 import type { ApiPost } from '@/lib/api-types'
 
 const typeLabel: Record<string, string> = {
@@ -49,59 +43,7 @@ export function PostCard({ post }: { post: ApiPost }) {
   const router = useRouter()
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
-  const toggleSaved = useUIStore((s) => s.toggleSaved)
-  const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
   const { isAuthenticated } = useAuth()
-  const queryClient = useQueryClient()
-
-  const isSaved = isAuthenticated ? post.savedByCurrentUser : isGuestSaved
-
-  const { mutate: savePost } = usePostsControllerSavePost({
-    mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
-    },
-  })
-  const { mutate: unsavePost } = usePostsControllerUnsavePost({
-    mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
-    },
-  })
-
-  function handleSave(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (!isAuthenticated) {
-      toggleSaved(post)
-      toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
-    } else if (isSaved) {
-      unsavePost(
-        { id: post.id },
-        {
-          onSuccess: () => {
-            toast.success('Removed from saved posts')
-          },
-          onError: () => {
-            toast.error('Could not update saved posts')
-          },
-        },
-      )
-    } else {
-      savePost(
-        { id: post.id },
-        {
-          onSuccess: () => {
-            toast.success('Saved post')
-          },
-          onError: () => {
-            toast.error('Could not update saved posts')
-          },
-        },
-      )
-    }
-  }
 
   const author = post.author
 
@@ -208,18 +150,7 @@ export function PostCard({ post }: { post: ApiPost }) {
       {/* Action buttons sit outside the Link so clicks never trigger navigation */}
       <div className="absolute top-5 right-6 flex flex-col items-center gap-1">
         {isAuthenticated && !post.isOwner && <ReportDialog postId={post.id} />}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="hover:bg-background"
-          onClick={handleSave}
-          aria-label={isSaved ? 'Unsave post' : 'Save post'}
-        >
-          <Bookmark
-            className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-            strokeWidth={1.5}
-          />
-        </Button>
+        <CollectionPicker post={post} />
       </div>
     </div>
   )

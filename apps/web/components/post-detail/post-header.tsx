@@ -4,23 +4,17 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { useQueryClient } from '@tanstack/react-query'
+
 import { toast } from 'sonner'
-import { cn, calcYearLevel, pluralize } from '@/lib/utils'
+import { calcYearLevel, pluralize } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { TypeBadge } from '@/components/post-card'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
-import { useUIStore } from '@/lib/store'
 import { useAuth } from '@/contexts/auth-context'
-import {
-  usePostsControllerSavePost,
-  usePostsControllerUnsavePost,
-  getPostsControllerFindAllQueryKey,
-  getPostsControllerFindOneQueryKey,
-} from '@/src/lib/api/generated/posts/posts'
+import { CollectionPicker } from '@/components/posts/collection-picker'
 import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
 
 interface PostHeaderProps {
@@ -45,60 +39,6 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { isAuthenticated } = useAuth()
-  const toggleSaved = useUIStore((s) => s.toggleSaved)
-  const isGuestSaved = useUIStore((s) => s.savedPosts.some((p) => p.id === post.id))
-  const queryClient = useQueryClient()
-
-  const isSaved = isAuthenticated ? post.savedByCurrentUser : isGuestSaved
-
-  const { mutate: savePost } = usePostsControllerSavePost({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
-      },
-    },
-  })
-
-  const { mutate: unsavePost } = usePostsControllerUnsavePost({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
-        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
-      },
-    },
-  })
-
-  function handleSave() {
-    if (!isAuthenticated) {
-      toggleSaved(post as ApiPost)
-      toast.success(isSaved ? 'Removed from saved posts' : 'Saved post')
-    } else if (isSaved) {
-      unsavePost(
-        { id: post.id },
-        {
-          onSuccess: () => {
-            toast.success('Removed from saved posts')
-          },
-          onError: () => {
-            toast.error('Could not update saved posts')
-          },
-        },
-      )
-    } else {
-      savePost(
-        { id: post.id },
-        {
-          onSuccess: () => {
-            toast.success('Saved post')
-          },
-          onError: () => {
-            toast.error('Could not update saved posts')
-          },
-        },
-      )
-    }
-  }
 
   function handleShare() {
     navigator.clipboard.writeText(`${window.location.origin}/s/${post.shortCode}`)
@@ -242,18 +182,8 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
           )}
         </div>
         <div className="flex items-center gap-2">
-          <ActionHint label={isSaved ? 'Unsave Post' : 'Save Post'}>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleSave}
-              aria-label={isSaved ? 'Unsave post' : 'Save post'}
-            >
-              <Bookmark
-                className={cn('size-4', isSaved ? 'fill-amber text-amber' : 'text-text-muted')}
-                strokeWidth={1.5}
-              />
-            </Button>
+          <ActionHint label="Save to Collection">
+            <CollectionPicker post={post} align="end" />
           </ActionHint>
 
           <ActionHint label={copied ? 'Copied' : 'Copy Share Code'}>
