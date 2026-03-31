@@ -1480,6 +1480,48 @@
         "tags": ["chat"]
       }
     },
+    "/api/chat/dm": {
+      "post": {
+        "operationId": "ChatController_createDM",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateDMDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
+    "/api/chat/groups": {
+      "post": {
+        "operationId": "ChatController_createGroup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateGroupDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      }
+    },
     "/api/chat/rooms/{id}/read": {
       "post": {
         "operationId": "ChatController_markAsRead",
@@ -2644,6 +2686,29 @@
           "initialMessage": { "type": "string" }
         },
         "required": ["type", "participantIds"]
+      },
+      "CreateDMDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "description": "User ID to start DM with" },
+          "initialMessage": {
+            "type": "string",
+            "description": "Initial message to send with DM creation"
+          }
+        },
+        "required": ["userId"]
+      },
+      "CreateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Group name" },
+          "participantIds": {
+            "description": "Array of user IDs to add to group",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["name", "participantIds"]
       },
       "SendMessageDto": {
         "type": "object",

@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerSendMessage,
-  useChatControllerCreateRoom,
+  useChatControllerCreateDM,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
@@ -15,6 +15,42 @@ import {
   replaceMessageInInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
 import { useRouter } from 'next/navigation'
+
+/**
+ * Helper function to create an optimistic message with consistent shape
+ */
+function createOptimisticMessage({
+  tempId,
+  roomId,
+  content,
+  type = 'TEXT',
+  user,
+}: {
+  tempId: string
+  roomId: string
+  content: string
+  type?: string
+  user?: UserProfileEntity | null
+}): ChatMessageEntity {
+  return {
+    id: tempId,
+    roomId,
+    userId: user?.id || null,
+    type: type as any,
+    content,
+    imageUrl: null,
+    linkUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: user
+      ? {
+          id: user.id,
+          name: user.name,
+          image: user.image,
+        }
+      : undefined,
+  }
+}
 
 interface UseSendMessageOptions {
   roomId?: string
@@ -46,24 +82,13 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         const tempId = 'temp-' + Date.now()
 
-        const optimisticMessage: ChatMessageEntity = {
-          id: tempId,
+        const optimisticMessage = createOptimisticMessage({
+          tempId,
           roomId: variables.id,
-          userId: user?.id || null,
-          type: variables.data.type as any,
-          content: variables.data.content || null,
-          imageUrl: null,
-          linkUrl: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          user: user
-            ? {
-                id: user.id,
-                name: user.name,
-                image: user.image,
-              }
-            : undefined,
-        }
+          content: variables.data.content || '',
+          type: variables.data.type,
+          user,
+        })
 
         // Optimistically add message to cache (infinite query structure)
         queryClient.setQueryData(messagesQueryKey, (old: any) =>
@@ -76,16 +101,6 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
           const currentRoom = old.data.find((r: ChatRoomEntity) => r.id === roomId)
           if (!currentRoom) return old
-
-          // Create optimistic message matching ChatMessageEntity structure
-          const optimisticMessage: Partial<ChatMessageEntity> = {
-            id: tempId,
-            roomId: roomId,
-            userId: user?.id || null,
-            content: variables.data.content || null,
-            type: variables.data.type as any,
-            createdAt: new Date().toISOString(),
-          }
 
           const updatedRoom: ChatRoomEntity = {
             ...currentRoom,
@@ -155,17 +170,17 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
   })
 }
 
-interface UseCreateRoomOptions {
+interface UseCreateDMOptions {
   user?: UserProfileEntity | null
   targetUser?: any
   targetUserId?: string
 }
 
-export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomOptions) {
+export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptions) {
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  return useChatControllerCreateRoom({
+  return useChatControllerCreateDM({
     mutation: {
       onMutate: async (variables) => {
         const roomsQueryKey = getChatControllerGetRoomsQueryKey()
@@ -177,6 +192,7 @@ export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomO
         const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
         const tempId = 'temp-room-' + Date.now()
+        const tempMessageId = 'temp-message-' + Date.now()
 
         // Optimistically add room to cache
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
@@ -184,21 +200,40 @@ export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomO
 
           const optimisticRoom = {
             id: tempId,
-            type: variables.data.type,
-            name: variables.data.name || null,
+            type: 'DM',
+            name: targetUser?.name || null,
             imageUrl: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            participants:
-              variables.data.participantIds?.map((id) => ({
-                id: 'temp-participant-' + id,
+            participants: [
+              {
+                id: 'temp-participant-' + user?.id,
                 roomId: tempId,
-                userId: id,
+                userId: user?.id,
                 lastReadAt: new Date().toISOString(),
                 joinedAt: new Date().toISOString(),
-                user: id === targetUserId ? targetUser : user,
-              })) || [],
-            messages: [],
+                user: user,
+              },
+              {
+                id: 'temp-participant-' + targetUserId,
+                roomId: tempId,
+                userId: targetUserId,
+                lastReadAt: new Date().toISOString(),
+                joinedAt: new Date().toISOString(),
+                user: targetUser,
+              },
+            ],
+            messages: variables.data.initialMessage
+              ? [
+                  createOptimisticMessage({
+                    tempId: tempMessageId,
+                    roomId: tempId,
+                    content: variables.data.initialMessage,
+                    type: 'TEXT',
+                    user,
+                  }),
+                ]
+              : [],
           }
 
           return {
@@ -207,14 +242,45 @@ export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomO
           }
         })
 
-        return { previousRooms, roomsQueryKey, tempId }
+        const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(tempId, {
+          limit: 50,
+          direction: 'desc',
+        })
+
+        // // Optimistically pre-populate messages query if there's an initial message
+        // if (variables.data.initialMessage) {
+        //   const optimisticMessage = createOptimisticMessage({
+        //     tempId: tempMessageId,
+        //     roomId: tempId,
+        //     content: variables.data.initialMessage,
+        //     type: 'TEXT',
+        //     user,
+        //   })
+
+        //   queryClient.setQueryData(messagesQueryKey, {
+        //     pages: [
+        //       {
+        //         data: {
+        //           items: [optimisticMessage],
+        //           nextCursor: null,
+        //           hasMore: false,
+        //         },
+        //         success: true,
+        //         message: 'Messages fetched successfully',
+        //       },
+        //     ],
+        //     pageParams: [undefined],
+        //   })
+        // }
+
+        return { previousRooms, roomsQueryKey, tempId, messagesQueryKey }
       },
       onSuccess: (data, _variables, context) => {
         if (!context?.roomsQueryKey) return
 
         const realRoom = data.data
 
-        // Replace optimistic room with real one
+        // Replace optimistic room with real one, ensuring messages are included
         queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
           if (!old?.data) return old
 
@@ -222,12 +288,21 @@ export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomO
             ...old,
             data: old.data.map((item: any) => {
               if (item.id === context.tempId) {
-                return realRoom
+                // Ensure messages array is present in the real room data
+                return {
+                  ...realRoom,
+                  messages: realRoom.messages || [],
+                }
               }
               return item
             }),
           }
         })
+
+        // Pre-populate messages query with initial message from room response
+        if (realRoom.messages && realRoom.messages.length > 0) {
+          queryClient.invalidateQueries({ queryKey: context.messagesQueryKey })
+        }
 
         // Redirect to the new room
         router.push(`/chat/${data.data.id}`)

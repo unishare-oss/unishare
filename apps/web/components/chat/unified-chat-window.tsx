@@ -14,7 +14,7 @@ import type {
   ChatRoomEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
-import { useSendMessage, useCreateRoom } from '@/hooks/use-chat-mutations'
+import { useSendMessage, useCreateDM } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -134,8 +134,8 @@ export function UnifiedChatWindow({
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
 
-  // Create room mutation (only for new chats)
-  const { mutateAsync: createRoom, isPending: isCreating } = useCreateRoom({
+  // Create DM mutation (only for new chats)
+  const { mutateAsync: createDM, isPending: isCreating } = useCreateDM({
     user,
     targetUser,
     targetUserId,
@@ -248,11 +248,9 @@ export function UnifiedChatWindow({
 
     if (isNewChat && targetUserId) {
       try {
-        await createRoom({
+        await createDM({
           data: {
-            type: 'DM',
-            participantIds: [targetUserId],
-            name: targetUser?.name,
+            userId: targetUserId,
             initialMessage: messageContent,
           },
         })
@@ -341,8 +339,8 @@ export function UnifiedChatWindow({
                     <h2 className="text-xl font-bold">{displayUser.name}</h2>
                     <p className="text-sm text-muted-foreground max-w-xs mt-2">
                       This is the beginning of your conversation with {displayUser.name}.
-                      {!messages
-                        ? `Send a
+                      {messages.length === 0
+                        ? ` Send a
                       message to start chatting.`
                         : ''}
                     </p>
@@ -350,6 +348,7 @@ export function UnifiedChatWindow({
                 )}
 
                 {messages.map((msg, i) => {
+                  console.log(msg)
                   const isMe = msg.userId === user?.id
                   const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
 
