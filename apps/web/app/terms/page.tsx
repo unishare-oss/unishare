@@ -43,8 +43,8 @@ export default function TermsPage() {
             <h2 className="font-semibold mb-2">2. Use of the Platform</h2>
             <p className="text-text-secondary">
               Unishare is a platform for university students to share academic materials including
-              lecture notes, past papers, and study guides. You may only use the platform for
-              lawful, educational purposes.
+              lecture notes and study guides. You may only use the platform for lawful, educational
+              purposes.
             </p>
           </section>
 
