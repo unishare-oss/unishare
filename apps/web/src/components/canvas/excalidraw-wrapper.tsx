@@ -62,8 +62,15 @@ function ExcalidrawWrapperInner() {
         const incomingIds = new Set(elements.map((el) => el.id))
         for (const el of elements) {
           const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
+          // Only write if local element is newer (or same version, different nonce).
+          // Without this guard, a remote update can arrive and set el_A@v10 in Yjs,
+          // but B's Excalidraw might still show el_A@v5 (React batch hasn't applied
+          // the updateScene yet). B's handleChange would then write v5 back, overwriting
+          // v10 in Yjs — leaving remote users with a stale "dot" for A's drawing.
           const differs =
-            !stored || stored.version !== el.version || stored.versionNonce !== el.versionNonce
+            !stored ||
+            el.version > stored.version ||
+            (el.version === stored.version && el.versionNonce !== stored.versionNonce)
           if (differs) {
             // Shallow-clone: Excalidraw mutates elements in-place during drawing.
             // Storing a reference means stored.versionNonce === el.versionNonce always,

@@ -225,7 +225,15 @@ export function CollabProvider({
 
     return () => {
       unmountingRef.current = true
+      // Flush any buffered Yjs updates before disconnecting so that an in-progress
+      // drawing is synced to the server. Without this, navigating away mid-stroke
+      // cancels the 16ms timer and leaves other users with a permanent "dot".
       if (emitTimer) clearTimeout(emitTimer)
+      if (pendingUpdates.length > 0 && socket.connected) {
+        const merged =
+          pendingUpdates.length === 1 ? pendingUpdates[0] : Y.mergeUpdates(pendingUpdates)
+        socket.emit('yjs-update', merged)
+      }
       socketRef.current = null
       setSocketId(null)
       setParticipants([])
