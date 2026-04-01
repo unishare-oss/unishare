@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 
+interface GitHubRelease {
+  tag_name: string
+  published_at: string
+  body: string | null
+}
+
 interface Release {
   version: string
   date: string
@@ -17,9 +23,9 @@ export default function ChangelogPage() {
     const fetchReleases = async () => {
       try {
         const response = await fetch('https://api.github.com/repos/unishare-oss/unishare/releases')
-        const data = await response.json()
+        const data = (await response.json()) as GitHubRelease[]
 
-        const formattedReleases = data.map((release: any) => ({
+        const formattedReleases = data.map((release) => ({
           version: release.tag_name,
           date: release.published_at,
           notes: release.body || 'No release notes provided',
@@ -42,7 +48,7 @@ export default function ChangelogPage() {
         <div className="mb-12">
           <h1 className="text-4xl font-bold mb-3">Changelog</h1>
           <p className="text-text-muted">
-            See what's new in Unishare. We release updates regularly with new features,
+            See what&apos;s new in Unishare. We release updates regularly with new features,
             improvements, and bug fixes.
           </p>
         </div>
