@@ -86,24 +86,37 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <PageHeader title={post.title ?? 'Post'} />
 
       <div className="flex-1 bg-card">
-        <div className="max-w-240 mx-auto px-4 py-4 md:px-6 md:py-6">
+        <div className="max-w-3xl mx-auto px-4 py-8 md:px-6 md:py-12">
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}
             title={post.title ?? ''}
           />
-          <PostHeader
-            post={post}
-            isOwner={isOwner}
-            onDelete={handleDeletePost}
-            isDeleting={isDeleting}
-          />
-          <PostSummary post={post} />
-          <PostFiles post={post} />
-          <PostReactions post={post} />
-          <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
-          <div className="border-t border-border mt-4" />
-          <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+          <div className="mt-6">
+            <PostHeader
+              post={post}
+              isOwner={isOwner}
+              onDelete={handleDeletePost}
+              isDeleting={isDeleting}
+            />
+          </div>
+          {post.summary && (
+            <div className="mt-8">
+              <PostSummary post={post} />
+            </div>
+          )}
+          <div className="mt-8">
+            <PostFiles post={post} />
+          </div>
+          <div className="mt-8">
+            <PostReactions post={post} />
+          </div>
+          <div className="mt-8">
+            <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
+          </div>
+          <div className="mt-8">
+            <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+          </div>
         </div>
       </div>
     </div>
