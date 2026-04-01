@@ -153,7 +153,7 @@ export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHea
     <header className="sticky top-0 z-20 bg-card px-6 py-4 flex items-center justify-between gap-4">
       <h1 className="text-lg font-semibold text-foreground shrink-0">Feed</h1>
       <div className="flex items-center gap-3 flex-1 justify-end">
-        <div className="hidden sm:flex flex-1 max-w-[280px]">
+        <div className="flex flex-1 max-w-xs sm:max-w-[280px]">
           <SearchInput
             searchQuery={searchQuery}
             onSearchChange={onSearchChange}
