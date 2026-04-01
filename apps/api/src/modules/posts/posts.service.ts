@@ -167,6 +167,12 @@ export class PostsService {
     // Extract tags and handle separately
     const { tags, ...postData } = dto
 
+    // Treat empty string as null to explicitly clear the field
+    if (postData.externalUrl === '') {
+      postData.externalUrl = undefined
+      ;(postData as Record<string, unknown>).externalUrl = null
+    }
+
     const updatedPost = await this.postsRepository.update(id, postData, { id: userId })
 
     // Update tags if provided
