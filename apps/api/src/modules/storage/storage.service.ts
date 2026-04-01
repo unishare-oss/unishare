@@ -14,7 +14,6 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   OnModuleInit,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -76,8 +75,6 @@ export class StorageService implements OnModuleInit {
   private s3Client: S3Client
   private bucket: string
   private publicUrl: string
-  private readonly logger = new Logger(StorageService.name)
-  // In-memory ETag cache: uploadId → partNumber → ETag
   private readonly partEtagCache = new Map<string, Map<number, string>>()
 
   constructor(private readonly config: ConfigService) {}
@@ -182,7 +179,6 @@ export class StorageService implements OnModuleInit {
       ContentType: mimeType,
     })
     const result = await this.s3Client.send(command)
-    this.logger.log(`Created multipart upload: key=${key}, uploadId=${result.UploadId}`)
     return { uploadId: result.UploadId!, key }
   }
 
@@ -219,7 +215,6 @@ export class StorageService implements OnModuleInit {
     const parts = Array.from(partMap.entries())
       .sort(([a], [b]) => a - b)
       .map(([PartNumber, ETag]) => ({ PartNumber, ETag }))
-    this.logger.log(`Completing multipart upload: key=${key}, parts=${parts.length}`)
     await this.s3Client.send(
       new CompleteMultipartUploadCommand({
         Bucket: this.bucket,
