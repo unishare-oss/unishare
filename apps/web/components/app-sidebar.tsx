@@ -80,7 +80,7 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-72 min-h-screen border-r border-border bg-background fixed left-0 top-0 z-30 overflow-hidden">
+    <aside className="hidden md:flex flex-col w-72 h-screen border-r border-border bg-background fixed left-0 top-0 z-30 overflow-y-auto">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <Image
           src="/icon.svg"
@@ -120,7 +120,7 @@ export function AppSidebar() {
         ) : (
           <motion.nav
             key="main-nav"
-            className="flex flex-col gap-0.5 px-3 flex-1"
+            className="flex flex-col gap-0.5 px-3 flex-1 overflow-y-auto"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 16 }}
