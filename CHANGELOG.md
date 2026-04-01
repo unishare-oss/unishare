@@ -1,3 +1,14 @@
+# [0.5.0](https://github.com/unishare-oss/unishare/compare/v0.4.2...v0.5.0) (2026-04-01)
+
+### Bug Fixes
+
+- remove duplicate version heading from release notes ([112e874](https://github.com/unishare-oss/unishare/commit/112e874241b77703b938aeae20e62a11181d701d))
+- remove duplicate version headings from changelog page ([7585a9c](https://github.com/unishare-oss/unishare/commit/7585a9c5f75852171e3bd80d8f544f988e829463))
+
+### Features
+
+- add link to GitHub release for each version ([323da18](https://github.com/unishare-oss/unishare/commit/323da18c9545f7be40f6ca71ba7ca9c129867263))
+
 ## [0.4.2](https://github.com/unishare-oss/unishare/compare/v0.4.1...v0.4.2) (2026-04-01)
 
 ### Bug Fixes
