@@ -1,18 +1,18 @@
-name: Release
+name: Changesets Release
 
 on:
   push:
     branches:
       - main
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
       pull-requests: write
-      id-token: write
 
     steps:
       - name: Checkout
@@ -32,13 +32,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Release
-        uses: cycjimmy/semantic-release-action@v4
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
         with:
-          semantic_version: 25
-          branches: |
-            [
-              'main'
-            ]
+          publish: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

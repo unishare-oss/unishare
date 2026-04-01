@@ -9,18 +9,17 @@
     "prepare": "husky",
     "api:sync": "curl -sf http://localhost:3001/docs-json > apps/web/openapi.json && pnpm --filter web api:generate",
     "clean:cache": "rm -rf .turbo",
-    "release": "semantic-release"
+    "changeset": "changeset",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.6",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.3.0",
-    "semantic-release": "^25.0.3",
     "turbo": "latest",
     "typescript": "^5.4.0"
   },
