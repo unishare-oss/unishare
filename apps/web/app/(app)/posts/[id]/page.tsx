@@ -98,7 +98,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             onDelete={handleDeletePost}
             isDeleting={isDeleting}
           />
-          <PostSummary post={post} isOwner={isOwner} />
+          <PostSummary post={post} />
           <PostFiles post={post} />
           <PostReactions post={post} />
           <RelatedPosts courseId={post.course.id} currentPostId={post.id} />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare } from 'lucide-react'
+import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare, Sparkles } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 import { toast } from 'sonner'
@@ -16,6 +16,17 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { useAuth } from '@/contexts/auth-context'
 import { CollectionPicker } from '@/components/posts/collection-picker'
 import type { ApiPost, ApiPostDetail } from '@/lib/api-types'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+  usePostsControllerSummarize,
+  getPostsControllerFindOneQueryKey,
+} from '@/src/lib/api/generated/posts/posts'
+
+const SUPPORTED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]
 
 interface PostHeaderProps {
   post: ApiPostDetail
@@ -39,6 +50,18 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { isAuthenticated } = useAuth()
+
+  const queryClient = useQueryClient()
+  const { mutate: triggerSummarize, isPending: isSummarizing } = usePostsControllerSummarize({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) })
+      },
+    },
+  })
+
+  const hasSupportedFile = post.files?.some((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
+  const canGenerate = isOwner && hasSupportedFile && !post.summary
 
   function handleShare() {
     navigator.clipboard.writeText(`${window.location.origin}/s/${post.shortCode}`)
@@ -202,6 +225,22 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
           </ActionHint>
           {isOwner && (
             <>
+              {canGenerate && (
+                <ActionHint label="Generate Summary">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => triggerSummarize({ id: post.id })}
+                    disabled={isSummarizing}
+                    aria-label="Generate summary"
+                  >
+                    <Sparkles
+                      className={`size-4 text-text-muted ${isSummarizing ? 'animate-pulse' : ''}`}
+                      strokeWidth={1.5}
+                    />
+                  </Button>
+                </ActionHint>
+              )}
               <ActionHint label="Edit Post">
                 <Button variant="ghost" size="icon-sm" aria-label="Edit" asChild>
                   <Link href={`/posts/${post.id}/edit`}>
