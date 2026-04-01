@@ -277,7 +277,6 @@ export function UnifiedChatWindow({
                 )}
 
                 {messages.map((msg, i) => {
-                  console.log(msg)
                   const isMe = msg.userId === user?.id
                   const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
 
