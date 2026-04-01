@@ -14,6 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth()
   const pathname = usePathname()
   const isChat = pathname.startsWith('/chat')
+  const isChatRoom = /^\/chat\/.+/.test(pathname)
 
   useNotificationStream(isAuthenticated)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
@@ -46,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        <MobileNav />
+        {!isChatRoom && <MobileNav />}
       </div>
 
       {!showLoader && requiresDepartmentOnboarding && !profileModalDismissed && (
