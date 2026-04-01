@@ -24,7 +24,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session } = useAuth()
+  const { session, user } = useAuth()
   const currentUserId = session?.user?.id
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
 
@@ -48,7 +48,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM({
-    user: session?.user || null,
+    user: user || null,
   })
 
   const handleNetworkUserClick = async (user: any) => {
