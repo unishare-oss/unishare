@@ -47,9 +47,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const rooms = roomsResponse?.data || []
 
   // Create DM mutation
-  const { mutateAsync: createDM } = useCreateDM({
-    user: user || null,
-  })
+  const { mutateAsync: createDM } = useCreateDM()
 
   const handleNetworkUserClick = async (user: any) => {
     try {
