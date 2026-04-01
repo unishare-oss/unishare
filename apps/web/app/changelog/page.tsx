@@ -42,7 +42,11 @@ export default function ChangelogPage() {
         const formattedReleases = data.map((release) => {
           // Remove the version heading that semantic-release includes
           let notes = release.body || 'No release notes provided'
-          notes = notes.replace(/^#+\s+\[?\d+\.\d+\.\d+\]?\s*\(.*?\)\s*\n?/m, '').trim()
+          // Remove lines like "## [0.4.2](url) (2026-04-01)" or "0.4.2 (2026-04-01)"
+          notes = notes
+            .replace(/^#+\s+\[?[\d.]+\]?.*?\(.*?\)\s*$/m, '')
+            .replace(/^\d+\.\d+\.\d+\s*\(.*?\)\s*$/m, '')
+            .trim()
           return {
             version: release.tag_name,
             date: release.published_at,
