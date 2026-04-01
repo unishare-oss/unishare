@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --font-scale: 1;
   --background: #f7f3ee;
   --foreground: #1c1917;
   --card: #ffffff;
@@ -251,4 +252,13 @@
     border-left: 1px solid rgba(186, 160, 137, 0.85);
     border-bottom: 1px solid rgba(186, 160, 137, 0.85);
   }
+}
+
+/* Font Size Scaling */
+:root {
+  --font-scale: 1;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale));
 }
