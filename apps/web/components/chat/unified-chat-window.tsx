@@ -30,17 +30,20 @@ import { ChatMessageBubble } from './chat-message-bubble'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { Socket } from 'socket.io-client'
 
 interface UnifiedChatWindowProps {
   roomId?: string
   lastSocketMessage?: ChatMessageEntity
   isConnected?: boolean
+  socket: Socket | null
 }
 
 export function UnifiedChatWindow({
   roomId,
   lastSocketMessage,
   isConnected = true,
+  socket,
 }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
   const router = useRouter()
@@ -50,9 +53,6 @@ export function UnifiedChatWindow({
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
-
-  // Socket connection
-  const { socket } = useChatSocket()
 
   // Typing indicator
   const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', !!content.trim())

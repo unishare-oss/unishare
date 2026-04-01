@@ -49,11 +49,11 @@ export function useChatSocket() {
     }
   }, [session])
 
-  const joinRoom = useCallback((roomId: string) => {
+  const joinRoom = (roomId: string) => {
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }
-  }, [])
+  }
 
   return {
     socket: socketRef.current,

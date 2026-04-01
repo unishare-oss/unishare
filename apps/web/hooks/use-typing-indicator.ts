@@ -31,8 +31,6 @@ export function useTypingIndicator(
       // Ignore self
       if (data.userId === userId) return
 
-      console.log('TYPING')
-
       const key = `${data.userId}-${data.roomId}`
 
       if (data.isTyping) {
