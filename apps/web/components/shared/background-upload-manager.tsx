@@ -47,5 +47,16 @@ export function BackgroundUploadManager() {
     }
   }, [tasks, setStatus, setProgress, remove, queryClient])
 
+  // Warn before page unload if any upload is active
+  useEffect(() => {
+    const hasActive = tasks.some((t) => t.status === 'uploading' || t.status === 'pending')
+    if (!hasActive) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [tasks])
+
   return null
 }
