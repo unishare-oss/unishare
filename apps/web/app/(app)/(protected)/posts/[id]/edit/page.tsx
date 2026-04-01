@@ -152,7 +152,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           title: formValues.title.trim(),
           description: formValues.description.trim(),
           isAnonymous: formValues.isAnonymous,
-          externalUrl: formValues.externalUrl?.trim() ?? '',
+          externalUrl: formValues.externalUrl?.trim() || undefined,
           year: Number(formValues.year),
           semester: Number(formValues.semester),
           moduleNumber: Number(formValues.moduleNum),
