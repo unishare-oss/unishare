@@ -100,10 +100,13 @@ export default function ChangelogPage() {
                   <ReactMarkdown
                     components={{
                       h2: ({ node, ...props }) => (
-                        <h3 className="text-lg font-semibold mt-4 mb-2" {...props} />
+                        <h3
+                          className="text-lg font-bold mt-4 mb-3 px-3 py-2 rounded-md bg-amber/10 text-amber border-l-2 border-amber"
+                          {...props}
+                        />
                       ),
                       h3: ({ node, ...props }) => (
-                        <h4 className="text-base font-semibold mt-3 mb-2" {...props} />
+                        <h4 className="text-base font-semibold mt-3 mb-2 text-amber" {...props} />
                       ),
                       p: ({ node, ...props }) => <p className="mb-2" {...props} />,
                       ul: ({ node, ...props }) => (
