@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
   LogOut,
   Settings,
+  MessageSquareHeart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -24,6 +25,7 @@ import { useState } from 'react'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { authClient } from '@/src/lib/auth/client'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 
 const guestTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
@@ -63,6 +65,7 @@ export function MobileNav() {
     isAuthenticated && moreAuthItems.some((item) => pathname.startsWith(item.href))
 
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -163,7 +166,17 @@ export function MobileNav() {
                 })}
               </div>
 
-              <div className="px-5 mt-4 border-t pt-4">
+              <div className="px-5 mt-4 border-t pt-4 flex flex-col gap-1">
+                <button
+                  onClick={() => {
+                    setSheetOpen(false)
+                    setFeedbackOpen(true)
+                  }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-text-muted hover:bg-muted rounded-xl transition-colors duration-200"
+                >
+                  <MessageSquareHeart className="size-4" strokeWidth={1.5} />
+                  Feedback or bug report
+                </button>
                 <button
                   onClick={handleSignOut}
                   className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors duration-200"
@@ -176,6 +189,8 @@ export function MobileNav() {
           </Sheet>
         )}
       </div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </nav>
   )
 }
