@@ -116,7 +116,7 @@ export class PostsRepository {
       type: PostType
       title?: string
       description?: string
-      externalUrl?: string | null
+      externalUrl?: string
       isAnonymous?: boolean
       examYear?: number
       moduleNumber?: number

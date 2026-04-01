@@ -49,7 +49,7 @@ export class CreatePostDto {
   @ValidateIf((o: CreatePostDto) => o.externalUrl != null && o.externalUrl !== '')
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(500)
-  externalUrl?: string | null
+  externalUrl?: string
 
   @ApiPropertyOptional({ minimum: 1900, maximum: 2100 })
   @ValidateIf((o: CreatePostDto) => o.type === PostType.OLD_QUESTION || o.examYear !== undefined)
