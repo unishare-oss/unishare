@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { useTypingIndicator } from '@/hooks/use-typing-indicator'
-import { useChatSocket } from '@/hooks/use-chat-socket'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
@@ -48,22 +47,22 @@ export function UnifiedChatWindow({
   const { user, session } = useAuth()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const scrollRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
 
-  // Helper to scroll to bottom
-  const scrollToBottom = (smooth = false) => {
-    if (messagesContainerRef.current?.children.length) {
-      const lastElement = messagesContainerRef.current.lastChild as HTMLElement
-      lastElement?.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end',
-        inline: 'nearest',
-      })
+  // Force scroll to bottom immediately on initial load (before render completes)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const hasScrolledInitiallyRef = useRef(false)
+
+  // Callback ref to capture the ScrollArea viewport
+  const setScrollContainer = (node: HTMLDivElement | null) => {
+    if (node) {
+      scrollContainerRef.current = node.querySelector(
+        '[data-radix-scroll-area-viewport]',
+      ) as HTMLDivElement
     }
   }
 
@@ -125,7 +124,7 @@ export function UnifiedChatWindow({
 
   // Scroll position restoration hook
   const { prepareForLoad, isLoadingMore } = useScrollPositionRestore({
-    scrollRef,
+    scrollRef: scrollContainerRef,
     isFetchingNextPage,
   })
 
@@ -150,8 +149,22 @@ export function UnifiedChatWindow({
   const messages = useMemo(() => {
     if (!searchQuery.trim()) return initialMsgs
     const q = searchQuery.toLowerCase()
-    return initialMsgs.filter((m) => m.content && (m.content as any).toLowerCase().includes(q))
+    return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
   }, [initialMsgs, searchQuery])
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (
+      scrollContainerRef.current &&
+      !messagesLoading &&
+      messages.length > 0 &&
+      !hasScrolledInitiallyRef.current
+    ) {
+      // Scroll immediately without setTimeout
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+      hasScrolledInitiallyRef.current = true
+    }
+  }, [messagesLoading, messages.length])
 
   // Socket message handling (only for existing rooms)
   useEffect(() => {
@@ -169,42 +182,32 @@ export function UnifiedChatWindow({
     })
 
     // Add socket message to the first page (most recent)
-    queryClient.setQueryData(messagesQueryKey, (old: any) =>
+    queryClient.setQueryData(messagesQueryKey, (old: unknown) =>
       addMessageToInfiniteCache(old, lastSocketMessage),
     )
   }, [lastSocketMessage, roomId, queryClient, user])
-
-  // Scroll to bottom on initial load
-  const hasScrolledInitiallyRef = useRef(false)
-  useEffect(() => {
-    if (!messagesLoading && messages.length > 0 && !hasScrolledInitiallyRef.current) {
-      setTimeout(() => {
-        scrollToBottom(false)
-        hasScrolledInitiallyRef.current = true
-      }, 100)
-    }
-  }, [messagesLoading, messages.length])
 
   // Reset scroll flag when room changes
   useEffect(() => {
     hasScrolledInitiallyRef.current = false
   }, [roomId])
 
-  // Auto-scroll to bottom for new messages (only if user is near bottom)
+  // Auto-scroll to bottom for new messages and typing indicators
   useEffect(() => {
-    if (scrollRef.current && !isLoadingMore.current && hasScrolledInitiallyRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
-      if (scrollContainer) {
-        const isNearBottom =
-          scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight <
-          150
+    if (scrollContainerRef.current && !isLoadingMore.current && hasScrolledInitiallyRef.current) {
+      const isNearBottom =
+        scrollContainerRef.current.scrollHeight -
+          scrollContainerRef.current.scrollTop -
+          scrollContainerRef.current.clientHeight <
+        150
 
-        if (isNearBottom) {
-          scrollToBottom(true)
-        }
+      if (isNearBottom) {
+        // Scroll immediately for typing indicators, smoothly for regular messages
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
       }
     }
-  }, [messages])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, typingUsers.roomTypingUsers.length])
 
   const handleSend = async () => {
     if (!content.trim() || !roomId) return
@@ -276,7 +279,7 @@ export function UnifiedChatWindow({
           {messagesLoading ? (
             <ChatMessagesSkeleton />
           ) : (
-            <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
+            <ScrollArea ref={setScrollContainer} className="flex-1 min-h-0 p-4">
               <div
                 ref={messagesContainerRef}
                 className="flex flex-col gap-4 max-w-6xl mx-auto my-1"

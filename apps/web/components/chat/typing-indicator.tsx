@@ -17,10 +17,25 @@ export function TypingIndicator({ participant }: TypingIndicatorProps) {
           </AvatarFallback>
         </Avatar>
       </div>
-      <div className="max-w-[70%] rounded-2xl rounded-bl-none px-4 py-2 bg-gray-100 text-gray-900 shadow-sm flex items-center gap-1 text-sm min-h-[2.25rem]">
-        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+      <div
+        className="max-w-[70%] rounded-2xl rounded-bl-none px-4 py-2 shadow-sm flex items-center gap-1 text-sm min-h-[2.25rem]"
+        style={{
+          backgroundColor: 'var(--color-muted)',
+          color: 'var(--color-foreground)',
+        }}
+      >
+        <span
+          className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s]"
+          style={{ backgroundColor: 'var(--color-muted-foreground)' }}
+        />
+        <span
+          className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s]"
+          style={{ backgroundColor: 'var(--color-muted-foreground)' }}
+        />
+        <span
+          className="w-2 h-2 rounded-full animate-bounce"
+          style={{ backgroundColor: 'var(--color-muted-foreground)' }}
+        />
       </div>
     </div>
   )
