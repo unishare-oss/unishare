@@ -38,6 +38,7 @@ import {
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
+import { renderWithLinks } from '@/lib/render-with-links'
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
@@ -275,7 +276,7 @@ export function PostFiles({ post }: PostFilesProps) {
           Description
         </h2>
         <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
-          {post.description}
+          {renderWithLinks(post.description ?? '', 'text-primary')}
         </p>
         {post.externalUrl && (
           <a
