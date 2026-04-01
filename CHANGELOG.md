@@ -1,3 +1,9 @@
+## [0.4.2](https://github.com/unishare-oss/unishare/compare/v0.4.1...v0.4.2) (2026-04-01)
+
+### Bug Fixes
+
+- resolve linting errors in changelog page ([7a567f5](https://github.com/unishare-oss/unishare/commit/7a567f5312e8697afeb7cc8a9efdf85dcf83d0be))
+
 ## [0.4.1](https://github.com/unishare-oss/unishare/compare/v0.4.0...v0.4.1) (2026-04-01)
 
 ### Bug Fixes
