@@ -94,11 +94,17 @@ async function uploadMultipart(
           })
           const { url } = presignRes.data as PresignedPartEntity
 
-          await fetch(url, {
+          const partRes = await fetch(url, {
             method: 'PUT',
             body: chunk,
-            headers: { 'Content-Type': mimeType },
+            // No Content-Type — UploadPartCommand presigned URLs aren't signed
+            // with a content-type constraint, adding one mismatches the signature
           })
+          if (!partRes.ok) {
+            throw new Error(
+              `Part ${partNumber} upload failed: ${partRes.status} ${partRes.statusText}`,
+            )
+          }
 
           completedChunks++
           onProgress?.(Math.round((completedChunks / totalChunks) * 100))
