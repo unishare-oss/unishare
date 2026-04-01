@@ -49,10 +49,23 @@ export function UnifiedChatWindow({
   const router = useRouter()
   const queryClient = useQueryClient()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
+
+  // Helper to scroll to bottom
+  const scrollToBottom = (smooth = false) => {
+    if (messagesContainerRef.current?.children.length) {
+      const lastElement = messagesContainerRef.current.lastChild as HTMLElement
+      lastElement?.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end',
+        inline: 'nearest',
+      })
+    }
+  }
 
   // Typing indicator
   const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', !!content.trim())
@@ -161,22 +174,37 @@ export function UnifiedChatWindow({
     )
   }, [lastSocketMessage, roomId, queryClient, user])
 
-  // Auto-scroll to bottom only for new messages (not when loading more)
+  // Scroll to bottom on initial load
+  const hasScrolledInitiallyRef = useRef(false)
   useEffect(() => {
-    if (scrollRef.current && !isLoadingMore.current) {
+    if (!messagesLoading && messages.length > 0 && !hasScrolledInitiallyRef.current) {
+      setTimeout(() => {
+        scrollToBottom(false)
+        hasScrolledInitiallyRef.current = true
+      }, 100)
+    }
+  }, [messagesLoading, messages.length])
+
+  // Reset scroll flag when room changes
+  useEffect(() => {
+    hasScrolledInitiallyRef.current = false
+  }, [roomId])
+
+  // Auto-scroll to bottom for new messages (only if user is near bottom)
+  useEffect(() => {
+    if (scrollRef.current && !isLoadingMore.current && hasScrolledInitiallyRef.current) {
       const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
-        // Only auto-scroll if user is near bottom (within 100px)
         const isNearBottom =
           scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight <
-          100
+          150
 
         if (isNearBottom) {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight
+          scrollToBottom(true)
         }
       }
     }
-  }, [messages, isLoadingMore])
+  }, [messages])
 
   const handleSend = async () => {
     if (!content.trim() || !roomId) return
@@ -249,7 +277,10 @@ export function UnifiedChatWindow({
             <ChatMessagesSkeleton />
           ) : (
             <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
-              <div className="flex flex-col gap-4 max-w-6xl mx-auto">
+              <div
+                ref={messagesContainerRef}
+                className="flex flex-col gap-4 max-w-6xl mx-auto my-1"
+              >
                 {/* Load more trigger (at top for loading older messages) */}
                 {hasNextPage && (
                   <div ref={loadMoreRef} className="flex justify-center py-2">
