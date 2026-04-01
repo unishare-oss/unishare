@@ -39,11 +39,16 @@ export default function ChangelogPage() {
 
         const data = (await response.json()) as GitHubRelease[]
 
-        const formattedReleases = data.map((release) => ({
-          version: release.tag_name,
-          date: release.published_at,
-          notes: release.body || 'No release notes provided',
-        }))
+        const formattedReleases = data.map((release) => {
+          // Remove the version heading that semantic-release includes
+          let notes = release.body || 'No release notes provided'
+          notes = notes.replace(/^#+\s+\[?\d+\.\d+\.\d+\]?\s*\(.*?\)\s*\n?/m, '').trim()
+          return {
+            version: release.tag_name,
+            date: release.published_at,
+            notes,
+          }
+        })
 
         setReleases(formattedReleases)
       } catch (err) {
