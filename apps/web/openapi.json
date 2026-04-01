@@ -65,14 +65,24 @@
         "tags": ["storage"]
       }
     },
-    "/api/storage/multipart/presign-part": {
+    "/api/storage/multipart/upload-part": {
       "post": {
-        "operationId": "StorageController_presignPart",
+        "operationId": "StorageController_uploadPart",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/PresignPartDto" } }
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": { "type": "string" },
+                  "uploadId": { "type": "string" },
+                  "partNumber": { "type": "integer" },
+                  "chunk": { "type": "string", "format": "binary" }
+                }
+              }
+            }
           }
         },
         "responses": {
@@ -80,7 +90,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PresignedPartEntity" }
+                "schema": { "$ref": "#/components/schemas/UploadedPartEntity" }
               }
             }
           }
@@ -1847,33 +1857,18 @@
         "properties": { "uploadId": { "type": "string" }, "key": { "type": "string" } },
         "required": ["uploadId", "key"]
       },
-      "PresignPartDto": {
+      "UploadedPartEntity": {
         "type": "object",
-        "properties": {
-          "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 1024 },
-          "partNumber": { "type": "number", "minimum": 1, "maximum": 10000 }
-        },
-        "required": ["key", "uploadId", "partNumber"]
-      },
-      "PresignedPartEntity": {
-        "type": "object",
-        "properties": { "url": { "type": "string" } },
-        "required": ["url"]
-      },
-      "CompletedPart": {
-        "type": "object",
-        "properties": { "PartNumber": { "type": "number" }, "ETag": { "type": "string" } },
-        "required": ["PartNumber", "ETag"]
+        "properties": { "etag": { "type": "string" } },
+        "required": ["etag"]
       },
       "CompleteMultipartUploadDto": {
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 1024 },
-          "parts": { "type": "array", "items": { "$ref": "#/components/schemas/CompletedPart" } }
+          "uploadId": { "type": "string", "maxLength": 1024 }
         },
-        "required": ["key", "uploadId", "parts"]
+        "required": ["key", "uploadId"]
       },
       "AbortMultipartUploadDto": {
         "type": "object",

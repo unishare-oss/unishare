@@ -8,7 +8,7 @@ export class MultipartUploadEntity {
   key: string
 }
 
-export class PresignedPartEntity {
+export class UploadedPartEntity {
   @ApiProperty()
-  url: string
+  etag: string
 }

@@ -5,7 +5,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -78,6 +77,8 @@ export class StorageService implements OnModuleInit {
   private bucket: string
   private publicUrl: string
   private readonly logger = new Logger(StorageService.name)
+  // In-memory ETag cache: uploadId → partNumber → ETag
+  private readonly partEtagCache = new Map<string, Map<number, string>>()
 
   constructor(private readonly config: ConfigService) {}
 
@@ -94,27 +95,6 @@ export class StorageService implements OnModuleInit {
 
     this.bucket = this.config.getOrThrow('S3_BUCKET')
     this.publicUrl = this.config.getOrThrow('STORAGE_PUBLIC_URL')
-
-    // Expose ETag in CORS so browsers can collect part ETags for multipart completion
-    this.s3Client
-      .send(
-        new PutBucketCorsCommand({
-          Bucket: this.bucket,
-          CORSConfiguration: {
-            CORSRules: [
-              {
-                AllowedOrigins: ['*'],
-                AllowedMethods: ['GET', 'PUT', 'DELETE', 'HEAD'],
-                AllowedHeaders: ['*'],
-                ExposeHeaders: ['ETag'],
-                MaxAgeSeconds: 3600,
-              },
-            ],
-          },
-        }),
-      )
-      .then(() => this.logger.log('R2 CORS configured (ETag exposed)'))
-      .catch((e) => this.logger.warn(`Failed to set R2 CORS: ${e.message}`))
   }
 
   async generatePresignedUploadUrl(
@@ -206,44 +186,57 @@ export class StorageService implements OnModuleInit {
     return { uploadId: result.UploadId!, key }
   }
 
-  async presignUploadPart(key: string, uploadId: string, partNumber: number): Promise<string> {
-    this.assertSafeKey(key)
-    const command = new UploadPartCommand({
-      Bucket: this.bucket,
-      Key: key,
-      UploadId: uploadId,
-      PartNumber: partNumber,
-    })
-    return getSignedUrl(this.s3Client, command, { expiresIn: 3600 })
-  }
-
-  async completeMultipartUpload(
+  async uploadPart(
     key: string,
     uploadId: string,
-    parts: { PartNumber: number; ETag: string }[],
-  ): Promise<void> {
+    partNumber: number,
+    chunk: Buffer,
+  ): Promise<{ etag: string }> {
     this.assertSafeKey(key)
-    this.logger.log(
-      `Completing multipart upload: key=${key}, parts=${parts.length}, bucket=${this.bucket}`,
+    const result = await this.s3Client.send(
+      new UploadPartCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+        Body: chunk,
+      }),
     )
+    const etag = result.ETag!
+    if (!this.partEtagCache.has(uploadId)) {
+      this.partEtagCache.set(uploadId, new Map())
+    }
+    this.partEtagCache.get(uploadId)!.set(partNumber, etag)
+    return { etag }
+  }
 
-    const command = new CompleteMultipartUploadCommand({
-      Bucket: this.bucket,
-      Key: key,
-      UploadId: uploadId,
-      MultipartUpload: { Parts: parts },
-    })
-    await this.s3Client.send(command)
+  async completeMultipartUpload(key: string, uploadId: string): Promise<void> {
+    this.assertSafeKey(key)
+    const partMap = this.partEtagCache.get(uploadId)
+    if (!partMap || partMap.size === 0) {
+      throw new BadRequestException('No uploaded parts found for this upload session')
+    }
+    const parts = Array.from(partMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([PartNumber, ETag]) => ({ PartNumber, ETag }))
+    this.logger.log(`Completing multipart upload: key=${key}, parts=${parts.length}`)
+    await this.s3Client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: { Parts: parts },
+      }),
+    )
+    this.partEtagCache.delete(uploadId)
   }
 
   async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
     this.assertSafeKey(key)
-    const command = new AbortMultipartUploadCommand({
-      Bucket: this.bucket,
-      Key: key,
-      UploadId: uploadId,
-    })
-    await this.s3Client.send(command)
+    await this.s3Client.send(
+      new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }),
+    )
+    this.partEtagCache.delete(uploadId)
   }
 }
 

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsIn, IsInt, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator'
-import { Type } from 'class-transformer'
+import { IsIn, IsInt, IsString, Max, MaxLength, Min } from 'class-validator'
+import { Transform } from 'class-transformer'
 
 export class CreateMultipartUploadDto {
   @ApiProperty({ maxLength: 255 })
@@ -17,7 +17,7 @@ export class CreateMultipartUploadDto {
   purpose: 'post-attachment'
 }
 
-export class PresignPartDto {
+export class UploadPartDto {
   @ApiProperty({ maxLength: 500 })
   @IsString()
   @MaxLength(500)
@@ -29,21 +29,11 @@ export class PresignPartDto {
   uploadId: string
 
   @ApiProperty({ minimum: 1, maximum: 10000 })
+  @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   @Min(1)
   @Max(10000)
   partNumber: number
-}
-
-export class CompletedPart {
-  @ApiProperty()
-  @IsInt()
-  @Min(1)
-  PartNumber: number
-
-  @ApiProperty()
-  @IsString()
-  ETag: string
 }
 
 export class CompleteMultipartUploadDto {
@@ -56,11 +46,6 @@ export class CompleteMultipartUploadDto {
   @IsString()
   @MaxLength(1024)
   uploadId: string
-
-  @ApiProperty({ type: [CompletedPart] })
-  @ValidateNested({ each: true })
-  @Type(() => CompletedPart)
-  parts: CompletedPart[]
 }
 
 export class AbortMultipartUploadDto {
