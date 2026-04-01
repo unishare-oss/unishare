@@ -107,3 +107,36 @@ export const useUIStore = create<UIStore>()(
     { name: 'unishare-ui', skipHydration: true },
   ),
 )
+
+export interface UploadTask {
+  id: string // unique task id
+  postId: string
+  file: File
+  status: 'pending' | 'uploading' | 'done' | 'error'
+}
+
+interface UploadStore {
+  tasks: UploadTask[]
+  enqueue: (postId: string, files: File[]) => void
+  setStatus: (id: string, status: UploadTask['status']) => void
+  remove: (id: string) => void
+}
+
+export const useUploadStore = create<UploadStore>()((set) => ({
+  tasks: [],
+  enqueue: (postId, files) =>
+    set((s) => ({
+      tasks: [
+        ...s.tasks,
+        ...files.map((file) => ({
+          id: `${postId}-${file.name}-${Date.now()}`,
+          postId,
+          file,
+          status: 'pending' as const,
+        })),
+      ],
+    })),
+  setStatus: (id, status) =>
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
+  remove: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
+}))

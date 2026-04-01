@@ -14,6 +14,7 @@ import { FilesStep } from '@/components/posts/files-step'
 import { Button } from '@/components/ui/button'
 import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import { uploadPostFile } from '@/lib/posts/upload-post-file'
+import { useUploadStore } from '@/lib/store'
 import {
   addExamYearIssueIfPresent,
   externalUrlSchema,
@@ -84,6 +85,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   const router = useRouter()
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [removedFileIds, setRemovedFileIds] = useState<Set<string>>(new Set())
+  const enqueueUploads = useUploadStore((s) => s.enqueue)
 
   // Keep validation live so "Save changes" only enables when the current edited values are valid.
   const form = useForm<CreatePostFormValues>({ defaultValues: emptyValues, mode: 'onChange' })
@@ -167,9 +169,17 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         await removeFile({ postId: id, fileId })
       }
 
-      for (const file of newFiles) {
+      const BG_THRESHOLD = 10 * 1024 * 1024 // 10MB
+      const smallFiles = newFiles.filter((f) => f.size <= BG_THRESHOLD)
+      const largeFiles = newFiles.filter((f) => f.size > BG_THRESHOLD)
+
+      for (const file of smallFiles) {
         const uploadedFile = await uploadPostFile(file)
         await confirmUpload({ postId: id, data: uploadedFile })
+      }
+
+      if (largeFiles.length > 0) {
+        enqueueUploads(id, largeFiles)
       }
 
       toast.success('Post updated')
