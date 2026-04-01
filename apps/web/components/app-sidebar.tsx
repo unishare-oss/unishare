@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useParams, useRouter } from 'next/navigation'
@@ -21,8 +22,10 @@ import {
   Github,
   LayoutGrid,
   ChevronLeft,
+  MessageSquareHeart,
 } from 'lucide-react'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
+import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { cn } from '@/lib/utils'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { authClient } from '@/src/lib/auth/client'
@@ -51,6 +54,7 @@ const authNavItems = [
 const adminItems = [
   { href: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
   { href: '/admin/reports', label: 'Reports', icon: Flag },
+  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquareHeart },
   { href: '/admin/departments', label: 'Manage Depts', icon: Building2 },
 ]
 
@@ -62,6 +66,7 @@ export function AppSidebar() {
   const router = useRouter()
   const { session } = useAuth()
   const user = session?.user
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
@@ -207,7 +212,16 @@ export function AppSidebar() {
           <Github className="size-3.5 shrink-0" strokeWidth={1.5} />
           Open source · Contribute
         </a>
+        <button
+          onClick={() => setFeedbackOpen(true)}
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
+        >
+          <MessageSquareHeart className="size-3.5 shrink-0" strokeWidth={1.5} />
+          Feedback or bug report
+        </button>
       </div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 
       <div className="border-t border-border px-4 py-4">
         {user ? (
