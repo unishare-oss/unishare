@@ -71,6 +71,7 @@ async function uploadMultipart(
 
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
   let completedChunks = 0
+  const collectedParts: { PartNumber: number; ETag: string }[] = []
 
   try {
     // Upload chunks with limited concurrency
@@ -80,7 +81,7 @@ async function uploadMultipart(
         (_, j) => i + j,
       )
 
-      await Promise.all(
+      const batchParts = await Promise.all(
         batch.map(async (chunkIndex) => {
           const partNumber = chunkIndex + 1
           const start = chunkIndex * CHUNK_SIZE
@@ -98,7 +99,7 @@ async function uploadMultipart(
             method: 'PUT',
             body: chunk,
             // No Content-Type — UploadPartCommand presigned URLs aren't signed
-            // with a content-type constraint, adding one mismatches the signature
+            // with a content-type constraint, adding one causes a signature mismatch
           })
           if (!partRes.ok) {
             throw new Error(
@@ -106,14 +107,25 @@ async function uploadMultipart(
             )
           }
 
+          const etag = partRes.headers.get('ETag')
+          if (!etag) {
+            throw new Error(
+              `Part ${partNumber} ETag missing — ensure R2 CORS exposes the ETag header`,
+            )
+          }
+
           completedChunks++
           onProgress?.(Math.round((completedChunks / totalChunks) * 100))
+          return { PartNumber: partNumber, ETag: etag }
         }),
       )
+      collectedParts.push(...batchParts)
     }
 
-    // API uses ListParts to get ETags — no need to send them from the browser
-    await storageControllerCompleteMultipartUpload({ key, uploadId })
+    // Sort by PartNumber (S3 requires ascending order)
+    collectedParts.sort((a, b) => a.PartNumber - b.PartNumber)
+
+    await storageControllerCompleteMultipartUpload({ key, uploadId, parts: collectedParts })
 
     return { key, name: file.name, size: file.size, mimeType }
   } catch (err) {

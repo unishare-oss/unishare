@@ -5,7 +5,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  ListPartsCommand,
+  PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -15,6 +15,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   OnModuleInit,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -76,6 +77,7 @@ export class StorageService implements OnModuleInit {
   private s3Client: S3Client
   private bucket: string
   private publicUrl: string
+  private readonly logger = new Logger(StorageService.name)
 
   constructor(private readonly config: ConfigService) {}
 
@@ -92,6 +94,27 @@ export class StorageService implements OnModuleInit {
 
     this.bucket = this.config.getOrThrow('S3_BUCKET')
     this.publicUrl = this.config.getOrThrow('STORAGE_PUBLIC_URL')
+
+    // Expose ETag in CORS so browsers can collect part ETags for multipart completion
+    this.s3Client
+      .send(
+        new PutBucketCorsCommand({
+          Bucket: this.bucket,
+          CORSConfiguration: {
+            CORSRules: [
+              {
+                AllowedOrigins: ['*'],
+                AllowedMethods: ['GET', 'PUT', 'DELETE', 'HEAD'],
+                AllowedHeaders: ['*'],
+                ExposeHeaders: ['ETag'],
+                MaxAgeSeconds: 3600,
+              },
+            ],
+          },
+        }),
+      )
+      .then(() => this.logger.log('R2 CORS configured (ETag exposed)'))
+      .catch((e) => this.logger.warn(`Failed to set R2 CORS: ${e.message}`))
   }
 
   async generatePresignedUploadUrl(
@@ -179,6 +202,7 @@ export class StorageService implements OnModuleInit {
       ContentType: mimeType,
     })
     const result = await this.s3Client.send(command)
+    this.logger.log(`Created multipart upload: key=${key}, uploadId=${result.UploadId}`)
     return { uploadId: result.UploadId!, key }
   }
 
@@ -193,26 +217,15 @@ export class StorageService implements OnModuleInit {
     return getSignedUrl(this.s3Client, command, { expiresIn: 3600 })
   }
 
-  async completeMultipartUpload(key: string, uploadId: string): Promise<void> {
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: { PartNumber: number; ETag: string }[],
+  ): Promise<void> {
     this.assertSafeKey(key)
-
-    // List all uploaded parts to get their ETags (avoids CORS ETag exposure issue)
-    const parts: { PartNumber: number; ETag: string }[] = []
-    let partNumberMarker: string | undefined
-    do {
-      const listRes = await this.s3Client.send(
-        new ListPartsCommand({
-          Bucket: this.bucket,
-          Key: key,
-          UploadId: uploadId,
-          PartNumberMarker: partNumberMarker,
-        }),
-      )
-      for (const part of listRes.Parts ?? []) {
-        parts.push({ PartNumber: part.PartNumber!, ETag: part.ETag! })
-      }
-      partNumberMarker = listRes.NextPartNumberMarker
-    } while (partNumberMarker)
+    this.logger.log(
+      `Completing multipart upload: key=${key}, parts=${parts.length}, bucket=${this.bucket}`,
+    )
 
     const command = new CompleteMultipartUploadCommand({
       Bucket: this.bucket,

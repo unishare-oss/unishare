@@ -1861,13 +1861,19 @@
         "properties": { "url": { "type": "string" } },
         "required": ["url"]
       },
+      "CompletedPart": {
+        "type": "object",
+        "properties": { "PartNumber": { "type": "number" }, "ETag": { "type": "string" } },
+        "required": ["PartNumber", "ETag"]
+      },
       "CompleteMultipartUploadDto": {
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 1024 }
+          "uploadId": { "type": "string", "maxLength": 1024 },
+          "parts": { "type": "array", "items": { "$ref": "#/components/schemas/CompletedPart" } }
         },
-        "required": ["key", "uploadId"]
+        "required": ["key", "uploadId", "parts"]
       },
       "AbortMultipartUploadDto": {
         "type": "object",
