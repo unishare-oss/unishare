@@ -250,23 +250,48 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
         const realRoom = data.data
 
         // Replace optimistic room with real one, ensuring messages are included
-        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
-          if (!old?.data) return old
+        if (context.tempId) {
+          queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
+            if (!old?.data) return old
 
-          return {
-            ...old,
-            data: old.data.map((item: any) => {
-              if (item.id === context.tempId) {
-                // Ensure messages array is present in the real room data
-                return {
-                  ...realRoom,
-                  messages: realRoom.messages || [],
+            return {
+              ...old,
+              data: old.data.map((item: any) => {
+                if (item.id === context.tempId) {
+                  // Ensure messages array is present in the real room data
+                  return {
+                    ...realRoom,
+                    messages: realRoom.messages || [],
+                  }
                 }
-              }
-              return item
-            }),
-          }
-        })
+                return item
+              }),
+            }
+          })
+        }
+
+        // Pre-populate messages query with initial message from room response
+        if (realRoom.messages && realRoom.messages.length > 0) {
+          const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(realRoom.id, {
+            limit: 50,
+            direction: 'desc',
+          })
+
+          queryClient.setQueryData(messagesQueryKey, {
+            pages: [
+              {
+                data: {
+                  items: realRoom.messages,
+                  nextCursor: null,
+                  hasMore: false,
+                },
+                success: true,
+                message: 'Messages fetched successfully',
+              },
+            ],
+            pageParams: [undefined],
+          })
+        }
 
         // Redirect to the new room
         router.push(`/chat/${data.data.id}`)
