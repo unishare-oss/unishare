@@ -15,7 +15,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 
-type UploadType = 'document' | 'image'
+type UploadType = 'document' | 'image' | 'video'
 
 const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize: number }> = {
   document: {
@@ -52,6 +52,17 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
   image: {
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
     maxSize: 10 * 1024 * 1024, // 10MB
+  },
+  video: {
+    allowedMimeTypes: [
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-matroska',
+    ],
+    maxSize: 500 * 1024 * 1024, // 500MB
   },
 }
 
@@ -177,4 +188,11 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  // Video
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/ogg': 'ogv',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+  'video/x-matroska': 'mkv',
 }

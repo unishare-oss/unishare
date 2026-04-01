@@ -43,7 +43,9 @@ export async function uploadPostFile(file: File) {
 
   const uploadType = mimeType.startsWith('image/')
     ? PresignedUploadDtoUploadType.image
-    : PresignedUploadDtoUploadType.document
+    : mimeType.startsWith('video/')
+      ? PresignedUploadDtoUploadType.video
+      : PresignedUploadDtoUploadType.document
 
   const presignedRes = await storageControllerGetPresignedUploadUrl({
     mimeType,
