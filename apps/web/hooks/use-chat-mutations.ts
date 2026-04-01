@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerSendMessage,
-  useChatControllerCreateDM,
+  useChatControllerCreateRoom,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
@@ -172,15 +172,13 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
 interface UseCreateDMOptions {
   user?: UserProfileEntity | null
-  targetUser?: any
-  targetUserId?: string
 }
 
-export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptions) {
+export function useCreateDM({ user }: UseCreateDMOptions) {
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  return useChatControllerCreateDM({
+  return useChatControllerCreateRoom({
     mutation: {
       onMutate: async (variables) => {
         const roomsQueryKey = getChatControllerGetRoomsQueryKey()
@@ -192,7 +190,6 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
         const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
         const tempId = 'temp-room-' + Date.now()
-        const tempMessageId = 'temp-message-' + Date.now()
 
         // Optimistically add room to cache
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
@@ -201,7 +198,7 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
           const optimisticRoom = {
             id: tempId,
             type: 'DM',
-            name: targetUser?.name || null,
+            name: null,
             imageUrl: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -214,26 +211,8 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
                 joinedAt: new Date().toISOString(),
                 user: user,
               },
-              {
-                id: 'temp-participant-' + targetUserId,
-                roomId: tempId,
-                userId: targetUserId,
-                lastReadAt: new Date().toISOString(),
-                joinedAt: new Date().toISOString(),
-                user: targetUser,
-              },
             ],
-            messages: variables.data.initialMessage
-              ? [
-                  createOptimisticMessage({
-                    tempId: tempMessageId,
-                    roomId: tempId,
-                    content: variables.data.initialMessage,
-                    type: 'TEXT',
-                    user,
-                  }),
-                ]
-              : [],
+            messages: [],
           }
 
           return {
@@ -267,29 +246,6 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
                 return item
               }),
             }
-          })
-        }
-
-        // Pre-populate messages query with initial message from room response
-        if (realRoom.messages && realRoom.messages.length > 0) {
-          const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(realRoom.id, {
-            limit: 50,
-            direction: 'desc',
-          })
-
-          queryClient.setQueryData(messagesQueryKey, {
-            pages: [
-              {
-                data: {
-                  items: realRoom.messages,
-                  nextCursor: null,
-                  hasMore: false,
-                },
-                success: true,
-                message: 'Messages fetched successfully',
-              },
-            ],
-            pageParams: [undefined],
           })
         }
 

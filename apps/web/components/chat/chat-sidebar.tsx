@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -24,7 +24,6 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const pathname = usePathname()
   const { session } = useAuth()
   const currentUserId = session?.user?.id
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
@@ -47,20 +46,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const rooms = roomsResponse?.data || []
 
-  // Get currently selected network user from network users list
-  const targetUser = useMemo(() => {
-    if (!pathname.startsWith('/chat/new/')) return null
-    const userId = pathname.split('/chat/new/')[1]
-    const following = followingResponse?.data || []
-    const followers = followersResponse?.data || []
-    return [...following, ...followers].find((u) => u.id === userId) || null
-  }, [pathname, followingResponse, followersResponse])
-
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM({
     user: session?.user || null,
-    targetUser,
-    targetUserId: targetUser?.id,
   })
 
   const handleNetworkUserClick = async (user: any) => {
@@ -80,7 +68,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         // Create new DM room
         const response = await createDM({
           data: {
-            userId: user.id,
+            type: 'DM',
+            participantIds: [user.id],
           },
         })
         // Navigate to the created room

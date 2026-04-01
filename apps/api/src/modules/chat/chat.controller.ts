@@ -4,8 +4,6 @@ import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { ChatService } from './chat.service'
 import { CreateRoomDto } from './dto/create-room.dto'
-import { CreateDMDto } from './dto/create-dm.dto'
-import { CreateGroupDto } from './dto/create-group.dto'
 import { SendMessageDto } from './dto/send-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
@@ -45,27 +43,7 @@ export class ChatController {
   @ApiOkResponse({ type: ChatRoomEntity })
   @ResponseMessage('Chat room created successfully')
   createRoom(@Session() session: UserSession, @Body() dto: CreateRoomDto) {
-    return this.chatService.createRoom(
-      session.user.id,
-      dto.participantIds,
-      dto.type,
-      dto.name,
-      dto.initialMessage,
-    )
-  }
-
-  @Post('dm')
-  @ApiOkResponse({ type: ChatRoomEntity })
-  @ResponseMessage('Direct message created successfully')
-  createDM(@Session() session: UserSession, @Body() dto: CreateDMDto) {
-    return this.chatService.createDM(session.user.id, dto.userId, dto.initialMessage)
-  }
-
-  @Post('groups')
-  @ApiOkResponse({ type: ChatRoomEntity })
-  @ResponseMessage('Group created successfully')
-  createGroup(@Session() session: UserSession, @Body() dto: CreateGroupDto) {
-    return this.chatService.createGroup(session.user.id, dto.name, dto.participantIds)
+    return this.chatService.createRoom(session.user.id, dto.participantIds, dto.type, dto.name)
   }
 
   @Post('rooms/:id/messages')

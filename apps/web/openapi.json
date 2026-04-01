@@ -175,6 +175,14 @@
         "tags": ["users"]
       }
     },
+    "/api/users/me/export": {
+      "get": {
+        "operationId": "UsersController_exportMyData",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["users"]
+      }
+    },
     "/api/users/{id}": {
       "get": {
         "operationId": "UsersController_getById",
@@ -1480,48 +1488,6 @@
         "tags": ["chat"]
       }
     },
-    "/api/chat/dm": {
-      "post": {
-        "operationId": "ChatController_createDM",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateDMDto" } }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
-            }
-          }
-        },
-        "tags": ["chat"]
-      }
-    },
-    "/api/chat/groups": {
-      "post": {
-        "operationId": "ChatController_createGroup",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CreateGroupDto" } }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ChatRoomEntity" } }
-            }
-          }
-        },
-        "tags": ["chat"]
-      }
-    },
     "/api/chat/rooms/{id}/read": {
       "post": {
         "operationId": "ChatController_markAsRead",
@@ -1639,7 +1605,7 @@
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "204": { "description": "" } },
+        "responses": { "200": { "description": "" } },
         "tags": ["reading-lists"]
       }
     },
@@ -1688,8 +1654,69 @@
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           { "name": "postId", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "204": { "description": "" } },
+        "responses": { "200": { "description": "" } },
         "tags": ["reading-lists"]
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "operationId": "FeedbackController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateFeedbackDto" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeedbackEntity" } }
+            }
+          }
+        },
+        "tags": ["feedback"]
+      }
+    },
+    "/api/admin/feedback": {
+      "get": {
+        "operationId": "AdminFeedbackController_findAll",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filter by feedback type",
+            "schema": { "type": "string", "enum": ["FEEDBACK", "BUG_REPORT"] }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Results per page",
+            "schema": { "default": 20, "type": "number" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedFeedbackEntity" }
+              }
+            }
+          },
+          "403": { "description": "Admin or moderator role required" }
+        },
+        "tags": ["admin"]
       }
     }
   },
@@ -2682,33 +2709,9 @@
         "properties": {
           "type": { "type": "string", "enum": ["DM", "GROUP"] },
           "participantIds": { "type": "array", "items": { "type": "string" } },
-          "name": { "type": "string" },
-          "initialMessage": { "type": "string" }
+          "name": { "type": "string" }
         },
         "required": ["type", "participantIds"]
-      },
-      "CreateDMDto": {
-        "type": "object",
-        "properties": {
-          "userId": { "type": "string", "description": "User ID to start DM with" },
-          "initialMessage": {
-            "type": "string",
-            "description": "Initial message to send with DM creation"
-          }
-        },
-        "required": ["userId"]
-      },
-      "CreateGroupDto": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string", "description": "Group name" },
-          "participantIds": {
-            "description": "Array of user IDs to add to group",
-            "type": "array",
-            "items": { "type": "string" }
-          }
-        },
-        "required": ["name", "participantIds"]
       },
       "SendMessageDto": {
         "type": "object",
@@ -2759,6 +2762,52 @@
           "description": { "type": "string", "example": "Materials for final exam prep" },
           "isPublic": { "type": "boolean", "default": false }
         }
+      },
+      "CreateFeedbackDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["FEEDBACK", "BUG_REPORT"],
+            "description": "Type of feedback"
+          },
+          "message": {
+            "type": "string",
+            "description": "Feedback message",
+            "minLength": 10,
+            "maxLength": 2000
+          }
+        },
+        "required": ["type", "message"]
+      },
+      "FeedbackUserEntity": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["id", "name"]
+      },
+      "FeedbackEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["FEEDBACK", "BUG_REPORT"] },
+          "message": { "type": "string" },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "user": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/FeedbackUserEntity" }]
+          }
+        },
+        "required": ["id", "type", "message", "createdAt"]
+      },
+      "PaginatedFeedbackEntity": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/FeedbackEntity" } },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" }
+        },
+        "required": ["items", "total", "page", "limit"]
       }
     }
   }
