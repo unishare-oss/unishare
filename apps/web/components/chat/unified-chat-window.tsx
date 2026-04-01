@@ -14,12 +14,14 @@ import type {
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
+import { useTypingIndicator } from '@/hooks/use-typing-indicator'
+import { useChatSocket } from '@/hooks/use-chat-socket'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
+import { TypingIndicator } from './typing-indicator'
 import { cn } from '@/lib/utils'
 import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
@@ -27,6 +29,7 @@ import { ChatInfoPane } from './chat-info-pane'
 import { ChatMessageBubble } from './chat-message-bubble'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 
 interface UnifiedChatWindowProps {
   roomId?: string
@@ -47,6 +50,12 @@ export function UnifiedChatWindow({
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
+
+  // Socket connection
+  const { socket } = useChatSocket()
+
+  // Typing indicator
+  const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', !!content.trim())
 
   // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
   useEffect(() => {
@@ -282,6 +291,18 @@ export function UnifiedChatWindow({
                     />
                   )
                 })}
+
+                {/* Typing indicators */}
+                {typingUsers.roomTypingUsers.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {typingUsers.roomTypingUsers.map((typingUser) => {
+                      const participant = room?.participants?.find(
+                        (p) => p.userId === typingUser.userId,
+                      )
+                      return <TypingIndicator key={typingUser.userId} participant={participant} />
+                    })}
+                  </div>
+                )}
               </div>
             </ScrollArea>
           )}
