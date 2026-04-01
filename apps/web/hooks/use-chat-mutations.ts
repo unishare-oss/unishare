@@ -242,38 +242,7 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
           }
         })
 
-        const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(tempId, {
-          limit: 50,
-          direction: 'desc',
-        })
-
-        // // Optimistically pre-populate messages query if there's an initial message
-        // if (variables.data.initialMessage) {
-        //   const optimisticMessage = createOptimisticMessage({
-        //     tempId: tempMessageId,
-        //     roomId: tempId,
-        //     content: variables.data.initialMessage,
-        //     type: 'TEXT',
-        //     user,
-        //   })
-
-        //   queryClient.setQueryData(messagesQueryKey, {
-        //     pages: [
-        //       {
-        //         data: {
-        //           items: [optimisticMessage],
-        //           nextCursor: null,
-        //           hasMore: false,
-        //         },
-        //         success: true,
-        //         message: 'Messages fetched successfully',
-        //       },
-        //     ],
-        //     pageParams: [undefined],
-        //   })
-        // }
-
-        return { previousRooms, roomsQueryKey, tempId, messagesQueryKey }
+        return { previousRooms, roomsQueryKey, tempId }
       },
       onSuccess: (data, _variables, context) => {
         if (!context?.roomsQueryKey) return
@@ -298,11 +267,6 @@ export function useCreateDM({ user, targetUser, targetUserId }: UseCreateDMOptio
             }),
           }
         })
-
-        // Pre-populate messages query with initial message from room response
-        if (realRoom.messages && realRoom.messages.length > 0) {
-          queryClient.invalidateQueries({ queryKey: context.messagesQueryKey })
-        }
 
         // Redirect to the new room
         router.push(`/chat/${data.data.id}`)
