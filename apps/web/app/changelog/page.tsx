@@ -8,12 +8,14 @@ interface GitHubRelease {
   tag_name: string
   published_at: string
   body: string | null
+  html_url: string
 }
 
 interface Release {
   version: string
   date: string
   notes: string
+  url: string
 }
 
 export default function ChangelogPage() {
@@ -51,6 +53,7 @@ export default function ChangelogPage() {
             version: release.tag_name,
             date: release.published_at,
             notes,
+            url: release.html_url,
           }
         })
 
@@ -94,7 +97,14 @@ export default function ChangelogPage() {
             {releases.map((release) => (
               <div key={release.version} className="border-l-2 border-amber pl-6 pb-8">
                 <div className="flex items-baseline gap-3 mb-4 flex-wrap">
-                  <h2 className="text-2xl font-semibold">{release.version}</h2>
+                  <a
+                    href={release.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-2xl font-semibold text-amber hover:underline"
+                  >
+                    {release.version}
+                  </a>
                   <span className="text-sm text-text-muted">
                     {formatDistanceToNow(new Date(release.date), { addSuffix: true })}
                   </span>
