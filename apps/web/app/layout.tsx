@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Space_Grotesk, Fira_Code } from 'next/font/google'
 import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
@@ -9,13 +9,15 @@ import './globals.css'
 import './themes.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
-const geistSans = Geist({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  variable: '--font-geist-sans',
+  variable: '--font-sans',
+  weight: ['400', '500', '600', '700'],
 })
-const geistMono = Geist_Mono({
+const firaCode = Fira_Code({
   subsets: ['latin'],
-  variable: '--font-geist-mono',
+  variable: '--font-mono',
+  weight: ['400', '500', '600', '700'],
 })
 
 export const metadata: Metadata = {
@@ -91,7 +93,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${firaCode.variable} font-sans antialiased`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
