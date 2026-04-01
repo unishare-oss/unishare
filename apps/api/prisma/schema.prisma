@@ -45,6 +45,7 @@ model User {
   chatParticipants        ChatRoomParticipant[]
   chatMessages            ChatMessage[]
   readingLists            ReadingList[]
+  feedbacks               Feedback[]
 
   @@map("user")
 }
@@ -552,4 +553,23 @@ model ChatMessage {
   @@index([userId])
   @@index([createdAt])
   @@map("chat_message")
+}
+
+enum FeedbackType {
+  FEEDBACK
+  BUG_REPORT
+}
+
+model Feedback {
+  id        String       @id @default(cuid())
+  type      FeedbackType
+  message   String       @db.Text
+  userId    String?
+  createdAt DateTime     @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("feedback")
 }

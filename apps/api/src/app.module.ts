@@ -25,6 +25,7 @@ import { ReportsModule } from './modules/reports/reports.module'
 import { ChatModule } from './modules/chat/chat.module'
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
+import { FeedbackModule } from './modules/feedback/feedback.module'
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ReadingListsModule } from './modules/reading-lists/reading-lists.module
     ChatModule,
     AiSummaryModule,
     ReadingListsModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService],
