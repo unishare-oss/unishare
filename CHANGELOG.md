@@ -1,3 +1,9 @@
+## [0.4.1](https://github.com/unishare-oss/unishare/compare/v0.4.0...v0.4.1) (2026-04-01)
+
+### Bug Fixes
+
+- use useWatch instead of form.watch for React Compiler compatibility ([d91c26c](https://github.com/unishare-oss/unishare/commit/d91c26ccc9c7fccaa2263f991a3c11957ef60f0c))
+
 # [0.4.0](https://github.com/unishare-oss/unishare/compare/v0.3.0...v0.4.0) (2026-04-01)
 
 ### Bug Fixes
