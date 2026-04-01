@@ -198,7 +198,7 @@ export class StorageService implements OnModuleInit {
 
     // List all uploaded parts to get their ETags (avoids CORS ETag exposure issue)
     const parts: { PartNumber: number; ETag: string }[] = []
-    let partNumberMarker: number | undefined
+    let partNumberMarker: string | undefined
     do {
       const listRes = await this.s3Client.send(
         new ListPartsCommand({
