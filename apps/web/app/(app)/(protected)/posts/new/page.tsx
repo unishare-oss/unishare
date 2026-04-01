@@ -210,10 +210,12 @@ export default function CreatePostPage() {
       const smallFiles = formValues.files.filter((f) => f.size <= BG_THRESHOLD)
       const largeFiles = formValues.files.filter((f) => f.size > BG_THRESHOLD)
 
-      for (const file of smallFiles) {
-        const uploadedFile = await uploadPostFile(file)
-        await filesControllerConfirmUpload(post.id, uploadedFile)
-      }
+      await Promise.all(
+        smallFiles.map(async (file) => {
+          const uploadedFile = await uploadPostFile(file)
+          await filesControllerConfirmUpload(post.id, uploadedFile)
+        }),
+      )
 
       if (largeFiles.length > 0) {
         enqueueUploads(post.id, largeFiles)

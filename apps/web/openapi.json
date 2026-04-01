@@ -40,6 +40,86 @@
         "tags": ["storage"]
       }
     },
+    "/api/storage/multipart/create": {
+      "post": {
+        "operationId": "StorageController_createMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MultipartUploadEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/presign-part": {
+      "post": {
+        "operationId": "StorageController_presignPart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/PresignPartDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PresignedPartEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/complete": {
+      "post": {
+        "operationId": "StorageController_completeMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/abort": {
+      "delete": {
+        "operationId": "StorageController_abortMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AbortMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["storage"]
+      }
+    },
     "/api/courses": {
       "post": {
         "operationId": "CoursesController_create",
@@ -1752,6 +1832,56 @@
           "publicUrl": { "type": "string" }
         },
         "required": ["url", "key", "publicUrl"]
+      },
+      "CreateMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "mimeType": { "type": "string", "maxLength": 255 },
+          "uploadType": { "type": "string", "enum": ["document", "image", "video"] },
+          "purpose": { "type": "string", "enum": ["post-attachment"] }
+        },
+        "required": ["mimeType", "uploadType", "purpose"]
+      },
+      "MultipartUploadEntity": {
+        "type": "object",
+        "properties": { "uploadId": { "type": "string" }, "key": { "type": "string" } },
+        "required": ["uploadId", "key"]
+      },
+      "PresignPartDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "uploadId": { "type": "string", "maxLength": 255 },
+          "partNumber": { "type": "number", "minimum": 1, "maximum": 10000 }
+        },
+        "required": ["key", "uploadId", "partNumber"]
+      },
+      "PresignedPartEntity": {
+        "type": "object",
+        "properties": { "url": { "type": "string" } },
+        "required": ["url"]
+      },
+      "CompletedPart": {
+        "type": "object",
+        "properties": { "PartNumber": { "type": "number" }, "ETag": { "type": "string" } },
+        "required": ["PartNumber", "ETag"]
+      },
+      "CompleteMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "uploadId": { "type": "string", "maxLength": 255 },
+          "parts": { "type": "array", "items": { "$ref": "#/components/schemas/CompletedPart" } }
+        },
+        "required": ["key", "uploadId", "parts"]
+      },
+      "AbortMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "uploadId": { "type": "string", "maxLength": 255 }
+        },
+        "required": ["key", "uploadId"]
       },
       "CreateCourseDto": {
         "type": "object",

@@ -1,9 +1,13 @@
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import {
@@ -154,6 +158,63 @@ export class StorageService implements OnModuleInit {
     const ext = MIME_EXTENSIONS[mimeType] ?? 'bin'
     const random = crypto.randomBytes(8).toString('hex')
     return `${Date.now()}-${random}.${ext}`
+  }
+
+  async createMultipartUpload(
+    folder: string,
+    mimeType: string,
+    uploadType: UploadType,
+  ): Promise<{ uploadId: string; key: string }> {
+    const typeConfig = FILE_TYPE_CONFIG[uploadType]
+    if (!typeConfig.allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed: ${typeConfig.allowedMimeTypes.join(', ')}`,
+      )
+    }
+    const key = `${folder}/${this.generateFileName(mimeType)}`
+    const command = new CreateMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: mimeType,
+    })
+    const result = await this.s3Client.send(command)
+    return { uploadId: result.UploadId!, key }
+  }
+
+  async presignUploadPart(key: string, uploadId: string, partNumber: number): Promise<string> {
+    this.assertSafeKey(key)
+    const command = new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    })
+    return getSignedUrl(this.s3Client, command, { expiresIn: 3600 })
+  }
+
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: { PartNumber: number; ETag: string }[],
+  ): Promise<void> {
+    this.assertSafeKey(key)
+    const command = new CompleteMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: { Parts: parts },
+    })
+    await this.s3Client.send(command)
+  }
+
+  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    this.assertSafeKey(key)
+    const command = new AbortMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+    })
+    await this.s3Client.send(command)
   }
 }
 

@@ -113,12 +113,14 @@ export interface UploadTask {
   postId: string
   file: File
   status: 'pending' | 'uploading' | 'done' | 'error'
+  progress: number // 0–100
 }
 
 interface UploadStore {
   tasks: UploadTask[]
   enqueue: (postId: string, files: File[]) => void
   setStatus: (id: string, status: UploadTask['status']) => void
+  setProgress: (id: string, progress: number) => void
   remove: (id: string) => void
 }
 
@@ -133,10 +135,13 @@ export const useUploadStore = create<UploadStore>()((set) => ({
           postId,
           file,
           status: 'pending' as const,
+          progress: 0,
         })),
       ],
     })),
   setStatus: (id, status) =>
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
+  setProgress: (id, progress) =>
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, progress } : t)) })),
   remove: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
 }))

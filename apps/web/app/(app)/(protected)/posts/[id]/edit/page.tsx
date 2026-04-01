@@ -173,10 +173,12 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       const smallFiles = newFiles.filter((f) => f.size <= BG_THRESHOLD)
       const largeFiles = newFiles.filter((f) => f.size > BG_THRESHOLD)
 
-      for (const file of smallFiles) {
-        const uploadedFile = await uploadPostFile(file)
-        await confirmUpload({ postId: id, data: uploadedFile })
-      }
+      await Promise.all(
+        smallFiles.map(async (file) => {
+          const uploadedFile = await uploadPostFile(file)
+          await confirmUpload({ postId: id, data: uploadedFile })
+        }),
+      )
 
       if (largeFiles.length > 0) {
         enqueueUploads(id, largeFiles)

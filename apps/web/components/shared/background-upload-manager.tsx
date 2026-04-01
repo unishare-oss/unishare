@@ -9,7 +9,7 @@ import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/file
 import { getPostsControllerFindOneQueryKey } from '@/src/lib/api/generated/posts/posts'
 
 export function BackgroundUploadManager() {
-  const { tasks, setStatus, remove } = useUploadStore()
+  const { tasks, setStatus, setProgress, remove } = useUploadStore()
   const queryClient = useQueryClient()
   const processingIds = useRef(new Set<string>())
 
@@ -22,9 +22,12 @@ export function BackgroundUploadManager() {
 
       setStatus(task.id, 'uploading')
 
-      const toastId = toast.loading(`Uploading ${task.file.name}…`, { duration: Infinity })
+      const toastId = toast.loading(`Uploading ${task.file.name}… 0%`, { duration: Infinity })
 
-      uploadPostFile(task.file)
+      uploadPostFile(task.file, (pct) => {
+        setProgress(task.id, pct)
+        toast.loading(`Uploading ${task.file.name}… ${pct}%`, { id: toastId, duration: Infinity })
+      })
         .then((uploaded) => filesControllerConfirmUpload(task.postId, uploaded))
         .then(() => {
           setStatus(task.id, 'done')
@@ -42,7 +45,7 @@ export function BackgroundUploadManager() {
           processingIds.current.delete(task.id)
         })
     }
-  }, [tasks, setStatus, remove, queryClient])
+  }, [tasks, setStatus, setProgress, remove, queryClient])
 
   return null
 }
