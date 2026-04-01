@@ -15,6 +15,7 @@ import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/cou
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { TrendingUp, Clock, SlidersHorizontal } from 'lucide-react'
+import { DropdownFilters, type DropdownFiltersProps } from '@/components/feed/dropdown-filters'
 
 export type SortType = 'recent' | 'trending'
 
@@ -114,87 +115,21 @@ export function FilterStrip({
     onModuleChange(value === ALL ? null : Number(value))
   }
 
-  const DropdownFilters = () => (
-    <div className="flex flex-col gap-3 pb-2">
-      <div className="grid grid-cols-2 gap-2">
-        <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-          <SelectTrigger
-            size="sm"
-            className="font-mono text-xs text-text-muted w-full"
-            title={selectedDeptLabel}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All departments</SelectItem>
-            {(departments ?? []).map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedYear === null ? ALL : String(selectedYear)}
-          onValueChange={handleYearChange}
-        >
-          <SelectTrigger
-            size="sm"
-            className="font-mono text-xs text-text-muted w-full"
-            title={selectedYearLabel}
-          >
-            <SelectValue placeholder="Year" />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All years</SelectItem>
-            {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                Year {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
-          onValueChange={handleModuleChange}
-        >
-          <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
-            <SelectValue placeholder="Module" />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All modules</SelectItem>
-            {[1, 2, 3].map((m) => (
-              <SelectItem key={m} value={String(m)}>
-                Module {m}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="col-span-2">
-          <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-            <SelectTrigger
-              size="sm"
-              className="font-mono text-xs text-text-muted w-full"
-              title={selectedCourseLabel}
-            >
-              <SelectValue placeholder="Course" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All courses</SelectItem>
-              {filteredCourses.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.code} — {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-  )
+  const dropdownProps: DropdownFiltersProps = {
+    selectedDeptId,
+    selectedYear,
+    selectedCourseId,
+    selectedModuleNumber,
+    departments,
+    filteredCourses,
+    selectedDeptLabel,
+    selectedYearLabel,
+    selectedCourseLabel,
+    onDeptChange: handleDeptChange,
+    onYearChange: handleYearChange,
+    onCourseChange: handleCourseChange,
+    onModuleChange: handleModuleChange,
+  }
 
   return (
     <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col">
@@ -271,7 +206,7 @@ export function FilterStrip({
                 <SheetHeader className="mb-5">
                   <SheetTitle className="font-mono text-sm text-left">Filter posts</SheetTitle>
                 </SheetHeader>
-                <DropdownFilters />
+                <DropdownFilters {...dropdownProps} />
               </SheetContent>
             </Sheet>
           </div>
