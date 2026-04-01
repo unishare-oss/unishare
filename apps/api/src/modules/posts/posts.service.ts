@@ -167,9 +167,8 @@ export class PostsService {
     // Extract tags and handle separately
     const { tags, ...postData } = dto
 
-    // Treat empty string as null to explicitly clear the field
-    if (postData.externalUrl === '') {
-      postData.externalUrl = undefined
+    // Treat empty string or null as null to explicitly clear the field
+    if (postData.externalUrl === '' || postData.externalUrl === null) {
       ;(postData as Record<string, unknown>).externalUrl = null
     }
 
