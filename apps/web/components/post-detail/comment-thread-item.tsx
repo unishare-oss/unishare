@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
+import { renderWithLinks } from '@/lib/render-with-links'
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 
@@ -229,7 +230,9 @@ export function CommentThreadItem({
                   isDeletedComment ? 'italic text-text-muted' : 'text-foreground',
                 )}
               >
-                {comment.content}
+                {isDeletedComment
+                  ? comment.content
+                  : renderWithLinks(comment.content, 'text-primary')}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (
