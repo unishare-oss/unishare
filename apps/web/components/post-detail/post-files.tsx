@@ -266,7 +266,9 @@ export function PostFiles({ post }: PostFilesProps) {
         <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
           Description
         </h2>
-        <p className="text-[15px] leading-[1.7] text-foreground">{post.description}</p>
+        <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
+          {post.description}
+        </p>
         {post.externalUrl && (
           <a
             href={post.externalUrl}
