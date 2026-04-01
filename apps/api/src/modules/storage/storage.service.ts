@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListPartsCommand,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -192,12 +193,27 @@ export class StorageService implements OnModuleInit {
     return getSignedUrl(this.s3Client, command, { expiresIn: 3600 })
   }
 
-  async completeMultipartUpload(
-    key: string,
-    uploadId: string,
-    parts: { PartNumber: number; ETag: string }[],
-  ): Promise<void> {
+  async completeMultipartUpload(key: string, uploadId: string): Promise<void> {
     this.assertSafeKey(key)
+
+    // List all uploaded parts to get their ETags (avoids CORS ETag exposure issue)
+    const parts: { PartNumber: number; ETag: string }[] = []
+    let partNumberMarker: number | undefined
+    do {
+      const listRes = await this.s3Client.send(
+        new ListPartsCommand({
+          Bucket: this.bucket,
+          Key: key,
+          UploadId: uploadId,
+          PartNumberMarker: partNumberMarker,
+        }),
+      )
+      for (const part of listRes.Parts ?? []) {
+        parts.push({ PartNumber: part.PartNumber!, ETag: part.ETag! })
+      }
+      partNumberMarker = listRes.NextPartNumberMarker
+    } while (partNumberMarker)
+
     const command = new CompleteMultipartUploadCommand({
       Bucket: this.bucket,
       Key: key,

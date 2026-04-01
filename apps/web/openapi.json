@@ -1851,7 +1851,7 @@
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 255 },
+          "uploadId": { "type": "string", "maxLength": 1024 },
           "partNumber": { "type": "number", "minimum": 1, "maximum": 10000 }
         },
         "required": ["key", "uploadId", "partNumber"]
@@ -1861,25 +1861,19 @@
         "properties": { "url": { "type": "string" } },
         "required": ["url"]
       },
-      "CompletedPart": {
-        "type": "object",
-        "properties": { "PartNumber": { "type": "number" }, "ETag": { "type": "string" } },
-        "required": ["PartNumber", "ETag"]
-      },
       "CompleteMultipartUploadDto": {
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 255 },
-          "parts": { "type": "array", "items": { "$ref": "#/components/schemas/CompletedPart" } }
+          "uploadId": { "type": "string", "maxLength": 1024 }
         },
-        "required": ["key", "uploadId", "parts"]
+        "required": ["key", "uploadId"]
       },
       "AbortMultipartUploadDto": {
         "type": "object",
         "properties": {
           "key": { "type": "string", "maxLength": 500 },
-          "uploadId": { "type": "string", "maxLength": 255 }
+          "uploadId": { "type": "string", "maxLength": 1024 }
         },
         "required": ["key", "uploadId"]
       },

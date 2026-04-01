@@ -70,7 +70,6 @@ async function uploadMultipart(
   const { uploadId, key } = createRes.data as MultipartUploadEntity
 
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
-  const parts: { PartNumber: number; ETag: string }[] = []
   let completedChunks = 0
 
   try {
@@ -81,7 +80,7 @@ async function uploadMultipart(
         (_, j) => i + j,
       )
 
-      const batchResults = await Promise.all(
+      await Promise.all(
         batch.map(async (chunkIndex) => {
           const partNumber = chunkIndex + 1
           const start = chunkIndex * CHUNK_SIZE
@@ -95,25 +94,20 @@ async function uploadMultipart(
           })
           const { url } = presignRes.data as PresignedPartEntity
 
-          const res = await fetch(url, {
+          await fetch(url, {
             method: 'PUT',
             body: chunk,
             headers: { 'Content-Type': mimeType },
           })
 
-          const etag = res.headers.get('ETag') ?? res.headers.get('etag') ?? ''
           completedChunks++
           onProgress?.(Math.round((completedChunks / totalChunks) * 100))
-
-          return { PartNumber: partNumber, ETag: etag }
         }),
       )
-
-      parts.push(...batchResults)
     }
 
-    parts.sort((a, b) => a.PartNumber - b.PartNumber)
-    await storageControllerCompleteMultipartUpload({ key, uploadId, parts })
+    // API uses ListParts to get ETags — no need to send them from the browser
+    await storageControllerCompleteMultipartUpload({ key, uploadId })
 
     return { key, name: file.name, size: file.size, mimeType }
   } catch (err) {

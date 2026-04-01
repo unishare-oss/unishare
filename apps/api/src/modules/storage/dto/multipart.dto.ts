@@ -56,11 +56,6 @@ export class CompleteMultipartUploadDto {
   @IsString()
   @MaxLength(1024)
   uploadId: string
-
-  @ApiProperty({ type: [CompletedPart] })
-  @ValidateNested({ each: true })
-  @Type(() => CompletedPart)
-  parts: CompletedPart[]
 }
 
 export class AbortMultipartUploadDto {

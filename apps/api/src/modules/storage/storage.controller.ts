@@ -45,7 +45,7 @@ export class StorageController {
   @Post('multipart/complete')
   @ResponseMessage('Multipart upload completed')
   completeMultipartUpload(@Body() dto: CompleteMultipartUploadDto) {
-    return this.storageService.completeMultipartUpload(dto.key, dto.uploadId, dto.parts)
+    return this.storageService.completeMultipartUpload(dto.key, dto.uploadId)
   }
 
   @Delete('multipart/abort')
