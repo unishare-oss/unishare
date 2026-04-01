@@ -309,7 +309,7 @@ export function UnifiedChatWindow({
       )}
 
       {/* Body: messages + optional info pane */}
-      <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
+      <div className="flex flex-1 overflow-hidden">
         {/* Messages Area */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {messagesLoading ? (
