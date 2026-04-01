@@ -50,7 +50,7 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="rounded-lg border border-border bg-muted/40 mt-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="group/header flex items-center justify-between px-4 py-3">
           <CollapsibleTrigger className="flex items-center gap-1.5 group cursor-pointer flex-1 text-left">
             <Sparkles className="size-3.5 text-amber" strokeWidth={1.5} />
             <span className="font-mono text-[11px] font-medium text-amber uppercase tracking-wide">
@@ -75,6 +75,7 @@ export function PostSummary({ post, isOwner }: PostSummaryProps) {
               onClick={() => triggerSummarize({ id: post.id })}
               disabled={isRegenerating}
               aria-label="Regenerate summary"
+              className={`transition-opacity ${isRegenerating ? 'opacity-100' : 'opacity-0 group-hover/header:opacity-100'}`}
             >
               <RefreshCw
                 className={`size-3.5 text-text-muted ${isRegenerating ? 'animate-spin' : ''}`}
