@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import { authClient } from '@/src/lib/auth/client'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
+import { Button } from '@/components/ui/button'
 
 const guestTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
@@ -167,23 +168,25 @@ export function MobileNav() {
               </div>
 
               <div className="px-5 mt-4 border-t pt-4 flex flex-col gap-1">
-                <button
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-3 text-text-muted"
                   onClick={() => {
                     setSheetOpen(false)
                     setFeedbackOpen(true)
                   }}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-text-muted hover:bg-muted rounded-xl transition-colors duration-200"
                 >
                   <MessageSquareHeart className="size-4" strokeWidth={1.5} />
                   Feedback or bug report
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-3 text-red-500 hover:text-red-500 hover:bg-red-50"
                   onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors duration-200"
                 >
                   <LogOut className="size-4" strokeWidth={1.5} />
                   Sign out
-                </button>
+                </Button>
               </div>
             </SheetContent>
           </Sheet>
