@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
-import { Globe, Lock } from 'lucide-react'
+import { Globe, Lock, Share2 } from 'lucide-react'
 import { use } from 'react'
 import {
   useReadingListsControllerFindOne,
@@ -11,12 +11,17 @@ import {
 import type { PaginatedPostEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { PostFeed } from '@/components/feed/post-feed'
 import { PageHeader } from '@/components/shared/page-header'
+import { Button } from '@/components/ui/button'
+import { ShareDialog } from '@/components/reading-lists/share-dialog'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function ListPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [page, setPage] = useState(1)
+  const [shareOpen, setShareOpen] = useState(false)
+  const { session } = useAuth()
 
-  const { data: list } = useReadingListsControllerFindOne(id, {
+  const { data: list, refetch: refetchList } = useReadingListsControllerFindOne(id, {
     query: { select: (r) => r.data },
   })
 
@@ -27,6 +32,8 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   )
   const postsData = postsRaw?.data as PaginatedPostEntity | undefined
 
+  const isOwner = list && session?.user?.id === list.userId
+
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader
@@ -34,14 +41,27 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         subtitle={list?.description ?? undefined}
         action={
           list && (
-            <span className="flex items-center gap-1 font-mono text-[11px] text-text-muted uppercase tracking-wide">
-              {list.isPublic ? (
-                <Globe className="size-3.5" strokeWidth={1.5} />
-              ) : (
-                <Lock className="size-3.5" strokeWidth={1.5} />
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 font-mono text-[11px] text-text-muted uppercase tracking-wide">
+                {list.isPublic ? (
+                  <Globe className="size-3.5" strokeWidth={1.5} />
+                ) : (
+                  <Lock className="size-3.5" strokeWidth={1.5} />
+                )}
+                {list.isPublic ? 'Public' : 'Private'}
+              </span>
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShareOpen(true)}
+                  className="gap-1.5"
+                >
+                  <Share2 className="size-3.5" strokeWidth={1.5} />
+                  Share
+                </Button>
               )}
-              {list.isPublic ? 'Public' : 'Private'}
-            </span>
+            </div>
           )
         }
       />
@@ -55,6 +75,16 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
           emptyMessage="No posts in this list yet."
         />
       </div>
+
+      {list && (
+        <ShareDialog
+          list={list}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          isOwner={isOwner || false}
+          onPublicityChange={() => refetchList()}
+        />
+      )}
     </div>
   )
 }
