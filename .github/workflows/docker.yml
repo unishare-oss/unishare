@@ -22,6 +22,7 @@ jobs:
   changes:
     name: Detect changed paths
     runs-on: ubuntu-latest
+    if: github.actor != 'unishare-release-bot[bot]'
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
