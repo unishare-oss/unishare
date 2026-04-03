@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
@@ -124,6 +127,14 @@ export class QuizzesController {
   @ResponseMessage('Quiz fetched successfully')
   getQuiz(@Param('id') quizId: string) {
     return this.quizzesService.getQuiz(quizId, true)
+  }
+
+  @Delete(':id')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseMessage('Quiz deleted successfully')
+  deleteQuiz(@Param('id') quizId: string) {
+    return this.quizzesService.deleteQuiz(quizId)
   }
 
   @Post(':id/submit')

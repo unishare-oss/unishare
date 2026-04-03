@@ -330,6 +330,15 @@ export class QuizzesService {
     return { stats, recentSessions: sessions }
   }
 
+  async deleteQuiz(quizId: string) {
+    const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } })
+    if (!quiz) throw new NotFoundException('Quiz not found')
+
+    await this.prisma.quizQuestion.deleteMany({ where: { quizId } })
+    await this.prisma.quizSession.deleteMany({ where: { quizId } })
+    await this.prisma.quiz.delete({ where: { id: quizId } })
+  }
+
   async publishQuiz(quizId: string, userId: string) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } })
 
