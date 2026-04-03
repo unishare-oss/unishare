@@ -535,6 +535,13 @@
             "in": "query",
             "description": "Filter by tag slug (exact match)",
             "schema": { "type": "string" }
+          },
+          {
+            "name": "hasSummary",
+            "required": false,
+            "in": "query",
+            "description": "Only return posts that have an AI summary",
+            "schema": { "type": "boolean" }
           }
         ],
         "responses": {
@@ -1809,13 +1816,59 @@
         "tags": ["admin"]
       }
     },
+    "/api/quizzes": {
+      "get": {
+        "operationId": "QuizzesController_listQuizzes",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "type": "number" }
+          },
+          { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedQuizzesEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
     "/api/quizzes/student/{studentId}/progress": {
       "get": {
         "operationId": "QuizzesController_getStudentProgress",
         "parameters": [
           { "name": "studentId", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StudentProgressEntity" }
+              }
+            }
+          }
+        },
         "tags": ["quizzes"]
       }
     },
@@ -1854,6 +1907,29 @@
                 }
               }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenerateQuizResponseEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/generate-from-post": {
+      "post": {
+        "operationId": "QuizzesController_generateFromPost",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/GenerateFromPostDto" } }
           }
         },
         "responses": {
@@ -3079,6 +3155,65 @@
         },
         "required": ["items", "total", "page", "limit"]
       },
+      "QuizListItemEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "courseId": { "type": "string" },
+          "course": { "type": "object" },
+          "questionsCount": { "type": "number" },
+          "createdAt": { "format": "date-time", "type": "string" }
+        },
+        "required": ["id", "title", "courseId", "course", "questionsCount", "createdAt"]
+      },
+      "PaginatedQuizzesEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuizListItemEntity" }
+          },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" }
+        },
+        "required": ["items", "total", "page", "limit"]
+      },
+      "StudentStatsEntity": {
+        "type": "object",
+        "properties": {
+          "totalAttempts": { "type": "number" },
+          "averageScore": { "type": "number" },
+          "bestScore": { "type": "number" }
+        },
+        "required": ["totalAttempts", "averageScore", "bestScore"]
+      },
+      "RecentSessionEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "score": { "type": "number" },
+          "totalPoints": { "type": "number" },
+          "timeSpentSec": { "type": "number", "nullable": true },
+          "attemptedAt": { "format": "date-time", "type": "string" },
+          "completedAt": { "type": "string", "nullable": true },
+          "quiz": { "type": "object" }
+        },
+        "required": ["id", "score", "totalPoints", "attemptedAt", "quiz"]
+      },
+      "StudentProgressEntity": {
+        "type": "object",
+        "properties": {
+          "stats": { "$ref": "#/components/schemas/StudentStatsEntity" },
+          "recentSessions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RecentSessionEntity" }
+          }
+        },
+        "required": ["stats", "recentSessions"]
+      },
       "QuizQuestionEntity": {
         "type": "object",
         "properties": {
@@ -3154,6 +3289,17 @@
           }
         },
         "required": ["quizId", "questions"]
+      },
+      "GenerateFromPostDto": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Post ID with an AI summary to generate quiz from"
+          },
+          "questionCount": { "type": "number", "minimum": 1, "maximum": 100, "default": 20 }
+        },
+        "required": ["postId"]
       },
       "UpdateQuestionDto": {
         "type": "object",
