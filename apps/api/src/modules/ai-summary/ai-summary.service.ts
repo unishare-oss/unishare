@@ -65,6 +65,36 @@ Examples:
 SAFE
 FLAG: Contains what appears to be a complete leaked exam with answer keys intended for cheating.`
 
+function buildQuestionGenerationPrompt(count: number): string {
+  return `You are an expert exam question generator for university students.
+
+Based on the following study material excerpt, generate exactly ${count} multiple-choice questions in JSON format.
+
+IMPORTANT RULES:
+- Each question must have exactly 4 options
+- One option must be correct
+- Options should be plausible and educational
+- Include brief explanations for why the answer is correct
+- Questions should cover different difficulty levels (easy, medium, hard)
+- Output ONLY valid JSON, nothing else
+
+Study Material:
+{TEXT}
+
+Output format:
+[
+  {
+    "content": "Question text here?",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": 0,
+    "explanation": "Why option 0 is correct...",
+    "difficulty": "medium"
+  }
+]
+
+Generate the questions now:`
+}
+
 @Injectable()
 export class AiSummaryService {
   private readonly logger = new Logger(AiSummaryService.name)
@@ -215,6 +245,77 @@ export class AiSummaryService {
     } catch (err) {
       this.logger.warn(`Failed to screen post ${postId}: ${(err as Error).message}`)
     }
+  }
+
+  async generateQuizQuestions(
+    text: string,
+    questionCount: number = 10,
+  ): Promise<
+    Array<{
+      content: string
+      options: string[]
+      correctAnswer: number
+      explanation: string
+      difficulty: 'easy' | 'medium' | 'hard'
+    }>
+  > {
+    if (!this.provider) {
+      throw new Error('AI service not configured')
+    }
+
+    if (questionCount < 1 || questionCount > 100) {
+      throw new Error('Question count must be between 1 and 100')
+    }
+
+    try {
+      const response = await this.callLlm(
+        buildQuestionGenerationPrompt(questionCount).replace('{TEXT}', text.slice(0, 4000)),
+        '',
+        questionCount * 300,
+      )
+
+      if (!response) {
+        throw new Error('Failed to generate questions')
+      }
+
+      // Parse JSON from response
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      if (!jsonMatch) {
+        throw new Error('Invalid response format from AI')
+      }
+
+      const questions = JSON.parse(jsonMatch[0])
+
+      // Validate questions
+      questions.forEach((q: any, idx: number) => {
+        if (!q.content || !q.options || q.options.length !== 4) {
+          throw new Error(`Question ${idx + 1} has invalid format`)
+        }
+        if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) {
+          throw new Error(`Question ${idx + 1} has invalid correct answer`)
+        }
+      })
+
+      return questions
+    } catch (err) {
+      this.logger.error(`Question generation failed: ${(err as Error).message}`)
+      throw err
+    }
+  }
+
+  async extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
+    let text: string
+
+    if (mimeType === 'application/pdf') {
+      const parser = new PDFParse({ data: new Uint8Array(buffer) })
+      const result = await parser.getText()
+      text = result.text
+    } else {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+    }
+
+    return text.slice(0, MAX_TEXT_CHARS)
   }
 
   private async extractText(key: string, mimeType: string): Promise<string> {
