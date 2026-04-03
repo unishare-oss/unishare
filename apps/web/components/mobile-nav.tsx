@@ -18,13 +18,16 @@ import {
   Settings,
   MessageSquareHeart,
   BrainCircuit,
-  History,
+  Puzzle,
+  ShieldCheck,
+  Flag,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 import { useState } from 'react'
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
 import { authClient } from '@/src/lib/auth/client'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
@@ -49,7 +52,7 @@ const moreAuthItems = [
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
-  { href: '/quizzes', label: 'Quizzes', icon: History },
+  { href: '/quizzes', label: 'Quizzes', icon: Puzzle },
   { href: '/profile', label: 'Settings', icon: Settings },
 ]
 
@@ -69,7 +72,7 @@ export function MobileNav() {
   const isMoreActive =
     isAuthenticated &&
     (moreAuthItems.some((item) => pathname.startsWith(item.href)) ||
-      (isAdmin && pathname.startsWith('/admin/quizzes')))
+      (isAdmin && pathname.startsWith('/admin/')))
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -112,8 +115,8 @@ export function MobileNav() {
         })}
 
         {isAuthenticated && (
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild>
+          <Drawer open={sheetOpen} onOpenChange={setSheetOpen}>
+            <DrawerTrigger asChild>
               <button
                 className={cn(
                   'relative flex flex-col items-center gap-1 px-3 py-1.5 transition-colors duration-200',
@@ -129,11 +132,11 @@ export function MobileNav() {
                 <MoreHorizontal className="size-5" strokeWidth={1.5} />
                 <span className="text-[10px] font-mono uppercase tracking-wider">More</span>
               </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-4">
-              <SheetTitle className="px-5 pt-1 pb-3 text-sm font-mono uppercase tracking-widest text-muted-foreground">
+            </DrawerTrigger>
+            <DrawerContent className="px-0 pb-4 max-h-[85vh]">
+              <DrawerTitle className="px-5 pt-1 pb-3 text-sm font-mono uppercase tracking-widest text-muted-foreground">
                 More
-              </SheetTitle>
+              </DrawerTitle>
 
               {user && (
                 <div className="px-5 py-3 border-b mb-2">
@@ -149,54 +152,71 @@ export function MobileNav() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-1 px-3">
-                {moreAuthItems.map((item) => {
-                  const isActive = pathname.startsWith(item.href)
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setSheetOpen(false)}
-                      className={cn(
-                        'flex flex-col items-center gap-2 px-3 py-4 rounded-xl transition-colors duration-200',
-                        isActive
-                          ? 'bg-amber/10 text-amber'
-                          : 'text-text-muted hover:bg-muted hover:text-foreground',
-                      )}
-                    >
-                      <item.icon className="size-5" strokeWidth={1.5} />
-                      <span className="text-[11px] font-mono uppercase tracking-wider">
-                        {item.label}
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
+              <div className="overflow-y-auto">
+                <div className="grid grid-cols-3 gap-1 px-3">
+                  {moreAuthItems.map((item) => {
+                    const isActive = pathname.startsWith(item.href)
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setSheetOpen(false)}
+                        className={cn(
+                          'flex flex-col items-center gap-2 px-3 py-4 rounded-xl transition-colors duration-200',
+                          isActive
+                            ? 'bg-amber/10 text-amber'
+                            : 'text-text-muted hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        <item.icon className="size-5" strokeWidth={1.5} />
+                        <span className="text-[11px] font-mono uppercase tracking-wider">
+                          {item.label}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
 
-              {isAdmin && (
-                <>
-                  <div className="px-5 pt-4 pb-2">
-                    <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                      Admin
-                    </span>
-                  </div>
-                  <div className="px-3">
-                    <Link
-                      href="/admin/quizzes"
-                      onClick={() => setSheetOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200',
-                        pathname.startsWith('/admin/quizzes')
-                          ? 'bg-amber/10 text-amber'
-                          : 'text-text-muted hover:bg-muted hover:text-foreground',
-                      )}
-                    >
-                      <BrainCircuit className="size-5" strokeWidth={1.5} />
-                      <span className="text-sm font-medium">Generate Quiz</span>
-                    </Link>
-                  </div>
-                </>
-              )}
+                {isAdmin && (
+                  <>
+                    <div className="px-5 pt-4 pb-2">
+                      <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                        Admin
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 px-3">
+                      {[
+                        { href: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
+                        { href: '/admin/reports', label: 'Reports', icon: Flag },
+                        { href: '/admin/feedback', label: 'Feedback', icon: MessageSquareHeart },
+                        { href: '/admin/departments', label: 'Depts', icon: Building2 },
+                        { href: '/admin/quizzes', label: 'Gen Quiz', icon: BrainCircuit },
+                        ...(user?.role === 'ADMIN'
+                          ? [{ href: '/admin/users', label: 'Users', icon: Users }]
+                          : []),
+                      ].map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setSheetOpen(false)}
+                          className={cn(
+                            'flex flex-col items-center gap-2 px-3 py-4 rounded-xl transition-colors duration-200',
+                            pathname.startsWith(item.href)
+                              ? 'bg-amber/10 text-amber'
+                              : 'text-text-muted hover:bg-muted hover:text-foreground',
+                          )}
+                        >
+                          <item.icon className="size-5" strokeWidth={1.5} />
+                          <span className="text-[11px] font-mono uppercase tracking-wider">
+                            {item.label}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* end scrollable */}
 
               <div className="px-5 mt-4 border-t pt-4 flex flex-col gap-1">
                 <Button
@@ -219,8 +239,8 @@ export function MobileNav() {
                   Sign out
                 </Button>
               </div>
-            </SheetContent>
-          </Sheet>
+            </DrawerContent>
+          </Drawer>
         )}
       </div>
 
