@@ -130,13 +130,17 @@ export function PostCard({ post }: { post: ApiPost }) {
                   <span className="font-mono text-xs text-text-muted">Year {yearLevel}</span>
                 </>
               )}
-              <span className="text-text-muted text-xs hidden sm:inline">{'·'}</span>
-              <span className="flex items-center gap-1 hidden sm:flex">
-                <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                <span className="font-mono text-xs text-text-muted">
-                  {post.files.length} {post.files.length === 1 ? 'file' : 'files'}
-                </span>
-              </span>
+              {post.files != null && (
+                <>
+                  <span className="text-text-muted text-xs hidden sm:inline">{'·'}</span>
+                  <span className="flex items-center gap-1 hidden sm:flex">
+                    <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                    <span className="font-mono text-xs text-text-muted">
+                      {post.files.length} {post.files.length === 1 ? 'file' : 'files'}
+                    </span>
+                  </span>
+                </>
+              )}
               <span className="text-text-muted text-xs">{'·'}</span>
               <span className="flex items-center gap-1">
                 <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />
