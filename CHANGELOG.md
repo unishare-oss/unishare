@@ -1,3 +1,39 @@
+# [0.6.0](https://github.com/unishare-oss/unishare/compare/v0.5.0...v0.6.0) (2026-04-03)
+
+### Bug Fixes
+
+- **auth:** allow moderators to moderate comments ([1067db1](https://github.com/unishare-oss/unishare/commit/1067db1cd6511d746a032c36468b85d0759c3789))
+- **post-card:** guard against null course on post card ([7ef395e](https://github.com/unishare-oss/unishare/commit/7ef395ef40dbc005c8f65b7dca392fbceebaabfd))
+- **quiz:** allow null explanation in results type ([5de1d8c](https://github.com/unishare-oss/unishare/commit/5de1d8c608ade91b2fd5ed1460d8cd14706a0b39))
+- **quiz:** correct average score calculation using valid session count ([cf2c502](https://github.com/unishare-oss/unishare/commit/cf2c5024f91a0473a9dd6089fd5088849ff8751d))
+- **quiz:** remove setState-in-effect and impure Date.now in useState ([4fcfeff](https://github.com/unishare-oss/unishare/commit/4fcfeff36087ea4c89fc5ea847ffedb6b626b87d))
+- **saved:** invalidate saved posts query on unsave ([e12dd85](https://github.com/unishare-oss/unishare/commit/e12dd85ab63e8144d1dba09f4b71094e85f99489))
+- **trending:** full PostEntity shape, guard null course/files in post-card ([c4c4e90](https://github.com/unishare-oss/unishare/commit/c4c4e90e8bffb99016665158fefe6bba694e5cfc))
+- **trending:** remove double-wrap, return result directly for interceptor ([c7f8f28](https://github.com/unishare-oss/unishare/commit/c7f8f28fb9ac2c41dd1eeaabd71724c773f431c7))
+
+### Features
+
+- **admin:** add From Post source toggle on quiz generation page ([d4770a5](https://github.com/unishare-oss/unishare/commit/d4770a520afd3b52023a1c88f9f9f679413fb079))
+- **ai:** extend summary service for quiz generation ([1256b6b](https://github.com/unishare-oss/unishare/commit/1256b6b9dfa593f898b703b5cc7df4cf6e22c27a))
+- **api:** add DELETE /quizzes/:id endpoint ([a555298](https://github.com/unishare-oss/unishare/commit/a555298b9733be641ecef214b22beef4aea96b68))
+- **api:** add quiz and study material schema models ([2c69954](https://github.com/unishare-oss/unishare/commit/2c699540d7c374e702dfe007b0320187e82c9b91))
+- **api:** migration for quiz models ([65575a7](https://github.com/unishare-oss/unishare/commit/65575a724062a46b52b99f68c28c44b1e68e2804))
+- **api:** quizzes module with generation, sessions, and listing ([6aa164c](https://github.com/unishare-oss/unishare/commit/6aa164c79c70805a8ea00b46b949ce115008f1f4))
+- **api:** register quiz module ([0962e36](https://github.com/unishare-oss/unishare/commit/0962e36692fe646a1a56f4260eeeba602555ec0f))
+- **mobile-nav:** swipeable drawer, full admin items, quizzes icon ([d39d1da](https://github.com/unishare-oss/unishare/commit/d39d1dab5e160ba678afb98b9981fc6c0f546893))
+- **posts:** add hasSummary filter to post listing ([9c41a9b](https://github.com/unishare-oss/unishare/commit/9c41a9b24f9bb45a316f5b5b05e5c82fa231f7c5))
+- **posts:** expand post page width when sidebar is collapsed ([3dbc9c4](https://github.com/unishare-oss/unishare/commit/3dbc9c474920a9819f61a08cfed6d409c7927064))
+- **quiz:** add delete button for admins on quiz page ([617cdf4](https://github.com/unishare-oss/unishare/commit/617cdf465f9bcdd9f5b39f3d222191bcc805054a))
+- **quiz:** add generate-from-post endpoint using post AI summary ([f96f7f0](https://github.com/unishare-oss/unishare/commit/f96f7f0ccc91374c71ff4c1905a61feb9974f63e))
+- **share:** add ShareDialog component & add share func ([40e6fe1](https://github.com/unishare-oss/unishare/commit/40e6fe128d84d0c8396e61fc17f64b940ce84db7))
+- **sidebar:** collapsible sidebar with grouped nav and notification placement ([f068597](https://github.com/unishare-oss/unishare/commit/f06859706ce80aeb73816a75fde584c26db76ea8))
+- **web:** quiz components and game hook ([e9bb0f1](https://github.com/unishare-oss/unishare/commit/e9bb0f15a2270c19e739ece5aa0a6431b787df91))
+- **web:** quiz pages — admin generation, browse, play, and results ([6689155](https://github.com/unishare-oss/unishare/commit/6689155c45930f8878c7abe4640b66a303c944cb))
+
+### Performance Improvements
+
+- **quiz:** O(1) question lookup via Map, atomic createMany+update in transaction ([6c9ebf8](https://github.com/unishare-oss/unishare/commit/6c9ebf8dde7d4b855f4267bbd91c7f821c696de2))
+
 # [0.5.0](https://github.com/unishare-oss/unishare/compare/v0.4.2...v0.5.0) (2026-04-01)
 
 ### Bug Fixes
