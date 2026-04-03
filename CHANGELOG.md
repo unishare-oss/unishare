@@ -1,3 +1,9 @@
+## [0.6.1](https://github.com/unishare-oss/unishare/compare/v0.6.0...v0.6.1) (2026-04-03)
+
+### Bug Fixes
+
+- **post:** match skeleton and content container width to prevent layout shift ([4ce1fec](https://github.com/unishare-oss/unishare/commit/4ce1fec44d72b4d9efaf98002c07f1474fc3c16b))
+
 # [0.6.0](https://github.com/unishare-oss/unishare/compare/v0.5.0...v0.6.0) (2026-04-03)
 
 ### Bug Fixes
