@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 import { Bell } from 'lucide-react'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-export function NotificationsBell() {
+export function NotificationsBell({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname()
   const isActive = pathname.startsWith('/notifications')
 
@@ -16,11 +17,12 @@ export function NotificationsBell() {
 
   const unreadCount = (data ?? []).filter((n) => !n.read).length
 
-  return (
+  const link = (
     <Link
       href="/notifications"
       className={cn(
         'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+        collapsed && 'justify-center px-2',
         isActive
           ? 'bg-gradient-to-r from-amber/[0.12] to-transparent text-amber font-medium'
           : 'text-text-muted hover:text-foreground hover:bg-muted',
@@ -29,10 +31,11 @@ export function NotificationsBell() {
       <span
         className={cn(
           'absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-gradient-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
+          collapsed && 'hidden',
           isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
         )}
       />
-      <span className="relative">
+      <span className="relative shrink-0">
         <Bell
           className={cn(
             'size-4 transition-colors duration-200',
@@ -44,12 +47,29 @@ export function NotificationsBell() {
           <span className="absolute -top-1 -right-1 size-1.5 rounded-full bg-amber" />
         )}
       </span>
-      <span>Notifications</span>
-      {unreadCount > 0 && (
-        <span className="ml-auto font-mono text-[10px] bg-amber/20 text-amber px-1.5 py-0.5 rounded-full">
-          {unreadCount}
-        </span>
+      {!collapsed && (
+        <>
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <span className="ml-auto font-mono text-[10px] bg-amber/20 text-amber px-1.5 py-0.5 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </>
       )}
     </Link>
   )
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">
+          Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return link
 }

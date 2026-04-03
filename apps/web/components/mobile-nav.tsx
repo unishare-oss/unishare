@@ -17,6 +17,8 @@ import {
   LogOut,
   Settings,
   MessageSquareHeart,
+  BrainCircuit,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -47,6 +49,7 @@ const moreAuthItems = [
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
   { href: '/departments', label: 'Departments', icon: Building2 },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
+  { href: '/quizzes', label: 'Quizzes', icon: History },
   { href: '/profile', label: 'Settings', icon: Settings },
 ]
 
@@ -62,8 +65,11 @@ export function MobileNav() {
   })
   const unreadCount = (notifications ?? []).filter((n) => !n.read).length
 
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isMoreActive =
-    isAuthenticated && moreAuthItems.some((item) => pathname.startsWith(item.href))
+    isAuthenticated &&
+    (moreAuthItems.some((item) => pathname.startsWith(item.href)) ||
+      (isAdmin && pathname.startsWith('/admin/quizzes')))
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -166,6 +172,31 @@ export function MobileNav() {
                   )
                 })}
               </div>
+
+              {isAdmin && (
+                <>
+                  <div className="px-5 pt-4 pb-2">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Admin
+                    </span>
+                  </div>
+                  <div className="px-3">
+                    <Link
+                      href="/admin/quizzes"
+                      onClick={() => setSheetOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200',
+                        pathname.startsWith('/admin/quizzes')
+                          ? 'bg-amber/10 text-amber'
+                          : 'text-text-muted hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      <BrainCircuit className="size-5" strokeWidth={1.5} />
+                      <span className="text-sm font-medium">Generate Quiz</span>
+                    </Link>
+                  </div>
+                </>
+              )}
 
               <div className="px-5 mt-4 border-t pt-4 flex flex-col gap-1">
                 <Button
