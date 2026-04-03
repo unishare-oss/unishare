@@ -14,7 +14,7 @@ import type {
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
-import { useTypingIndicator } from '@/hooks/use-typing-indicator'
+import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
@@ -66,8 +66,11 @@ export function UnifiedChatWindow({
     }
   }
 
-  // Typing indicator
-  const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', content.trim())
+  // Global typing indicator (tracks all rooms)
+  const { typingByRoom } = useGlobalTypingIndicator(socket, user?.id)
+
+  // Emit typing for current room
+  useEmitTyping(socket, roomId || '', content.trim())
 
   // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
   useEffect(() => {
@@ -192,6 +195,9 @@ export function UnifiedChatWindow({
     hasScrolledInitiallyRef.current = false
   }, [roomId])
 
+  // Get typing users for current room
+  const roomTypingUsers = typingByRoom.get(roomId || '') || []
+
   // Auto-scroll to bottom for new messages and typing indicators
   useEffect(() => {
     if (scrollContainerRef.current && !isLoadingMore.current && hasScrolledInitiallyRef.current) {
@@ -206,8 +212,7 @@ export function UnifiedChatWindow({
         scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, typingUsers.roomTypingUsers.length])
+  }, [messages.length, roomTypingUsers.length])
 
   const handleSend = async () => {
     if (!content.trim() || !roomId) return
@@ -326,9 +331,9 @@ export function UnifiedChatWindow({
                 })}
 
                 {/* Typing indicators */}
-                {typingUsers.roomTypingUsers.length > 0 && (
+                {roomTypingUsers.length > 0 && (
                   <div className="flex flex-col gap-2">
-                    {typingUsers.roomTypingUsers.map((typingUser) => {
+                    {roomTypingUsers.map((typingUser) => {
                       const participant = room?.participants?.find(
                         (p) => p.userId === typingUser.userId,
                       )

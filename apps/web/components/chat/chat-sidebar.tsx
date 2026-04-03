@@ -17,6 +17,9 @@ import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
+import { useChatSocket } from '@/hooks/use-chat-socket'
+import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
 interface ChatSidebarProps {
   selectedRoomId?: string
@@ -79,6 +82,10 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
       setCreatingDMForUserId(null)
     }
   }
+
+  //TODO: refc maybe becoz we are passing socket just to retreieve typing
+  const { socket } = useChatSocket()
+  const { typingByRoom } = useGlobalTypingIndicator(socket, currentUserId)
 
   // Merge Following and Followers into a unique list of "Network" users
   const networkUsers = useMemo(() => {
@@ -146,6 +153,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
             const displayName = otherParticipant?.user?.name ?? room.name ?? 'Chat Room'
             const displayImage = otherParticipant?.user?.image ?? room.imageUrl ?? ''
 
+            const roomTypingUsers = typingByRoom.get(room.id || '') || []
+
             return (
               <button
                 key={room.id}
@@ -171,11 +180,18 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                       </span>
                     )}
                   </div>
-                  {lastMessage && (
+                  {roomTypingUsers.length > 0 ? (
+                    <SidebarTypingIndicator />
+                  ) : lastMessage ? (
                     <p className="text-xs text-muted-foreground truncate opacity-70 mt-0.5">
                       {lastMessage.content}
                     </p>
-                  )}
+                  ) : null}
+                  {/* {lastMessage && (
+                    <p className="text-xs text-muted-foreground truncate opacity-70 mt-0.5">
+                      {lastMessage.content}
+                    </p>
+                  )} */}
                 </div>
               </button>
             )
@@ -197,6 +213,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     room.type === 'DM' && room.participants.some((p) => p.userId === user.id),
                 )
                 const isSelected = userRoom && selectedRoomId === userRoom.id
+                const roomTypingUsers = userRoom ? typingByRoom.get(userRoom.id) || [] : []
 
                 return (
                   <button
@@ -217,11 +234,15 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <span className="font-medium truncate text-sm block">{user.name}</span>
-                      <span className="text-xs text-muted-foreground mt-0.5 block">
-                        {user.relationship === 'mutual'
-                          ? 'Mutual connection • Say hello!'
-                          : 'Start a conversation'}
-                      </span>
+                      {roomTypingUsers.length > 0 ? (
+                        <SidebarTypingIndicator />
+                      ) : (
+                        <span className="text-xs text-muted-foreground mt-0.5 block">
+                          {user.relationship === 'mutual'
+                            ? 'Mutual connection • Say hello!'
+                            : 'Start a conversation'}
+                        </span>
+                      )}
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       {creatingDMForUserId === user.id ? (

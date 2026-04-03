@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { Socket } from 'socket.io-client'
 
 interface TypingUser {
@@ -11,25 +11,23 @@ interface TypingUser {
 const DEBOUNCE_DELAY_MS = 300
 const INACTIVITY_TIMEOUT_MS = 5000
 
-export function useTypingIndicator(
-  socket: Socket | null,
-  roomId: string,
-  userId: string,
-  message: string,
-) {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+/**
+ * Global typing indicator hook - tracks typing status across ALL rooms
+ * Can be used in chat window for specific room or in sidebar for all rooms
+ */
+export function useGlobalTypingIndicator(socket: Socket | null, currentUserId?: string) {
   const typingUsersRef = useRef<Map<string, TypingUser>>(new Map())
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
 
-  // Listen for incoming typing events
+  // Listen for incoming typing events from ALL rooms
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !currentUserId) return
 
     const typingTimeouts = new Map<string, NodeJS.Timeout>()
 
     const handleUserTyping = (data: { userId: string; roomId: string; isTyping: boolean }) => {
       // Ignore self
-      if (data.userId === userId) return
+      if (data.userId === currentUserId) return
 
       const key = `${data.userId}-${data.roomId}`
 
@@ -69,11 +67,33 @@ export function useTypingIndicator(
       typingTimeouts.forEach((timeout) => clearTimeout(timeout))
       typingTimeouts.clear()
     }
-  }, [socket, userId])
+  }, [socket, currentUserId])
 
-  // Debounced typing effect
+  // Build a Map of roomId -> TypingUser[] for easy lookup
+  const typingByRoom = useMemo(() => {
+    const map = new Map<string, TypingUser[]>()
+    typingUsers.forEach((user) => {
+      const existing = map.get(user.roomId) || []
+      map.set(user.roomId, [...existing, user])
+    })
+    return map
+  }, [typingUsers])
+
+  return {
+    typingUsers, // All typing users across all rooms
+    typingByRoom, // Map<roomId, TypingUser[]> for easy lookup
+  }
+}
+
+/**
+ * Hook for emitting typing events in a specific room
+ * Use alongside useGlobalTypingIndicator
+ */
+export function useEmitTyping(socket: Socket | null, roomId: string, message: string) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !roomId) return
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -87,12 +107,4 @@ export function useTypingIndicator(
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [message, socket, roomId])
-
-  // Get typing users for current room
-  const roomTypingUsers = typingUsers.filter((user) => user.roomId === roomId)
-
-  return {
-    roomTypingUsers,
-    typingUsers,
-  }
 }
