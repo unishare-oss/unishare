@@ -67,7 +67,7 @@ export function UnifiedChatWindow({
   }
 
   // Typing indicator
-  const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', !!content.trim())
+  const typingUsers = useTypingIndicator(socket, roomId || '', user?.id || '', content.trim())
 
   // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
   useEffect(() => {

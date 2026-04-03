@@ -15,7 +15,7 @@ export function useTypingIndicator(
   socket: Socket | null,
   roomId: string,
   userId: string,
-  isTyping: boolean,
+  message: string,
 ) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const typingUsersRef = useRef<Map<string, TypingUser>>(new Map())
@@ -80,13 +80,13 @@ export function useTypingIndicator(
     }
 
     timeoutRef.current = setTimeout(() => {
-      socket.emit('typing', { roomId, isTyping })
+      socket.emit('typing', { roomId, isTyping: !!message })
     }, DEBOUNCE_DELAY_MS)
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [isTyping, socket, roomId])
+  }, [message, socket, roomId])
 
   // Get typing users for current room
   const roomTypingUsers = typingUsers.filter((user) => user.roomId === roomId)
