@@ -198,7 +198,7 @@ export class QuizzesService {
 
     let score = 0
     const attempts: { questionId: string; studentAnswer: number | null; isCorrect: boolean }[] = []
-    const results: { questionId: string; isCorrect: boolean; explanation: string }[] = []
+    const results: { questionId: string; isCorrect: boolean; explanation: string | null }[] = []
 
     for (const answer of answers) {
       const question = questionMap.get(answer.questionId)
