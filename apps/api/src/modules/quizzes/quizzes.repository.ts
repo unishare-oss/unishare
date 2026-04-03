@@ -5,11 +5,7 @@ import { PrismaService } from '@/prisma/prisma.service'
 export class QuizzesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  listQuizzes(params: {
-    where: object
-    skip: number
-    limit: number
-  }) {
+  listQuizzes(params: { where: object; skip: number; limit: number }) {
     const { where, skip, limit } = params
     return Promise.all([
       this.prisma.quiz.findMany({
@@ -94,25 +90,20 @@ export class QuizzesRepository {
     return this.prisma.quizSession.create({ data })
   }
 
-  createAttempt(data: {
-    sessionId: string
-    questionId: string
-    studentAnswer: number | null
-    isCorrect: boolean
-  }) {
-    return this.prisma.questionAttempt.create({ data })
-  }
-
-  updateSession(
+  submitAttempts(
     sessionId: string,
-    data: {
-      score: number
-      totalPoints: number
-      completedAt: Date
-      timeSpentSec: number | null
-    },
+    attempts: { questionId: string; studentAnswer: number | null; isCorrect: boolean }[],
+    sessionUpdate: { score: number; totalPoints: number; completedAt: Date; timeSpentSec: number | null },
   ) {
-    return this.prisma.quizSession.update({ where: { id: sessionId }, data })
+    return this.prisma.$transaction([
+      this.prisma.questionAttempt.createMany({
+        data: attempts.map((a) => ({ sessionId, ...a })),
+      }),
+      this.prisma.quizSession.update({
+        where: { id: sessionId },
+        data: sessionUpdate,
+      }),
+    ])
   }
 
   findSessionById(sessionId: string) {

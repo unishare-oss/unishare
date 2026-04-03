@@ -193,34 +193,27 @@ export class QuizzesService {
   ) {
     const quiz = await this.getQuiz(quizId, true)
 
-    const session = await this.quizzesRepository.createSession({ quizId, studentId })
+    // O(1) lookups instead of O(n) find() per answer
+    const questionMap = new Map(quiz.questions.map((q) => [q.id, q]))
 
     let score = 0
-    const results = []
+    const attempts: { questionId: string; studentAnswer: number | null; isCorrect: boolean }[] = []
+    const results: { questionId: string; isCorrect: boolean; explanation: string }[] = []
 
     for (const answer of answers) {
-      const question = quiz.questions.find((q) => q.id === answer.questionId)
+      const question = questionMap.get(answer.questionId)
       if (!question) continue
 
       const isCorrect = answer.answerIndex === question.correctAnswer
-
-      await this.quizzesRepository.createAttempt({
-        sessionId: session.id,
-        questionId: answer.questionId,
-        studentAnswer: answer.answerIndex,
-        isCorrect,
-      })
-
       if (isCorrect) score += 1
 
-      results.push({
-        questionId: question.id,
-        isCorrect,
-        explanation: question.explanation,
-      })
+      attempts.push({ questionId: answer.questionId, studentAnswer: answer.answerIndex, isCorrect })
+      results.push({ questionId: question.id, isCorrect, explanation: question.explanation })
     }
 
-    await this.quizzesRepository.updateSession(session.id, {
+    const session = await this.quizzesRepository.createSession({ quizId, studentId })
+
+    await this.quizzesRepository.submitAttempts(session.id, attempts, {
       score,
       totalPoints: quiz.questions.length,
       completedAt: new Date(),
