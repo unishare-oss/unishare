@@ -158,6 +158,6 @@ export class QuizzesController {
   @ApiOkResponse({ type: QuizEntity })
   @ResponseMessage('Quiz published successfully')
   publishQuiz(@Param('id') quizId: string, @Session() session: UserSession) {
-    return this.quizzesService.publishQuiz(quizId, session.user.id)
+    return this.quizzesService.publishQuiz(quizId, session.user.role as UserRole)
   }
 }

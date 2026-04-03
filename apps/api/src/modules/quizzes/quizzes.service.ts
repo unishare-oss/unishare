@@ -5,8 +5,9 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common'
-import { PrismaService } from '@/prisma/prisma.service'
+import { UserRole } from '@/generated/prisma/client'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
+import { QuizzesRepository } from './quizzes.repository'
 
 interface QuizQuestion {
   content: string
@@ -27,7 +28,7 @@ export class QuizzesService {
   private readonly logger = new Logger(QuizzesService.name)
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly quizzesRepository: QuizzesRepository,
     private readonly aiSummary: AiSummaryService,
   ) {}
 
@@ -46,25 +47,7 @@ export class QuizzesService {
       ...(departmentId ? { course: { departmentId } } : {}),
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.quiz.findMany({
-        where,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          courseId: true,
-          questionsCount: true,
-          createdAt: true,
-          course: { select: { code: true, name: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.quiz.count({ where }),
-    ])
-
+    const [items, total] = await this.quizzesRepository.listQuizzes({ where, skip, limit })
     return { items, total, page, limit }
   }
 
@@ -105,30 +88,26 @@ export class QuizzesService {
     }
 
     // Persist study material (store first 50k chars)
-    const material = await this.prisma.studyMaterial.create({
-      data: {
-        courseId,
-        title: file.originalname.replace(/\.[^.]+$/, ''),
-        content: text.slice(0, 50000),
-        uploadedBy: generatedBy,
-      },
+    const material = await this.quizzesRepository.createStudyMaterial({
+      courseId,
+      title: file.originalname.replace(/\.[^.]+$/, ''),
+      content: text.slice(0, 50000),
+      uploadedBy: generatedBy,
     })
 
     // Create published quiz (admin explicitly generates it for immediate use)
-    const quiz = await this.prisma.quiz.create({
-      data: {
-        courseId,
-        studyMaterialId: material.id,
-        title: `${material.title} — Quiz (${questions.length} Q)`,
-        description: `Auto-generated quiz from: ${material.title}`,
-        isPublished: true,
-        createdBy: generatedBy,
-        questionsCount: questions.length,
-      },
+    const quiz = await this.quizzesRepository.createQuiz({
+      courseId,
+      studyMaterialId: material.id,
+      title: `${material.title} — Quiz (${questions.length} Q)`,
+      description: `Auto-generated quiz from: ${material.title}`,
+      isPublished: true,
+      createdBy: generatedBy,
+      questionsCount: questions.length,
     })
 
-    await this.prisma.quizQuestion.createMany({
-      data: questions.map((q) => ({
+    await this.quizzesRepository.createQuestions(
+      questions.map((q) => ({
         quizId: quiz.id,
         content: q.content,
         options: q.options,
@@ -136,7 +115,7 @@ export class QuizzesService {
         explanation: q.explanation,
         difficulty: q.difficulty,
       })),
-    })
+    )
 
     this.logger.log(`Created quiz ${quiz.id} with ${questions.length} questions`)
 
@@ -148,10 +127,7 @@ export class QuizzesService {
     generatedBy: string,
     questionCount: number = 20,
   ): Promise<{ quizId: string; questions: QuizQuestion[] }> {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-      select: { id: true, title: true, summary: true, courseId: true },
-    })
+    const post = await this.quizzesRepository.findPostForQuiz(postId)
 
     if (!post) throw new NotFoundException('Post not found')
     if (!post.summary?.trim()) {
@@ -168,19 +144,17 @@ export class QuizzesService {
 
     const title = post.title ?? `Post ${post.id.slice(0, 8)}`
 
-    const quiz = await this.prisma.quiz.create({
-      data: {
-        courseId: post.courseId,
-        title: `${title} — Quiz (${questions.length} Q)`,
-        description: `Auto-generated quiz from post summary: ${title}`,
-        isPublished: true,
-        createdBy: generatedBy,
-        questionsCount: questions.length,
-      },
+    const quiz = await this.quizzesRepository.createQuiz({
+      courseId: post.courseId,
+      title: `${title} — Quiz (${questions.length} Q)`,
+      description: `Auto-generated quiz from post summary: ${title}`,
+      isPublished: true,
+      createdBy: generatedBy,
+      questionsCount: questions.length,
     })
 
-    await this.prisma.quizQuestion.createMany({
-      data: questions.map((q) => ({
+    await this.quizzesRepository.createQuestions(
+      questions.map((q) => ({
         quizId: quiz.id,
         content: q.content,
         options: q.options,
@@ -188,7 +162,7 @@ export class QuizzesService {
         explanation: q.explanation,
         difficulty: q.difficulty,
       })),
-    })
+    )
 
     this.logger.log(
       `Created quiz ${quiz.id} from post ${postId} with ${questions.length} questions`,
@@ -198,21 +172,7 @@ export class QuizzesService {
   }
 
   async getQuiz(quizId: string, publishedOnly?: boolean) {
-    const quiz = await this.prisma.quiz.findUnique({
-      where: { id: quizId },
-      include: {
-        questions: {
-          select: {
-            id: true,
-            content: true,
-            options: true,
-            correctAnswer: true,
-            difficulty: true,
-            explanation: true,
-          },
-        },
-      },
-    })
+    const quiz = await this.quizzesRepository.findQuizById(quizId)
 
     if (!quiz) {
       throw new NotFoundException('Quiz not found')
@@ -233,9 +193,7 @@ export class QuizzesService {
   ) {
     const quiz = await this.getQuiz(quizId, true)
 
-    const session = await this.prisma.quizSession.create({
-      data: { quizId, studentId },
-    })
+    const session = await this.quizzesRepository.createSession({ quizId, studentId })
 
     let score = 0
     const results = []
@@ -246,13 +204,11 @@ export class QuizzesService {
 
       const isCorrect = answer.answerIndex === question.correctAnswer
 
-      await this.prisma.questionAttempt.create({
-        data: {
-          sessionId: session.id,
-          questionId: answer.questionId,
-          studentAnswer: answer.answerIndex,
-          isCorrect,
-        },
+      await this.quizzesRepository.createAttempt({
+        sessionId: session.id,
+        questionId: answer.questionId,
+        studentAnswer: answer.answerIndex,
+        isCorrect,
       })
 
       if (isCorrect) score += 1
@@ -264,14 +220,11 @@ export class QuizzesService {
       })
     }
 
-    await this.prisma.quizSession.update({
-      where: { id: session.id },
-      data: {
-        score,
-        totalPoints: quiz.questions.length,
-        completedAt: new Date(),
-        timeSpentSec: timeSpentSec ?? null,
-      },
+    await this.quizzesRepository.updateSession(session.id, {
+      score,
+      totalPoints: quiz.questions.length,
+      completedAt: new Date(),
+      timeSpentSec: timeSpentSec ?? null,
     })
 
     return {
@@ -284,15 +237,7 @@ export class QuizzesService {
   }
 
   async getSession(sessionId: string, userId: string) {
-    const session = await this.prisma.quizSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        quiz: {
-          include: { questions: { orderBy: { createdAt: 'asc' } } },
-        },
-        questionAttempts: true,
-      },
-    })
+    const session = await this.quizzesRepository.findSessionById(sessionId)
 
     if (!session) throw new NotFoundException('Session not found')
     if (session.studentId !== userId) throw new ForbiddenException('Access denied')
@@ -301,18 +246,7 @@ export class QuizzesService {
   }
 
   async getStudentProgress(studentId: string, courseId?: string) {
-    const sessions = await this.prisma.quizSession.findMany({
-      where: {
-        studentId,
-        quiz: courseId ? { courseId } : undefined,
-      },
-      include: {
-        quiz: {
-          select: { id: true, title: true, courseId: true },
-        },
-      },
-      orderBy: { attemptedAt: 'desc' },
-    })
+    const sessions = await this.quizzesRepository.findStudentSessions(studentId, courseId)
 
     const stats = sessions.reduce(
       (acc: { totalAttempts: number; averageScore: number; bestScore: number }, s) => {
@@ -331,33 +265,25 @@ export class QuizzesService {
   }
 
   async deleteQuiz(quizId: string) {
-    const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } })
+    const quiz = await this.quizzesRepository.findQuizById(quizId)
     if (!quiz) throw new NotFoundException('Quiz not found')
-
-    await this.prisma.quizQuestion.deleteMany({ where: { quizId } })
-    await this.prisma.quizSession.deleteMany({ where: { quizId } })
-    await this.prisma.quiz.delete({ where: { id: quizId } })
+    await this.quizzesRepository.deleteQuizCascade(quizId)
   }
 
-  async publishQuiz(quizId: string, userId: string) {
-    const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } })
+  async publishQuiz(quizId: string, role: UserRole) {
+    if (role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
+      throw new ForbiddenException('Only admins and moderators can publish quizzes')
+    }
 
+    const quiz = await this.quizzesRepository.findQuizById(quizId)
     if (!quiz) throw new NotFoundException('Quiz not found')
 
-    return this.prisma.quiz.update({
-      where: { id: quizId },
-      data: { isPublished: true },
-    })
+    return this.quizzesRepository.publishQuiz(quizId)
   }
 
   async updateQuestion(questionId: string, data: Partial<QuizQuestion>) {
-    const question = await this.prisma.quizQuestion.findUnique({ where: { id: questionId } })
-
+    const question = await this.quizzesRepository.findQuestionById(questionId)
     if (!question) throw new NotFoundException('Question not found')
-
-    return this.prisma.quizQuestion.update({
-      where: { id: questionId },
-      data,
-    })
+    return this.quizzesRepository.updateQuestion(questionId, data)
   }
 }
