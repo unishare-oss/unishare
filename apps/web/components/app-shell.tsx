@@ -46,8 +46,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           showLoader ? 'invisible pointer-events-none' : '',
           'transition-[margin] duration-300',
           isChat
-            ? cn('h-screen overflow-hidden', collapsed ? 'md:ml-16' : 'md:ml-72')
-            : cn('min-h-screen pb-16 md:pb-0', collapsed ? 'md:ml-16' : 'md:ml-72'),
+            ? cn('h-screen overflow-hidden', collapsed ? 'md:ml-15' : 'md:ml-68')
+            : cn('min-h-screen pb-16 md:pb-0', collapsed ? 'md:ml-15' : 'md:ml-68'),
         )}
         aria-hidden={showLoader}
       >
