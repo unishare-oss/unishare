@@ -17,7 +17,13 @@ import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UserSession } from '@/auth/auth.config'
 import { QuizzesService } from './quizzes.service'
-import { GenerateQuestionsDto, ListQuizzesDto, SubmitQuizDto, UpdateQuestionDto } from './dto'
+import {
+  GenerateQuestionsDto,
+  GenerateFromPostDto,
+  ListQuizzesDto,
+  SubmitQuizDto,
+  UpdateQuestionDto,
+} from './dto'
 import {
   PaginatedQuizzesEntity,
   QuizSessionEntity,
@@ -85,6 +91,18 @@ export class QuizzesController {
     return this.quizzesService.generateQuizFromMaterial(
       dto.courseId,
       file,
+      session.user.id,
+      dto.questionCount ?? 20,
+    )
+  }
+
+  @Post('generate-from-post')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @ApiOkResponse({ type: GenerateQuizResponseEntity })
+  @ResponseMessage('Quiz generated successfully')
+  generateFromPost(@Body() dto: GenerateFromPostDto, @Session() session: UserSession) {
+    return this.quizzesService.generateQuizFromPost(
+      dto.postId,
       session.user.id,
       dto.questionCount ?? 20,
     )

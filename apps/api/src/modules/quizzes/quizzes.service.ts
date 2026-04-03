@@ -143,6 +143,60 @@ export class QuizzesService {
     return { quizId: quiz.id, questions }
   }
 
+  async generateQuizFromPost(
+    postId: string,
+    generatedBy: string,
+    questionCount: number = 20,
+  ): Promise<{ quizId: string; questions: QuizQuestion[] }> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, title: true, summary: true, courseId: true },
+    })
+
+    if (!post) throw new NotFoundException('Post not found')
+    if (!post.summary?.trim()) {
+      throw new BadRequestException('This post does not have an AI summary yet')
+    }
+
+    let questions: QuizQuestion[]
+    try {
+      questions = await this.aiSummary.generateQuizQuestions(post.summary, questionCount)
+    } catch (err) {
+      this.logger.error(`Question generation failed: ${(err as Error).message}`)
+      throw new BadRequestException('Failed to generate questions from post summary')
+    }
+
+    const title = post.title ?? `Post ${post.id.slice(0, 8)}`
+
+    const quiz = await this.prisma.quiz.create({
+      data: {
+        courseId: post.courseId,
+        title: `${title} — Quiz (${questions.length} Q)`,
+        description: `Auto-generated quiz from post summary: ${title}`,
+        isPublished: true,
+        createdBy: generatedBy,
+        questionsCount: questions.length,
+      },
+    })
+
+    await this.prisma.quizQuestion.createMany({
+      data: questions.map((q) => ({
+        quizId: quiz.id,
+        content: q.content,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: q.difficulty,
+      })),
+    })
+
+    this.logger.log(
+      `Created quiz ${quiz.id} from post ${postId} with ${questions.length} questions`,
+    )
+
+    return { quizId: quiz.id, questions }
+  }
+
   async getQuiz(quizId: string, publishedOnly?: boolean) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id: quizId },
