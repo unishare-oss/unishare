@@ -60,13 +60,17 @@ export function PostCard({ post }: { post: ApiPost }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <TypeBadge type={post.type} />
-              <span className="font-mono text-[13px] text-amber font-medium">
-                {post.course.code}
-              </span>
-              <span className="text-text-muted text-[13px] hidden sm:inline">{'·'}</span>
-              <span className="text-text-muted text-[13px] hidden sm:inline">
-                {post.course.department.name}
-              </span>
+              {post.course && (
+                <>
+                  <span className="font-mono text-[13px] text-amber font-medium">
+                    {post.course.code}
+                  </span>
+                  <span className="text-text-muted text-[13px] hidden sm:inline">{'·'}</span>
+                  <span className="text-text-muted text-[13px] hidden sm:inline">
+                    {post.course.department?.name}
+                  </span>
+                </>
+              )}
             </div>
             <h3
               className={cn(
