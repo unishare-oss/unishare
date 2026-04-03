@@ -248,18 +248,26 @@ export class QuizzesService {
   async getStudentProgress(studentId: string, courseId?: string) {
     const sessions = await this.quizzesRepository.findStudentSessions(studentId, courseId)
 
-    const stats = sessions.reduce(
-      (acc: { totalAttempts: number; averageScore: number; bestScore: number }, s) => {
+    const aggregatedStats = sessions.reduce(
+      (acc: { totalAttempts: number; totalScore: number; bestScore: number }, s) => {
         if (!s.totalPoints) return acc
         const pct = (s.score / s.totalPoints) * 100
         return {
           totalAttempts: acc.totalAttempts + 1,
-          averageScore: acc.averageScore + pct / sessions.length,
+          totalScore: acc.totalScore + pct,
           bestScore: Math.max(acc.bestScore, pct),
         }
       },
-      { totalAttempts: 0, averageScore: 0, bestScore: 0 },
+      { totalAttempts: 0, totalScore: 0, bestScore: 0 },
     )
+    const stats = {
+      totalAttempts: aggregatedStats.totalAttempts,
+      averageScore:
+        aggregatedStats.totalAttempts > 0
+          ? aggregatedStats.totalScore / aggregatedStats.totalAttempts
+          : 0,
+      bestScore: aggregatedStats.bestScore,
+    }
 
     return { stats, recentSessions: sessions }
   }
