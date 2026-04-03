@@ -130,7 +130,7 @@ export function CommentThreadItem({
   const isViewerPostAuthor = viewer.postAuthorId != null && viewer.postAuthorId === currentUserId
   const isOriginalPosterComment =
     viewer.postAuthorId != null && comment.userId === viewer.postAuthorId
-  const isAdmin = viewer.user?.role === 'ADMIN'
+  const isAdmin = viewer.user?.role === 'ADMIN' || viewer.user?.role === 'MODERATOR'
   const canModerate = isCommentOwner || isViewerPostAuthor || isAdmin
   const canEdit = isCommentOwner
   const canDelete = canModerate
