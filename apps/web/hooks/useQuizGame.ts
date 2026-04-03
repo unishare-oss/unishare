@@ -17,7 +17,7 @@ export function useQuizGame(quiz: Quiz) {
   )
   const [showFeedback, setShowFeedback] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [startTime] = useState(Date.now())
+  const [startTime] = useState(() => Date.now())
   const [timeTaken, setTimeTaken] = useState(0)
 
   const currentQuestion = quiz.questions[currentQuestionIndex]

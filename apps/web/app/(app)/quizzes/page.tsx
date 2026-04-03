@@ -50,10 +50,8 @@ export default function QuizzesPage() {
   )
   const courses = coursesData?.items ?? []
 
-  // Reset course when department changes
-  useEffect(() => {
-    setCourseId('')
-  }, [departmentId])
+  // Reset course when department changes — derived state, no effect needed
+  const effectiveCourseId = departmentId ? courseId : ''
 
   const {
     data: quizzesData,
@@ -61,8 +59,8 @@ export default function QuizzesPage() {
     error: quizzesError,
   } = useQuizzesControllerListQuizzes(
     {
-      courseId: courseId || undefined,
-      departmentId: courseId ? undefined : departmentId || undefined,
+      courseId: effectiveCourseId || undefined,
+      departmentId: effectiveCourseId ? undefined : departmentId || undefined,
     },
     { query: { select: (r) => r.data } },
   )
@@ -78,7 +76,7 @@ export default function QuizzesPage() {
   if (isAuthenticated && !historyLoading && stats && stats.totalAttempts > 0) {
     statsToShow = stats
   }
-  const hasFilters = !!departmentId || !!courseId
+  const hasFilters = !!departmentId || !!effectiveCourseId
 
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4 space-y-6">
@@ -116,7 +114,7 @@ export default function QuizzesPage() {
         <TabsContent value="browse" className="mt-4 space-y-3">
           <QuizBrowseFilters
             departmentId={departmentId}
-            courseId={courseId}
+            courseId={effectiveCourseId}
             departments={departments ?? []}
             courses={courses}
             onDepartmentChange={setDepartmentId}
