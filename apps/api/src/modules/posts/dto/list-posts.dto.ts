@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { Type } from 'class-transformer'
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
+import { Transform, Type } from 'class-transformer'
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
 import { PostStatus, PostType } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 
@@ -50,4 +50,10 @@ export class ListPostsDto extends PaginationDto {
   @IsOptional()
   @IsString()
   tagSlug?: string
+
+  @ApiPropertyOptional({ description: 'Only return posts that have an AI summary' })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  hasSummary?: boolean
 }

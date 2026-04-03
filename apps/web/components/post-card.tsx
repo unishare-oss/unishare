@@ -60,13 +60,17 @@ export function PostCard({ post }: { post: ApiPost }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <TypeBadge type={post.type} />
-              <span className="font-mono text-[13px] text-amber font-medium">
-                {post.course.code}
-              </span>
-              <span className="text-text-muted text-[13px] hidden sm:inline">{'·'}</span>
-              <span className="text-text-muted text-[13px] hidden sm:inline">
-                {post.course.department.name}
-              </span>
+              {post.course && (
+                <>
+                  <span className="font-mono text-[13px] text-amber font-medium">
+                    {post.course.code}
+                  </span>
+                  <span className="text-text-muted text-[13px] hidden sm:inline">{'·'}</span>
+                  <span className="text-text-muted text-[13px] hidden sm:inline">
+                    {post.course.department?.name}
+                  </span>
+                </>
+              )}
             </div>
             <h3
               className={cn(
@@ -126,13 +130,17 @@ export function PostCard({ post }: { post: ApiPost }) {
                   <span className="font-mono text-xs text-text-muted">Year {yearLevel}</span>
                 </>
               )}
-              <span className="text-text-muted text-xs hidden sm:inline">{'·'}</span>
-              <span className="flex items-center gap-1 hidden sm:flex">
-                <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
-                <span className="font-mono text-xs text-text-muted">
-                  {post.files.length} {post.files.length === 1 ? 'file' : 'files'}
-                </span>
-              </span>
+              {post.files != null && (
+                <>
+                  <span className="text-text-muted text-xs hidden sm:inline">{'·'}</span>
+                  <span className="flex items-center gap-1 hidden sm:flex">
+                    <FileText className="size-3.5 text-text-muted" strokeWidth={1.5} />
+                    <span className="font-mono text-xs text-text-muted">
+                      {post.files.length} {post.files.length === 1 ? 'file' : 'files'}
+                    </span>
+                  </span>
+                </>
+              )}
               <span className="text-text-muted text-xs">{'·'}</span>
               <span className="flex items-center gap-1">
                 <MessageSquare className="size-3.5 text-text-muted" strokeWidth={1.5} />

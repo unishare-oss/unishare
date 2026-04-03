@@ -26,6 +26,7 @@ import { ChatModule } from './modules/chat/chat.module'
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
 import { FeedbackModule } from './modules/feedback/feedback.module'
+import { QuizzesModule } from './modules/quizzes/quizzes.module'
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module'
     AiSummaryModule,
     ReadingListsModule,
     FeedbackModule,
+    QuizzesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

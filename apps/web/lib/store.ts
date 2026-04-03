@@ -83,6 +83,8 @@ interface UIStore {
   markRead: (id: string) => void
   savedPosts: ApiPost[]
   toggleSaved: (post: ApiPost) => void
+  sidebarCollapsed: boolean
+  toggleSidebar: () => void
 }
 
 export const useUIStore = create<UIStore>()(
@@ -103,6 +105,8 @@ export const useUIStore = create<UIStore>()(
             : [...current, post],
         })
       },
+      sidebarCollapsed: false,
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
     { name: 'unishare-ui', skipHydration: true },
   ),
