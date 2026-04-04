@@ -42,23 +42,25 @@ export function DropdownFilters({
   return (
     <div className="flex flex-col gap-3 pb-2">
       <div className="grid grid-cols-2 gap-2">
-        <Select value={selectedDeptId || ALL} onValueChange={onDeptChange}>
-          <SelectTrigger
-            size="sm"
-            className="font-mono text-xs text-text-muted w-full"
-            title={selectedDeptLabel}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value={ALL}>All departments</SelectItem>
-            {(departments ?? []).map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="col-span-2">
+          <Select value={selectedDeptId || ALL} onValueChange={onDeptChange}>
+            <SelectTrigger
+              size="sm"
+              className="font-mono text-xs text-text-muted w-full"
+              title={selectedDeptLabel}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value={ALL}>All departments</SelectItem>
+              {(departments ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <Select
           value={selectedYear === null ? ALL : String(selectedYear)}

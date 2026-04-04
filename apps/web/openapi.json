@@ -40,6 +40,96 @@
         "tags": ["storage"]
       }
     },
+    "/api/storage/multipart/create": {
+      "post": {
+        "operationId": "StorageController_createMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MultipartUploadEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/upload-part": {
+      "post": {
+        "operationId": "StorageController_uploadPart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": { "type": "string" },
+                  "uploadId": { "type": "string" },
+                  "partNumber": { "type": "integer" },
+                  "chunk": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadedPartEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/complete": {
+      "post": {
+        "operationId": "StorageController_completeMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "" } },
+        "tags": ["storage"]
+      }
+    },
+    "/api/storage/multipart/abort": {
+      "delete": {
+        "operationId": "StorageController_abortMultipartUpload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AbortMultipartUploadDto" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "" } },
+        "tags": ["storage"]
+      }
+    },
     "/api/courses": {
       "post": {
         "operationId": "CoursesController_create",
@@ -445,6 +535,13 @@
             "in": "query",
             "description": "Filter by tag slug (exact match)",
             "schema": { "type": "string" }
+          },
+          {
+            "name": "hasSummary",
+            "required": false,
+            "in": "query",
+            "description": "Only return posts that have an AI summary",
+            "schema": { "type": "boolean" }
           }
         ],
         "responses": {
@@ -1718,6 +1815,227 @@
         },
         "tags": ["admin"]
       }
+    },
+    "/api/quizzes": {
+      "get": {
+        "operationId": "QuizzesController_listQuizzes",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "default": 1, "type": "number" }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": { "minimum": 1, "type": "number" }
+          },
+          { "name": "courseId", "required": false, "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "departmentId",
+            "required": false,
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedQuizzesEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/student/{studentId}/progress": {
+      "get": {
+        "operationId": "QuizzesController_getStudentProgress",
+        "parameters": [
+          { "name": "studentId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StudentProgressEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/sessions/{sessionId}": {
+      "get": {
+        "operationId": "QuizzesController_getSession",
+        "parameters": [
+          { "name": "sessionId", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/QuizSessionEntity" } }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/generate": {
+      "post": {
+        "operationId": "QuizzesController_generateQuestions",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["courseId", "file"],
+                "properties": {
+                  "courseId": { "type": "string" },
+                  "questionCount": { "type": "integer", "default": 20 },
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenerateQuizResponseEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/generate-from-post": {
+      "post": {
+        "operationId": "QuizzesController_generateFromPost",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/GenerateFromPostDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GenerateQuizResponseEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/questions/{id}": {
+      "put": {
+        "operationId": "QuizzesController_updateQuestion",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateQuestionDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuizQuestionEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/{id}": {
+      "get": {
+        "operationId": "QuizzesController_getQuiz",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/QuizEntity" } }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      },
+      "delete": {
+        "operationId": "QuizzesController_deleteQuiz",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "" } },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/{id}/submit": {
+      "post": {
+        "operationId": "QuizzesController_submitQuiz",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SubmitQuizDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SubmitQuizResponseEntity" }
+              }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
+    },
+    "/api/quizzes/{id}/publish": {
+      "post": {
+        "operationId": "QuizzesController_publishQuiz",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/QuizEntity" } }
+            }
+          }
+        },
+        "tags": ["quizzes"]
+      }
     }
   },
   "info": {
@@ -1739,7 +2057,7 @@
             "maxLength": 255,
             "pattern": "^[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_]*\\/[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_.+]*$"
           },
-          "uploadType": { "type": "string", "enum": ["document", "image"] },
+          "uploadType": { "type": "string", "enum": ["document", "image", "video"] },
           "purpose": { "type": "string", "enum": ["profile-picture", "post-attachment"] }
         },
         "required": ["mimeType", "uploadType", "purpose"]
@@ -1752,6 +2070,41 @@
           "publicUrl": { "type": "string" }
         },
         "required": ["url", "key", "publicUrl"]
+      },
+      "CreateMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "mimeType": { "type": "string", "maxLength": 255 },
+          "uploadType": { "type": "string", "enum": ["document", "image", "video"] },
+          "purpose": { "type": "string", "enum": ["post-attachment"] }
+        },
+        "required": ["mimeType", "uploadType", "purpose"]
+      },
+      "MultipartUploadEntity": {
+        "type": "object",
+        "properties": { "uploadId": { "type": "string" }, "key": { "type": "string" } },
+        "required": ["uploadId", "key"]
+      },
+      "UploadedPartEntity": {
+        "type": "object",
+        "properties": { "etag": { "type": "string" } },
+        "required": ["etag"]
+      },
+      "CompleteMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "uploadId": { "type": "string", "maxLength": 1024 }
+        },
+        "required": ["key", "uploadId"]
+      },
+      "AbortMultipartUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "maxLength": 500 },
+          "uploadId": { "type": "string", "maxLength": 1024 }
+        },
+        "required": ["key", "uploadId"]
       },
       "CreateCourseDto": {
         "type": "object",
@@ -2808,6 +3161,204 @@
           "limit": { "type": "number" }
         },
         "required": ["items", "total", "page", "limit"]
+      },
+      "QuizListItemEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "courseId": { "type": "string" },
+          "course": { "type": "object" },
+          "questionsCount": { "type": "number" },
+          "createdAt": { "format": "date-time", "type": "string" }
+        },
+        "required": ["id", "title", "courseId", "course", "questionsCount", "createdAt"]
+      },
+      "PaginatedQuizzesEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuizListItemEntity" }
+          },
+          "total": { "type": "number" },
+          "page": { "type": "number" },
+          "limit": { "type": "number" }
+        },
+        "required": ["items", "total", "page", "limit"]
+      },
+      "StudentStatsEntity": {
+        "type": "object",
+        "properties": {
+          "totalAttempts": { "type": "number" },
+          "averageScore": { "type": "number" },
+          "bestScore": { "type": "number" }
+        },
+        "required": ["totalAttempts", "averageScore", "bestScore"]
+      },
+      "RecentSessionEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "score": { "type": "number" },
+          "totalPoints": { "type": "number" },
+          "timeSpentSec": { "type": "number", "nullable": true },
+          "attemptedAt": { "format": "date-time", "type": "string" },
+          "completedAt": { "type": "string", "nullable": true },
+          "quiz": { "type": "object" }
+        },
+        "required": ["id", "score", "totalPoints", "attemptedAt", "quiz"]
+      },
+      "StudentProgressEntity": {
+        "type": "object",
+        "properties": {
+          "stats": { "$ref": "#/components/schemas/StudentStatsEntity" },
+          "recentSessions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RecentSessionEntity" }
+          }
+        },
+        "required": ["stats", "recentSessions"]
+      },
+      "QuizQuestionEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "content": { "type": "string" },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "correctAnswer": { "type": "number" },
+          "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+          "explanation": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "content", "options", "correctAnswer", "difficulty"]
+      },
+      "QuizEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "courseId": { "type": "string" },
+          "isPublished": { "type": "boolean" },
+          "questionsCount": { "type": "number" },
+          "questions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuizQuestionEntity" }
+          },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "id",
+          "title",
+          "courseId",
+          "isPublished",
+          "questionsCount",
+          "questions",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "QuestionAttemptEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "questionId": { "type": "string" },
+          "studentAnswer": { "type": "number", "nullable": true },
+          "isCorrect": { "type": "boolean", "nullable": true }
+        },
+        "required": ["id", "questionId"]
+      },
+      "QuizSessionEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "score": { "type": "number" },
+          "totalPoints": { "type": "number" },
+          "timeSpentSec": { "type": "number", "nullable": true },
+          "completedAt": { "type": "string", "nullable": true },
+          "quiz": { "$ref": "#/components/schemas/QuizEntity" },
+          "questionAttempts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuestionAttemptEntity" }
+          }
+        },
+        "required": ["id", "score", "totalPoints", "quiz", "questionAttempts"]
+      },
+      "GenerateQuizResponseEntity": {
+        "type": "object",
+        "properties": {
+          "quizId": { "type": "string" },
+          "questions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuizQuestionEntity" }
+          }
+        },
+        "required": ["quizId", "questions"]
+      },
+      "GenerateFromPostDto": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Post ID with an AI summary to generate quiz from"
+          },
+          "questionCount": { "type": "number", "minimum": 1, "maximum": 100, "default": 20 }
+        },
+        "required": ["postId"]
+      },
+      "UpdateQuestionDto": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "correctAnswer": { "type": "number", "minimum": 0, "maximum": 3 },
+          "explanation": { "type": "string" },
+          "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+        }
+      },
+      "SubmitQuizAnswerDto": {
+        "type": "object",
+        "properties": {
+          "questionId": { "type": "string" },
+          "answerIndex": { "type": "number", "nullable": true }
+        },
+        "required": ["questionId", "answerIndex"]
+      },
+      "SubmitQuizDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SubmitQuizAnswerDto" }
+          },
+          "timeSpentSec": { "type": "number", "description": "Total time spent in seconds" }
+        },
+        "required": ["answers"]
+      },
+      "QuizAttemptResultEntity": {
+        "type": "object",
+        "properties": {
+          "questionId": { "type": "string" },
+          "isCorrect": { "type": "boolean" },
+          "explanation": { "type": "string", "nullable": true }
+        },
+        "required": ["questionId", "isCorrect"]
+      },
+      "SubmitQuizResponseEntity": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "score": { "type": "number" },
+          "totalPoints": { "type": "number" },
+          "percentage": { "type": "number" },
+          "results": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuizAttemptResultEntity" }
+          }
+        },
+        "required": ["sessionId", "score", "totalPoints", "percentage", "results"]
       }
     }
   }
