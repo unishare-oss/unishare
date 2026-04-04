@@ -26,6 +26,7 @@ import {
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { getPostsControllerFindAllQueryKey } from '@/src/lib/api/generated/posts/posts'
 
 interface AcademicProfileModalProps {
   requireDepartment?: boolean
@@ -70,6 +71,7 @@ export function AcademicProfileModal({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
+        queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
       },
     },
   })

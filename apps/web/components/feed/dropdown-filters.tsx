@@ -31,16 +31,16 @@ export interface DropdownFiltersProps {
 }
 
 export function DropdownFilters({
-  selectedDeptId,
+  // selectedDeptId,
   selectedYear,
   selectedCourseId,
   selectedModuleNumber,
-  departments,
+  // departments,
   filteredCourses,
   selectedDeptLabel,
   selectedYearLabel,
   selectedCourseLabel,
-  onDeptChange,
+  // onDeptChange,
   onYearChange,
   onCourseChange,
   onModuleChange,
@@ -79,7 +79,7 @@ export function DropdownFilters({
       )}
       {sortType !== 'trending' && (
         <div className="grid grid-cols-2 gap-2">
-          <div className="col-span-2">
+          {/* <div className="col-span-2">
             <Select value={selectedDeptId || ALL} onValueChange={onDeptChange}>
               <SelectTrigger
                 size="sm"
@@ -97,7 +97,7 @@ export function DropdownFilters({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           <Select
             value={selectedYear === null ? ALL : String(selectedYear)}
