@@ -14,6 +14,7 @@ import * as Y from 'yjs'
 import { io } from 'socket.io-client'
 import { toast } from 'sonner'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -127,7 +128,16 @@ export function CollabProvider({
     socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
       const isReconnect = hasJoined.current
       Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
-      const elements = [...yElementsMap.values()].filter(Boolean)
+      const elements = [...yElementsMap.entries()]
+        .filter(([, element]) => Boolean(element))
+        .sort(([leftId, leftElement], [rightId, rightElement]) => {
+          const indexComparison = String(
+            (leftElement as ExcalidrawElement)?.index ?? '',
+          ).localeCompare(String((rightElement as ExcalidrawElement)?.index ?? ''))
+          if (indexComparison !== 0) return indexComparison
+          return String(leftId).localeCompare(String(rightId))
+        })
+        .map(([, element]) => element)
       setInitialElements(elements)
       setConnectionStatus('connected')
       hasJoined.current = true

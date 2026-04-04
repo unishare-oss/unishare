@@ -82,15 +82,18 @@ function ExcalidrawWrapperInner() {
       if (transaction.origin !== 'remote' && transaction.origin !== 'init') return
       if (!excalidrawAPIRef.current) return
 
-      // Sort by fractional index for correct z-order. Elements without an index
-      // fall back to insertion order (stable sort preserves relative position).
+      // Sort by fractional index for correct z-order. Elements without an index,
+      // or elements with the same index, use id as a deterministic tie-breaker
+      // so all peers converge on the same ordering.
       const remoteElements = ([...yElementsMap.values()] as ExcalidrawElement[])
         .map((el) => ({ ...el }))
         .sort((a, b) => {
-          if (a.index == null && b.index == null) return 0
+          if (a.index == null && b.index == null) return a.id.localeCompare(b.id)
           if (a.index == null) return 1
           if (b.index == null) return -1
-          return a.index < b.index ? -1 : a.index > b.index ? 1 : 0
+          if (a.index < b.index) return -1
+          if (a.index > b.index) return 1
+          return a.id.localeCompare(b.id)
         })
 
       excalidrawAPIRef.current.updateScene({
