@@ -68,7 +68,7 @@ export function useChatSocket() {
   }
 
   return {
-    socket: socketRef.current,
+    socket: socketRef,
     isConnected,
     lastMessage,
     joinRoom,

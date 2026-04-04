@@ -23,7 +23,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ roomId: str
         key={roomId}
         lastSocketMessage={lastMessage ?? undefined}
         isConnected={isConnected}
-        socket={socket}
+        socket={socket.current}
       />
     </ChatPageTransition>
   )
