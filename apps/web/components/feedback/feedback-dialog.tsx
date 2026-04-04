@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { MessageSquareHeart, Bug } from 'lucide-react'
@@ -57,7 +57,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   })
 
   const { isSubmitting } = form.formState
-  const selectedType = form.watch('type')
+  const selectedType = useWatch({ control: form.control, name: 'type' })
 
   async function onSubmit(values: FormValues) {
     try {

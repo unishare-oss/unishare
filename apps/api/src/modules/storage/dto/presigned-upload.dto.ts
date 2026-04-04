@@ -24,9 +24,9 @@ export class PresignedUploadDto {
   })
   mimeType: string
 
-  @ApiProperty({ enum: ['document', 'image'] })
-  @IsIn(['document', 'image'])
-  uploadType: 'document' | 'image'
+  @ApiProperty({ enum: ['document', 'image', 'video'] })
+  @IsIn(['document', 'image', 'video'])
+  uploadType: 'document' | 'image' | 'video'
 
   @ApiProperty({ enum: ['profile-picture', 'post-attachment'] })
   @IsIn(['profile-picture', 'post-attachment'])

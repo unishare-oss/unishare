@@ -69,6 +69,7 @@
     "@types/cookie": "^1.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.1.0",
     "@types/node": "^22.10.7",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.11.0",

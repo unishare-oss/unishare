@@ -123,19 +123,10 @@ export class PostsController {
     },
   })
   @ResponseMessage('Trending posts fetched successfully')
-  async getTrendingPosts(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '20',
-  ): Promise<{ success: boolean; data: any }> {
+  async getTrendingPosts(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
     const pageNum = parseInt(page, 10) || 1
     const limitNum = parseInt(limit, 10) || 20
-
-    const result = await this.trendingService.getTrendingPosts(limitNum, pageNum)
-
-    return {
-      success: true,
-      data: result,
-    }
+    return this.trendingService.getTrendingPosts(limitNum, pageNum)
   }
 
   @Get(':id')

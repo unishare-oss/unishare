@@ -22,6 +22,7 @@ import {
   usePostsControllerUnsavePost,
   getPostsControllerFindAllQueryKey,
   getPostsControllerFindOneQueryKey,
+  getPostsControllerGetSavedPostsQueryKey,
 } from '@/src/lib/api/generated/posts/posts'
 import type { ReadingListEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import type { ApiPost } from '@/lib/api-types'
@@ -66,6 +67,7 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
     return Promise.all([
       queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getPostsControllerFindOneQueryKey(post.id) }),
+      queryClient.invalidateQueries({ queryKey: getPostsControllerGetSavedPostsQueryKey() }),
     ])
   }
 

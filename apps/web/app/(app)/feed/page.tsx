@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search } from 'lucide-react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
@@ -206,23 +205,6 @@ function FeedContent() {
         sortType={sortType}
         onSortChange={handleSortChange}
       />
-
-      {/* Mobile search */}
-      <div className="sm:hidden px-4 py-3 bg-card">
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-muted"
-            strokeWidth={1.5}
-          />
-          <input
-            type="text"
-            placeholder="Search posts..."
-            value={tagParam !== null ? tagParam : searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 bg-card border border-border rounded-[6px] text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
-          />
-        </div>
-      </div>
 
       <PostFeed
         posts={items}

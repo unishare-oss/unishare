@@ -8,12 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
-
-import { TrendingUp, Clock } from 'lucide-react'
+import { TrendingUp, Clock, SlidersHorizontal } from 'lucide-react'
+import { DropdownFilters, type DropdownFiltersProps } from '@/components/feed/dropdown-filters'
 
 export type SortType = 'recent' | 'trending'
 
@@ -86,6 +88,13 @@ export function FilterStrip({
       })()
     : 'All courses'
 
+  const activeFilterCount = [
+    !!selectedDeptId,
+    selectedYear !== null,
+    !!selectedCourseId,
+    selectedModuleNumber !== null,
+  ].filter(Boolean).length
+
   function handleDeptChange(value: string) {
     const deptId = value === ALL ? '' : value
     onDeptChange(deptId)
@@ -106,14 +115,31 @@ export function FilterStrip({
     onModuleChange(value === ALL ? null : Number(value))
   }
 
+  const dropdownProps: DropdownFiltersProps = {
+    selectedDeptId,
+    selectedYear,
+    selectedCourseId,
+    selectedModuleNumber,
+    departments,
+    filteredCourses,
+    selectedDeptLabel,
+    selectedYearLabel,
+    selectedCourseLabel,
+    onDeptChange: handleDeptChange,
+    onYearChange: handleYearChange,
+    onCourseChange: handleCourseChange,
+    onModuleChange: handleModuleChange,
+  }
+
   return (
     <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col">
+      {/* Sort tabs */}
       {onSortChange && (
-        <div className="flex border-b border-border px-6">
+        <div className="flex border-b border-border px-4 md:px-6">
           <button
             onClick={() => onSortChange('recent')}
             className={cn(
-              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
+              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 md:px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
               sortType === 'recent'
                 ? 'border-amber text-amber font-medium'
                 : 'border-transparent text-text-muted hover:text-foreground',
@@ -125,7 +151,7 @@ export function FilterStrip({
           <button
             onClick={() => onSortChange('trending')}
             className={cn(
-              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
+              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 md:px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
               sortType === 'trending'
                 ? 'border-amber text-amber font-medium'
                 : 'border-transparent text-text-muted hover:text-foreground',
@@ -138,111 +164,160 @@ export function FilterStrip({
       )}
 
       {sortType !== 'trending' && (
-        <div className="flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
-          <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
-            {typeFilters.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => onFilterChange(filter)}
-                className={cn(
-                  'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2 shrink-0',
-                  activeFilter === filter
-                    ? 'border-amber text-amber font-medium'
-                    : 'border-transparent text-text-muted hover:text-foreground',
-                )}
+        <>
+          {/* Mobile: type tabs + Filters sheet button in a single row */}
+          <div className="md:hidden flex items-center">
+            <div className="flex items-center overflow-x-auto flex-1 px-2 scrollbar-none">
+              {typeFilters.map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => onFilterChange(filter)}
+                  className={cn(
+                    'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
+                    activeFilter === filter
+                      ? 'border-amber text-amber font-medium'
+                      : 'border-transparent text-text-muted hover:text-foreground',
+                  )}
+                >
+                  {typeFilterLabel[filter]}
+                </button>
+              ))}
+            </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 mr-2 relative font-mono text-xs text-text-muted gap-1.5"
+                >
+                  <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="bottom"
+                className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]"
               >
-                {typeFilterLabel[filter]}
-              </button>
-            ))}
+                <SheetHeader className="mb-5">
+                  <SheetTitle className="font-mono text-sm text-left">Filter posts</SheetTitle>
+                </SheetHeader>
+                <DropdownFilters {...dropdownProps} />
+              </SheetContent>
+            </Sheet>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
-            <div className="min-w-0">
-              <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-                <SelectTrigger
-                  size="sm"
-                  className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
-                  title={selectedDeptLabel}
+          {/* Desktop: full inline filter row */}
+          <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
+            <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
+              {typeFilters.map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => onFilterChange(filter)}
+                  className={cn(
+                    'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2 shrink-0',
+                    activeFilter === filter
+                      ? 'border-amber text-amber font-medium'
+                      : 'border-transparent text-text-muted hover:text-foreground',
+                  )}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value={ALL}>All departments</SelectItem>
-                  {(departments ?? []).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  {typeFilterLabel[filter]}
+                </button>
+              ))}
             </div>
 
-            <div className="min-w-0">
-              <Select
-                value={selectedYear === null ? ALL : String(selectedYear)}
-                onValueChange={handleYearChange}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="font-mono text-xs text-text-muted w-full lg:w-24"
-                  title={selectedYearLabel}
-                >
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value={ALL}>All years</SelectItem>
-                  {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      Year {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
+              <div className="min-w-0">
+                <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
+                  <SelectTrigger
+                    size="sm"
+                    className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
+                    title={selectedDeptLabel}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value={ALL}>All departments</SelectItem>
+                    {(departments ?? []).map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="min-w-0">
-              <Select
-                value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
-                onValueChange={handleModuleChange}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="font-mono text-xs text-text-muted w-full lg:w-28"
+              <div className="min-w-0">
+                <Select
+                  value={selectedYear === null ? ALL : String(selectedYear)}
+                  onValueChange={handleYearChange}
                 >
-                  <SelectValue placeholder="Module" />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value={ALL}>All modules</SelectItem>
-                  {[1, 2, 3].map((m) => (
-                    <SelectItem key={m} value={String(m)}>
-                      Module {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <SelectTrigger
+                    size="sm"
+                    className="font-mono text-xs text-text-muted w-full lg:w-24"
+                    title={selectedYearLabel}
+                  >
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value={ALL}>All years</SelectItem>
+                    {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        Year {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="col-span-2 min-w-0">
-              <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-                <SelectTrigger
-                  size="sm"
-                  className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
-                  title={selectedCourseLabel}
+              <div className="min-w-0">
+                <Select
+                  value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
+                  onValueChange={handleModuleChange}
                 >
-                  <SelectValue placeholder="Course" />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value={ALL}>All courses</SelectItem>
-                  {filteredCourses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.code} — {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    size="sm"
+                    className="font-mono text-xs text-text-muted w-full lg:w-28"
+                  >
+                    <SelectValue placeholder="Module" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value={ALL}>All modules</SelectItem>
+                    {[1, 2, 3].map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        Module {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="col-span-2 min-w-0">
+                <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
+                  <SelectTrigger
+                    size="sm"
+                    className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
+                    title={selectedCourseLabel}
+                  >
+                    <SelectValue placeholder="Course" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value={ALL}>All courses</SelectItem>
+                    {filteredCourses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.code} — {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

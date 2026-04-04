@@ -8,6 +8,7 @@ import {
   usePostsControllerRemove,
 } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore } from '@/lib/store'
+import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
@@ -24,6 +25,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const markRead = useUIStore((s) => s.markRead)
+  const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const { mutateAsync: removeFile } = useFilesControllerRemove()
@@ -58,7 +60,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Post" />
         <div className="flex-1 bg-card">
-          <div className="max-w-240 mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
+          <div
+            className={cn(
+              'mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4 transition-[max-width] duration-300',
+              collapsed ? 'max-w-360' : 'max-w-240',
+            )}
+          >
             <Skeleton className="h-3 w-48" />
             <div className="space-y-3 pt-2">
               <Skeleton className="h-4 w-24" />
@@ -86,24 +93,42 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <PageHeader title={post.title ?? 'Post'} />
 
       <div className="flex-1 bg-card">
-        <div className="max-w-240 mx-auto px-4 py-4 md:px-6 md:py-6">
+        <div
+          className={cn(
+            'mx-auto px-4 py-4 md:px-6 md:py-6 transition-[max-width] duration-300',
+            collapsed ? 'max-w-360' : 'max-w-240',
+          )}
+        >
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}
             title={post.title ?? ''}
           />
-          <PostHeader
-            post={post}
-            isOwner={isOwner}
-            onDelete={handleDeletePost}
-            isDeleting={isDeleting}
-          />
-          <PostSummary post={post} isOwner={isOwner} />
-          <PostFiles post={post} />
-          <PostReactions post={post} />
-          <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
-          <div className="border-t border-border mt-4" />
-          <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+          <div className="mt-6">
+            <PostHeader
+              post={post}
+              isOwner={isOwner}
+              onDelete={handleDeletePost}
+              isDeleting={isDeleting}
+            />
+          </div>
+          {post.summary && (
+            <div className="mt-8">
+              <PostSummary post={post} />
+            </div>
+          )}
+          <div className="mt-8">
+            <PostFiles post={post} />
+          </div>
+          <div className="mt-8">
+            <PostReactions post={post} />
+          </div>
+          <div className="mt-8">
+            <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
+          </div>
+          <div className="mt-8">
+            <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+          </div>
         </div>
       </div>
     </div>

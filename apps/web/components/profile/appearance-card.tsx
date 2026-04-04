@@ -2,6 +2,8 @@
 
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
+import { useSettingsStore } from '@/lib/store'
+import { Button } from '@/components/ui/button'
 
 interface ThemeOption {
   id: string
@@ -171,6 +173,8 @@ function ThemePreview({ t }: { t: ThemeOption }) {
 
 export function AppearanceCard() {
   const { theme, setTheme } = useTheme()
+  const fontSize = useSettingsStore((s) => s.fontSize)
+  const setFontSize = useSettingsStore((s) => s.setFontSize)
 
   return (
     <section className="mb-8">
@@ -178,41 +182,79 @@ export function AppearanceCard() {
         Appearance
       </h2>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {THEMES.map((t) => {
-          const isActive = theme === t.id
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTheme(t.id)}
-              className={cn(
-                'flex flex-col gap-2 rounded-[8px] border-2 p-2.5 text-left transition-all duration-150',
-                isActive
-                  ? 'border-amber bg-amber/5'
-                  : 'border-border hover:border-amber/40 hover:bg-muted',
-              )}
-            >
-              <ThemePreview t={t} />
-              <div className="flex items-center justify-between px-0.5">
-                <span
-                  className={cn(
-                    'text-xs font-medium truncate transition-colors',
-                    isActive ? 'text-amber' : 'text-foreground',
-                  )}
-                >
-                  {t.label}
-                </span>
-                <span
-                  className={cn(
-                    'size-3 rounded-full border-2 shrink-0 transition-all',
-                    isActive ? 'border-amber bg-amber' : 'border-border',
-                  )}
-                />
-              </div>
-            </button>
-          )
-        })}
+      {/* Theme Selection */}
+      <div className="mb-8">
+        <h3 className="text-sm font-medium text-foreground mb-3">Theme</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {THEMES.map((t) => {
+            const isActive = theme === t.id
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTheme(t.id)}
+                className={cn(
+                  'flex flex-col gap-2 rounded-[8px] border-2 p-2.5 text-left transition-all duration-150',
+                  isActive
+                    ? 'border-amber bg-amber/5'
+                    : 'border-border hover:border-amber/40 hover:bg-muted',
+                )}
+              >
+                <ThemePreview t={t} />
+                <div className="flex items-center justify-between px-0.5">
+                  <span
+                    className={cn(
+                      'text-xs font-medium truncate transition-colors',
+                      isActive ? 'text-amber' : 'text-foreground',
+                    )}
+                  >
+                    {t.label}
+                  </span>
+                  <span
+                    className={cn(
+                      'size-3 rounded-full border-2 shrink-0 transition-all',
+                      isActive ? 'border-amber bg-amber' : 'border-border',
+                    )}
+                  />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Font Size Selection */}
+      <div>
+        <h3 className="text-sm font-medium text-foreground mb-3">Font Size</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => useSettingsStore.getState().decreaseFontSize()}
+            className={cn(
+              'flex-1 px-4 py-2 rounded-lg border font-semibold transition-all duration-200 text-xs',
+              'border-border text-text-muted hover:border-amber/40 hover:bg-muted',
+            )}
+          >
+            a
+          </button>
+          <button
+            onClick={() => useSettingsStore.getState().increaseFontSize()}
+            className={cn(
+              'flex-1 px-4 py-2 rounded-lg border font-semibold transition-all duration-200 text-lg',
+              'border-border text-text-muted hover:border-amber/40 hover:bg-muted',
+            )}
+          >
+            A
+          </button>
+        </div>
+        <p className="text-xs text-text-muted mt-2">
+          {fontSize === 'xsmall' && 'Extra Small'}
+          {fontSize === 'small' && 'Small'}
+          {fontSize === 'normalsmall' && 'Small-Normal'}
+          {fontSize === 'medium' && 'Normal'}
+          {fontSize === 'mediumlarge' && 'Normal-Large'}
+          {fontSize === 'large' && 'Large'}
+          {fontSize === 'xlarge' && 'Extra Large'}
+        </p>
       </div>
     </section>
   )

@@ -15,6 +15,7 @@ import { DetailsStep } from '@/components/posts/details-step'
 import { FilesStep } from '@/components/posts/files-step'
 import type { CreatePostFormValues } from '@/lib/posts/form-types'
 import { uploadPostFile } from '@/lib/posts/upload-post-file'
+import { useUploadStore } from '@/lib/store'
 import {
   addExamYearIssueIfPresent,
   externalUrlSchema,
@@ -116,6 +117,7 @@ export default function CreatePostPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [showOldQuestionWarning, setShowOldQuestionWarning] = useState(false)
+  const enqueueUploads = useUploadStore((s) => s.enqueue)
 
   // Keep validation live so step gating and field feedback stay in sync as the user fills each stage.
   const form = useForm<CreatePostFormValues>({ defaultValues, mode: 'onChange' })
@@ -204,9 +206,19 @@ export default function CreatePostPage() {
 
       const post = res.data
 
-      for (const file of formValues.files) {
-        const uploadedFile = await uploadPostFile(file)
-        await filesControllerConfirmUpload(post.id, uploadedFile)
+      const BG_THRESHOLD = 10 * 1024 * 1024 // 10MB
+      const smallFiles = formValues.files.filter((f) => f.size <= BG_THRESHOLD)
+      const largeFiles = formValues.files.filter((f) => f.size > BG_THRESHOLD)
+
+      await Promise.all(
+        smallFiles.map(async (file) => {
+          const uploadedFile = await uploadPostFile(file)
+          await filesControllerConfirmUpload(post.id, uploadedFile)
+        }),
+      )
+
+      if (largeFiles.length > 0) {
+        enqueueUploads(post.id, largeFiles)
       }
 
       router.push(`/posts/${post.id}`)

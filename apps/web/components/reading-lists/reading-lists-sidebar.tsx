@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, BookMarked, Trash2, Globe, Lock, Pencil } from 'lucide-react'
+import { Plus, BookMarked, Trash2, Globe, Lock, Pencil, Share2, MoreHorizontal } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ShareDialog } from '@/components/reading-lists/share-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -50,6 +56,12 @@ export function ReadingListsSidebar({ selectedListId, onSelect }: ReadingListsSi
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editIsPublic, setEditIsPublic] = useState(false)
+
+  // Share dialog
+  const [shareTarget, setShareTarget] = useState<ReadingListEntity | null>(null)
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<ReadingListEntity | null>(null)
 
   const { data } = useReadingListsControllerFindAll({
     query: { select: (r) => r.data },
@@ -152,47 +164,37 @@ export function ReadingListsSidebar({ selectedListId, onSelect }: ReadingListsSi
               </span>
             </button>
 
-            {/* Edit + Delete actions (shown on hover) */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => openEdit(list)}
-                className="p-0.5 rounded"
-                aria-label="Edit list"
-              >
-                <Pencil
-                  className="size-3 text-text-muted hover:text-foreground transition-colors"
-                  strokeWidth={1.5}
-                />
-              </button>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button className="p-0.5 rounded" aria-label="Delete list">
-                    <Trash2
-                      className="size-3 text-text-muted hover:text-destructive transition-colors"
-                      strokeWidth={1.5}
-                    />
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete &ldquo;{list.name}&rdquo;?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete the reading list and remove all posts from it.
-                      This cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() => deleteList({ id: list.id })}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            {/* Edit + Share + Delete actions (shown on hover with dropdown) */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="List options"
+                    className="text-text-muted hover:text-foreground hover:bg-muted"
+                  >
+                    <MoreHorizontal className="size-4" strokeWidth={1.5} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShareTarget(list)}>
+                    <Share2 className="size-3.5 mr-2" strokeWidth={1.5} />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openEdit(list)}>
+                    <Pencil className="size-3.5 mr-2" strokeWidth={1.5} />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setDeleteTarget(list)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="size-3.5 mr-2" strokeWidth={1.5} />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         ))}
@@ -365,6 +367,46 @@ export function ReadingListsSidebar({ selectedListId, onSelect }: ReadingListsSi
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Share dialog */}
+      {shareTarget && (
+        <ShareDialog
+          list={shareTarget}
+          open={!!shareTarget}
+          onOpenChange={(open) => !open && setShareTarget(null)}
+          isOwner={true}
+          onPublicityChange={() => {
+            queryClient.invalidateQueries({ queryKey: getReadingListsControllerFindAllQueryKey() })
+          }}
+        />
+      )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{deleteTarget?.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the reading list and remove all posts from it. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteList({ id: deleteTarget.id })
+                  setDeleteTarget(null)
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   )
 }

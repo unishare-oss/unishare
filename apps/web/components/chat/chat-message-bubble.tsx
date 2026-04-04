@@ -2,30 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-
-const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
-
-function renderWithLinks(text: string, isMe: boolean) {
-  const parts = text.split(URL_REGEX)
-  const urls = text.match(URL_REGEX) ?? []
-  return parts.flatMap((part, i) => [
-    part,
-    urls[i] ? (
-      <a
-        key={i}
-        href={urls[i]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          'underline underline-offset-2 break-all hover:opacity-80',
-          isMe ? 'text-primary-foreground/90' : 'text-primary',
-        )}
-      >
-        {urls[i]}
-      </a>
-    ) : null,
-  ])
-}
+import { renderWithLinks } from '@/lib/render-with-links'
 
 interface ChatMessageBubbleProps {
   message: ChatMessageEntity
@@ -64,7 +41,10 @@ export function ChatMessageBubble({ message, isMe, showAvatar }: ChatMessageBubb
           </span>
         )}
         <p className="whitespace-pre-wrap break-words">
-          {renderWithLinks(message.content ?? '', isMe)}
+          {renderWithLinks(
+            message.content ?? '',
+            isMe ? 'text-primary-foreground/90' : 'text-primary',
+          )}
         </p>
         <span className={cn('text-[9px] block mt-1 opacity-60', isMe ? 'text-right' : 'text-left')}>
           {format(new Date(message.createdAt), 'HH:mm')}

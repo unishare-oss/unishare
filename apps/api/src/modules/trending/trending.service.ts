@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { Post, Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
-import { Post } from '@/generated/prisma/client'
 
 @Injectable()
 export class TrendingService {
@@ -67,35 +67,50 @@ export class TrendingService {
    * Get trending posts with pagination.
    * Returns posts with highest trending scores, most recent first for ties.
    */
-  async getTrendingPosts(
-    limit: number = 20,
-    page: number = 1,
-  ): Promise<{
-    posts: Post[]
-    total: number
-    page: number
-    limit: number
-  }> {
+  async getTrendingPosts(limit: number = 20, page: number = 1) {
     const skip = (page - 1) * limit
+
+    const include: Prisma.PostInclude = {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          enrollmentYear: true,
+          department: { select: { id: true, name: true } },
+        },
+      },
+      course: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          department: { select: { id: true, name: true } },
+        },
+      },
+      files: {
+        select: {
+          id: true,
+          key: true,
+          name: true,
+          size: true,
+          mimeType: true,
+          createdAt: true,
+          downloads: true,
+        },
+      },
+      reactions: { select: { type: true, userId: true } },
+      tags: { select: { tag: { select: { id: true, name: true, slug: true, color: true } } } },
+      _count: { select: { comments: { where: { deletedAt: null } }, savedBy: true } },
+    }
 
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
-        where: {
-          publicationStatus: 'PUBLISHED',
-          deletedAt: null,
-        },
-        orderBy: [
-          { trendingScore: 'desc' },
-          { createdAt: 'desc' }, // Secondary sort by recency
-        ],
+        where: { publicationStatus: 'PUBLISHED', deletedAt: null },
+        orderBy: [{ trendingScore: 'desc' }, { createdAt: 'desc' }],
         skip,
         take: limit,
-        include: {
-          author: { select: { id: true, name: true, email: true } },
-          tags: { include: { tag: true } },
-          reactions: true,
-          comments: true,
-        },
+        include,
       }),
       this.prisma.post.count({
         where: {
@@ -106,7 +121,21 @@ export class TrendingService {
     ])
 
     return {
-      posts,
+      posts: posts.map((p) => {
+        const { reactions, savedBy, ...rest } = p as any
+        const reactionCounts: Record<string, number> = {}
+        for (const r of reactions ?? []) {
+          reactionCounts[r.type] = (reactionCounts[r.type] ?? 0) + 1
+        }
+        return {
+          ...rest,
+          tags: (rest.tags ?? []).map((pt: any) => pt.tag),
+          savedByCurrentUser: Array.isArray(savedBy) && savedBy.length > 0,
+          reactionCounts,
+          userReaction: null,
+          isOwner: false,
+        }
+      }),
       total,
       page,
       limit,

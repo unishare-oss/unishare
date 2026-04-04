@@ -105,6 +105,7 @@ export class PostsService {
       status,
       authorId,
       tagSlug,
+      hasSummary,
       ...pagination
     } = query
 
@@ -124,6 +125,7 @@ export class PostsService {
       ...(authorId && { authorId }),
       ...(authorId && !isPrivileged && !isViewingOwnPosts && { isAnonymous: false }),
       ...(tagSlug && { tags: { some: { tag: { slug: tagSlug } } } }),
+      ...(hasSummary && { summary: { not: null } }),
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
@@ -167,9 +169,8 @@ export class PostsService {
     // Extract tags and handle separately
     const { tags, ...postData } = dto
 
-    // Treat empty string as null to explicitly clear the field
-    if (postData.externalUrl === '') {
-      postData.externalUrl = undefined
+    // Treat empty string or null as null to explicitly clear the field
+    if (postData.externalUrl === '' || postData.externalUrl === null) {
       ;(postData as Record<string, unknown>).externalUrl = null
     }
 

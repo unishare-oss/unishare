@@ -1,9 +1,13 @@
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import {
@@ -15,7 +19,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 
-type UploadType = 'document' | 'image'
+type UploadType = 'document' | 'image' | 'video'
 
 const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize: number }> = {
   document: {
@@ -53,6 +57,17 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
     maxSize: 10 * 1024 * 1024, // 10MB
   },
+  video: {
+    allowedMimeTypes: [
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-matroska',
+    ],
+    maxSize: 500 * 1024 * 1024, // 500MB
+  },
 }
 
 @Injectable()
@@ -60,6 +75,7 @@ export class StorageService implements OnModuleInit {
   private s3Client: S3Client
   private bucket: string
   private publicUrl: string
+  private readonly partEtagCache = new Map<string, Map<number, string>>()
 
   constructor(private readonly config: ConfigService) {}
 
@@ -144,6 +160,79 @@ export class StorageService implements OnModuleInit {
     const random = crypto.randomBytes(8).toString('hex')
     return `${Date.now()}-${random}.${ext}`
   }
+
+  async createMultipartUpload(
+    folder: string,
+    mimeType: string,
+    uploadType: UploadType,
+  ): Promise<{ uploadId: string; key: string }> {
+    const typeConfig = FILE_TYPE_CONFIG[uploadType]
+    if (!typeConfig.allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed: ${typeConfig.allowedMimeTypes.join(', ')}`,
+      )
+    }
+    const key = `${folder}/${this.generateFileName(mimeType)}`
+    const command = new CreateMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: mimeType,
+    })
+    const result = await this.s3Client.send(command)
+    return { uploadId: result.UploadId!, key }
+  }
+
+  async uploadPart(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    chunk: Buffer,
+  ): Promise<{ etag: string }> {
+    this.assertSafeKey(key)
+    const result = await this.s3Client.send(
+      new UploadPartCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+        Body: chunk,
+      }),
+    )
+    const etag = result.ETag!
+    if (!this.partEtagCache.has(uploadId)) {
+      this.partEtagCache.set(uploadId, new Map())
+    }
+    this.partEtagCache.get(uploadId)!.set(partNumber, etag)
+    return { etag }
+  }
+
+  async completeMultipartUpload(key: string, uploadId: string): Promise<void> {
+    this.assertSafeKey(key)
+    const partMap = this.partEtagCache.get(uploadId)
+    if (!partMap || partMap.size === 0) {
+      throw new BadRequestException('No uploaded parts found for this upload session')
+    }
+    const parts = Array.from(partMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([PartNumber, ETag]) => ({ PartNumber, ETag }))
+    await this.s3Client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: { Parts: parts },
+      }),
+    )
+    this.partEtagCache.delete(uploadId)
+  }
+
+  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    this.assertSafeKey(key)
+    await this.s3Client.send(
+      new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }),
+    )
+    this.partEtagCache.delete(uploadId)
+  }
 }
 
 const MIME_EXTENSIONS: Record<string, string> = {
@@ -177,4 +266,11 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  // Video
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/ogg': 'ogv',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+  'video/x-matroska': 'mkv',
 }

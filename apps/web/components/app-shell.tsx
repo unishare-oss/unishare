@@ -6,7 +6,9 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
+import { BackgroundUploadManager } from '@/components/shared/background-upload-manager'
 import { useAuth } from '@/contexts/auth-context'
+import { useUIStore } from '@/lib/store'
 import { useNotificationStream } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +17,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const isChat = pathname.startsWith('/chat')
   const isChatRoom = /^\/chat\/.+/.test(pathname)
+
+  const collapsed = useUIStore((s) => s.sidebarCollapsed)
 
   useNotificationStream(isAuthenticated)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
@@ -40,7 +44,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main
         className={cn(
           showLoader ? 'invisible pointer-events-none' : '',
-          isChat ? 'h-screen overflow-hidden md:ml-72' : 'min-h-screen pb-16 md:ml-72 md:pb-0',
+          'transition-[margin] duration-300',
+          isChat
+            ? cn('h-screen overflow-hidden', collapsed ? 'md:ml-15' : 'md:ml-68')
+            : cn('min-h-screen pb-16 md:pb-0', collapsed ? 'md:ml-15' : 'md:ml-68'),
         )}
         aria-hidden={showLoader}
       >
@@ -53,6 +60,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!showLoader && requiresDepartmentOnboarding && !profileModalDismissed && (
         <AcademicProfileModal requireDepartment onSkip={() => setProfileModalDismissed(true)} />
       )}
+
+      <BackgroundUploadManager />
 
       {showLoader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">

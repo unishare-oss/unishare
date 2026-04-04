@@ -46,6 +46,7 @@ export class CreatePostDto {
 
   @IsOptional()
   @ApiPropertyOptional({ maxLength: 500 })
+  @ValidateIf((o: CreatePostDto) => o.externalUrl != null && o.externalUrl !== '')
   @IsUrl({ protocols: ['https'], require_protocol: true })
   @MaxLength(500)
   externalUrl?: string

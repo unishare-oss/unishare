@@ -5,11 +5,12 @@ interface ApiResponse<T> {
 }
 
 export const customFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
+  const isFormData = options.body instanceof FormData
   const response = await fetch(url, {
     credentials: 'include',
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...options.headers,
     },
   })

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
+import { renderWithLinks } from '@/lib/render-with-links'
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 
@@ -129,7 +130,7 @@ export function CommentThreadItem({
   const isViewerPostAuthor = viewer.postAuthorId != null && viewer.postAuthorId === currentUserId
   const isOriginalPosterComment =
     viewer.postAuthorId != null && comment.userId === viewer.postAuthorId
-  const isAdmin = viewer.user?.role === 'ADMIN'
+  const isAdmin = viewer.user?.role === 'ADMIN' || viewer.user?.role === 'MODERATOR'
   const canModerate = isCommentOwner || isViewerPostAuthor || isAdmin
   const canEdit = isCommentOwner
   const canDelete = canModerate
@@ -229,7 +230,9 @@ export function CommentThreadItem({
                   isDeletedComment ? 'italic text-text-muted' : 'text-foreground',
                 )}
               >
-                {comment.content}
+                {isDeletedComment
+                  ? comment.content
+                  : renderWithLinks(comment.content, 'text-primary')}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (

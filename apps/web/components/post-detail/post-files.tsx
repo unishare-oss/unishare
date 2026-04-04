@@ -20,6 +20,7 @@ import {
   FileText,
   FileImage,
   FileSpreadsheet,
+  FileVideo,
   Download,
   Eye,
   X,
@@ -37,6 +38,7 @@ import {
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
+import { renderWithLinks } from '@/lib/render-with-links'
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
@@ -76,6 +78,8 @@ function fileIcon(mimeType: string) {
     return <FileText className="size-5 text-destructive" strokeWidth={1.5} />
   if (mimeType.startsWith('image/'))
     return <FileImage className="size-5 text-success" strokeWidth={1.5} />
+  if (mimeType.startsWith('video/'))
+    return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
     return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
@@ -194,7 +198,9 @@ export function PostFiles({ post }: PostFilesProps) {
 
     const textPreviewable = isTextMimeType(file.mimeType)
     const blobPreviewable =
-      file.mimeType === 'application/pdf' || file.mimeType.startsWith('image/')
+      file.mimeType === 'application/pdf' ||
+      file.mimeType.startsWith('image/') ||
+      file.mimeType.startsWith('video/')
 
     if (textPreviewable) {
       if (previewTextCache.current[file.id]) {
@@ -256,7 +262,10 @@ export function PostFiles({ post }: PostFilesProps) {
 
   const isPreviewable = (mimeType: string) => {
     return (
-      mimeType === 'application/pdf' || mimeType.startsWith('image/') || isTextMimeType(mimeType)
+      mimeType === 'application/pdf' ||
+      mimeType.startsWith('image/') ||
+      mimeType.startsWith('video/') ||
+      isTextMimeType(mimeType)
     )
   }
 
@@ -267,7 +276,7 @@ export function PostFiles({ post }: PostFilesProps) {
           Description
         </h2>
         <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
-          {post.description}
+          {renderWithLinks(post.description ?? '', 'text-primary')}
         </p>
         {post.externalUrl && (
           <a
@@ -314,6 +323,14 @@ export function PostFiles({ post }: PostFilesProps) {
                   src={previewFile.url}
                   alt={previewFile.name}
                   className="max-w-full h-auto rounded-lg shadow-sm"
+                />
+              </div>
+            ) : previewFile.mimeType.startsWith('video/') && previewFile.url ? (
+              <div className="flex justify-center p-2 md:p-4">
+                <video
+                  src={previewFile.url}
+                  controls
+                  className="max-w-full max-h-[70vh] rounded-lg shadow-sm"
                 />
               </div>
             ) : (

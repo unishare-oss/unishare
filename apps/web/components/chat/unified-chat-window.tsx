@@ -233,8 +233,8 @@ export function UnifiedChatWindow({
 
   if (!room) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-muted-foreground">Room not found</p>
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }

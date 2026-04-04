@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { FileImage, FileSpreadsheet, FileText, Upload, X } from 'lucide-react'
+import { FileImage, FileSpreadsheet, FileText, FileVideo, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +50,13 @@ const ACCEPTED_MIME_TYPES = new Set([
   'application/x-tar',
   'application/gzip',
   'application/x-zip-compressed',
+  // Video
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime',
+  'video/x-msvideo',
+  'video/x-matroska',
 ])
 
 const ACCEPTED_EXTENSIONS = new Set([
@@ -104,6 +111,13 @@ const ACCEPTED_EXTENSIONS = new Set([
   '.zip',
   '.tar',
   '.gz',
+  // Video
+  '.mp4',
+  '.webm',
+  '.ogv',
+  '.mov',
+  '.avi',
+  '.mkv',
 ])
 
 function isFileAccepted(file: File) {
@@ -126,6 +140,8 @@ function fileIcon(mimeType: string) {
     return <FileText className="size-5 text-destructive" strokeWidth={1.5} />
   if (mimeType.startsWith('image/'))
     return <FileImage className="size-5 text-success" strokeWidth={1.5} />
+  if (mimeType.startsWith('video/'))
+    return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
     return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />

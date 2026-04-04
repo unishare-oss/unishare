@@ -16,7 +16,7 @@ export function PostCardSkeleton({ index = 0, className }: { index?: number; cla
     <article
       aria-hidden
       className={cn(
-        'relative flex items-start justify-between px-6 py-5 border-b border-border bg-card',
+        'relative flex items-start justify-between px-4 py-4 md:px-6 md:py-5 border-b border-border bg-card',
         className,
       )}
     >
