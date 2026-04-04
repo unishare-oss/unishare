@@ -1,3 +1,9 @@
+## [0.6.2](https://github.com/unishare-oss/unishare/compare/v0.6.1...v0.6.2) (2026-04-04)
+
+### Bug Fixes
+
+- **collab:** replace yElementOrder Y.Array with fractional index sorting ([1aa8b2d](https://github.com/unishare-oss/unishare/commit/1aa8b2de83ad30f00195998226f0ac6405a45c68))
+
 ## [0.6.1](https://github.com/unishare-oss/unishare/compare/v0.6.0...v0.6.1) (2026-04-03)
 
 ### Bug Fixes
