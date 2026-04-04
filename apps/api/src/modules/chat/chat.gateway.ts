@@ -91,7 +91,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       isTyping,
     })
 
-    this.logger.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`)
+    // this.logger.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`)
   }
 
   @OnEvent('chat.message_sent')

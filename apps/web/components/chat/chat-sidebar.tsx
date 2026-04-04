@@ -83,9 +83,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
   }
 
-  //TODO: refc maybe becoz we are passing socket just to retreieve typing
-  const { socket } = useChatSocket()
-  const { typingByRoom } = useGlobalTypingIndicator(socket.current, currentUserId)
+  const { socketRef } = useChatSocket()
+  const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
 
   // Merge Following and Followers into a unique list of "Network" users
   const networkUsers = useMemo(() => {
