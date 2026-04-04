@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
@@ -16,6 +15,7 @@ import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { TrendingUp, Clock, SlidersHorizontal } from 'lucide-react'
 import { DropdownFilters, type DropdownFiltersProps } from '@/components/feed/dropdown-filters'
+import { DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, Drawer } from '../ui/drawer'
 
 export type SortType = 'recent' | 'trending'
 
@@ -183,8 +183,8 @@ export function FilterStrip({
                 </button>
               ))}
             </div>
-            <Sheet>
-              <SheetTrigger asChild>
+            <Drawer>
+              <DrawerTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -198,17 +198,14 @@ export function FilterStrip({
                     </span>
                   )}
                 </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="bottom"
-                className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]"
-              >
-                <SheetHeader className="mb-5">
-                  <SheetTitle className="font-mono text-sm text-left">Filter posts</SheetTitle>
-                </SheetHeader>
+              </DrawerTrigger>
+              <DrawerContent className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]">
+                <DrawerHeader className="mb-5">
+                  <DrawerTitle className="font-mono text-sm text-left">Filter posts</DrawerTitle>
+                </DrawerHeader>
                 <DropdownFilters {...dropdownProps} />
-              </SheetContent>
-            </Sheet>
+              </DrawerContent>
+            </Drawer>
           </div>
 
           {/* Desktop: full inline filter row */}
