@@ -1,3 +1,9 @@
+## [0.6.3](https://github.com/unishare-oss/unishare/compare/v0.6.2...v0.6.3) (2026-04-04)
+
+### Bug Fixes
+
+- **collab:** add deterministic id tie-breaker to fractional index sort ([#24](https://github.com/unishare-oss/unishare/issues/24)) ([82d264b](https://github.com/unishare-oss/unishare/commit/82d264b5761d988376296615536cb3326da4ff96))
+
 ## [0.6.2](https://github.com/unishare-oss/unishare/compare/v0.6.1...v0.6.2) (2026-04-04)
 
 ### Bug Fixes
