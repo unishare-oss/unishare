@@ -27,6 +27,7 @@ import {
 } from '@/src/lib/api/generated/users/users'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { getPostsControllerFindAllQueryKey } from '@/src/lib/api/generated/posts/posts'
+import { useFeedStore } from '@/lib/store'
 
 interface AcademicProfileModalProps {
   requireDepartment?: boolean
@@ -53,6 +54,7 @@ export function AcademicProfileModal({
   onSkip,
 }: AcademicProfileModalProps) {
   const queryClient = useQueryClient()
+  const setSelectedDeptId = useFeedStore((s) => s.setSelectedDeptId)
 
   const form = useForm<AcademicProfileFormValues>({
     resolver: zodResolver(baseAcademicProfileSchema),
@@ -70,6 +72,8 @@ export function AcademicProfileModal({
   const { mutate, isPending } = useUsersControllerUpdateAcademicProfile({
     mutation: {
       onSuccess: () => {
+        // Clear feed store's selectedDeptId so it uses the new user department
+        setSelectedDeptId(null)
         queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
         queryClient.invalidateQueries({ queryKey: getPostsControllerFindAllQueryKey() })
       },
