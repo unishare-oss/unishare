@@ -1,9 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
-import * as Y from 'yjs'
 import { CollabRepository } from './collab.repository'
 
 interface RoomEntry {
-  doc: Y.Doc
+  elements: Map<string, Record<string, unknown>>
   timer: ReturnType<typeof setTimeout> | null
   idleTimer: ReturnType<typeof setTimeout> | null
 }
@@ -14,32 +13,48 @@ export class CollabRoomService {
   private readonly rooms = new Map<string, RoomEntry>()
   private readonly socketToRoom = new Map<string, string>()
 
-  /** GC delay in ms — 60s after last client leaves (keep short on low-RAM servers) */
-  private readonly GC_DELAY = parseInt(process.env.COLLAB_GC_DELAY_MS ?? '60000', 10)
-
-  /** Idle save delay — 30 seconds after last Yjs update */
+  private readonly GC_DELAY = parseInt(process.env.COLLAB_GC_DELAY_MS ?? '15000', 10)
   private readonly IDLE_SAVE_DELAY = 30_000
 
   constructor(private readonly collabRepository: CollabRepository) {}
 
-  async getOrCreate(slug: string): Promise<Y.Doc> {
-    if (this.rooms.has(slug)) {
-      return this.rooms.get(slug)!.doc
-    }
-    const doc = new Y.Doc()
-    this.rooms.set(slug, { doc, timer: null, idleTimer: null })
-    this.logger.log(`Created Y.Doc for room ${slug}`)
+  async getOrLoadElements(slug: string): Promise<Record<string, unknown>[]> {
+    if (!this.rooms.has(slug)) {
+      const entry: RoomEntry = { elements: new Map(), timer: null, idleTimer: null }
+      this.rooms.set(slug, entry)
+      this.logger.log(`Created room entry for ${slug}`)
 
-    const snapshot = await this.collabRepository.getSnapshot(slug)
-    if (snapshot) {
-      Y.applyUpdate(doc, new Uint8Array(snapshot))
-      this.logger.log(`Restored snapshot for room ${slug}`)
+      const snapshot = await this.collabRepository.getSnapshot(slug)
+      if (snapshot) {
+        try {
+          const parsed = JSON.parse(Buffer.from(snapshot).toString('utf8')) as Record<
+            string,
+            unknown
+          >[]
+          for (const el of parsed) {
+            if (el.id && typeof el.id === 'string') entry.elements.set(el.id, el)
+          }
+          this.logger.log(`Restored ${entry.elements.size} elements for room ${slug}`)
+        } catch {
+          this.logger.warn(`Failed to parse snapshot for room ${slug}, starting empty`)
+        }
+      }
     }
-    return doc
+    return [...this.rooms.get(slug)!.elements.values()]
   }
 
-  getDoc(slug: string): Y.Doc | undefined {
-    return this.rooms.get(slug)?.doc
+  mergeElements(slug: string, incoming: Record<string, unknown>[]): void {
+    const entry = this.rooms.get(slug)
+    if (!entry) return
+    for (const el of incoming) {
+      if (!el.id || typeof el.id !== 'string') continue
+      const stored = entry.elements.get(el.id)
+      const incomingVersion = typeof el.version === 'number' ? el.version : 0
+      const storedVersion = stored && typeof stored.version === 'number' ? stored.version : -1
+      if (incomingVersion >= storedVersion) {
+        entry.elements.set(el.id, el)
+      }
+    }
   }
 
   getRoomForSocket(socketId: string): string | undefined {
@@ -65,13 +80,11 @@ export class CollabRoomService {
     if (remaining.length === 0) {
       const entry = this.rooms.get(slug)
       if (entry) {
-        // Flush snapshot before scheduling GC
         void this.flushSnapshot(slug)
         entry.timer = setTimeout(() => {
           if (entry.idleTimer) clearTimeout(entry.idleTimer)
-          entry.doc.destroy()
           this.rooms.delete(slug)
-          this.logger.log(`GC: destroyed Y.Doc for room ${slug}`)
+          this.logger.log(`GC: removed room ${slug}`)
         }, this.GC_DELAY)
         this.logger.log(`Scheduled GC for room ${slug} in ${this.GC_DELAY}ms`)
       }
@@ -101,20 +114,19 @@ export class CollabRoomService {
     const entry = this.rooms.get(slug)
     if (!entry) return
     try {
-      const snapshot = Y.encodeStateAsUpdate(entry.doc)
-      await this.collabRepository.saveSnapshot(slug, snapshot)
-      this.logger.log(`Saved snapshot for room ${slug}`)
+      const elements = [...entry.elements.values()]
+      const json = JSON.stringify(elements)
+      await this.collabRepository.saveSnapshot(slug, new Uint8Array(Buffer.from(json, 'utf8')))
+      this.logger.log(`Saved snapshot for room ${slug} (${elements.length} elements)`)
     } catch (err) {
       this.logger.warn(`Failed to save snapshot for room ${slug}`, err)
     }
   }
 
-  /** For testing: check if a room exists in memory */
   hasRoom(slug: string): boolean {
     return this.rooms.has(slug)
   }
 
-  /** For testing: get socket count for a room */
   getSocketCount(slug: string): number {
     return [...this.socketToRoom.values()].filter((s) => s === slug).length
   }
