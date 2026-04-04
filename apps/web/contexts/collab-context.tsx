@@ -41,7 +41,6 @@ export interface CursorData {
 interface CollabContextValue {
   ydoc: Y.Doc
   yElementsMap: Y.Map<unknown>
-  yElementOrder: Y.Array<string>
   connectionStatus: ConnectionStatus
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
@@ -93,7 +92,6 @@ export function CollabProvider({
 
   const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
   const [yElementsMap] = useState<Y.Map<unknown>>(() => ydoc.getMap('elementsMap'))
-  const [yElementOrder] = useState<Y.Array<string>>(() => ydoc.getArray('elementOrder'))
 
   const [remoteCursors, setRemoteCursors] = useState<Map<string, CursorData>>(new Map())
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -129,8 +127,7 @@ export function CollabProvider({
     socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
       const isReconnect = hasJoined.current
       Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
-      const order = yElementOrder.toArray()
-      const elements = order.map((id) => yElementsMap.get(id)).filter(Boolean)
+      const elements = [...yElementsMap.values()].filter(Boolean)
       setInitialElements(elements)
       setConnectionStatus('connected')
       hasJoined.current = true
@@ -242,7 +239,7 @@ export function CollabProvider({
       socket.disconnect()
       ydoc.destroy()
     }
-  }, [slug, ydoc, yElementsMap, yElementOrder])
+  }, [slug, ydoc, yElementsMap])
 
   const emitCursorMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
@@ -268,7 +265,6 @@ export function CollabProvider({
     () => ({
       ydoc,
       yElementsMap,
-      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
@@ -281,7 +277,6 @@ export function CollabProvider({
     [
       ydoc,
       yElementsMap,
-      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,

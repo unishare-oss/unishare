@@ -25,8 +25,7 @@ const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElementsMap, yElementOrder, ydoc, initialElements, setExcalidrawAPI, isViewOnly } =
-    useCollab()
+  const { yElementsMap, ydoc, initialElements, setExcalidrawAPI, isViewOnly } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
@@ -62,75 +61,52 @@ function ExcalidrawWrapperInner() {
         const incomingIds = new Set(elements.map((el) => el.id))
         for (const el of elements) {
           const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
-          // Only write if local element is newer (or same version, different nonce).
-          // Without this guard, a remote update can arrive and set el_A@v10 in Yjs,
-          // but B's Excalidraw might still show el_A@v5 (React batch hasn't applied
-          // the updateScene yet). B's handleChange would then write v5 back, overwriting
-          // v10 in Yjs — leaving remote users with a stale "dot" for A's drawing.
           const differs =
             !stored ||
             el.version > stored.version ||
             (el.version === stored.version && el.versionNonce !== stored.versionNonce)
           if (differs) {
-            // Shallow-clone: Excalidraw mutates elements in-place during drawing.
-            // Storing a reference means stored.versionNonce === el.versionNonce always,
-            // so subsequent handleChange calls never detect changes. A clone snapshots
-            // the state at write time so future comparisons work correctly.
             yElementsMap.set(el.id, { ...el })
           }
         }
         for (const [id] of yElementsMap.entries()) {
           if (!incomingIds.has(id)) yElementsMap.delete(id)
         }
-        const newOrder = elements.map((el) => el.id)
-        if (newOrder.join(',') !== yElementOrder.toArray().join(',')) {
-          yElementOrder.delete(0, yElementOrder.length)
-          yElementOrder.insert(0, newOrder)
-        }
       })
     },
-    [ydoc, yElementsMap, yElementOrder],
+    [ydoc, yElementsMap],
   )
 
   useEffect(() => {
-    // Only react to remote/init transactions — local transactions (our own writes)
-    // are already in Excalidraw's state and don't need updateScene.
     const observer = (_event: unknown, transaction: Y.Transaction) => {
       if (transaction.origin !== 'remote' && transaction.origin !== 'init') return
       if (!excalidrawAPIRef.current) return
 
-      const seen = new Set<string>()
-      const remoteElements = yElementOrder
-        .toArray()
-        .filter((id) => {
-          if (seen.has(id) || !yElementsMap.has(id)) return false
-          seen.add(id)
-          return true
+      // Sort by fractional index for correct z-order. Elements without an index
+      // fall back to insertion order (stable sort preserves relative position).
+      const remoteElements = ([...yElementsMap.values()] as ExcalidrawElement[])
+        .map((el) => ({ ...el }))
+        .sort((a, b) => {
+          if (a.index == null && b.index == null) return 0
+          if (a.index == null) return 1
+          if (b.index == null) return -1
+          return a.index < b.index ? -1 : a.index > b.index ? 1 : 0
         })
-        // Clone on read: Excalidraw holds onto the object references we pass to
-        // updateScene and mutates them in-place (e.g. x/y during move). If we
-        // hand Y.Map's stored objects directly, the map's "snapshot" gets mutated
-        // too, so subsequent handleChange calls see stored.versionNonce === el.versionNonce
-        // and emit 0 changes. Cloning here keeps Y.Map's copies pristine for diffing.
-        .map((id) => ({ ...(yElementsMap.get(id) as ExcalidrawElement) }))
 
       excalidrawAPIRef.current.updateScene({
         elements: remoteElements,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
-      // Update fingerprint to match remote state so handleChange doesn't re-emit it
       lastWrittenFingerprintRef.current = remoteElements
         .map((el) => `${el.id}:${el.versionNonce}`)
         .join('|')
     }
 
     yElementsMap.observe(observer as Parameters<typeof yElementsMap.observe>[0])
-    yElementOrder.observe(observer as Parameters<typeof yElementOrder.observe>[0])
     return () => {
       yElementsMap.unobserve(observer as Parameters<typeof yElementsMap.unobserve>[0])
-      yElementOrder.unobserve(observer as Parameters<typeof yElementOrder.unobserve>[0])
     }
-  }, [yElementsMap, yElementOrder])
+  }, [yElementsMap])
 
   return (
     <div
