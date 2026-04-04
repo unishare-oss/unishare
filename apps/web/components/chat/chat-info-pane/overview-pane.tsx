@@ -42,7 +42,7 @@ export function OverviewPane({
 }: OverviewPaneProps) {
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="flex flex-col w-full md:w-64">
           {/* Search */}
           <div className="px-3 py-2 border-b flex items-center gap-2">

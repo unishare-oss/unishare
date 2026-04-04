@@ -124,17 +124,19 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   if (roomsLoading || followingLoading || followersLoading) {
     return (
-      <div className="flex flex-col gap-2 p-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg bg-muted" />
-        ))}
-      </div>
+      <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
+        <div className="flex flex-col gap-2 p-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg bg-muted" />
+          ))}
+        </div>
+      </Card>
     )
   }
 
   return (
     <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="flex flex-col pb-20">
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
