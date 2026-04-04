@@ -1,13 +1,16 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import * as Y from 'yjs'
-import { Excalidraw, CaptureUpdateAction } from '@excalidraw/excalidraw'
+import { Excalidraw, CaptureUpdateAction, reconcileElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useTheme } from 'next-themes'
 import { useCollab } from '@/contexts/collab-context'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import type {
+  ExcalidrawElement,
+  OrderedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types'
+import type { RemoteExcalidrawElement } from '@excalidraw/excalidraw/data/reconcile'
 
 const DARK_THEMES = [
   'theme-catppuccin-mocha',
@@ -19,20 +22,22 @@ const DARK_THEMES = [
   'theme-ocean-depth',
 ]
 
-// Stable references — these never change so we define them outside the component
-// to guarantee they don't cause Excalidraw to re-render.
 const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElementsMap, ydoc, initialElements, setExcalidrawAPI, isViewOnly } = useCollab()
+  const {
+    initialElements,
+    setExcalidrawAPI,
+    isViewOnly,
+    broadcastedVersionsRef,
+    emitSceneUpdate,
+    registerRemoteHandler,
+  } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
-  // Track the versionNonce fingerprint of what we last wrote to Yjs.
-  // Prevents handleChange from re-emitting remote state received via observer.
-  const lastWrittenFingerprintRef = useRef<string>('')
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -42,7 +47,6 @@ function ExcalidrawWrapperInner() {
     [setExcalidrawAPI],
   )
 
-  // Memoised initial data — only changes when initialElements changes (room join/reconnect).
   const initialData = useMemo(
     () => ({
       elements: (initialElements ?? []) as ExcalidrawElement[],
@@ -51,62 +55,46 @@ function ExcalidrawWrapperInner() {
     [initialElements],
   )
 
+  // On every local change, emit only elements with a higher version than last broadcast.
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
-      const fingerprint = elements.map((el) => `${el.id}:${el.versionNonce}`).join('|')
-      if (fingerprint === lastWrittenFingerprintRef.current) return
-      lastWrittenFingerprintRef.current = fingerprint
-
-      ydoc.transact(() => {
-        const incomingIds = new Set(elements.map((el) => el.id))
-        for (const el of elements) {
-          const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
-          const differs =
-            !stored ||
-            el.version > stored.version ||
-            (el.version === stored.version && el.versionNonce !== stored.versionNonce)
-          if (differs) {
-            yElementsMap.set(el.id, { ...el })
-          }
-        }
-        for (const [id] of yElementsMap.entries()) {
-          if (!incomingIds.has(id)) yElementsMap.delete(id)
-        }
-      })
+      emitSceneUpdate(elements)
     },
-    [ydoc, yElementsMap],
+    [emitSceneUpdate],
   )
 
+  // Register handler for incoming remote elements. Uses reconcileElements to
+  // merge remote changes with local state — higher version wins per element.
   useEffect(() => {
-    const observer = (_event: unknown, transaction: Y.Transaction) => {
-      if (transaction.origin !== 'remote' && transaction.origin !== 'init') return
-      if (!excalidrawAPIRef.current) return
+    const handleRemoteElements = (remoteElements: ExcalidrawElement[]) => {
+      const api = excalidrawAPIRef.current
+      if (!api) return
 
-      // Sort by fractional index for correct z-order. Elements without an index
-      // fall back to insertion order (stable sort preserves relative position).
-      const remoteElements = ([...yElementsMap.values()] as ExcalidrawElement[])
-        .map((el) => ({ ...el }))
-        .sort((a, b) => {
-          if (a.index == null && b.index == null) return 0
-          if (a.index == null) return 1
-          if (b.index == null) return -1
-          return a.index < b.index ? -1 : a.index > b.index ? 1 : 0
-        })
+      const localElements = api.getSceneElements() as readonly OrderedExcalidrawElement[]
+      const appState = api.getAppState()
+      const reconciled = reconcileElements(
+        localElements,
+        remoteElements as unknown as RemoteExcalidrawElement[],
+        appState,
+      )
 
-      excalidrawAPIRef.current.updateScene({
-        elements: remoteElements,
+      api.updateScene({
+        elements: reconciled,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
-      lastWrittenFingerprintRef.current = remoteElements
-        .map((el) => `${el.id}:${el.versionNonce}`)
-        .join('|')
+
+      // Mark reconciled versions as broadcast so we don't echo them back.
+      for (const el of reconciled) {
+        const current = broadcastedVersionsRef.current.get(el.id) ?? -1
+        if (el.version > current) {
+          broadcastedVersionsRef.current.set(el.id, el.version)
+        }
+      }
     }
 
-    yElementsMap.observe(observer as Parameters<typeof yElementsMap.observe>[0])
-    return () => {
-      yElementsMap.unobserve(observer as Parameters<typeof yElementsMap.unobserve>[0])
-    }
-  }, [yElementsMap])
+    registerRemoteHandler(handleRemoteElements)
+    return () => registerRemoteHandler(null)
+  }, [registerRemoteHandler, broadcastedVersionsRef])
 
   return (
     <div
@@ -131,8 +119,5 @@ function ExcalidrawWrapperInner() {
   )
 }
 
-// memo: prevents re-render when parent (CanvasInner) re-renders due to presence
-// context updates (30fps cursor moves). ExcalidrawWrapper only re-renders when
-// CollabContext (core) changes or theme changes.
 export const ExcalidrawWrapper = memo(ExcalidrawWrapperInner)
 export default ExcalidrawWrapper
