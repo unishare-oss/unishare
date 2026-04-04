@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, RefObject } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { useInView } from 'react-intersection-observer'
@@ -35,7 +35,7 @@ interface UnifiedChatWindowProps {
   roomId?: string
   lastSocketMessage?: ChatMessageEntity
   isConnected?: boolean
-  socket: Socket | null
+  socket: RefObject<Socket | null>
 }
 
 export function UnifiedChatWindow({
@@ -67,10 +67,10 @@ export function UnifiedChatWindow({
   }
 
   // Global typing indicator (tracks all rooms)
-  const { typingByRoom } = useGlobalTypingIndicator(socket, user?.id)
+  const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
 
   // Emit typing for current room
-  useEmitTyping(socket, roomId || '', content.trim())
+  useEmitTyping(socket.current, roomId || '', content.trim())
 
   // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
   useEffect(() => {
