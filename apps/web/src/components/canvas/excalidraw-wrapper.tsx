@@ -29,6 +29,32 @@ const DARK_THEMES = [
   'theme-ocean-depth',
 ]
 
+const toRemoteExcalidrawElements = (
+  elements: readonly ExcalidrawElement[],
+): RemoteExcalidrawElement[] => {
+  return elements as RemoteExcalidrawElement[]
+}
+
+const isValidExcalidrawElementArray = (
+  elements: unknown,
+): elements is ExcalidrawElement[] => {
+  if (!Array.isArray(elements)) {
+    return false
+  }
+
+  return elements.every((el) => {
+    if (!el || typeof el !== 'object') {
+      return false
+    }
+
+    const anyEl = el as { id?: unknown; type?: unknown }
+    return (
+      typeof anyEl.id === 'string' &&
+      typeof anyEl.type === 'string'
+    )
+  })
+}
+
 const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
@@ -46,8 +72,13 @@ function ExcalidrawWrapperInner() {
   const { libraryItems, setLibraryItems } = useLibraryStore()
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
+  const excalidrawAPI = useMemo(
+    () => excalidrawAPIRef.current,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [excalidrawAPIRef.current],
+  )
 
-  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef.current })
+  useHandleLibrary({ excalidrawAPI })
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -59,7 +90,9 @@ function ExcalidrawWrapperInner() {
 
   const initialData = useMemo(
     () => ({
-      elements: (initialElements ?? []) as ExcalidrawElement[],
+      elements: isValidExcalidrawElementArray(initialElements)
+        ? initialElements
+        : [],
       libraryItems,
       scrollToContent: true,
     }),
@@ -93,7 +126,7 @@ function ExcalidrawWrapperInner() {
       const appState = api.getAppState()
       const reconciled = reconcileElements(
         localElements,
-        remoteElements as unknown as RemoteExcalidrawElement[],
+        toRemoteExcalidrawElements(remoteElements),
         appState,
       )
 
