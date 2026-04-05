@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -9,6 +9,7 @@ import { UpdateMessageDto } from './dto/update-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
+import { ChatMemberGuard } from './guards/chat-member.guard'
 
 @ApiTags('chat')
 @Controller('chat')
@@ -23,6 +24,7 @@ export class ChatController {
   }
 
   @Get('rooms/:id')
+  @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatRoomEntity })
   @ResponseMessage('Chat room fetched successfully')
   getRoom(@Param('id') id: string, @Session() session: UserSession) {
@@ -30,6 +32,7 @@ export class ChatController {
   }
 
   @Get('rooms/:id/messages')
+  @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: PaginatedMessagesEntity })
   @ResponseMessage('Chat messages fetched successfully')
   getMessages(
@@ -48,6 +51,7 @@ export class ChatController {
   }
 
   @Post('rooms/:id/messages')
+  @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatMessageEntity })
   @ResponseMessage('Message sent successfully')
   sendMessage(
@@ -59,6 +63,7 @@ export class ChatController {
   }
 
   @Patch('messages/:id')
+  @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatMessageEntity })
   @ResponseMessage('Message updated successfully')
   editMessage(
@@ -70,12 +75,14 @@ export class ChatController {
   }
 
   @Delete('messages/:id')
+  @UseGuards(ChatMemberGuard)
   @ResponseMessage('Message deleted successfully')
   deleteMessage(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.deleteMessage(id, session.user.id)
   }
 
   @Post('rooms/:id/read')
+  @UseGuards(ChatMemberGuard)
   @ResponseMessage('Room marked as read successfully')
   markAsRead(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.markAsRead(id, session.user.id)

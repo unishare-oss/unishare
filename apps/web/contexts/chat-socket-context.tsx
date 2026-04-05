@@ -67,7 +67,8 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
 
     socket.on('error', (error: any) => {
       console.error('Chat socket error:', error)
-      toast.error('Chat connection error. Messages may not be delivered.')
+      const message = typeof error === 'string' ? error : error.message || 'Chat connection error'
+      toast.error(message)
     })
 
     return () => {
