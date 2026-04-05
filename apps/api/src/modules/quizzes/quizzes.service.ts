@@ -8,7 +8,6 @@ import {
 import { UserRole } from '@/generated/prisma/client'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { QuizzesRepository } from './quizzes.repository'
-import type { Multer } from 'multer'
 
 interface QuizQuestion {
   content: string
@@ -54,7 +53,7 @@ export class QuizzesService {
 
   async generateQuizFromMaterial(
     courseId: string,
-    file: Multer['File'],
+    file: Express.Multer.File,
     generatedBy: string,
     questionCount: number = 20,
   ): Promise<{ quizId: string; questions: QuizQuestion[] }> {
