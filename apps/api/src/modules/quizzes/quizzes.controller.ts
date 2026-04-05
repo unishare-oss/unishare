@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { memoryStorage } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
@@ -71,7 +72,7 @@ export class QuizzesController {
 
   @Post('generate')
   @Roles(['ADMIN', 'MODERATOR'])
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
