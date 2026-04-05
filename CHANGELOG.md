@@ -1,3 +1,13 @@
+## [0.8.1](https://github.com/unishare-oss/unishare/compare/v0.8.0...v0.8.1) (2026-04-05)
+
+### Bug Fixes
+
+- load Express.Multer types via tsconfig types field instead of per-file imports ([372ca13](https://github.com/unishare-oss/unishare/commit/372ca13db0c0a5eee5741f2711fe0f267b3e4904))
+- pin eslint to v9 for eslint-plugin-react compatibility ([6aa6cf7](https://github.com/unishare-oss/unishare/commit/6aa6cf79f787511e9ef95cf4f3fb03eead0ea0b7))
+- remove useless isAnonymous initial assignment ([6cc0e3b](https://github.com/unishare-oss/unishare/commit/6cc0e3b36b548e74fc0e308729fc3a8a2c19542b))
+- resolve LCP image warnings and TypeScript 6 build errors ([553f6ec](https://github.com/unishare-oss/unishare/commit/553f6ec4d11545d23bea4acbd3b66c508a8f301a))
+- use Multer['File'] type instead of unused Express.Multer.File ([e142f04](https://github.com/unishare-oss/unishare/commit/e142f04f7474abd791ff17544a607fec4a8d94ec))
+
 # [0.8.0](https://github.com/unishare-oss/unishare/compare/v0.7.0...v0.8.0) (2026-04-05)
 
 ### Features
