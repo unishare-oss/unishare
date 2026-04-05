@@ -17,9 +17,4 @@ export class CreateRoomDto {
   @IsString()
   @IsOptional()
   name?: string
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  initialMessage?: string
 }

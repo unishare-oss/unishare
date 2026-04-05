@@ -10,7 +10,6 @@ import {
 } from '@nestjs/websockets'
 import { Logger } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
-import * as Y from 'yjs'
 import { parse } from 'cookie'
 import { auth } from '@/auth/auth.config'
 import { CollabRoomService } from './collab.room.service'
@@ -22,14 +21,12 @@ const allowedOrigins = [
 ]
 
 const PRESENCE_COLORS_COUNT = 10
-const CURSOR_THROTTLE_MS = 16 // ~60fps
+const CURSOR_THROTTLE_MS = 16
 
 @WebSocketGateway({
   namespace: '/collab',
   cors: { origin: allowedOrigins, credentials: true },
-  // Large Yjs state snapshots can exceed socket.io's default 1MB polling limit.
-  // Force WebSocket transport on the client side; this is a safety net for polling fallback.
-  maxHttpBufferSize: 5 * 1024 * 1024, // 5MB — Yjs snapshots rarely exceed 1-2MB
+  maxHttpBufferSize: 5 * 1024 * 1024,
 })
 export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server
@@ -103,12 +100,10 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       return
     }
 
-    // Phase 5: assign presence metadata before joining room so fetchSockets() sees it
     const colorIndex = this.hashToColorIndex(client.data.user.id)
     client.data.colorIndex = colorIndex
     client.data.name = client.data.user.name
 
-    // Phase 7: compute view-only status from room visibility + user anonymous status
     const isAnonymous = !!client.data.user.isAnonymous
     if (room.visibility === 'PRIVATE' && isAnonymous) {
       client.emit('error', { message: 'Room is private' })
@@ -120,13 +115,10 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
 
-    const doc = await this.collabRoomService.getOrCreate(slug)
-    const state = Y.encodeStateAsUpdate(doc)
+    const elements = await this.collabRoomService.getOrLoadElements(slug)
+    client.emit('room-joined', { slug, elements })
+    this.logger.log(`Client ${client.id} joined room ${slug} (${elements.length} elements)`)
 
-    client.emit('room-joined', { slug, state: Buffer.from(state) })
-    this.logger.log(`Client ${client.id} joined room ${slug}`)
-
-    // Phase 5: participant tracking
     const roomSockets = await this.server.in(slug).fetchSockets()
     const participants = roomSockets.map((s) => ({
       socketId: s.id,
@@ -170,28 +162,19 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     client.to(slug).emit('cursor-move', { socketId: client.id, ...data })
   }
 
-  @SubscribeMessage('yjs-update')
-  handleYjsUpdate(
+  @SubscribeMessage('scene-update')
+  handleSceneUpdate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: Buffer | Uint8Array,
+    @MessageBody() elements: Record<string, unknown>[],
   ): void {
     if (client.data.isViewOnly) return
     const slug = this.collabRoomService.getRoomForSocket(client.id)
     if (!slug) return
 
-    const update = new Uint8Array(data)
-    const doc = this.collabRoomService.getDoc(slug)
-    if (!doc) return
-
-    const mapBefore = doc.getMap('elementsMap').size
-    Y.applyUpdate(doc, update)
-    const mapAfter = doc.getMap('elementsMap').size
-    const orderAfter = doc.getArray('elementOrder').length
-    this.logger.log(
-      `[COLLAB] yjs-update from ${client.id}: ${update.length}B — mapSize ${mapBefore}→${mapAfter} order=${orderAfter} — relaying to room`,
-    )
-
+    this.collabRoomService.mergeElements(slug, elements)
     this.collabRoomService.resetIdleTimer(slug)
-    client.to(slug).emit('yjs-update', data)
+
+    // this.logger.log(`[COLLAB] scene-update from ${client.id}: ${elements.length} elements`)
+    client.to(slug).emit('scene-update', elements)
   }
 }

@@ -10,15 +10,15 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import * as Y from 'yjs'
 import { io } from 'socket.io-client'
 import { toast } from 'sonner'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
-const CURSOR_THROTTLE_MS = 1000 / 60 // ~16ms, 60fps max
-const YJS_EMIT_THROTTLE_MS = 16 // merge rapid drag updates before emitting
+const CURSOR_THROTTLE_MS = 1000 / 60
+const SCENE_EMIT_THROTTLE_MS = 16
 
 export interface Participant {
   socketId: string
@@ -34,27 +34,22 @@ export interface CursorData {
 }
 
 // ─── Core context ────────────────────────────────────────────────────────────
-// Stable values: Y.Doc, Excalidraw API, connection status.
-// ExcalidrawWrapper consumes ONLY this context so it is never re-rendered by
-// cursor-move events (which update CollabPresenceContext at 30fps).
 
 interface CollabContextValue {
-  ydoc: Y.Doc
-  yElementsMap: Y.Map<unknown>
-  yElementOrder: Y.Array<string>
   connectionStatus: ConnectionStatus
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
-  initialElements: unknown[] | null
+  initialElements: ExcalidrawElement[] | null
   isAnonymous: boolean
   isViewOnly: boolean
   ownerId: string | null
   userId: string | null
+  broadcastedVersionsRef: React.MutableRefObject<Map<string, number>>
+  emitSceneUpdate: (elements: readonly ExcalidrawElement[]) => void
+  registerRemoteHandler: (handler: ((elements: ExcalidrawElement[]) => void) | null) => void
 }
 
 // ─── Presence context ────────────────────────────────────────────────────────
-// High-frequency values: cursors (30fps), participants, cursor emit.
-// Only CursorOverlay, CanvasHeader, and the pointer-move handler consume this.
 
 interface CollabPresenceContextValue {
   remoteCursors: Map<string, CursorData>
@@ -87,19 +82,16 @@ export function CollabProvider({
   children,
 }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
-  const [initialElements, setInitialElements] = useState<unknown[] | null>(null)
+  const [initialElements, setInitialElements] = useState<ExcalidrawElement[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
   const [isViewOnly, setIsViewOnly] = useState(isViewOnlyProp)
-
-  const [ydoc] = useState<Y.Doc>(() => new Y.Doc())
-  const [yElementsMap] = useState<Y.Map<unknown>>(() => ydoc.getMap('elementsMap'))
-  const [yElementOrder] = useState<Y.Array<string>>(() => ydoc.getArray('elementOrder'))
 
   const [remoteCursors, setRemoteCursors] = useState<Map<string, CursorData>>(new Map())
   const [participants, setParticipants] = useState<Participant[]>([])
   const [socketId, setSocketId] = useState<string | null>(null)
+
   const socketRef = useRef<ReturnType<typeof io> | null>(null)
-  const lastEmitTimeRef = useRef(0)
+  const lastCursorEmitRef = useRef(0)
   const unmountingRef = useRef(false)
   const kickedRef = useRef(false)
   const onAccessRevokedRef = useRef(onAccessRevoked)
@@ -107,15 +99,52 @@ export function CollabProvider({
     onAccessRevokedRef.current = onAccessRevoked
   })
 
+  // Tracks the version of each element we've last broadcast so we only send diffs.
+  const broadcastedVersionsRef = useRef<Map<string, number>>(new Map())
+
+  // Registered callback from ExcalidrawWrapper to handle incoming remote elements.
+  const remoteHandlerRef = useRef<((elements: ExcalidrawElement[]) => void) | null>(null)
+
+  // Pending elements accumulated between throttle ticks.
+  const pendingElementsRef = useRef<Map<string, ExcalidrawElement>>(new Map())
+  const emitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const registerRemoteHandler = useCallback(
+    (handler: ((elements: ExcalidrawElement[]) => void) | null) => {
+      remoteHandlerRef.current = handler
+    },
+    [],
+  )
+
+  const emitSceneUpdate = useCallback((elements: readonly ExcalidrawElement[]) => {
+    const toSend = elements.filter((el) => {
+      const lastVersion = broadcastedVersionsRef.current.get(el.id) ?? -1
+      return el.version > lastVersion
+    })
+    if (toSend.length === 0) return
+
+    for (const el of toSend) {
+      broadcastedVersionsRef.current.set(el.id, el.version)
+      pendingElementsRef.current.set(el.id, el)
+    }
+
+    if (!emitTimerRef.current) {
+      emitTimerRef.current = setTimeout(() => {
+        const batch = [...pendingElementsRef.current.values()]
+        socketRef.current?.emit('scene-update', batch)
+        pendingElementsRef.current.clear()
+        emitTimerRef.current = null
+      }, SCENE_EMIT_THROTTLE_MS)
+    }
+  }, [])
+
   useEffect(() => {
     unmountingRef.current = false
-    const hasJoined = { current: false }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const socket = io(`${apiUrl}/collab`, {
       withCredentials: true,
       autoConnect: false,
-      // Force WebSocket transport — avoids HTTP polling 413 errors on large Yjs payloads.
       transports: ['websocket'],
     })
 
@@ -126,22 +155,19 @@ export function CollabProvider({
       socket.emit('join-room', slug)
     })
 
-    socket.on('room-joined', ({ state }: { slug: string; state: ArrayBuffer }) => {
-      const isReconnect = hasJoined.current
-      Y.applyUpdate(ydoc, new Uint8Array(state), 'init')
-      const order = yElementOrder.toArray()
-      const elements = order.map((id) => yElementsMap.get(id)).filter(Boolean)
+    socket.on('room-joined', ({ elements }: { slug: string; elements: ExcalidrawElement[] }) => {
+      const isReconnect = broadcastedVersionsRef.current.size > 0
       setInitialElements(elements)
+      broadcastedVersionsRef.current = new Map(elements.map((el) => [el.id, el.version]))
       setConnectionStatus('connected')
-      hasJoined.current = true
       if (isReconnect) {
         toast.dismiss('collab-status')
         toast.success('Reconnected', { duration: 2000 })
       }
     })
 
-    socket.on('yjs-update', (data: ArrayBuffer) => {
-      Y.applyUpdate(ydoc, new Uint8Array(data), 'remote')
+    socket.on('scene-update', (elements: ExcalidrawElement[]) => {
+      remoteHandlerRef.current?.(elements)
     })
 
     socket.on('participant-list', (list: Participant[]) => {
@@ -204,35 +230,18 @@ export function CollabProvider({
       toast.error('Connection lost — reconnecting...', { id: 'collab-status', duration: Infinity })
     })
 
-    let pendingUpdates: Uint8Array[] = []
-    let emitTimer: ReturnType<typeof setTimeout> | null = null
-
-    ydoc.on('update', (update: Uint8Array, origin: unknown) => {
-      if (origin === 'remote' || origin === 'init') return
-      pendingUpdates.push(update)
-      if (!emitTimer) {
-        emitTimer = setTimeout(() => {
-          const merged =
-            pendingUpdates.length === 1 ? pendingUpdates[0] : Y.mergeUpdates(pendingUpdates)
-          socket.emit('yjs-update', merged)
-          pendingUpdates = []
-          emitTimer = null
-        }, YJS_EMIT_THROTTLE_MS)
-      }
-    })
-
     socket.connect()
 
     return () => {
       unmountingRef.current = true
-      // Flush any buffered Yjs updates before disconnecting so that an in-progress
-      // drawing is synced to the server. Without this, navigating away mid-stroke
-      // cancels the 16ms timer and leaves other users with a permanent "dot".
-      if (emitTimer) clearTimeout(emitTimer)
-      if (pendingUpdates.length > 0 && socket.connected) {
-        const merged =
-          pendingUpdates.length === 1 ? pendingUpdates[0] : Y.mergeUpdates(pendingUpdates)
-        socket.emit('yjs-update', merged)
+      if (emitTimerRef.current) {
+        clearTimeout(emitTimerRef.current)
+        const batch = [...pendingElementsRef.current.values()]
+        if (batch.length > 0 && socket.connected) {
+          socket.emit('scene-update', batch)
+        }
+        pendingElementsRef.current.clear()
+        emitTimerRef.current = null
       }
       socketRef.current = null
       setSocketId(null)
@@ -240,15 +249,14 @@ export function CollabProvider({
       setRemoteCursors(new Map())
       toast.dismiss('collab-status')
       socket.disconnect()
-      ydoc.destroy()
     }
-  }, [slug, ydoc, yElementsMap, yElementOrder])
+  }, [slug])
 
   const emitCursorMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       const now = Date.now()
-      if (now - lastEmitTimeRef.current < CURSOR_THROTTLE_MS) return
-      lastEmitTimeRef.current = now
+      if (now - lastCursorEmitRef.current < CURSOR_THROTTLE_MS) return
+      lastCursorEmitRef.current = now
 
       const appState = excalidrawAPI?.getAppState()
       if (!appState || !socketRef.current) return
@@ -262,13 +270,8 @@ export function CollabProvider({
     [excalidrawAPI],
   )
 
-  // Core value: stable fields only. useMemo ensures ExcalidrawWrapper's context
-  // subscription never triggers from presence updates.
   const coreValue = useMemo<CollabContextValue>(
     () => ({
-      ydoc,
-      yElementsMap,
-      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
@@ -277,11 +280,11 @@ export function CollabProvider({
       isViewOnly,
       ownerId,
       userId,
+      broadcastedVersionsRef,
+      emitSceneUpdate,
+      registerRemoteHandler,
     }),
     [
-      ydoc,
-      yElementsMap,
-      yElementOrder,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
@@ -290,10 +293,11 @@ export function CollabProvider({
       isViewOnly,
       ownerId,
       userId,
+      emitSceneUpdate,
+      registerRemoteHandler,
     ],
   )
 
-  // Presence value: high-frequency fields. CursorOverlay and CanvasHeader only.
   const presenceValue = useMemo<CollabPresenceContextValue>(
     () => ({ remoteCursors, participants, socketId, excalidrawAPI, emitCursorMove }),
     [remoteCursors, participants, socketId, excalidrawAPI, emitCursorMove],
@@ -306,7 +310,7 @@ export function CollabProvider({
   )
 }
 
-/** Core collab state: Y.Doc, connection, Excalidraw API. Used by ExcalidrawWrapper. */
+/** Core collab state: connection, Excalidraw API, scene emit. Used by ExcalidrawWrapper. */
 export function useCollab() {
   const context = useContext(CollabContext)
   if (!context) throw new Error('useCollab must be used within a CollabProvider')

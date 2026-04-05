@@ -67,16 +67,31 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @UseGuards(ChatRoomGuard)
   @SubscribeMessage('join-room')
-  async handleJoinRoom(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() roomId: string,
-  ): Promise<void> {
+  async handleJoinRoom(@ConnectedSocket() client: Socket, @MessageBody() roomId: string) {
     // Access is already verified by ChatRoomGuard
     await client.join(roomId)
     this.logger.log(`User ${client.data.user.id} joined chat room: ${roomId}`)
 
     // Notify client success
     client.emit('room-joined', { roomId })
+  }
+
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; isTyping: boolean },
+  ) {
+    const { roomId, isTyping } = data
+    const userId = client.data.user.id
+
+    // Emit globally to all connected clients
+    this.server.emit('user-typing', {
+      roomId,
+      userId,
+      isTyping,
+    })
+
+    // this.logger.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`)
   }
 
   @OnEvent('chat.message_sent')

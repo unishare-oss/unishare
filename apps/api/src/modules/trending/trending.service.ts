@@ -67,27 +67,37 @@ export class TrendingService {
    * Get trending posts with pagination.
    * Returns posts with highest trending scores, most recent first for ties.
    */
-  async getTrendingPosts(
-    limit: number = 20,
-    page: number = 1,
-  ) {
+  async getTrendingPosts(limit: number = 20, page: number = 1) {
     const skip = (page - 1) * limit
 
     const include: Prisma.PostInclude = {
       author: {
         select: {
-          id: true, name: true, image: true, enrollmentYear: true,
+          id: true,
+          name: true,
+          image: true,
+          enrollmentYear: true,
           department: { select: { id: true, name: true } },
         },
       },
       course: {
         select: {
-          id: true, code: true, name: true,
+          id: true,
+          code: true,
+          name: true,
           department: { select: { id: true, name: true } },
         },
       },
       files: {
-        select: { id: true, key: true, name: true, size: true, mimeType: true, createdAt: true, downloads: true },
+        select: {
+          id: true,
+          key: true,
+          name: true,
+          size: true,
+          mimeType: true,
+          createdAt: true,
+          downloads: true,
+        },
       },
       reactions: { select: { type: true, userId: true } },
       tags: { select: { tag: { select: { id: true, name: true, slug: true, color: true } } } },

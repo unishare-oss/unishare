@@ -30,13 +30,7 @@ export class ChatService {
     return this.chatRepository.findMessages(roomId, options)
   }
 
-  async createRoom(
-    creatorId: string,
-    participantIds: string[],
-    type: ChatRoomType,
-    name?: string,
-    initialMessage?: string,
-  ) {
+  async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
     const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
 
     if (type === ChatRoomType.DM) {
@@ -51,25 +45,7 @@ export class ChatService {
       }
     }
 
-    const room = await this.chatRepository.createRoom(type, allParticipantIds, name)
-
-    // Send initial message if provided (for DM creation)
-    if (initialMessage && type === ChatRoomType.DM) {
-      const message = await this.chatRepository.createMessage({
-        roomId: room.id,
-        userId: creatorId,
-        content: initialMessage,
-        type: 'TEXT',
-      })
-
-      this.eventEmitter.emit('chat.message_sent', {
-        roomId: room.id,
-        message,
-        participants: room.participants,
-      })
-    }
-
-    return room
+    return this.chatRepository.createRoom(type, allParticipantIds, name)
   }
 
   async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
