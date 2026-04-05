@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Optimized for 1GB RAM Oracle server
+  postgres:
+    image: postgres:17-alpine
+    container_name: unishare-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-unishare}
+      # Lean PostgreSQL settings for low-memory environments
+      POSTGRES_INITDB_ARGS: '-c shared_buffers=64MB -c effective_cache_size=128MB -c work_mem=16MB'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - unishare-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 350M
+        reservations:
+          cpus: '0.5'
+          memory: 250M
+
+  # API Service - NestJS backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: unishare-api:latest
+    container_name: unishare-api
+    env_file: apps/api/.env # Load all API environment variables
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: '--max-old-space-size=256'
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-unishare}
+      API_PORT: 3001
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - unishare-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 300M
+        reservations:
+          cpus: '0.5'
+          memory: 200M
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  unishare-network:
+    driver: bridge

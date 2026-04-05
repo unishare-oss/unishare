@@ -8,6 +8,7 @@ import {
 import { UserRole } from '@/generated/prisma/client'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { QuizzesRepository } from './quizzes.repository'
+import type { Multer } from 'multer'
 
 interface QuizQuestion {
   content: string

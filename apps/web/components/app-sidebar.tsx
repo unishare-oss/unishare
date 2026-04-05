@@ -19,7 +19,6 @@ import {
   Palette,
   MessageSquare,
   MessageSquarePlus,
-  GithubIcon,
   LayoutGrid,
   ChevronLeft,
   ChevronDown,
@@ -28,6 +27,7 @@ import {
   Puzzle,
   PanelLeftClose,
   PanelLeft,
+  GitFork,
 } from 'lucide-react'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
@@ -190,6 +190,7 @@ export function AppSidebar() {
                 alt="Unishare logo"
                 width={28}
                 height={28}
+                loading="eager"
                 className="rounded-[6px] shrink-0"
               />
               <span className="font-mono text-[15px] font-bold tracking-tight text-foreground truncate">
@@ -360,7 +361,7 @@ export function AppSidebar() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
                 >
-                  <GithubIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <GitFork className="size-3.5 shrink-0" strokeWidth={1.5} />
                   Open source · Contribute
                 </a>
                 <button
@@ -377,7 +378,7 @@ export function AppSidebar() {
               {user ? (
                 <div className="flex items-center gap-3">
                   <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
-                    <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" />
+                    <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" priority />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                       <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
@@ -427,7 +428,7 @@ export function AppSidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link href="/profile">
-                  <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" />
+                  <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" priority />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{user.name}</TooltipContent>
