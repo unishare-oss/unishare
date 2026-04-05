@@ -13,7 +13,7 @@ import type {
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
-import { useSendMessage } from '@/hooks/use-chat-mutations'
+import { useSendMessage, useEditMessage, useDeleteMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
@@ -75,6 +75,7 @@ export function UnifiedChatWindow({
   const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
+  const [editingMessage, setEditingMessage] = useState<ChatMessageEntity | null>(null)
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
@@ -168,6 +169,8 @@ export function UnifiedChatWindow({
 
   // Send message mutation
   const { mutate: sendMessage } = useSendMessage({ roomId, user })
+  const { mutate: editMessage } = useEditMessage({ roomId: roomId || '' })
+  const { mutate: deleteMessage } = useDeleteMessage({ roomId: roomId || '' })
 
   // Flatten all pages and reverse to show oldest first
   const initialMsgs = useMemo(() => {
@@ -246,7 +249,23 @@ export function UnifiedChatWindow({
     const messageContent = content
     setContent('')
 
-    sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
+    if (editingMessage) {
+      editMessage({ id: editingMessage.id, data: { content: messageContent } })
+      setEditingMessage(null)
+    } else {
+      sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
+    }
+  }
+
+  const handleEdit = (message: ChatMessageEntity) => {
+    setEditingMessage(message)
+    setContent(message.content || '')
+  }
+
+  const handleDelete = (messageId: string) => {
+    if (confirm('Are you sure you want to delete this message?')) {
+      deleteMessage({ id: messageId })
+    }
   }
 
   if (!roomId || roomLoading) {
@@ -363,6 +382,8 @@ export function UnifiedChatWindow({
                         isMe={isMe}
                         showAvatar={showAvatar}
                         currentUserId={user?.id}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
                       />
                     </div>
                   )
@@ -383,7 +404,16 @@ export function UnifiedChatWindow({
             </ScrollArea>
           )}
 
-          <ChatInput value={content} onChange={setContent} onSend={handleSend} />
+          <ChatInput
+            value={content}
+            onChange={setContent}
+            onSend={handleSend}
+            editingMessage={editingMessage}
+            onCancelEdit={() => {
+              setEditingMessage(null)
+              setContent('')
+            }}
+          />
         </div>
 
         {/* Info Pane */}

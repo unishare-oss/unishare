@@ -42,9 +42,7 @@ export function replaceMessageInInfiniteCache(
 
   return {
     ...oldData,
-    pages: oldData.pages.map((page: any, index: number) => {
-      if (index !== 0) return page // Only update first page (newest)
-
+    pages: oldData.pages.map((page: any) => {
       return {
         ...page,
         data: {
@@ -56,6 +54,55 @@ export function replaceMessageInInfiniteCache(
             }
             return item
           }),
+        },
+      }
+    }),
+  }
+}
+
+/**
+ * Updates a message in the infinite query cache
+ */
+export function updateMessageInInfiniteCache(
+  oldData: any,
+  messageId: string,
+  updatedMessage: ChatMessageEntity,
+): any {
+  if (!oldData?.pages) return oldData
+
+  return {
+    ...oldData,
+    pages: oldData.pages.map((page: any) => {
+      return {
+        ...page,
+        data: {
+          ...page.data,
+          items: page.data.items.map((item: any) => {
+            if (item.id === messageId) {
+              return updatedMessage
+            }
+            return item
+          }),
+        },
+      }
+    }),
+  }
+}
+
+/**
+ * Deletes a message from the infinite query cache
+ */
+export function deleteMessageFromInfiniteCache(oldData: any, messageId: string): any {
+  if (!oldData?.pages) return oldData
+
+  return {
+    ...oldData,
+    pages: oldData.pages.map((page: any) => {
+      return {
+        ...page,
+        data: {
+          ...page.data,
+          items: page.data.items.filter((item: any) => item.id !== messageId),
         },
       }
     }),

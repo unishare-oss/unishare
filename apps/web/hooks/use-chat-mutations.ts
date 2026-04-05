@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerSendMessage,
   useChatControllerCreateRoom,
+  useChatControllerEditMessage,
+  useChatControllerDeleteMessage,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
@@ -13,6 +15,8 @@ import type {
 import {
   addMessageToInfiniteCache,
   replaceMessageInInfiniteCache,
+  updateMessageInInfiniteCache,
+  deleteMessageFromInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
 
 /**
@@ -177,6 +181,127 @@ export function useCreateDM() {
       onSuccess: () => {
         // Invalidate rooms query to refresh the list with the new room
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      },
+    },
+  })
+}
+
+export function useEditMessage({ roomId }: { roomId: string }) {
+  const queryClient = useQueryClient()
+
+  return useChatControllerEditMessage({
+    mutation: {
+      onMutate: async (variables) => {
+        const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
+          limit: 50,
+          direction: 'desc',
+        })
+        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
+
+        await queryClient.cancelQueries({ queryKey: messagesQueryKey })
+        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
+
+        const previousMessages = queryClient.getQueryData(messagesQueryKey)
+        const previousRooms = queryClient.getQueryData(roomsQueryKey)
+
+        // Optimistically update message
+        queryClient.setQueryData(messagesQueryKey, (old: any) => {
+          if (!old?.pages) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              data: {
+                ...page.data,
+                items: page.data.items.map((item: any) => {
+                  if (item.id === variables.id) {
+                    return {
+                      ...item,
+                      content: variables.data.content,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  }
+                  return item
+                }),
+              },
+            })),
+          }
+        })
+
+        return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey }
+      },
+      onSuccess: (data, _variables, context) => {
+        const updatedMessage = data.data
+        queryClient.setQueryData(context.messagesQueryKey, (old: any) =>
+          updateMessageInInfiniteCache(old, updatedMessage.id, updatedMessage),
+        )
+
+        // Update room preview if it's the last message
+        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((room: ChatRoomEntity) => {
+              if (room.id === roomId && room.messages?.[0]?.id === updatedMessage.id) {
+                return { ...room, messages: [updatedMessage] }
+              }
+              return room
+            }),
+          }
+        })
+      },
+      onError: (_error, _variables, context) => {
+        if (context?.previousMessages) {
+          queryClient.setQueryData(context.messagesQueryKey, context.previousMessages)
+        }
+        if (context?.previousRooms) {
+          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
+        }
+      },
+    },
+  })
+}
+
+export function useDeleteMessage({ roomId }: { roomId: string }) {
+  const queryClient = useQueryClient()
+
+  return useChatControllerDeleteMessage({
+    mutation: {
+      onMutate: async (variables) => {
+        const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
+          limit: 50,
+          direction: 'desc',
+        })
+        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
+
+        await queryClient.cancelQueries({ queryKey: messagesQueryKey })
+        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
+
+        const previousMessages = queryClient.getQueryData(messagesQueryKey)
+        const previousRooms = queryClient.getQueryData(roomsQueryKey)
+
+        // Optimistically delete message
+        queryClient.setQueryData(messagesQueryKey, (old: any) =>
+          deleteMessageFromInfiniteCache(old, variables.id),
+        )
+
+        return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey }
+      },
+      onSuccess: (_data, variables, context) => {
+        // If deleted message was the preview message, invalidate rooms to get the next one
+        const rooms: any = context.previousRooms
+        const room = rooms?.data?.find((r: any) => r.id === roomId)
+        if (room?.messages?.[0]?.id === variables.id) {
+          queryClient.invalidateQueries({ queryKey: context.roomsQueryKey })
+        }
+      },
+      onError: (_error, _variables, context) => {
+        if (context?.previousMessages) {
+          queryClient.setQueryData(context.messagesQueryKey, context.previousMessages)
+        }
+        if (context?.previousRooms) {
+          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
+        }
       },
     },
   })

@@ -14,7 +14,15 @@ import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
-import { getChatControllerGetRoomsQueryKey } from '@/src/lib/api/generated/chat/chat'
+import {
+  getChatControllerGetRoomsQueryKey,
+  getChatControllerGetMessagesInfiniteQueryKey,
+} from '@/src/lib/api/generated/chat/chat'
+import {
+  addMessageToInfiniteCache,
+  deleteMessageFromInfiniteCache,
+  updateMessageInInfiniteCache,
+} from '@/lib/utils/infinite-query-cache'
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -57,6 +65,78 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
 
     socket.on('receive-message', (message: any) => {
       setLastMessage(message)
+
+      // Update messages cache
+      const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
+        limit: 50,
+        direction: 'desc',
+      })
+      queryClient.setQueryData(queryKey, (old: any) => addMessageToInfiniteCache(old, message))
+
+      // Update rooms list preview
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map((room: any) => {
+            if (room.id === message.roomId) {
+              return {
+                ...room,
+                updatedAt: message.createdAt,
+                messages: [message],
+              }
+            }
+            return room
+          }),
+        }
+      })
+    })
+
+    socket.on('message-updated', (message: any) => {
+      const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
+        limit: 50,
+        direction: 'desc',
+      })
+      queryClient.setQueryData(queryKey, (old: any) =>
+        updateMessageInInfiniteCache(old, message.id, message),
+      )
+
+      // Update rooms list preview if it's the last message
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map((room: any) => {
+            if (room.id === message.roomId && room.messages?.[0]?.id === message.id) {
+              return {
+                ...room,
+                messages: [message],
+              }
+            }
+            return room
+          }),
+        }
+      })
+    })
+
+    socket.on('message-deleted', (payload: { roomId: string; messageId: string }) => {
+      const queryKey = getChatControllerGetMessagesInfiniteQueryKey(payload.roomId, {
+        limit: 50,
+        direction: 'desc',
+      })
+      queryClient.setQueryData(queryKey, (old: any) =>
+        deleteMessageFromInfiniteCache(old, payload.messageId),
+      )
+
+      // If deleted message was the preview message, invalidate rooms to get the next one
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        const room = old.data.find((r: any) => r.id === payload.roomId)
+        if (room?.messages?.[0]?.id === payload.messageId) {
+          queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        }
+        return old
+      })
     })
 
     // Invalidate sidebar when new message notification arrives
