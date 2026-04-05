@@ -204,7 +204,7 @@ export function useEditMessage({ roomId }: { roomId: string }) {
         const previousMessages = queryClient.getQueryData(messagesQueryKey)
         const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
-        // Optimistically update message
+        // Optimistically update message in chat window
         queryClient.setQueryData(messagesQueryKey, (old: any) => {
           if (!old?.pages) return old
           return {
@@ -228,6 +228,31 @@ export function useEditMessage({ roomId }: { roomId: string }) {
           }
         })
 
+        // Optimistically update message in sidebar preview
+        queryClient.setQueryData(roomsQueryKey, (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((room: ChatRoomEntity) => {
+              if (room.id === roomId) {
+                return {
+                  ...room,
+                  messages: room.messages?.map((msg) =>
+                    msg.id === variables.id
+                      ? {
+                          ...msg,
+                          content: variables.data.content,
+                          updatedAt: new Date().toISOString(),
+                        }
+                      : msg,
+                  ),
+                }
+              }
+              return room
+            }),
+          }
+        })
+
         return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey }
       },
       onSuccess: (data, _variables, context) => {
@@ -236,7 +261,7 @@ export function useEditMessage({ roomId }: { roomId: string }) {
           updateMessageInInfiniteCache(old, updatedMessage.id, updatedMessage),
         )
 
-        // Update room preview if it's the last message
+        // Ensure room preview is perfectly in sync with real server data
         queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
           if (!old?.data) return old
           return {
@@ -280,15 +305,32 @@ export function useDeleteMessage({ roomId }: { roomId: string }) {
         const previousMessages = queryClient.getQueryData(messagesQueryKey)
         const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
-        // Optimistically delete message
+        // Optimistically delete message from chat window
         queryClient.setQueryData(messagesQueryKey, (old: any) =>
           deleteMessageFromInfiniteCache(old, variables.id),
         )
 
+        // Optimistically remove message from sidebar preview
+        queryClient.setQueryData(roomsQueryKey, (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((room: ChatRoomEntity) => {
+              if (room.id === roomId) {
+                return {
+                  ...room,
+                  messages: room.messages?.filter((msg) => msg.id !== variables.id),
+                }
+              }
+              return room
+            }),
+          }
+        })
+
         return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey }
       },
       onSuccess: (_data, variables, context) => {
-        // If deleted message was the preview message, invalidate rooms to get the next one
+        // If deleted message was the preview message, invalidate rooms to get the next one from server
         const rooms: any = context.previousRooms
         const room = rooms?.data?.find((r: any) => r.id === roomId)
         if (room?.messages?.[0]?.id === variables.id) {
