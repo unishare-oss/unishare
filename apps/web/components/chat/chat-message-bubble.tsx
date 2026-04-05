@@ -62,12 +62,22 @@ export function ChatMessageBubble({
             isMe ? 'text-primary-foreground/90' : 'text-primary',
           )}
         </p>
-        <span className={cn('text-[9px] block mt-1 opacity-60', isMe ? 'text-right' : 'text-left')}>
-          {format(new Date(message.createdAt), 'HH:mm')}
-          {message.updatedAt &&
+        <div
+          className={cn(
+            'text-[9px] mt-1 opacity-60 flex gap-1',
+            isMe ? 'justify-end' : 'justify-start',
+          )}
+        >
+          {isMe &&
+            message.updatedAt &&
             new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() >
-              1000 && <span className="ml-1 italic font-light opacity-80">(edited)</span>}
-        </span>
+              1000 && <span className="italic font-light opacity-80">(edited)</span>}
+          <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
+          {!isMe &&
+            message.updatedAt &&
+            new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() >
+              1000 && <span className="italic font-light opacity-80">(edited)</span>}
+        </div>
       </div>
 
       {isMe && (
