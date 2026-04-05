@@ -34,15 +34,24 @@ export class UsersService {
   }
 
   async updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
-    if (dto.departmentId === undefined && dto.enrollmentYear === undefined) {
+    if (
+      dto.departmentId === undefined &&
+      dto.enrollmentYear === undefined &&
+      dto.universityId === undefined
+    ) {
       throw new BadRequestException(
-        'At least one field is required: departmentId or enrollmentYear',
+        'At least one field is required: departmentId, universityId or enrollmentYear',
       )
     }
 
     if (dto.departmentId !== undefined && dto.departmentId !== null) {
       const department = await this.usersRepository.findDepartmentById(dto.departmentId)
       if (!department) throw new NotFoundException('Department not found')
+    }
+
+    if (dto.universityId !== undefined && dto.universityId !== null) {
+      const university = await this.usersRepository.findUniversityById(dto.universityId)
+      if (!university) throw new NotFoundException('University not found')
     }
 
     const user = await this.usersRepository.updateAcademicProfile(id, dto)
@@ -53,6 +62,7 @@ export class UsersService {
     user: {
       enrollmentYear: number | null
       departmentId?: string | null
+      universityId?: string | null
       _count?: { posts: number; comments: number; savedPosts: number }
       [key: string]: unknown
     },
@@ -60,7 +70,7 @@ export class UsersService {
     followingCount = 0,
     isFollowing: boolean | null = null,
   ) {
-    const { _count, departmentId, ...rest } = user
+    const { _count, departmentId, universityId, ...rest } = user
 
     const shouldShowUpdateMajorPopup = !departmentId || user.enrollmentYear === null
     const base = {

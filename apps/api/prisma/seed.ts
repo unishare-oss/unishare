@@ -3,13 +3,33 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { cs } from './seeds/cs'
 import { it } from './seeds/it'
 import { dsi } from './seeds/dsi'
+import { cpe } from './seeds/cpe'
+import { inc } from './seeds/inc'
+import { eie } from './seeds/eie'
+import { arc } from './seeds/arc'
+import { dd } from './seeds/dd'
+import { dt } from './seeds/dt'
+import { env } from './seeds/env'
+import { cve } from './seeds/cve'
+import { che } from './seeds/che'
+import { universities } from './seeds/universities'
 
 const pool = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter: pool })
 
-const departments = [cs, it, dsi]
+const departments = [cs, it, dsi, cpe, inc, eie, arc, dd, dt, env, cve, che]
 
 async function main() {
+  console.log('Seeding universities...')
+  for (const uni of universities) {
+    await prisma.university.upsert({
+      where: { name: uni.name },
+      update: { shortName: uni.shortName, logoUrl: uni.logoUrl },
+      create: uni,
+    })
+    console.log(`✓ ${uni.shortName}`)
+  }
+
   console.log('Seeding departments and courses...')
 
   const postCount = await prisma.post.count()

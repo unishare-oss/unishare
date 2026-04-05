@@ -105,6 +105,12 @@ export const auth = betterAuth({
         input: false,
         returned: true,
       },
+      universityId: {
+        type: 'string',
+        required: false,
+        input: true,
+        returned: true,
+      },
       consentGivenAt: {
         type: 'date',
         required: false,

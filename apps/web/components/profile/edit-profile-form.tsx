@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import {
   useUsersControllerUpdateMe,
   useUsersControllerUpdateAcademicProfile,
@@ -31,6 +32,7 @@ interface EditProfileFormProps {
 const editProfileSchema = z.object({
   name: z.string().max(100),
   bio: z.string().max(300),
+  universityId: z.string(),
   departmentId: z.string(),
   enrollmentYear: z
     .string()
@@ -54,6 +56,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     defaultValues: {
       name: user.name,
       bio: user.bio ?? '',
+      universityId: user.university?.id ?? '',
       departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     },
@@ -64,12 +67,17 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     form.reset({
       name: user.name,
       bio: user.bio ?? '',
+      universityId: user.university?.id ?? '',
       departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     })
   }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name])
 
   const { data: depts } = useDepartmentsControllerFindAll({
+    query: { select: (r) => r.data },
+  })
+
+  const { data: unis } = useUniversitiesControllerFindAll({
     query: { select: (r) => r.data },
   })
 
@@ -90,6 +98,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
         }),
         updateAcademic({
           data: {
+            universityId: values.universityId || null,
             departmentId: values.departmentId || null,
             enrollmentYear: values.enrollmentYear ? Number(values.enrollmentYear) : null,
           },
@@ -104,7 +113,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
   }
 
   return (
-    <div className="border border-border rounded-[6px] p-6 bg-card mb-8">
+    <div className="border border-border rounded-[6px] p-6 bg-card mb-8 overflow-hidden">
       <div className="border-b border-border pb-3 mb-5">
         <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted">Profile</h3>
       </div>
@@ -151,9 +160,47 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
 
           <FormField
             control={form.control}
+            name="universityId"
+            render={({ field }) => (
+              <FormItem className="min-w-0">
+                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                  University
+                </label>
+                <FormControl>
+                  <Select
+                    value={field.value || '_none'}
+                    onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
+                  >
+                    <SelectTrigger className="w-full min-w-0">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      className="w-[var(--radix-select-trigger-width)]"
+                    >
+                      <SelectItem value="_none" className="text-text-muted">
+                        None
+                      </SelectItem>
+                      {(unis ?? []).map((uni) => (
+                        <SelectItem key={uni.id} value={uni.id}>
+                          <span className="truncate block">
+                            {uni.shortName} — {uni.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="departmentId"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="min-w-0">
                 <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
                   Department
                 </label>
@@ -162,16 +209,19 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                     value={field.value || '_none'}
                     onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full min-w-0">
                       <SelectValue placeholder="None" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      position="popper"
+                      className="w-[var(--radix-select-trigger-width)]"
+                    >
                       <SelectItem value="_none" className="text-text-muted">
                         None
                       </SelectItem>
                       {(depts ?? []).map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name}
+                          <span className="truncate block">{dept.name}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>

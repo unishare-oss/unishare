@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutList,
@@ -32,6 +33,7 @@ import { authClient } from '@/src/lib/auth/client'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { Button } from '@/components/ui/button'
+import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 
 const guestTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
@@ -73,6 +75,11 @@ export function MobileNav() {
     isAuthenticated &&
     (moreAuthItems.some((item) => pathname.startsWith(item.href)) ||
       (isAdmin && pathname.startsWith('/admin/')))
+
+  const { data: universities } = useUniversitiesControllerFindAll({
+    query: { select: (r) => r.data, enabled: !!user?.universityId },
+  })
+  const userUniversity = universities?.find((u) => u.id === user?.universityId) ?? null
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -134,8 +141,32 @@ export function MobileNav() {
               </button>
             </DrawerTrigger>
             <DrawerContent className="px-0 pb-4 max-h-[85vh]">
-              <DrawerTitle className="px-5 pt-1 pb-3 text-sm font-mono uppercase tracking-widest text-muted-foreground">
-                More
+              <DrawerTitle className="px-5 pt-1 pb-3 flex items-center gap-2">
+                <Image
+                  src="/icon.svg"
+                  alt="Unishare"
+                  width={22}
+                  height={22}
+                  className="rounded-[4px] shrink-0"
+                />
+                <span className="font-mono text-sm font-bold tracking-tight text-foreground">
+                  Unishare
+                </span>
+                {userUniversity?.logoUrl && (
+                  <>
+                    <span className="text-border select-none">|</span>
+                    <Image
+                      src={userUniversity.logoUrl}
+                      alt={userUniversity.shortName}
+                      width={22}
+                      height={22}
+                      className="shrink-0 object-contain"
+                    />
+                    <span className="font-mono text-sm font-bold tracking-tight text-foreground">
+                      {userUniversity.shortName}
+                    </span>
+                  </>
+                )}
               </DrawerTitle>
 
               {user && (

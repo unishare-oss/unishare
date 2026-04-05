@@ -8,6 +8,12 @@ export class UpdateAcademicProfileDto {
   @MaxLength(50)
   departmentId?: string | null
 
+  @ApiPropertyOptional({ nullable: true, type: String, maxLength: 50 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  universityId?: string | null
+
   @ApiPropertyOptional({ nullable: true, type: Number, minimum: 1950, maximum: 2100 })
   @IsOptional()
   @IsInt()
