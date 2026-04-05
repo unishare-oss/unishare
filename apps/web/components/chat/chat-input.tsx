@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Send, Loader2, X, Pencil } from 'lucide-react'
@@ -24,6 +25,19 @@ export function ChatInput({
   editingMessage,
   onCancelEdit,
 }: ChatInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Focus input when editing mode is activated
+  useEffect(() => {
+    if (editingMessage) {
+      // Delay focus to ensure animations and re-renders complete
+      const timer = setTimeout(() => {
+        inputRef.current?.focus()
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [editingMessage])
+
   return (
     <div className="bg-background sticky bottom-0 z-20">
       {/* Editing Box Layer */}
@@ -57,6 +71,7 @@ export function ChatInput({
       <div className="p-3.5 border-t">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
           <Input
+            ref={inputRef}
             placeholder={editingMessage ? 'Edit your message...' : placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}

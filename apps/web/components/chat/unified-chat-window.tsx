@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useMemo, RefObject } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
-
 import { useInView } from 'react-intersection-observer'
 import {
   useChatControllerGetMessagesInfinite,
@@ -31,6 +30,7 @@ import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Socket } from 'socket.io-client'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 
 // Helper function to format date separator
 function getDateSeparatorText(date: Date): string {
@@ -79,6 +79,8 @@ export function UnifiedChatWindow({
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
 
   // Force scroll to bottom immediately on initial load (before render completes)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -250,6 +252,10 @@ export function UnifiedChatWindow({
     setContent('')
 
     if (editingMessage) {
+      if (editingMessage!.content!.trim() === content.trim()) {
+        setEditingMessage(null)
+        return
+      }
       editMessage({ id: editingMessage.id, data: { content: messageContent } })
       setEditingMessage(null)
     } else {
@@ -263,8 +269,15 @@ export function UnifiedChatWindow({
   }
 
   const handleDelete = (messageId: string) => {
-    if (confirm('Are you sure you want to delete this message?')) {
-      deleteMessage({ id: messageId })
+    setMessageToDelete(messageId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (messageToDelete) {
+      deleteMessage({ id: messageToDelete })
+      setDeleteDialogOpen(false)
+      setMessageToDelete(null)
     }
   }
 
@@ -434,6 +447,17 @@ export function UnifiedChatWindow({
           />
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete message"
+        description="Are you sure you want to delete this message? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
