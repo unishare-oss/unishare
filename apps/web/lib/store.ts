@@ -150,6 +150,23 @@ export const useUploadStore = create<UploadStore>()((set) => ({
   remove: (id) => set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
 }))
 
+import type { LibraryItems } from '@excalidraw/excalidraw/types'
+
+interface LibraryStore {
+  libraryItems: LibraryItems
+  setLibraryItems: (items: LibraryItems) => void
+}
+
+export const useLibraryStore = create<LibraryStore>()(
+  persist(
+    (set) => ({
+      libraryItems: [],
+      setLibraryItems: (libraryItems) => set({ libraryItems }),
+    }),
+    { name: 'unishare-excalidraw-library' },
+  ),
+)
+
 interface SettingsStore {
   fontSize: 'xsmall' | 'small' | 'normalsmall' | 'medium' | 'mediumlarge' | 'large' | 'xlarge'
   setFontSize: (
