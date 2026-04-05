@@ -54,7 +54,7 @@ export class QuizzesService {
 
   async generateQuizFromMaterial(
     courseId: string,
-    file: Express.Multer.File,
+    file: Multer['File'],
     generatedBy: string,
     questionCount: number = 20,
   ): Promise<{ quizId: string; questions: QuizQuestion[] }> {

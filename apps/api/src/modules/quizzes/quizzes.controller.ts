@@ -88,7 +88,7 @@ export class QuizzesController {
   @ApiOkResponse({ type: GenerateQuizResponseEntity })
   @ResponseMessage('Quiz generated successfully')
   generateQuestions(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Multer['File'],
     @Body() dto: GenerateQuestionsDto,
     @Session() session: UserSession,
   ) {
