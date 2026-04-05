@@ -129,8 +129,8 @@ export default function LoginPage() {
       email: values.email,
       password: values.password,
       consentGivenAt: new Date(),
-      ...(values.universityId ? { universityId: values.universityId } : {}),
-    } as Parameters<typeof authClient.signUp.email>[0])
+      universityId: values.universityId || undefined,
+    })
     if (error) setServerError(error.message ?? 'Failed to create account')
     else router.replace('/')
   }
