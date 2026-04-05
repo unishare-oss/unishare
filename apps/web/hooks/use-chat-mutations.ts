@@ -14,7 +14,42 @@ import {
   addMessageToInfiniteCache,
   replaceMessageInInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
-import { useRouter } from 'next/navigation'
+
+/**
+ * Helper function to create an optimistic message with consistent shape
+ */
+function createOptimisticMessage({
+  tempId,
+  roomId,
+  content,
+  type = 'TEXT',
+  user,
+}: {
+  tempId: string
+  roomId: string
+  content: string
+  type?: string
+  user?: UserProfileEntity | null
+}): ChatMessageEntity {
+  return {
+    id: tempId,
+    roomId,
+    userId: user?.id || null,
+    type: type as any,
+    content,
+    imageUrl: null,
+    linkUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: user
+      ? {
+          id: user.id,
+          name: user.name,
+          image: user.image,
+        }
+      : undefined,
+  }
+}
 
 interface UseSendMessageOptions {
   roomId?: string
@@ -46,24 +81,13 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         const tempId = 'temp-' + Date.now()
 
-        const optimisticMessage: ChatMessageEntity = {
-          id: tempId,
+        const optimisticMessage = createOptimisticMessage({
+          tempId,
           roomId: variables.id,
-          userId: user?.id || null,
-          type: variables.data.type as any,
-          content: variables.data.content || null,
-          imageUrl: null,
-          linkUrl: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          user: user
-            ? {
-                id: user.id,
-                name: user.name,
-                image: user.image,
-              }
-            : undefined,
-        }
+          content: variables.data.content || '',
+          type: variables.data.type,
+          user,
+        })
 
         // Optimistically add message to cache (infinite query structure)
         queryClient.setQueryData(messagesQueryKey, (old: any) =>
@@ -76,16 +100,6 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
           const currentRoom = old.data.find((r: ChatRoomEntity) => r.id === roomId)
           if (!currentRoom) return old
-
-          // Create optimistic message matching ChatMessageEntity structure
-          const optimisticMessage: Partial<ChatMessageEntity> = {
-            id: tempId,
-            roomId: roomId,
-            userId: user?.id || null,
-            content: variables.data.content || null,
-            type: variables.data.type as any,
-            createdAt: new Date().toISOString(),
-          }
 
           const updatedRoom: ChatRoomEntity = {
             ...currentRoom,
@@ -155,88 +169,14 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
   })
 }
 
-interface UseCreateRoomOptions {
-  user?: UserProfileEntity | null
-  targetUser?: any
-  targetUserId?: string
-}
-
-export function useCreateRoom({ user, targetUser, targetUserId }: UseCreateRoomOptions) {
+export function useCreateDM() {
   const queryClient = useQueryClient()
-  const router = useRouter()
 
   return useChatControllerCreateRoom({
     mutation: {
-      onMutate: async (variables) => {
-        const roomsQueryKey = getChatControllerGetRoomsQueryKey()
-
-        // Cancel outgoing refetches
-        await queryClient.cancelQueries({ queryKey: roomsQueryKey })
-
-        // Snapshot previous value for rollback
-        const previousRooms = queryClient.getQueryData(roomsQueryKey)
-
-        const tempId = 'temp-room-' + Date.now()
-
-        // Optimistically add room to cache
-        queryClient.setQueryData(roomsQueryKey, (old: any) => {
-          if (!old?.data) return old
-
-          const optimisticRoom = {
-            id: tempId,
-            type: variables.data.type,
-            name: variables.data.name || null,
-            imageUrl: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            participants:
-              variables.data.participantIds?.map((id) => ({
-                id: 'temp-participant-' + id,
-                roomId: tempId,
-                userId: id,
-                lastReadAt: new Date().toISOString(),
-                joinedAt: new Date().toISOString(),
-                user: id === targetUserId ? targetUser : user,
-              })) || [],
-            messages: [],
-          }
-
-          return {
-            ...old,
-            data: [optimisticRoom, ...old.data],
-          }
-        })
-
-        return { previousRooms, roomsQueryKey, tempId }
-      },
-      onSuccess: (data, _variables, context) => {
-        if (!context?.roomsQueryKey) return
-
-        const realRoom = data.data
-
-        // Replace optimistic room with real one
-        queryClient.setQueryData(context.roomsQueryKey, (old: any) => {
-          if (!old?.data) return old
-
-          return {
-            ...old,
-            data: old.data.map((item: any) => {
-              if (item.id === context.tempId) {
-                return realRoom
-              }
-              return item
-            }),
-          }
-        })
-
-        // Redirect to the new room
-        router.push(`/chat/${data.data.id}`)
-      },
-      onError: (_error, _variables, context) => {
-        // Rollback on error
-        if (context?.previousRooms) {
-          queryClient.setQueryData(context.roomsQueryKey, context.previousRooms)
-        }
+      onSuccess: () => {
+        // Invalidate rooms query to refresh the list with the new room
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
       },
     },
   })

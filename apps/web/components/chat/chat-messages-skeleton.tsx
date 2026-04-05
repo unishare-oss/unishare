@@ -14,7 +14,7 @@ const SKELETON_ROWS = [
 
 export function ChatMessagesSkeleton() {
   return (
-    <ScrollArea className="flex-1 p-4">
+    <ScrollArea className="flex-1 min-h-0 p-4">
       <div className="flex flex-col gap-4 max-w-6xl mx-auto">
         {SKELETON_ROWS.map((item, i) => (
           <div

@@ -93,7 +93,12 @@ export class QuizzesRepository {
   submitAttempts(
     sessionId: string,
     attempts: { questionId: string; studentAnswer: number | null; isCorrect: boolean }[],
-    sessionUpdate: { score: number; totalPoints: number; completedAt: Date; timeSpentSec: number | null },
+    sessionUpdate: {
+      score: number
+      totalPoints: number
+      completedAt: Date
+      timeSpentSec: number | null
+    },
   ) {
     return this.prisma.$transaction([
       this.prisma.questionAttempt.createMany({

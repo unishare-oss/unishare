@@ -43,13 +43,7 @@ export class ChatController {
   @ApiOkResponse({ type: ChatRoomEntity })
   @ResponseMessage('Chat room created successfully')
   createRoom(@Session() session: UserSession, @Body() dto: CreateRoomDto) {
-    return this.chatService.createRoom(
-      session.user.id,
-      dto.participantIds,
-      dto.type,
-      dto.name,
-      dto.initialMessage,
-    )
+    return this.chatService.createRoom(session.user.id, dto.participantIds, dto.type, dto.name)
   }
 
   @Post('rooms/:id/messages')
