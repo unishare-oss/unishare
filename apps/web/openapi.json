@@ -2036,6 +2036,26 @@
         },
         "tags": ["quizzes"]
       }
+    },
+    "/api/universities": {
+      "get": {
+        "operationId": "UniversitiesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UniversityEntity" }
+                }
+              }
+            }
+          }
+        },
+        "tags": ["universities"]
+      }
     }
   },
   "info": {
@@ -2166,6 +2186,16 @@
         },
         "required": ["id", "name", "code"]
       },
+      "UserUniversityEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "shortName": { "type": "string" },
+          "logoUrl": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name", "shortName"]
+      },
       "UserProfileEntity": {
         "type": "object",
         "properties": {
@@ -2179,6 +2209,10 @@
           "department": {
             "nullable": true,
             "allOf": [{ "$ref": "#/components/schemas/UserDepartmentEntity" }]
+          },
+          "university": {
+            "nullable": true,
+            "allOf": [{ "$ref": "#/components/schemas/UserUniversityEntity" }]
           },
           "enrollmentYear": { "type": "number", "nullable": true },
           "yearLevel": { "type": "number", "nullable": true },
@@ -2218,6 +2252,7 @@
         "type": "object",
         "properties": {
           "departmentId": { "type": "string", "nullable": true, "maxLength": 50 },
+          "universityId": { "type": "string", "nullable": true, "maxLength": 50 },
           "enrollmentYear": { "type": "number", "nullable": true, "minimum": 1950, "maximum": 2100 }
         }
       },
@@ -3359,6 +3394,16 @@
           }
         },
         "required": ["sessionId", "score", "totalPoints", "percentage", "results"]
+      },
+      "UniversityEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "shortName": { "type": "string" },
+          "logoUrl": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name", "shortName"]
       }
     }
   }

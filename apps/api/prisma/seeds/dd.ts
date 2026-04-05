@@ -1,0 +1,48 @@
+export const dd = {
+  name: 'Digital Design (International Program)',
+  courses: [
+    // Shared Foundation Courses
+    { code: 'DD100', name: 'Introduction to Psychology for Digital Media', yearLevel: 1 },
+    { code: 'DD102', name: 'Storytelling', yearLevel: 1 },
+    { code: 'DD120', name: 'User Experience Design 1', yearLevel: 1 },
+    { code: 'DD121', name: 'Introduction to 2D Graphics', yearLevel: 1 },
+    { code: 'DD123', name: '3D Modeling 1', yearLevel: 1 },
+    { code: 'DD124', name: 'Photography and Cinematography', yearLevel: 1 },
+    { code: 'DD210', name: 'Physics for Designer', yearLevel: 2 },
+    { code: 'DD211', name: 'Math for Digital Design', yearLevel: 2 },
+    { code: 'DD212', name: 'Scripting for Designer', yearLevel: 2 },
+    { code: 'DD352', name: 'Fundamentals of Music and Sound Design', yearLevel: 3 },
+
+    // Game Design and Production (DDG) Track
+    { code: 'DDG100', name: 'Introduction to Design Process', yearLevel: 1 },
+    { code: 'DDG101', name: 'Introduction to Digital Production', yearLevel: 1 },
+    { code: 'DDG110', name: 'Principles of Interactive Design', yearLevel: 1 },
+    { code: 'DDG111', name: 'Game Design Process', yearLevel: 1 },
+    { code: 'DDG130', name: 'Introduction to Computer Technology and Programming', yearLevel: 1 },
+    { code: 'DDG131', name: 'Introductory Probability and Statistics', yearLevel: 1 },
+    { code: 'DDG140', name: 'Cognitive Psychology for Designer', yearLevel: 1 },
+    { code: 'DDG200', name: 'User Research', yearLevel: 2 },
+    { code: 'DDG202', name: 'Level Design 1', yearLevel: 2 },
+    { code: 'DDG210', name: 'System Design 1', yearLevel: 2 },
+    { code: 'DDG211', name: 'Game Design 1', yearLevel: 2 },
+    { code: 'DDG230', name: 'Programming Foundation for Designer', yearLevel: 2 },
+    { code: 'DDG232', name: 'Technical Design 1', yearLevel: 2 },
+    { code: 'DDG310', name: 'Game Design 2', yearLevel: 3 },
+    { code: 'DDG311', name: 'Game Design 3', yearLevel: 3 },
+    { code: 'DDG321', name: 'Game Feel', yearLevel: 3 },
+    { code: 'DDG322', name: 'Narrative Design 1', yearLevel: 3 },
+    { code: 'DDG331', name: 'Level Design 2', yearLevel: 3 },
+
+    // Animation & VFX (DDA) Track
+    { code: 'DDA100', name: 'Language of Drawing', yearLevel: 1 },
+    { code: 'DDA101', name: 'Tone, Color, and Composition 1', yearLevel: 1 },
+    { code: 'DDA102', name: 'Life Drawing 1', yearLevel: 1 },
+    { code: 'DDA103', name: 'Life Drawing 2', yearLevel: 1 },
+    { code: 'DDA104', name: 'Tone, Color, and Composition 2', yearLevel: 2 },
+    { code: 'DDA110', name: '2D Animation 1', yearLevel: 2 },
+    { code: 'DDA200', name: 'Anatomy', yearLevel: 2 },
+    { code: 'DDA210', name: 'Storyboard', yearLevel: 2 },
+    { code: 'DDA230', name: 'Character Design', yearLevel: 2 },
+    { code: 'DDA231', name: 'Perspective', yearLevel: 2 },
+  ],
+}

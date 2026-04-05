@@ -9,6 +9,7 @@ export class UsersRepository {
 
   private readonly countInclude = {
     department: true,
+    university: { select: { id: true, name: true, shortName: true, logoUrl: true } },
     _count: {
       select: {
         posts: { where: { deletedAt: null, status: 'APPROVED', isAnonymous: false } },
@@ -91,6 +92,13 @@ export class UsersRepository {
 
   findDepartmentById(id: string) {
     return this.prisma.department.findUnique({
+      where: { id },
+      select: { id: true },
+    })
+  }
+
+  findUniversityById(id: string) {
+    return this.prisma.university.findUnique({
       where: { id },
       select: { id: true },
     })

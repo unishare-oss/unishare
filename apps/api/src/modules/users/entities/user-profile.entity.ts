@@ -12,6 +12,20 @@ export class UserDepartmentEntity {
   code: string
 }
 
+export class UserUniversityEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  name: string
+
+  @ApiProperty()
+  shortName: string
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  logoUrl: string | null
+}
+
 export class OnboardingRequiredEntity {
   @ApiProperty()
   department: boolean
@@ -41,6 +55,9 @@ export class UserProfileEntity {
 
   @ApiPropertyOptional({ nullable: true, type: UserDepartmentEntity })
   department: UserDepartmentEntity | null
+
+  @ApiPropertyOptional({ nullable: true, type: UserUniversityEntity })
+  university: UserUniversityEntity | null
 
   @ApiPropertyOptional({ nullable: true, type: Number })
   enrollmentYear: number | null
