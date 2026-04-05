@@ -1,23 +1,21 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { TrendingUp, Clock, SlidersHorizontal } from 'lucide-react'
-import { DropdownFilters, type DropdownFiltersProps } from '@/components/feed/dropdown-filters'
+import { SlidersHorizontal, X } from 'lucide-react'
+import {
+  DropdownFilters,
+  type DropdownFiltersProps,
+  type SortType,
+} from '@/components/feed/dropdown-filters'
+import { DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, Drawer } from '../ui/drawer'
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover'
 
-export type SortType = 'recent' | 'trending'
+export type { SortType }
 
 export const typeFilters: TypeFilter[] = ['ALL', PostType.NOTE, PostType.ASSIGNMENT]
 
@@ -89,7 +87,6 @@ export function FilterStrip({
     : 'All courses'
 
   const activeFilterCount = [
-    !!selectedDeptId,
     selectedYear !== null,
     !!selectedCourseId,
     selectedModuleNumber !== null,
@@ -129,196 +126,106 @@ export function FilterStrip({
     onYearChange: handleYearChange,
     onCourseChange: handleCourseChange,
     onModuleChange: handleModuleChange,
+    sortType,
+    onSortChange,
   }
 
   return (
     <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col">
-      {/* Sort tabs */}
-      {onSortChange && (
-        <div className="flex border-b border-border px-4 md:px-6">
-          <button
-            onClick={() => onSortChange('recent')}
-            className={cn(
-              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 md:px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
-              sortType === 'recent'
-                ? 'border-amber text-amber font-medium'
-                : 'border-transparent text-text-muted hover:text-foreground',
-            )}
-          >
-            <Clock className="size-3" strokeWidth={1.5} />
-            Recent
-          </button>
-          <button
-            onClick={() => onSortChange('trending')}
-            className={cn(
-              'flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 md:px-4 py-3 border-b-2 -mb-px transition-colors duration-150',
-              sortType === 'trending'
-                ? 'border-amber text-amber font-medium'
-                : 'border-transparent text-text-muted hover:text-foreground',
-            )}
-          >
-            <TrendingUp className="size-3" strokeWidth={1.5} />
-            Trending
-          </button>
+      {/* Mobile: type tabs + Filters sheet button in a single row */}
+      <div className="md:hidden flex items-center">
+        <div className="flex items-center overflow-x-auto flex-1 px-2 scrollbar-none">
+          {typeFilters.map((filter) => (
+            <button
+              key={filter}
+              onClick={() => onFilterChange(filter)}
+              className={cn(
+                'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
+                activeFilter === filter
+                  ? 'border-amber text-amber font-medium'
+                  : 'border-transparent text-text-muted hover:text-foreground',
+              )}
+            >
+              {typeFilterLabel[filter]}
+            </button>
+          ))}
         </div>
-      )}
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 mr-2 relative font-mono text-xs text-text-muted gap-1.5"
+            >
+              <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]">
+            <DrawerHeader className="mb-5">
+              <DrawerTitle className="font-mono text-sm text-left">Filter posts</DrawerTitle>
+            </DrawerHeader>
+            <DropdownFilters {...dropdownProps} />
+          </DrawerContent>
+        </Drawer>
+      </div>
 
-      {sortType !== 'trending' && (
-        <>
-          {/* Mobile: type tabs + Filters sheet button in a single row */}
-          <div className="md:hidden flex items-center">
-            <div className="flex items-center overflow-x-auto flex-1 px-2 scrollbar-none">
-              {typeFilters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => onFilterChange(filter)}
-                  className={cn(
-                    'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
-                    activeFilter === filter
-                      ? 'border-amber text-amber font-medium'
-                      : 'border-transparent text-text-muted hover:text-foreground',
-                  )}
-                >
-                  {typeFilterLabel[filter]}
-                </button>
-              ))}
-            </div>
-            <Sheet>
-              <SheetTrigger asChild>
+      {/* Desktop: type tabs + Filters popup button */}
+      <div className="hidden md:flex items-center">
+        <div className="flex items-center overflow-x-auto flex-1 px-4 scrollbar-none">
+          {typeFilters.map((filter) => (
+            <button
+              key={filter}
+              onClick={() => onFilterChange(filter)}
+              className={cn(
+                'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
+                activeFilter === filter
+                  ? 'border-amber text-amber font-medium'
+                  : 'border-transparent text-text-muted hover:text-foreground',
+              )}
+            >
+              {typeFilterLabel[filter]}
+            </button>
+          ))}
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 mr-4 relative font-mono text-xs text-text-muted gap-1.5"
+            >
+              <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-5" align="end">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-mono text-sm font-medium">Filter posts</h3>
+              <PopoverClose asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="shrink-0 mr-2 relative font-mono text-xs text-text-muted gap-1.5"
+                  className="h-6 w-6 p-0 text-text-muted hover:text-foreground"
                 >
-                  <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
-                      {activeFilterCount}
-                    </span>
-                  )}
+                  <X className="size-4" strokeWidth={1.5} />
                 </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="bottom"
-                className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]"
-              >
-                <SheetHeader className="mb-5">
-                  <SheetTitle className="font-mono text-sm text-left">Filter posts</SheetTitle>
-                </SheetHeader>
-                <DropdownFilters {...dropdownProps} />
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          {/* Desktop: full inline filter row */}
-          <div className="hidden md:flex flex-col lg:flex-row lg:items-center lg:px-6 lg:py-3 lg:gap-6">
-            <div className="flex items-center gap-1 px-4 pt-3 pb-0 lg:p-0 overflow-x-auto lg:flex-1 lg:min-w-0">
-              {typeFilters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => onFilterChange(filter)}
-                  className={cn(
-                    'font-mono text-xs uppercase tracking-wider px-3 py-1.5 transition-colors duration-150 border-b-2 shrink-0',
-                    activeFilter === filter
-                      ? 'border-amber text-amber font-medium'
-                      : 'border-transparent text-text-muted hover:text-foreground',
-                  )}
-                >
-                  {typeFilterLabel[filter]}
-                </button>
-              ))}
+              </PopoverClose>
             </div>
-
-            <div className="grid grid-cols-2 gap-2 px-4 py-3 lg:p-0 lg:ml-auto lg:flex lg:items-center lg:gap-2 lg:min-w-0">
-              <div className="min-w-0">
-                <Select value={selectedDeptId || ALL} onValueChange={handleDeptChange}>
-                  <SelectTrigger
-                    size="sm"
-                    className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-40"
-                    title={selectedDeptLabel}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value={ALL}>All departments</SelectItem>
-                    {(departments ?? []).map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="min-w-0">
-                <Select
-                  value={selectedYear === null ? ALL : String(selectedYear)}
-                  onValueChange={handleYearChange}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="font-mono text-xs text-text-muted w-full lg:w-24"
-                    title={selectedYearLabel}
-                  >
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value={ALL}>All years</SelectItem>
-                    {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-                      <SelectItem key={y} value={String(y)}>
-                        Year {y}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="min-w-0">
-                <Select
-                  value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
-                  onValueChange={handleModuleChange}
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="font-mono text-xs text-text-muted w-full lg:w-28"
-                  >
-                    <SelectValue placeholder="Module" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value={ALL}>All modules</SelectItem>
-                    {[1, 2, 3].map((m) => (
-                      <SelectItem key={m} value={String(m)}>
-                        Module {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="col-span-2 min-w-0">
-                <Select value={selectedCourseId || ALL} onValueChange={handleCourseChange}>
-                  <SelectTrigger
-                    size="sm"
-                    className="font-mono text-xs text-text-muted w-full min-w-0 lg:w-64 xl:w-80"
-                    title={selectedCourseLabel}
-                  >
-                    <SelectValue placeholder="Course" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value={ALL}>All courses</SelectItem>
-                    {filteredCourses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.code} — {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+            <DropdownFilters {...dropdownProps} />
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   )
 }

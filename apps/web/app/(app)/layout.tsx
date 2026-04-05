@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { ChatSocketProvider } from '@/contexts/chat-socket-context'
 
 export const metadata: Metadata = {
   title: {
@@ -12,5 +13,9 @@ export const metadata: Metadata = {
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return (
+    <ChatSocketProvider>
+      <AppShell>{children}</AppShell>
+    </ChatSocketProvider>
+  )
 }

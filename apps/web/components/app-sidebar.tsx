@@ -19,10 +19,9 @@ import {
   Palette,
   MessageSquare,
   MessageSquarePlus,
-  Github,
+  GithubIcon,
   LayoutGrid,
   ChevronLeft,
-  ChevronRight,
   ChevronDown,
   MessageSquareHeart,
   BrainCircuit,
@@ -353,24 +352,26 @@ export function AppSidebar() {
 
         {!collapsed && (
           <>
-            <div className="px-4 py-2">
-              <a
-                href="https://github.com/unishare-oss/unishare"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
-              >
-                <Github className="size-3.5 shrink-0" strokeWidth={1.5} />
-                Open source · Contribute
-              </a>
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
-              >
-                <MessageSquareHeart className="size-3.5 shrink-0" strokeWidth={1.5} />
-                Feedback or bug report
-              </button>
-            </div>
+            {!isChat && (
+              <div className="px-4 py-2">
+                <a
+                  href="https://github.com/unishare-oss/unishare"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
+                >
+                  <GithubIcon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  Open source · Contribute
+                </a>
+                <button
+                  onClick={() => setFeedbackOpen(true)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-muted hover:text-foreground rounded-[6px] hover:bg-muted transition-all duration-150"
+                >
+                  <MessageSquareHeart className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  Feedback or bug report
+                </button>
+              </div>
+            )}
 
             <div className="border-t border-border px-4 py-4">
               {user ? (

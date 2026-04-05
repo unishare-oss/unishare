@@ -11,12 +11,10 @@ interface ChatHeaderProps {
     lastSeenAt?: string | Date
     isActive?: boolean
   }
-  isNew?: boolean
 }
 
-export function ChatHeader({ user, isNew }: ChatHeaderProps) {
+export function ChatHeader({ user }: ChatHeaderProps) {
   const getStatus = () => {
-    if (isNew) return 'New Conversation'
     if (user?.isActive) return 'Active'
     if (user?.lastSeenAt) {
       try {

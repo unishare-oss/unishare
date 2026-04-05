@@ -95,8 +95,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex-1 bg-card">
         <div
           className={cn(
-            'mx-auto px-4 py-8 md:px-6 md:py-12 transition-[max-width] duration-300',
-            collapsed ? 'max-w-4xl' : 'max-w-3xl',
+            'mx-auto px-4 py-4 md:px-6 md:py-6 transition-[max-width] duration-300',
+            collapsed ? 'max-w-360' : 'max-w-240',
           )}
         >
           <PostBreadcrumb
