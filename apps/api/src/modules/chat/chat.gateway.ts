@@ -111,4 +111,24 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       })
     })
   }
+
+  @OnEvent('chat.message_updated')
+  async handleMessageUpdatedEvent(payload: {
+    roomId: string
+    message: ChatMessageEntity
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, message } = payload
+    this.server.to(roomId).emit('message-updated', message)
+  }
+
+  @OnEvent('chat.message_deleted')
+  async handleMessageDeletedEvent(payload: {
+    roomId: string
+    messageId: string
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, messageId } = payload
+    this.server.to(roomId).emit('message-deleted', { roomId, messageId })
+  }
 }

@@ -161,8 +161,33 @@ export class ChatRepository {
     imageUrl?: string
     linkUrl?: string
   }) {
-    const message = await this.prisma.chatMessage.create({
-      data,
+    return this.prisma.$transaction(async (tx) => {
+      const message = await tx.chatMessage.create({
+        data,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      })
+
+      // Update room's updatedAt to bring it to top of list
+      await tx.chatRoom.update({
+        where: { id: data.roomId },
+        data: { updatedAt: new Date() },
+      })
+
+      return message
+    })
+  }
+
+  async findMessageById(id: string) {
+    return this.prisma.chatMessage.findUnique({
+      where: { id },
       include: {
         user: {
           select: {
@@ -173,14 +198,28 @@ export class ChatRepository {
         },
       },
     })
+  }
 
-    // Update room's updatedAt to bring it to top of list
-    await this.prisma.chatRoom.update({
-      where: { id: data.roomId },
-      data: { updatedAt: new Date() },
+  async updateMessage(id: string, content: string) {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { content },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
     })
+  }
 
-    return message
+  async deleteMessage(id: string) {
+    return this.prisma.chatMessage.delete({
+      where: { id },
+    })
   }
 
   async markAsRead(roomId: string, userId: string) {
