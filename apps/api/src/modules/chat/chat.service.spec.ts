@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { ChatService } from './chat.service'
 import { ChatRepository } from './chat.repository'
 import { EventEmitter2 } from '@nestjs/event-emitter'
-import { NotFoundException } from '@nestjs/common'
+import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { ChatRoomType } from '@/generated/prisma/client'
 
 describe('ChatService', () => {
@@ -18,6 +18,9 @@ describe('ChatService', () => {
       createRoom: jest.fn(),
       findDirectMessageRoom: jest.fn(),
       createMessage: jest.fn(),
+      findMessageById: jest.fn(),
+      updateMessage: jest.fn(),
+      deleteMessage: jest.fn(),
       markAsRead: jest.fn(),
     }
 
@@ -126,6 +129,78 @@ describe('ChatService', () => {
         participants: mockRoom.participants,
       })
       expect(result).toEqual(mockMessage)
+    })
+  })
+
+  describe('editMessage', () => {
+    it('should throw NotFoundException if message does not exist', async () => {
+      repository.findMessageById.mockResolvedValue(null)
+      await expect(service.editMessage('1', 'user1', { content: 'new' })).rejects.toThrow(
+        NotFoundException,
+      )
+    })
+
+    it('should throw ForbiddenException if user is not author', async () => {
+      repository.findMessageById.mockResolvedValue({ id: '1', userId: 'user2' } as any)
+      await expect(service.editMessage('1', 'user1', { content: 'new' })).rejects.toThrow(
+        ForbiddenException,
+      )
+    })
+
+    it('should update message and emit event', async () => {
+      const messageId = '1'
+      const userId = 'user1'
+      const roomId = 'room1'
+      const mockMessage = { id: messageId, userId, roomId, content: 'old' }
+      const updatedMessage = { ...mockMessage, content: 'new' }
+      const mockRoom = { id: roomId, participants: [{ userId }] }
+
+      repository.findMessageById.mockResolvedValue(mockMessage as any)
+      repository.updateMessage.mockResolvedValue(updatedMessage as any)
+      repository.findRoomById.mockResolvedValue(mockRoom as any)
+
+      const result = await service.editMessage(messageId, userId, { content: 'new' })
+
+      expect(repository.updateMessage).toHaveBeenCalledWith(messageId, 'new')
+      expect(eventEmitter.emit).toHaveBeenCalledWith('chat.message_updated', {
+        roomId,
+        message: updatedMessage,
+        participants: mockRoom.participants,
+      })
+      expect(result).toEqual(updatedMessage)
+    })
+  })
+
+  describe('deleteMessage', () => {
+    it('should throw NotFoundException if message does not exist', async () => {
+      repository.findMessageById.mockResolvedValue(null)
+      await expect(service.deleteMessage('1', 'user1')).rejects.toThrow(NotFoundException)
+    })
+
+    it('should throw ForbiddenException if user is not author', async () => {
+      repository.findMessageById.mockResolvedValue({ id: '1', userId: 'user2' } as any)
+      await expect(service.deleteMessage('1', 'user1')).rejects.toThrow(ForbiddenException)
+    })
+
+    it('should delete message and emit event', async () => {
+      const messageId = '1'
+      const userId = 'user1'
+      const roomId = 'room1'
+      const mockMessage = { id: messageId, userId, roomId }
+      const mockRoom = { id: roomId, participants: [{ userId }] }
+
+      repository.findMessageById.mockResolvedValue(mockMessage as any)
+      repository.findRoomById.mockResolvedValue(mockRoom as any)
+
+      const result = await service.deleteMessage(messageId, userId)
+
+      expect(repository.deleteMessage).toHaveBeenCalledWith(messageId)
+      expect(eventEmitter.emit).toHaveBeenCalledWith('chat.message_deleted', {
+        roomId,
+        messageId,
+        participants: mockRoom.participants,
+      })
+      expect(result).toEqual({ success: true })
     })
   })
 })
