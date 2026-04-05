@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { UniversitiesRepository } from './universities.repository'
 
 @Injectable()
@@ -9,7 +9,9 @@ export class UniversitiesService {
     return this.universitiesRepository.findAll()
   }
 
-  findById(id: string) {
-    return this.universitiesRepository.findById(id)
+  async findById(id: string) {
+    const university = await this.universitiesRepository.findById(id)
+    if (!university) throw new NotFoundException('University not found')
+    return university
   }
 }
