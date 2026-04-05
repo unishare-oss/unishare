@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, RefObject } from 'react'
 import { useRouter } from 'next/navigation'
+import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 
 import { useInView } from 'react-intersection-observer'
 import {
@@ -30,6 +31,31 @@ import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Socket } from 'socket.io-client'
+
+// Helper function to format date separator
+function getDateSeparatorText(date: Date): string {
+  if (isToday(date)) {
+    return 'Today'
+  }
+  if (isYesterday(date)) {
+    return 'Yesterday'
+  }
+  // Show full date for older messages
+  return format(date, 'MMMM d, yyyy')
+}
+
+// Helper function to check if we should show a date separator
+function shouldShowDateSeparator(
+  currentMsg: ChatMessageEntity,
+  previousMsg: ChatMessageEntity | undefined,
+): boolean {
+  if (!previousMsg) return true
+
+  const currentDate = new Date(currentMsg.createdAt)
+  const previousDate = new Date(previousMsg.createdAt)
+
+  return !isSameDay(currentDate, previousDate)
+}
 
 interface UnifiedChatWindowProps {
   roomId?: string
@@ -318,15 +344,27 @@ export function UnifiedChatWindow({
                 {messages.map((msg, i) => {
                   const isMe = msg.userId === user?.id
                   const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
+                  const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
 
                   return (
-                    <ChatMessageBubble
-                      key={msg.id || i}
-                      message={msg}
-                      isMe={isMe}
-                      showAvatar={showAvatar}
-                      currentUserId={user?.id}
-                    />
+                    <div key={msg.id || i}>
+                      {/* Date Separator */}
+                      {showDateSeparator && (
+                        <div className="flex items-center justify-center my-4">
+                          <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[10px] text-secondary-foreground font-medium">
+                            {getDateSeparatorText(new Date(msg.createdAt))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Message Bubble */}
+                      <ChatMessageBubble
+                        message={msg}
+                        isMe={isMe}
+                        showAvatar={showAvatar}
+                        currentUserId={user?.id}
+                      />
+                    </div>
                   )
                 })}
 
