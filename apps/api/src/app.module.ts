@@ -27,6 +27,7 @@ import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
 import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
+import { UniversitiesModule } from './modules/universities/universities.module'
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { QuizzesModule } from './modules/quizzes/quizzes.module'
     ReadingListsModule,
     FeedbackModule,
     QuizzesModule,
+    UniversitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

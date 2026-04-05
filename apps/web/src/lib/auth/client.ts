@@ -11,6 +11,7 @@ export const authClient = createAuthClient({
       user: {
         role: { type: 'string', input: false },
         departmentId: { type: 'string', input: false },
+        universityId: { type: 'string', input: true, required: false },
       },
     }),
     adminClient({ ac, roles }),

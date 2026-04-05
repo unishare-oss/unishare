@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
+import { useUniversitiesControllerFindOne } from '@/src/lib/api/generated/universities/universities'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -156,6 +157,10 @@ export function AppSidebar() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
+
+  const { data: userUniversity } = useUniversitiesControllerFindOne(user?.universityId ?? '', {
+    query: { select: (r) => r.data, enabled: !!user?.universityId },
+  })
   const groups = user ? authNavGroups : [{ label: null, items: publicNavItems }]
   const isChat = pathname.startsWith('/chat')
   const selectedRoomId = isChat ? (params?.roomId as string | undefined) : undefined
@@ -196,6 +201,19 @@ export function AppSidebar() {
               <span className="font-mono text-[15px] font-bold tracking-tight text-foreground truncate">
                 Unishare
               </span>
+              {userUniversity?.logoUrl && (
+                <>
+                  <span className="text-border mx-0.5 select-none">|</span>
+                  <Image
+                    src={userUniversity.logoUrl}
+                    alt={userUniversity.shortName}
+                    width={42}
+                    height={42}
+                    className="shrink-0 object-contain"
+                    title={userUniversity.name}
+                  />
+                </>
+              )}
             </Link>
           )}
           {collapsed ? (

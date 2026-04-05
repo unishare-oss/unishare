@@ -8,8 +8,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authClient } from '@/src/lib/auth/client'
+import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 function GoogleIcon() {
   return (
@@ -53,6 +61,7 @@ const signInSchema = z.object({
 const signUpSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
+    universityId: z.string().optional(),
     email: z.email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
@@ -73,6 +82,10 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [serverError, setServerError] = useState('')
 
+  const { data: universities } = useUniversitiesControllerFindAll({
+    query: { select: (r) => r.data, enabled: mode === 'signup' },
+  })
+
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: { email: '', password: '' },
@@ -82,6 +95,7 @@ export default function LoginPage() {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       name: '',
+      universityId: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -114,8 +128,8 @@ export default function LoginPage() {
       name: values.name,
       email: values.email,
       password: values.password,
-      consentGivenAt: new Date(),
-    } as Parameters<typeof authClient.signUp.email>[0])
+      universityId: values.universityId || undefined,
+    })
     if (error) setServerError(error.message ?? 'Failed to create account')
     else router.replace('/')
   }
@@ -237,6 +251,26 @@ export default function LoginPage() {
                     {signUpForm.formState.errors.name.message}
                   </p>
                 )}
+              </div>
+              <div>
+                <Select
+                  value={signUpForm.watch('universityId') || '_none'}
+                  onValueChange={(v) => signUpForm.setValue('universityId', v === '_none' ? '' : v)}
+                >
+                  <SelectTrigger className="w-full bg-card">
+                    <SelectValue placeholder="Select your university (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none" className="text-text-muted">
+                      No university
+                    </SelectItem>
+                    {(universities ?? []).map((uni) => (
+                      <SelectItem key={uni.id} value={uni.id}>
+                        {uni.shortName} — {uni.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Input
