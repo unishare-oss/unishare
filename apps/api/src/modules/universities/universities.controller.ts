@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common'
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
+import { ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UniversitiesService } from './universities.service'
@@ -21,6 +21,7 @@ export class UniversitiesController {
   @Get(':id')
   @OptionalAuth()
   @ApiOkResponse({ type: UniversityEntity })
+  @ApiNotFoundResponse({ description: 'University not found' })
   @ResponseMessage('University fetched successfully')
   findOne(@Param('id') id: string) {
     return this.universitiesService.findById(id)
