@@ -38,7 +38,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
-import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
+import { useUniversitiesControllerFindOne } from '@/src/lib/api/generated/universities/universities'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -158,13 +158,9 @@ export function AppSidebar() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
 
-  const { data: universities } = useUniversitiesControllerFindAll({
-    query: {
-      select: (r) => r.data,
-      enabled: !!user?.universityId,
-    },
+  const { data: userUniversity } = useUniversitiesControllerFindOne(user?.universityId ?? '', {
+    query: { select: (r) => r.data, enabled: !!user?.universityId },
   })
-  const userUniversity = universities?.find((u) => u.id === user?.universityId) ?? null
   const groups = user ? authNavGroups : [{ label: null, items: publicNavItems }]
   const isChat = pathname.startsWith('/chat')
   const selectedRoomId = isChat ? (params?.roomId as string | undefined) : undefined

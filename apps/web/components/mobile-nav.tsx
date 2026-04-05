@@ -33,7 +33,7 @@ import { authClient } from '@/src/lib/auth/client'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { Button } from '@/components/ui/button'
-import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
+import { useUniversitiesControllerFindOne } from '@/src/lib/api/generated/universities/universities'
 
 const guestTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
@@ -76,10 +76,9 @@ export function MobileNav() {
     (moreAuthItems.some((item) => pathname.startsWith(item.href)) ||
       (isAdmin && pathname.startsWith('/admin/')))
 
-  const { data: universities } = useUniversitiesControllerFindAll({
+  const { data: userUniversity } = useUniversitiesControllerFindOne(user?.universityId ?? '', {
     query: { select: (r) => r.data, enabled: !!user?.universityId },
   })
-  const userUniversity = universities?.find((u) => u.id === user?.universityId) ?? null
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
