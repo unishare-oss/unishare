@@ -32,7 +32,7 @@ export function ChatMessageBubble({ message, isMe, showAvatar }: ChatMessageBubb
           'max-w-[70%] px-3 py-2 rounded-2xl text-[13px] shadow-sm transition-all',
           isMe
             ? 'bg-primary text-primary-foreground rounded-br-sm'
-            : 'bg-muted text-foreground rounded-bl-sm',
+            : 'bg-accent/50 text-foreground rounded-bl-sm',
         )}
       >
         {!isMe && showAvatar && (
