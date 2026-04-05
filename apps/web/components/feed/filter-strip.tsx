@@ -87,7 +87,6 @@ export function FilterStrip({
     : 'All courses'
 
   const activeFilterCount = [
-    !!selectedDeptId,
     selectedYear !== null,
     !!selectedCourseId,
     selectedModuleNumber !== null,
