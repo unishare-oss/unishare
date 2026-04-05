@@ -1,3 +1,9 @@
+## [0.9.1](https://github.com/unishare-oss/unishare/compare/v0.9.0...v0.9.1) (2026-04-05)
+
+### Bug Fixes
+
+- use memoryStorage for file uploads so buffer is populated ([a6f3bd6](https://github.com/unishare-oss/unishare/commit/a6f3bd6118eed51e1fd54df493b9d48e6d9174ef))
+
 # [0.9.0](https://github.com/unishare-oss/unishare/compare/v0.8.1...v0.9.0) (2026-04-05)
 
 ### Bug Fixes
