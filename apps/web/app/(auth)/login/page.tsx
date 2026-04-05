@@ -128,7 +128,7 @@ export default function LoginPage() {
       name: values.name,
       email: values.email,
       password: values.password,
-      ...(values.universityId && { universityId: values.universityId }),
+      universityId: values.universityId || undefined,
     })
     if (error) setServerError(error.message ?? 'Failed to create account')
     else router.replace('/')
