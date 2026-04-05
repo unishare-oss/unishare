@@ -1,11 +1,18 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Excalidraw, CaptureUpdateAction, reconcileElements } from '@excalidraw/excalidraw'
+import {
+  Excalidraw,
+  CaptureUpdateAction,
+  reconcileElements,
+  useHandleLibrary,
+} from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useTheme } from 'next-themes'
 import { useCollab } from '@/contexts/collab-context'
+import { useLibraryStore } from '@/lib/store'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { LibraryItems } from '@excalidraw/excalidraw/types'
 import type {
   ExcalidrawElement,
   OrderedExcalidrawElement,
@@ -36,8 +43,11 @@ function ExcalidrawWrapperInner() {
   } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
+  const { libraryItems, setLibraryItems } = useLibraryStore()
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
+
+  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef.current })
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -50,9 +60,18 @@ function ExcalidrawWrapperInner() {
   const initialData = useMemo(
     () => ({
       elements: (initialElements ?? []) as ExcalidrawElement[],
+      libraryItems,
       scrollToContent: true,
     }),
-    [initialElements],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialElements], // libraryItems intentionally excluded — only used on first mount
+  )
+
+  const handleLibraryChange = useCallback(
+    (items: LibraryItems) => {
+      setLibraryItems(items)
+    },
+    [setLibraryItems],
   )
 
   // On every local change, emit only elements with a higher version than last broadcast.
@@ -114,6 +133,8 @@ function ExcalidrawWrapperInner() {
         renderTopRightUI={renderTopRightUI}
         UIOptions={uiOptions}
         viewModeEnabled={isViewOnly}
+        libraryReturnUrl={typeof window !== 'undefined' ? window.location.href : undefined}
+        onLibraryChange={handleLibraryChange}
       />
     </div>
   )
