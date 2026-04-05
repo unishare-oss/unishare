@@ -1,3 +1,10 @@
+## [0.9.2](https://github.com/unishare-oss/unishare/compare/v0.9.1...v0.9.2) (2026-04-05)
+
+### Bug Fixes
+
+- add multer as direct dependency for memoryStorage import ([6f61cfc](https://github.com/unishare-oss/unishare/commit/6f61cfc033f0bd03ac33b5d4d992cf53a5ccd82e))
+- quiz file upload, multer dep, and quizzes tab styling ([3940541](https://github.com/unishare-oss/unishare/commit/39405418c9ec90c6cf8b03cf8d840a854f76a495))
+
 ## [0.9.1](https://github.com/unishare-oss/unishare/compare/v0.9.0...v0.9.1) (2026-04-05)
 
 ### Bug Fixes
