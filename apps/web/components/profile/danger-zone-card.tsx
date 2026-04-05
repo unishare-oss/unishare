@@ -21,6 +21,7 @@ export function DangerZoneCard() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   async function handleDownload() {
     setDownloading(true)
@@ -49,10 +50,13 @@ export function DangerZoneCard() {
     setDeleting(true)
     setDeleteError('')
     const { error } = await authClient.deleteUser({ callbackURL: '/login' })
+
     if (error) {
       setDeleteError(error.message ?? 'Failed to delete account')
       setDeleting(false)
+      // Keep dialog open to show error
     } else {
+      setDialogOpen(false)
       router.replace('/login')
     }
   }
@@ -86,7 +90,7 @@ export function DangerZoneCard() {
             Permanently delete your account and all associated data.
           </p>
         </div>
-        <AlertDialog>
+        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm">
               Delete
@@ -104,7 +108,10 @@ export function DangerZoneCard() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleDelete}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleDelete()
+                }}
                 disabled={deleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
