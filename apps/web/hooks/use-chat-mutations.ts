@@ -310,16 +310,24 @@ export function useDeleteMessage({ roomId }: { roomId: string }) {
           deleteMessageFromInfiniteCache(old, variables.id),
         )
 
-        // Optimistically remove message from sidebar preview
+        // Optimistically update sidebar preview with next message
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
           if (!old?.data) return old
+
+          // Get current messages from cache after deletion
+          const messagesData: any = queryClient.getQueryData(messagesQueryKey)
+
+          const allMessages =
+            messagesData?.pages?.flatMap((page: any) => page.data.items).reverse() || []
+          const nextPreviewMessage = allMessages[allMessages.length - 1]
+
           return {
             ...old,
             data: old.data.map((room: ChatRoomEntity) => {
               if (room.id === roomId) {
                 return {
                   ...room,
-                  messages: room.messages?.filter((msg) => msg.id !== variables.id),
+                  messages: nextPreviewMessage ? [nextPreviewMessage] : [],
                 }
               }
               return room
