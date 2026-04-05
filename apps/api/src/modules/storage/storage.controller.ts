@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Post, UploadedFile, UseInterceptors } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import type { Multer } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -52,7 +51,7 @@ export class StorageController {
     },
   })
   @UseInterceptors(FileInterceptor('chunk'))
-  async uploadPart(@Body() dto: UploadPartDto, @UploadedFile() file: Multer['File']) {
+  async uploadPart(@Body() dto: UploadPartDto, @UploadedFile() file: Express.Multer.File) {
     return this.storageService.uploadPart(dto.key, dto.uploadId, dto.partNumber, file.buffer)
   }
 

@@ -14,7 +14,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import type { Multer } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
@@ -88,7 +87,7 @@ export class QuizzesController {
   @ApiOkResponse({ type: GenerateQuizResponseEntity })
   @ResponseMessage('Quiz generated successfully')
   generateQuestions(
-    @UploadedFile() file: Multer['File'],
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: GenerateQuestionsDto,
     @Session() session: UserSession,
   ) {
