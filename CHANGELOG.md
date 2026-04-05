@@ -1,3 +1,17 @@
+# [0.10.0](https://github.com/unishare-oss/unishare/compare/v0.9.2...v0.10.0) (2026-04-05)
+
+### Bug Fixes
+
+- fetch single university by id instead of full list in sidebar ([9480558](https://github.com/unishare-oss/unishare/commit/9480558f0ec87db582d46f145ce6a0646405af21))
+- mark universityId as required: false on client to allow optional signup ([3feac43](https://github.com/unishare-oss/unishare/commit/3feac43d8e135d6e55f9f7c1e5a5b901c74e3288))
+- move consentGivenAt to server-side only via databaseHooks ([ec3c5a0](https://github.com/unishare-oss/unishare/commit/ec3c5a03c176c889a81671150d73669180645dc2))
+- omit universityId from signup payload when not selected ([1ff182b](https://github.com/unishare-oss/unishare/commit/1ff182bd3f6ce721fc9623fda16746426843f422))
+- throw NotFoundException in universities findById and add ApiNotFoundResponse ([abebb0d](https://github.com/unishare-oss/unishare/commit/abebb0d4369b86a9c033e3ddd53d4fcda65509ac))
+
+### Features
+
+- add university branding with school logo in sidebar ([909956f](https://github.com/unishare-oss/unishare/commit/909956f305ad2fbdd1596fc1fdcb18ec2832235a))
+
 ## [0.9.2](https://github.com/unishare-oss/unishare/compare/v0.9.1...v0.9.2) (2026-04-05)
 
 ### Bug Fixes
