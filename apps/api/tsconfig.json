@@ -3,6 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "types": ["multer"],
     "paths": {
       "@/*": ["src/*"]
     }

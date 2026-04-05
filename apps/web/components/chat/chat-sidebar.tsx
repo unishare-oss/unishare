@@ -184,15 +184,12 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
-                    <p className="text-xs text-muted-foreground truncate opacity-70 mt-0.5">
-                      {lastMessage.content}
+                    <p className="text-xs text-muted-foreground line-clamp-2 opacity-70 mt-0.5">
+                      {lastMessage?.content!.length > 25
+                        ? `${lastMessage?.content!.substring(0, 25)}...`
+                        : lastMessage.content}
                     </p>
                   ) : null}
-                  {/* {lastMessage && (
-                    <p className="text-xs text-muted-foreground truncate opacity-70 mt-0.5">
-                      {lastMessage.content}
-                    </p>
-                  )} */}
                 </div>
               </button>
             )
