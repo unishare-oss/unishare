@@ -52,7 +52,7 @@ export class StorageController {
     },
   })
   @UseInterceptors(FileInterceptor('chunk'))
-  async uploadPart(@Body() dto: UploadPartDto, @UploadedFile() file: Express.Multer.File) {
+  async uploadPart(@Body() dto: UploadPartDto, @UploadedFile() file: Multer['File']) {
     return this.storageService.uploadPart(dto.key, dto.uploadId, dto.partNumber, file.buffer)
   }
 
