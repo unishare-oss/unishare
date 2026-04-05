@@ -1,3 +1,49 @@
+# [0.7.0](https://github.com/unishare-oss/unishare/compare/v0.6.3...v0.7.0) (2026-04-05)
+
+### Bug Fixes
+
+- clear feed store department filter when user updates department ([223336f](https://github.com/unishare-oss/unishare/commit/223336f00a7b286e6a162d6ee7adf0c3f3b6c472))
+- consent validation + remove past papers references ([e1d28ab](https://github.com/unishare-oss/unishare/commit/e1d28ab14c57aea22bef8d306729d5da072aab23))
+- correct export fetch URL to use Next.js proxy ([efe60d3](https://github.com/unishare-oss/unishare/commit/efe60d39845cbd95535b52a27b6ac0c682253943))
+- emit typing indicator on every keystroke instead of once ([93de19d](https://github.com/unishare-oss/unishare/commit/93de19d04d81d2a8ffbdc261e87230dfeb42061c))
+- external link removal, description newlines ([adfcfe4](https://github.com/unishare-oss/unishare/commit/adfcfe42d10d36bc52a8fb9748231ce086840141))
+- **feed:** exclude hidden dept filter from activeFilterCount ([c677f32](https://github.com/unishare-oss/unishare/commit/c677f327e14c08e9928fc69f54fe4c8ebef1645d))
+- make chat sidebar scrollable on desktop ([4633b9b](https://github.com/unishare-oss/unishare/commit/4633b9b2136ffd2dbf66844195dac195f145bc85))
+- optimistic collection toggle and consistent DELETE responses ([bb581f7](https://github.com/unishare-oss/unishare/commit/bb581f7cf2657274744f7ef4b7364e5f1b58ff81))
+- prevent duplicate room creation by checking local cache first ([9d42aaa](https://github.com/unishare-oss/unishare/commit/9d42aaaaa12262fcea81925d2afc82cd71a5c855))
+- register TrendingScheduler and run on startup ([374be7d](https://github.com/unishare-oss/unishare/commit/374be7d8d441c1fbd42e11726bb699648ccc92be))
+- remove bottom padding from chat window ([fa9ada0](https://github.com/unishare-oss/unishare/commit/fa9ada0045fe957a09c5529a90ea38af3267d83e))
+- remove invalid side prop from DrawerContent ([970c406](https://github.com/unishare-oss/unishare/commit/970c406b2b5c1b9b35bf7e3068492ea9d8fa301c))
+- resolve React ref linter error in chat room page ([32e6c7f](https://github.com/unishare-oss/unishare/commit/32e6c7f18fa65bb8756ea3c531de4b26f74cbfb8))
+- restore searchVector trigger and include course code in FTS ([5e86b72](https://github.com/unishare-oss/unishare/commit/5e86b7285ffe916bc34333f8a71b71a1a8fc4e60))
+- **unified-chat-window:** simplify disconnected banner logic to fix build ([1040555](https://github.com/unishare-oss/unishare/commit/1040555ad5a62ec8606da62655ecaf65c6ef7329))
+- update indicator status scroll ([f60f5aa](https://github.com/unishare-oss/unishare/commit/f60f5aa42e1a2d14f1561682496ebd1591d421fe))
+- use full user profile object instead of session user ([0be5218](https://github.com/unishare-oss/unishare/commit/0be52183882b9c86e5882e692eee815fdd5980d1))
+- **web:** improve mobile chat UI and info pane animations ([0a33a88](https://github.com/unishare-oss/unishare/commit/0a33a889e23224850bd8af7812ebeb19733eab4c))
+- **web:** specify page as infinite query param for admin reports endpoint ([07ee59b](https://github.com/unishare-oss/unishare/commit/07ee59b3f058d7bfc6591be91a513df4b78ec735))
+- **web:** switch global infinite query param from cursor to page ([12c2ac5](https://github.com/unishare-oss/unishare/commit/12c2ac5f76673fed6877c86ad41609cf2dedd4dd))
+
+### Features
+
+- add collection picker to bookmark button ([96f9017](https://github.com/unishare-oss/unishare/commit/96f9017697b553b530f172e7efdeb3953b37945c))
+- add feedback button to mobile More sheet ([98e6b54](https://github.com/unishare-oss/unishare/commit/98e6b549f776af1786818fab87d501a2d0799e71))
+- add PDPA compliance (consent, data export, privacy policy) ([499e485](https://github.com/unishare-oss/unishare/commit/499e485650ea0dc9369dc53ebca5c3af27b87e72))
+- add typing indicator WebSocket handler ([228342f](https://github.com/unishare-oss/unishare/commit/228342f78bbf51d2750e3562a389a2b9fbb69075))
+- **api:** split DM and Group creation endpoints ([a7e2fbf](https://github.com/unishare-oss/unishare/commit/a7e2fbf23c3809a6cb36a3c59a212cf28778f531))
+- assignment disclaimer + shorten consent label ([689abc2](https://github.com/unishare-oss/unishare/commit/689abc28a3e79435558b0ca77848ab0cf70b1b8b))
+- **chat:** add socket debugging and fix socket prop passing ([67e7154](https://github.com/unishare-oss/unishare/commit/67e7154182df255c94443399e30b10dccb52895d))
+- **chat:** auto-scroll to bottom on initial load ([7997979](https://github.com/unishare-oss/unishare/commit/79979792f64d446d1e3c0f53a273bbc5fabb640b))
+- **chat:** improve real-time messaging and sidebar updates ([c58cab7](https://github.com/unishare-oss/unishare/commit/c58cab79cec31cdd9fbcbc82f68ef7eb66f05029))
+- **chat:** remove group dto ([f9def6b](https://github.com/unishare-oss/unishare/commit/f9def6bd0e6c0893d036e9b44b2262e1971eafd9))
+- feedback and bug report system ([98bd3d4](https://github.com/unishare-oss/unishare/commit/98bd3d4739ea7fe5a7bf234cffb27f208d804730))
+- hide filter options when trending is selected ([5c3eb89](https://github.com/unishare-oss/unishare/commit/5c3eb8994aa0eaecdaecfe1f4b08287244c92f11))
+- hide mobile nav bar when inside a chat room ([4d4e79e](https://github.com/unishare-oss/unishare/commit/4d4e79e06d034b68a96aff8480e0481ff792c461))
+- **hook:** comment out optimistic msg update ([f54332b](https://github.com/unishare-oss/unishare/commit/f54332b800af5ed3704bfded79a900f0eaee6604))
+- integrate typing indicator with proper types ([8c3f4e6](https://github.com/unishare-oss/unishare/commit/8c3f4e6667d78a3c0be0461492e4f2647b671c5e))
+- invalidate sidebar on new message notification ([72a3943](https://github.com/unishare-oss/unishare/commit/72a3943c7ff321d319e3afcc738d3f60326eda76))
+- remove past exams filter from feed filter strip ([8457a19](https://github.com/unishare-oss/unishare/commit/8457a190a2df9490c0bae18486e8fa5b36c44a3d))
+- **web:** update chat to use new DM endpoint with optimistic updates ([0fab12c](https://github.com/unishare-oss/unishare/commit/0fab12c7a91c7b1aa88f3112b9b2efc9903679c4))
+
 ## [0.6.3](https://github.com/unishare-oss/unishare/compare/v0.6.2...v0.6.3) (2026-04-04)
 
 ### Bug Fixes
