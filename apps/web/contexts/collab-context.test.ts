@@ -1,5 +1,60 @@
-import { describe, it, expect, vi } from 'vitest'
-import * as Y from 'yjs'
+import { describe, it, expect } from 'vitest'
+
+describe('scene-update sync logic', () => {
+  it('only emits elements with version higher than last broadcast', () => {
+    const broadcastedVersions = new Map<string, number>()
+    broadcastedVersions.set('rect-1', 3)
+
+    const elements = [
+      { id: 'rect-1', version: 3, versionNonce: 1 }, // same version — skip
+      { id: 'rect-2', version: 1, versionNonce: 2 }, // new element — send
+    ]
+
+    const toSend = elements.filter((el) => {
+      const lastVersion = broadcastedVersions.get(el.id) ?? -1
+      return el.version > lastVersion
+    })
+
+    expect(toSend).toHaveLength(1)
+    expect(toSend[0].id).toBe('rect-2')
+  })
+
+  it('mergeElements keeps higher version when same id arrives', () => {
+    const stored = new Map<string, Record<string, unknown>>()
+    stored.set('rect-1', { id: 'rect-1', version: 5 })
+
+    const incoming = [{ id: 'rect-1', version: 3 }] // older — should not overwrite
+
+    for (const el of incoming) {
+      const existing = stored.get(el.id as string)
+      const incomingVersion = typeof el.version === 'number' ? el.version : 0
+      const storedVersion = existing && typeof existing.version === 'number' ? existing.version : -1
+      if (incomingVersion >= storedVersion) {
+        stored.set(el.id as string, el)
+      }
+    }
+
+    expect((stored.get('rect-1') as Record<string, unknown>).version).toBe(5)
+  })
+
+  it('mergeElements accepts newer version and overwrites', () => {
+    const stored = new Map<string, Record<string, unknown>>()
+    stored.set('rect-1', { id: 'rect-1', version: 5 })
+
+    const incoming = [{ id: 'rect-1', version: 7 }] // newer — should overwrite
+
+    for (const el of incoming) {
+      const existing = stored.get(el.id as string)
+      const incomingVersion = typeof el.version === 'number' ? el.version : 0
+      const storedVersion = existing && typeof existing.version === 'number' ? existing.version : -1
+      if (incomingVersion >= storedVersion) {
+        stored.set(el.id as string, el)
+      }
+    }
+
+    expect((stored.get('rect-1') as Record<string, unknown>).version).toBe(7)
+  })
+})
 
 describe('Yjs sync logic', () => {
   it('local update (no origin) triggers socket emit', () => {

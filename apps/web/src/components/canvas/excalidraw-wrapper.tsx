@@ -1,13 +1,16 @@
 'use client'
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
-import * as Y from 'yjs'
-import { Excalidraw, CaptureUpdateAction } from '@excalidraw/excalidraw'
+import { Excalidraw, CaptureUpdateAction, reconcileElements } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useTheme } from 'next-themes'
 import { useCollab } from '@/contexts/collab-context'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import type {
+  ExcalidrawElement,
+  OrderedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types'
+import type { RemoteExcalidrawElement } from '@excalidraw/excalidraw/data/reconcile'
 
 const DARK_THEMES = [
   'theme-catppuccin-mocha',
@@ -19,21 +22,22 @@ const DARK_THEMES = [
   'theme-ocean-depth',
 ]
 
-// Stable references — these never change so we define them outside the component
-// to guarantee they don't cause Excalidraw to re-render.
 const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
 function ExcalidrawWrapperInner() {
-  const { yElementsMap, yElementOrder, ydoc, initialElements, setExcalidrawAPI, isViewOnly } =
-    useCollab()
+  const {
+    initialElements,
+    setExcalidrawAPI,
+    isViewOnly,
+    broadcastedVersionsRef,
+    emitSceneUpdate,
+    registerRemoteHandler,
+  } = useCollab()
   const { theme } = useTheme()
   const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
-  // Track the versionNonce fingerprint of what we last wrote to Yjs.
-  // Prevents handleChange from re-emitting remote state received via observer.
-  const lastWrittenFingerprintRef = useRef<string>('')
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
@@ -43,7 +47,6 @@ function ExcalidrawWrapperInner() {
     [setExcalidrawAPI],
   )
 
-  // Memoised initial data — only changes when initialElements changes (room join/reconnect).
   const initialData = useMemo(
     () => ({
       elements: (initialElements ?? []) as ExcalidrawElement[],
@@ -52,85 +55,46 @@ function ExcalidrawWrapperInner() {
     [initialElements],
   )
 
+  // On every local change, emit only elements with a higher version than last broadcast.
   const handleChange = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
-      const fingerprint = elements.map((el) => `${el.id}:${el.versionNonce}`).join('|')
-      if (fingerprint === lastWrittenFingerprintRef.current) return
-      lastWrittenFingerprintRef.current = fingerprint
-
-      ydoc.transact(() => {
-        const incomingIds = new Set(elements.map((el) => el.id))
-        for (const el of elements) {
-          const stored = yElementsMap.get(el.id) as ExcalidrawElement | undefined
-          // Only write if local element is newer (or same version, different nonce).
-          // Without this guard, a remote update can arrive and set el_A@v10 in Yjs,
-          // but B's Excalidraw might still show el_A@v5 (React batch hasn't applied
-          // the updateScene yet). B's handleChange would then write v5 back, overwriting
-          // v10 in Yjs — leaving remote users with a stale "dot" for A's drawing.
-          const differs =
-            !stored ||
-            el.version > stored.version ||
-            (el.version === stored.version && el.versionNonce !== stored.versionNonce)
-          if (differs) {
-            // Shallow-clone: Excalidraw mutates elements in-place during drawing.
-            // Storing a reference means stored.versionNonce === el.versionNonce always,
-            // so subsequent handleChange calls never detect changes. A clone snapshots
-            // the state at write time so future comparisons work correctly.
-            yElementsMap.set(el.id, { ...el })
-          }
-        }
-        for (const [id] of yElementsMap.entries()) {
-          if (!incomingIds.has(id)) yElementsMap.delete(id)
-        }
-        const newOrder = elements.map((el) => el.id)
-        if (newOrder.join(',') !== yElementOrder.toArray().join(',')) {
-          yElementOrder.delete(0, yElementOrder.length)
-          yElementOrder.insert(0, newOrder)
-        }
-      })
+      emitSceneUpdate(elements)
     },
-    [ydoc, yElementsMap, yElementOrder],
+    [emitSceneUpdate],
   )
 
+  // Register handler for incoming remote elements. Uses reconcileElements to
+  // merge remote changes with local state — higher version wins per element.
   useEffect(() => {
-    // Only react to remote/init transactions — local transactions (our own writes)
-    // are already in Excalidraw's state and don't need updateScene.
-    const observer = (_event: unknown, transaction: Y.Transaction) => {
-      if (transaction.origin !== 'remote' && transaction.origin !== 'init') return
-      if (!excalidrawAPIRef.current) return
+    const handleRemoteElements = (remoteElements: ExcalidrawElement[]) => {
+      const api = excalidrawAPIRef.current
+      if (!api) return
 
-      const seen = new Set<string>()
-      const remoteElements = yElementOrder
-        .toArray()
-        .filter((id) => {
-          if (seen.has(id) || !yElementsMap.has(id)) return false
-          seen.add(id)
-          return true
-        })
-        // Clone on read: Excalidraw holds onto the object references we pass to
-        // updateScene and mutates them in-place (e.g. x/y during move). If we
-        // hand Y.Map's stored objects directly, the map's "snapshot" gets mutated
-        // too, so subsequent handleChange calls see stored.versionNonce === el.versionNonce
-        // and emit 0 changes. Cloning here keeps Y.Map's copies pristine for diffing.
-        .map((id) => ({ ...(yElementsMap.get(id) as ExcalidrawElement) }))
+      const localElements = api.getSceneElements() as readonly OrderedExcalidrawElement[]
+      const appState = api.getAppState()
+      const reconciled = reconcileElements(
+        localElements,
+        remoteElements as unknown as RemoteExcalidrawElement[],
+        appState,
+      )
 
-      excalidrawAPIRef.current.updateScene({
-        elements: remoteElements,
+      api.updateScene({
+        elements: reconciled,
         captureUpdate: CaptureUpdateAction.NEVER,
       })
-      // Update fingerprint to match remote state so handleChange doesn't re-emit it
-      lastWrittenFingerprintRef.current = remoteElements
-        .map((el) => `${el.id}:${el.versionNonce}`)
-        .join('|')
+
+      // Mark reconciled versions as broadcast so we don't echo them back.
+      for (const el of reconciled) {
+        const current = broadcastedVersionsRef.current.get(el.id) ?? -1
+        if (el.version > current) {
+          broadcastedVersionsRef.current.set(el.id, el.version)
+        }
+      }
     }
 
-    yElementsMap.observe(observer as Parameters<typeof yElementsMap.observe>[0])
-    yElementOrder.observe(observer as Parameters<typeof yElementOrder.observe>[0])
-    return () => {
-      yElementsMap.unobserve(observer as Parameters<typeof yElementsMap.unobserve>[0])
-      yElementOrder.unobserve(observer as Parameters<typeof yElementOrder.unobserve>[0])
-    }
-  }, [yElementsMap, yElementOrder])
+    registerRemoteHandler(handleRemoteElements)
+    return () => registerRemoteHandler(null)
+  }, [registerRemoteHandler, broadcastedVersionsRef])
 
   return (
     <div
@@ -155,8 +119,5 @@ function ExcalidrawWrapperInner() {
   )
 }
 
-// memo: prevents re-render when parent (CanvasInner) re-renders due to presence
-// context updates (30fps cursor moves). ExcalidrawWrapper only re-renders when
-// CollabContext (core) changes or theme changes.
 export const ExcalidrawWrapper = memo(ExcalidrawWrapperInner)
 export default ExcalidrawWrapper
