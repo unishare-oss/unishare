@@ -1,3 +1,9 @@
+# [0.8.0](https://github.com/unishare-oss/unishare/compare/v0.7.0...v0.8.0) (2026-04-05)
+
+### Features
+
+- **canvas:** add excalidraw library support with zustand persistence ([b4bce5b](https://github.com/unishare-oss/unishare/commit/b4bce5b3918a425f090194c5712ac8ae6d457d74))
+
 # [0.7.0](https://github.com/unishare-oss/unishare/compare/v0.6.3...v0.7.0) (2026-04-05)
 
 ### Bug Fixes
