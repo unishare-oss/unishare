@@ -53,12 +53,9 @@ export default function AdminGenerateQuizPage() {
           return
         }
 
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('courseId', courseId)
-        formData.append('questionCount', String(questionCount))
-
-        const res = await generateFromFile({ data: formData as never })
+        const res = await generateFromFile({
+          data: { file, courseId, questionCount },
+        })
         quizId = res.data.quizId
       } else {
         if (!selectedPostId) {
