@@ -50,7 +50,7 @@ export function ChatInput({
                 <span className="text-[10px] font-bold text-primary uppercase tracking-wider shrink-0">
                   Editing Message
                 </span>
-                <span className="text-xs text-muted-foreground truncate italic opacity-70">
+                <span className="text-xs text-muted-foreground truncate opacity-70">
                   "{editingMessage.content}"
                 </span>
               </div>

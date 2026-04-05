@@ -64,6 +64,9 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('receive-message', (message: any) => {
+      if (message.userId === session.user.id) {
+        return
+      }
       setLastMessage(message)
 
       // Update messages cache
@@ -93,6 +96,10 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('message-updated', (message: any) => {
+      if (message.userId === session.user.id) {
+        return
+      }
+
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
