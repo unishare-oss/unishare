@@ -65,7 +65,7 @@
     "@types/react-dom": "^19.2.3",
     "@unishare/tsconfig": "workspace:*",
     "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.2.0",
+    "eslint": "^9.39.4",
     "eslint-config-next": "16.2.2",
     "jsdom": "^29.0.1",
     "orval": "^8.6.2",
