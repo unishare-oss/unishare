@@ -94,7 +94,7 @@ export class CollabService {
     if (!room) throw new NotFoundException('Room not found')
 
     let activeSession = session
-    let isAnonymous = false
+    let isAnonymous: boolean
 
     if (!activeSession) {
       // No session — create anonymous one

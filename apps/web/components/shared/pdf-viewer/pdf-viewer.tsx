@@ -204,7 +204,6 @@ function PdfDocument({ documentId, storageKey }: PdfDocumentProps) {
                 height={h}
                 fill="transparent"
                 onPointerDown={onClick}
-                onTouchStart={onClick}
                 style={{ cursor: 'pointer', pointerEvents: 'visible' }}
               />
             </svg>
