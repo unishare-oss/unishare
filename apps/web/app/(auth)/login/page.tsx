@@ -128,7 +128,6 @@ export default function LoginPage() {
       name: values.name,
       email: values.email,
       password: values.password,
-      consentGivenAt: new Date(),
       ...(values.universityId && { universityId: values.universityId }),
     })
     if (error) setServerError(error.message ?? 'Failed to create account')
