@@ -1,3 +1,19 @@
+# [0.9.0](https://github.com/unishare-oss/unishare/compare/v0.8.1...v0.9.0) (2026-04-05)
+
+### Bug Fixes
+
+- load Express.Multer types via tsconfig types field instead of per-file imports ([4b68d77](https://github.com/unishare-oss/unishare/commit/4b68d776dda993c95c4ff50b521001560bfab9f8))
+- pin eslint to v9 for eslint-plugin-react compatibility ([4067f7f](https://github.com/unishare-oss/unishare/commit/4067f7fe4da70a740617737ae99e52701bcb8099))
+- remove useless isAnonymous initial assignment ([5e4a078](https://github.com/unishare-oss/unishare/commit/5e4a0787e4b16f2b4a2901646720bb98283f989a))
+- resolve LCP image warnings and TypeScript 6 build errors ([0976d25](https://github.com/unishare-oss/unishare/commit/0976d257a835caf3f813a6901f56e9a01e556ec1))
+- use Multer['File'] type instead of unused Express.Multer.File ([7466c81](https://github.com/unishare-oss/unishare/commit/7466c8141a1a60c24cb5e6190cbc185632b01b18))
+
+### Features
+
+- **chat:** improve message preview truncation in sidebar ([a857ca6](https://github.com/unishare-oss/unishare/commit/a857ca6f709c4713577cd6fba38a69ae0d3835ee))
+- **profile:** fix user account deletion ([de267c2](https://github.com/unishare-oss/unishare/commit/de267c28fb0e9483ef9204279f23e860f80c7eb1))
+- **profile:** implement dialog useState for tracking error msg ([c268f8d](https://github.com/unishare-oss/unishare/commit/c268f8d444edaa479cc034cecc254d6e4bf4e80b))
+
 ## [0.8.1](https://github.com/unishare-oss/unishare/compare/v0.8.0...v0.8.1) (2026-04-05)
 
 ### Bug Fixes
