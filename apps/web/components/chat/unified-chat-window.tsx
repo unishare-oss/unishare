@@ -76,6 +76,7 @@ export function UnifiedChatWindow({
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [content, setContent] = useState('')
   const [editingMessage, setEditingMessage] = useState<ChatMessageEntity | null>(null)
+  const [replyingToMessage, setReplyingToMessage] = useState<ChatMessageEntity | null>(null)
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
@@ -259,13 +260,29 @@ export function UnifiedChatWindow({
       editMessage({ id: editingMessage.id, data: { content: messageContent } })
       setEditingMessage(null)
     } else {
-      sendMessage({ id: roomId, data: { content: messageContent, type: 'TEXT' } })
+      // Send message with optional parentId for replies
+      sendMessage({
+        id: roomId,
+        data: {
+          content: messageContent,
+          type: 'TEXT',
+          ...(replyingToMessage && { parentId: replyingToMessage.id }),
+        },
+      })
+      setReplyingToMessage(null)
     }
   }
 
   const handleEdit = (message: ChatMessageEntity) => {
     setEditingMessage(message)
+    setReplyingToMessage(null) // Clear reply when editing
     setContent(message.content || '')
+  }
+
+  const handleReply = (message: ChatMessageEntity) => {
+    setReplyingToMessage(message)
+    setEditingMessage(null) // Clear edit when replying
+    setContent('')
   }
 
   const handleDelete = (messageId: string) => {
@@ -397,6 +414,7 @@ export function UnifiedChatWindow({
                         currentUserId={user?.id}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
+                        onReply={handleReply}
                       />
                     </div>
                   )
@@ -422,8 +440,13 @@ export function UnifiedChatWindow({
             onChange={setContent}
             onSend={handleSend}
             editingMessage={editingMessage}
+            replyingToMessage={replyingToMessage}
             onCancelEdit={() => {
               setEditingMessage(null)
+              setContent('')
+            }}
+            onCancelReply={() => {
+              setReplyingToMessage(null)
               setContent('')
             }}
           />
