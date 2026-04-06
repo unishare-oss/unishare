@@ -75,7 +75,13 @@ export function ChatInput({
             placeholder={getPlaceholder()}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && !disabled && onSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !disabled) onSend()
+              if (e.key === 'Escape') {
+                if (editingMessage) onCancelEdit?.()
+                else if (replyingToMessage) onCancelReply?.()
+              }
+            }}
             className="flex-1"
           />
           <Button size="icon" onClick={onSend} disabled={disabled} className="h-10 w-10 shrink-0">

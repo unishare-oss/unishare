@@ -28,12 +28,14 @@ function createOptimisticMessage({
   content,
   type = 'TEXT',
   user,
+  parent,
 }: {
   tempId: string
   roomId: string
   content: string
   type?: string
   user?: UserProfileEntity | null
+  parent?: ChatMessageEntity
 }): ChatMessageEntity {
   return {
     id: tempId,
@@ -52,6 +54,7 @@ function createOptimisticMessage({
           image: user.image,
         }
       : undefined,
+    parent: parent ?? undefined,
   }
 }
 
@@ -85,12 +88,22 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
 
         const tempId = 'temp-' + Date.now()
 
+        // Look up parent message from cache for optimistic reply rendering
+        let parentMessage: ChatMessageEntity | undefined
+        if (variables.data.parentId) {
+          const currentMessages: any = queryClient.getQueryData(messagesQueryKey)
+          const allItems: ChatMessageEntity[] =
+            currentMessages?.pages?.flatMap((page: any) => page.data.items) || []
+          parentMessage = allItems.find((m) => m.id === variables.data.parentId)
+        }
+
         const optimisticMessage = createOptimisticMessage({
           tempId,
           roomId: variables.id,
           content: variables.data.content || '',
           type: variables.data.type,
           user,
+          parent: parentMessage,
         })
 
         // Optimistically add message to cache (infinite query structure)

@@ -17,7 +17,7 @@ import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff } from 'lucide-react'
+import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff, ArrowDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { TypingIndicator } from './typing-indicator'
@@ -82,6 +82,8 @@ export function UnifiedChatWindow({
   const [showDisconnected, setShowDisconnected] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
 
   // Force scroll to bottom immediately on initial load (before render completes)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -201,6 +203,18 @@ export function UnifiedChatWindow({
     }
   }, [messagesLoading, messages.length])
 
+  // Track scroll position to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    const handleScroll = () => {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      setIsAtBottom(distFromBottom < 100)
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [scrollContainerRef.current]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Socket message handling (only for existing rooms)
   useEffect(() => {
     if (
@@ -298,6 +312,29 @@ export function UnifiedChatWindow({
     }
   }
 
+  const handleScrollToMessage = async (messageId: string) => {
+    const tryScroll = () => {
+      const el = messagesContainerRef.current?.querySelector(
+        `[data-message-id="${messageId}"]`,
+      ) as HTMLElement | null
+      if (!el || !scrollContainerRef.current) return false
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setHighlightedMessageId(messageId)
+      setTimeout(() => setHighlightedMessageId(null), 1500)
+      return true
+    }
+
+    if (tryScroll()) return
+
+    // Message not yet in DOM — fetch older pages until found (max 5 pages)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (!hasNextPage) break
+      await fetchNextPage()
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      if (tryScroll()) return
+    }
+  }
+
   if (!roomId || roomLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -355,7 +392,7 @@ export function UnifiedChatWindow({
       {/* Body: messages + optional info pane */}
       <div className="flex flex-1 overflow-hidden">
         {/* Messages Area */}
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden relative">
           {messagesLoading ? (
             <ChatMessagesSkeleton />
           ) : (
@@ -396,7 +433,7 @@ export function UnifiedChatWindow({
                   const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
 
                   return (
-                    <div key={msg.id || i}>
+                    <div key={msg.id || i} data-message-id={msg.id}>
                       {/* Date Separator */}
                       {showDateSeparator && (
                         <div className="flex items-center justify-center my-4">
@@ -412,9 +449,11 @@ export function UnifiedChatWindow({
                         isMe={isMe}
                         showAvatar={showAvatar}
                         currentUserId={user?.id}
+                        isHighlighted={highlightedMessageId === msg.id}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onReply={handleReply}
+                        onScrollToMessage={handleScrollToMessage}
                       />
                     </div>
                   )
@@ -433,6 +472,28 @@ export function UnifiedChatWindow({
                 )}
               </div>
             </ScrollArea>
+          )}
+
+          {/* Scroll to bottom button */}
+          {!isAtBottom && (
+            <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
+              <Button
+                variant="outline"
+                size="icon"
+                className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border-border hover:bg-accent hover:text-accent-foreground animate-in fade-in zoom-in-95 duration-150"
+                onClick={() => {
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTo({
+                      top: scrollContainerRef.current.scrollHeight,
+                      behavior: 'smooth',
+                    })
+                  }
+                }}
+                aria-label="Scroll to bottom"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           )}
 
           <ChatInput
