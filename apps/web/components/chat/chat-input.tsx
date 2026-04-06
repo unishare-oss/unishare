@@ -15,6 +15,7 @@ interface ChatInputProps {
   placeholder?: string
   editingMessage?: ChatMessageEntity | null
   replyingToMessage?: ChatMessageEntity | null
+  currentUserId?: string
   onCancelEdit?: () => void
   onCancelReply?: () => void
 }
@@ -27,6 +28,7 @@ export function ChatInput({
   placeholder = 'Type a message...',
   editingMessage,
   replyingToMessage,
+  currentUserId,
   onCancelEdit,
   onCancelReply,
 }: ChatInputProps) {
@@ -57,7 +59,12 @@ export function ChatInput({
         <ChatInputContextBar mode="edit" message={editingMessage} onCancel={onCancelEdit} />
       )}
       {replyingToMessage && onCancelReply && (
-        <ChatInputContextBar mode="reply" message={replyingToMessage} onCancel={onCancelReply} />
+        <ChatInputContextBar
+          mode="reply"
+          message={replyingToMessage}
+          onCancel={onCancelReply}
+          currentUserId={currentUserId}
+        />
       )}
 
       {/* Original Input Area */}

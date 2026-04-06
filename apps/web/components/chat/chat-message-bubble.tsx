@@ -29,10 +29,14 @@ export function ChatMessageBubble({
   onEdit,
   onDelete,
   onReply,
+  currentUserId,
 }: ChatMessageBubbleProps) {
   const isEdited =
     message.updatedAt &&
     new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() > 1000
+
+  const parentIsMe = message.parent?.userId === currentUserId
+  const parentName = parentIsMe ? 'you' : message.parent?.user?.name
 
   return (
     <div className={cn('flex items-end gap-2 group', isMe ? 'flex-row-reverse' : 'flex-row')}>
@@ -52,24 +56,23 @@ export function ChatMessageBubble({
       <div className={cn('flex flex-col max-w-[70%]', isMe ? 'items-end' : 'items-start')}>
         {/* Reply Bubble - Behind */}
         {message.parent && (
-          <div className={cn('flex flex-col w-full mb-0', isMe ? 'items-end' : 'items-start')}>
+          <div className={cn('flex flex-col mb-0', isMe ? 'items-end' : 'items-start')}>
             {/* Reply info - Outside the bubble */}
             <div className="flex items-center gap-1 mb-1 px-1">
-              <Reply className="w-3 h-3 text-muted-foreground" />
               <span
                 className={cn(
-                  'text-[11px] font-semibold',
+                  'text-[11px] font-semibold whitespace-nowrap',
                   isMe ? 'text-muted-foreground' : 'text-muted-foreground/80',
                 )}
               >
-                {message.parent.user?.name || 'Deleted User'}
+                replying to {parentName || 'Deleted User'}
               </span>
             </div>
 
-            {/* Reply bubble content - Same size as main bubble */}
+            {/* Reply bubble content - Sized to content up to max-w */}
             <div
               className={cn(
-                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent w-full transition-colors',
+                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent transition-colors w-fit max-w-full',
                 isMe
                   ? 'bg-primary/60 text-primary-foreground border-primary-foreground/10'
                   : 'bg-secondary/40 text-muted-foreground border-border/40',
@@ -86,7 +89,7 @@ export function ChatMessageBubble({
         {/* Main Message Bubble - Overlapping on top */}
         <div
           className={cn(
-            'px-4 py-2 text-[13px] rounded-2xl shadow-sm transition-all hover:shadow-md relative z-10 w-full',
+            'px-4 py-2 text-[13px] rounded-2xl shadow-sm transition-all hover:shadow-md relative z-10 w-fit max-w-full',
             message.parent && '-mt-3',
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'

@@ -441,6 +441,7 @@ export function UnifiedChatWindow({
             onSend={handleSend}
             editingMessage={editingMessage}
             replyingToMessage={replyingToMessage}
+            currentUserId={user?.id}
             onCancelEdit={() => {
               setEditingMessage(null)
               setContent('')
