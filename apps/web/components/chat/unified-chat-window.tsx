@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo, RefObject } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useInView } from 'react-intersection-observer'
@@ -86,6 +87,7 @@ export function UnifiedChatWindow({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
   const { getLastSeen, setLastSeen } = useChatLastSeenStore()
 
@@ -348,11 +350,20 @@ export function UnifiedChatWindow({
   }
 
   const confirmDelete = () => {
-    if (messageToDelete) {
-      deleteMessage({ id: messageToDelete })
-      setDeleteDialogOpen(false)
-      setMessageToDelete(null)
-    }
+    if (!messageToDelete) return
+    const id = messageToDelete
+    setDeleteDialogOpen(false)
+    setMessageToDelete(null)
+    // Mark as deleting — AnimatePresence plays exit, then we remove from cache
+    setDeletingIds((prev) => new Set(prev).add(id))
+    setTimeout(() => {
+      deleteMessage({ id })
+      setDeletingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 400)
   }
 
   const handleScrollToMessage = async (messageId: string) => {
@@ -474,48 +485,66 @@ export function UnifiedChatWindow({
                   </div>
                 )}
 
-                {messages.map((msg, i) => {
-                  const isMe = msg.userId === user?.id
-                  const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
-                  const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
+                <AnimatePresence initial={false}>
+                  {messages.map((msg, i) => {
+                    const isMe = msg.userId === user?.id
+                    const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
+                    const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
+                    const isDeleting = deletingIds.has(msg.id)
 
-                  return (
-                    <div key={msg.id || i} data-message-id={msg.id}>
-                      {/* Date Separator */}
-                      {showDateSeparator && (
-                        <div className="flex items-center justify-center my-4">
-                          <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[10px] text-secondary-foreground font-medium">
-                            {getDateSeparatorText(new Date(msg.createdAt))}
+                    return (
+                      <motion.div
+                        key={msg.id || i}
+                        data-message-id={msg.id}
+                        layout="position"
+                        animate={
+                          isDeleting
+                            ? {
+                                opacity: 0,
+                                scale: 0.7,
+                                filter: 'blur(6px)',
+                                y: isMe ? 10 : -10,
+                                transition: { duration: 0.35, ease: [0.4, 0, 1, 1] },
+                              }
+                            : { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }
+                        }
+                      >
+                        {/* Date Separator */}
+                        {showDateSeparator && (
+                          <div className="flex items-center justify-center my-4">
+                            <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[10px] text-secondary-foreground font-medium">
+                              {getDateSeparatorText(new Date(msg.createdAt))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Unread divider */}
-                      {firstUnreadId === msg.id && (
-                        <div className="flex items-center gap-3 my-3">
-                          <div className="flex-1 h-px bg-primary/25" />
-                          <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
-                            ↓ new messages
-                          </span>
-                          <div className="flex-1 h-px bg-primary/25" />
-                        </div>
-                      )}
+                        {/* Unread divider */}
+                        {firstUnreadId === msg.id && (
+                          <div className="flex items-center gap-3 my-3">
+                            <div className="flex-1 h-px bg-primary/25" />
+                            <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                              ↓ new messages
+                            </span>
+                            <div className="flex-1 h-px bg-primary/25" />
+                          </div>
+                        )}
 
-                      {/* Message Bubble */}
-                      <ChatMessageBubble
-                        message={msg}
-                        isMe={isMe}
-                        showAvatar={showAvatar}
-                        currentUserId={user?.id}
-                        isHighlighted={highlightedMessageId === msg.id}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onReply={handleReply}
-                        onScrollToMessage={handleScrollToMessage}
-                      />
-                    </div>
-                  )
-                })}
+                        {/* Message Bubble */}
+                        <ChatMessageBubble
+                          message={msg}
+                          isMe={isMe}
+                          showAvatar={showAvatar}
+                          currentUserId={user?.id}
+                          isHighlighted={highlightedMessageId === msg.id}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onReply={handleReply}
+                          onScrollToMessage={handleScrollToMessage}
+                        />
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
 
                 {/* Typing indicators */}
                 {roomTypingUsers.length > 0 && (
