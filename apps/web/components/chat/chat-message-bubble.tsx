@@ -69,10 +69,10 @@ export function ChatMessageBubble({
             {/* Reply bubble content - Same size as main bubble */}
             <div
               className={cn(
-                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent w-full',
+                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent w-full transition-colors',
                 isMe
-                  ? 'bg-primary/50 text-primary-foreground border-primary-foreground/10'
-                  : 'bg-muted text-foreground border-border',
+                  ? 'bg-primary/60 text-primary-foreground border-primary-foreground/10'
+                  : 'bg-secondary/40 text-muted-foreground border-border/40',
                 isMe ? 'rounded-br-sm' : 'rounded-bl-sm',
               )}
             >
@@ -90,7 +90,7 @@ export function ChatMessageBubble({
             message.parent && '-mt-3',
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'
-              : 'bg-card text-foreground rounded-bl-sm',
+              : 'bg-secondary text-secondary-foreground rounded-bl-sm',
             message.parent && (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'),
           )}
         >
