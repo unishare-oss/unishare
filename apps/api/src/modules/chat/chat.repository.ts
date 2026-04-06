@@ -105,6 +105,17 @@ export class ChatRepository {
               image: true,
             },
           },
+          parent: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
         },
       },
       {
@@ -160,6 +171,7 @@ export class ChatRepository {
     type?: ChatMessageType
     imageUrl?: string
     linkUrl?: string
+    parentId?: string
   }) {
     return this.prisma.$transaction(async (tx) => {
       const message = await tx.chatMessage.create({
@@ -170,6 +182,17 @@ export class ChatRepository {
               id: true,
               name: true,
               image: true,
+            },
+          },
+          parent: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
             },
           },
         },
@@ -196,6 +219,17 @@ export class ChatRepository {
             image: true,
           },
         },
+        parent: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
       },
     })
   }
@@ -210,6 +244,17 @@ export class ChatRepository {
             id: true,
             name: true,
             image: true,
+          },
+        },
+        parent: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
           },
         },
       },

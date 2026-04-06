@@ -12,6 +12,41 @@ export class ChatMessageUserEntity {
   image: string | null
 }
 
+export class ChatMessageParentEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  roomId: string
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  userId: string | null
+
+  @ApiProperty({ enum: ChatMessageType })
+  type: ChatMessageType
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  content: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  imageUrl: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  linkUrl: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  parentId: string | null
+
+  @ApiProperty()
+  createdAt: Date
+
+  @ApiProperty()
+  updatedAt: Date
+
+  @ApiPropertyOptional({ type: ChatMessageUserEntity })
+  user?: ChatMessageUserEntity
+}
+
 export class ChatMessageEntity {
   @ApiProperty()
   id: string
@@ -34,6 +69,9 @@ export class ChatMessageEntity {
   @ApiPropertyOptional({ type: String, nullable: true })
   linkUrl: string | null
 
+  @ApiPropertyOptional({ type: String, nullable: true })
+  parentId: string | null
+
   @ApiProperty()
   createdAt: Date
 
@@ -42,6 +80,9 @@ export class ChatMessageEntity {
 
   @ApiPropertyOptional({ type: ChatMessageUserEntity })
   user?: ChatMessageUserEntity
+
+  @ApiPropertyOptional({ type: ChatMessageParentEntity })
+  parent?: ChatMessageParentEntity
 }
 
 export class PaginatedMessagesEntity {

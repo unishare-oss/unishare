@@ -23,4 +23,9 @@ export class SendMessageDto {
   @IsUrl()
   @IsOptional()
   linkUrl?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  parentId?: string
 }

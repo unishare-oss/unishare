@@ -1585,6 +1585,37 @@
         "tags": ["chat"]
       }
     },
+    "/api/chat/messages/{id}": {
+      "patch": {
+        "operationId": "ChatController_editMessage",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateMessageDto" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ChatMessageEntity" } }
+            }
+          }
+        },
+        "tags": ["chat"]
+      },
+      "delete": {
+        "operationId": "ChatController_deleteMessage",
+        "parameters": [
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "" } },
+        "tags": ["chat"]
+      }
+    },
     "/api/chat/rooms/{id}/read": {
       "post": {
         "operationId": "ChatController_markAsRead",
@@ -2069,7 +2100,8 @@
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/UniversityEntity" } }
             }
-          }
+          },
+          "404": { "description": "University not found" }
         },
         "tags": ["universities"]
       }
@@ -3061,6 +3093,23 @@
         },
         "required": ["id", "roomId", "userId", "lastReadAt", "joinedAt", "user"]
       },
+      "ChatMessageParentEntity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "roomId": { "type": "string" },
+          "userId": { "type": "string", "nullable": true },
+          "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
+          "content": { "type": "string", "nullable": true },
+          "imageUrl": { "type": "string", "nullable": true },
+          "linkUrl": { "type": "string", "nullable": true },
+          "parentId": { "type": "string", "nullable": true },
+          "createdAt": { "format": "date-time", "type": "string" },
+          "updatedAt": { "format": "date-time", "type": "string" },
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+        },
+        "required": ["id", "roomId", "type", "createdAt", "updatedAt"]
+      },
       "ChatMessageEntity": {
         "type": "object",
         "properties": {
@@ -3071,9 +3120,11 @@
           "content": { "type": "string", "nullable": true },
           "imageUrl": { "type": "string", "nullable": true },
           "linkUrl": { "type": "string", "nullable": true },
+          "parentId": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
-          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
+          "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" },
+          "parent": { "$ref": "#/components/schemas/ChatMessageParentEntity" }
         },
         "required": ["id", "roomId", "type", "createdAt", "updatedAt"]
       },
@@ -3124,8 +3175,14 @@
           "content": { "type": "string" },
           "type": { "type": "string", "enum": ["TEXT", "IMAGE", "LINK", "SYSTEM"] },
           "imageUrl": { "type": "string" },
-          "linkUrl": { "type": "string" }
+          "linkUrl": { "type": "string" },
+          "parentId": { "type": "string" }
         }
+      },
+      "UpdateMessageDto": {
+        "type": "object",
+        "properties": { "content": { "type": "string" } },
+        "required": ["content"]
       },
       "CreateReadingListDto": {
         "type": "object",

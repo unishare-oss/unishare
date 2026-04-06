@@ -1,72 +1,103 @@
 # Coding Conventions
 
-This document outlines the coding conventions, naming patterns, and formatting standards used in the Unishare codebase.
+**Analysis Date:** 2025-05-24
 
-## Formatting & Linting
+## Naming Patterns
 
-### General
-- **Prettier**: Configured in `.prettierrc`.
-  - `semi`: `false` (no semicolons).
-  - `singleQuote`: `true` (use single quotes).
-  - `trailingComma`: `all`.
-  - `printWidth`: `100`.
-  - `tabWidth`: `2`.
-- **TypeScript**: Used throughout the project for both API and Web.
-- **ESLint**: Modern ESLint flat config (`eslint.config.mjs`) is used in each app.
+**Files:**
+- **General:** `dash-case.ts` (e.g., `app.module.ts`, `chat.service.ts`)
+- **React Components:** `PascalCase.tsx` (e.g., `PostCard.tsx`, `SearchBox.tsx`)
+- **Next.js Pages:** `page.tsx`, `layout.tsx` (standard Next.js)
+- **Tests:** `*.spec.ts` (API), `*.test.ts` or `*.spec.ts` (Web)
 
-### Unused Variables
-- Unused variables are allowed if prefixed with an underscore `_`.
-  - Rule: `['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_', ignoreRestSiblings: true }]`.
+**Functions:**
+- `camelCase` (e.g., `getRooms`, `createRoom`)
+
+**Variables:**
+- `camelCase` (e.g., `allowedOrigins`, `repositoryMock`)
+- `UPPER_SNAKE_CASE` for constants (e.g., `BASE_URL`)
+
+**Types:**
+- `PascalCase` (e.g., `SendMessageDto`, `ChatRoomType`)
+- **Interfaces:** `PascalCase` (e.g., `Metadata`, `Viewport`)
+
+## Code Style
+
+**Formatting:**
+- **Prettier:** Managed via `.prettierrc`.
+- **Key settings:**
+  - `semi: false`
+  - `singleQuote: true`
+  - `trailingComma: "all"`
+  - `printWidth: 100`
+  - `tabWidth: 2`
+
+**Linting:**
+- **Tool:** ESLint (standardized across `apps/api/eslint.config.mjs` and `apps/web/eslint.config.mjs`).
+- **Standard rules:** TypeScript-focused, React-focused for frontend.
+
+## Import Organization
+
+**Order (API):**
+1. Standard modules (e.g., `import 'dotenv/config'`, `import helmet from 'helmet'`)
+2. NestJS core and common (e.g., `import { NestFactory } from '@nestjs/core'`)
+3. Internal app modules using relative paths or alias (e.g., `import { AppModule } from './app.module'`)
+
+**Order (Web):**
+1. Next.js and React imports (e.g., `import type { Metadata } from 'next'`)
+2. UI components (e.g., `import { Toaster } from '@/components/ui/sonner'`)
+3. Internal providers and hooks (e.g., `import { Providers } from '@/src/providers'`)
+4. Styles (e.g., `import './globals.css'`)
+
+**Path Aliases:**
+- `@/*`: Points to the root of the respective application or shared logic (e.g., `import { ChatRoomType } from '@/generated/prisma/client'`).
+
+## Error Handling
+
+**Patterns (API):**
+- Use built-in NestJS exceptions (e.g., `NotFoundException`, `UnauthorizedException`).
+- Global filters: `HttpExceptionFilter` in `apps/api/src/common/filters/http-exception.filter`.
+- Centralized response handling: `ResponseInterceptor` in `apps/api/src/common/interceptors/response.interceptor`.
+
+**Patterns (Web):**
+- Use of `sonner` for toast notifications: `import { toast } from 'sonner'`.
+- Error boundaries where appropriate.
+
+## Logging
+
+**Framework:**
+- **API:** `Logger` from `@nestjs/common`.
+- **Web:** Standard `console`.
+
+**Patterns:**
+- Instantiate logger with context: `const logger = new Logger('Bootstrap')`.
+
+## Comments
+
+**When to Comment:**
+- Complexity: Used to explain non-obvious logic or complex data flows.
+- TODOs: Marked with `TODO:` for future tasks.
+
+**JSDoc/TSDoc:**
+- Used for public API methods and complex functions.
+
+## Function Design
+
+**Size:** Generally small, single-responsibility functions.
+
+**Parameters:** Prefer object destructuring for multiple parameters to improve readability.
+
+**Return Values:** Strongly typed return values, often involving `Promise<T>` for async operations.
+
+## Module Design
+
+**Exports:**
+- **Named Exports:** Used for most services, controllers, and utility functions.
+- **Default Exports:** Used for Next.js pages/layouts and the main `AppModule`.
+
+**Barrel Files:**
+- Used for exporting multiple entities from a directory (e.g., `apps/api/src/common/middleware/index.ts`).
 
 ---
 
-## API (apps/api) - NestJS
-
-### Naming Patterns
-- **Files**: `kebab-case.type.ts`.
-  - Controllers: `*.controller.ts`
-  - Services: `*.service.ts`
-  - Modules: `*.module.ts`
-  - DTOs: `*.dto.ts` (e.g., `create-post.dto.ts`)
-  - Entities: `*.entity.ts`
-- **Classes**: `PascalCase` with a suffix corresponding to the type.
-  - `PostsController`, `PostsService`, `CreatePostDto`.
-- **Directories**: `kebab-case`.
-
-### Architecture
-- **Modules**: Feature-based modular structure in `src/modules/`.
-- **Repositories**: Uses a Repository pattern (e.g., `PostsRepository`) to abstract Prisma calls.
-- **Swagger**: Heavy use of `@nestjs/swagger` decorators (`@ApiTags`, `@ApiOkResponse`, etc.) for API documentation.
-- **Validation**: Uses `class-validator` and `class-transformer` for DTO validation.
-
-### Path Aliases
-- `@/` points to `apps/api/src/`.
-
----
-
-## Web (apps/web) - Next.js
-
-### Naming Patterns
-- **App Router**: Next.js conventions for files like `layout.tsx`, `page.tsx`, `not-found.tsx`.
-- **Components**:
-  - Files: A mix of `kebab-case.tsx` (e.g., `post-card.tsx`) and `PascalCase.tsx` (e.g., `FeedSortDropdown.tsx`).
-  - Component Names: `PascalCase`.
-- **Hooks**: `kebab-case` with `use-` prefix (e.g., `use-search.ts`). Some older hooks use `camelCase` (e.g., `useFeedSort.ts`).
-- **Directories**: `kebab-case`.
-
-### Styling & UI
-- **Tailwind CSS**: Primary styling framework.
-- **Utility**: `cn()` utility for conditional class merging (using `tailwind-merge` and `clsx`).
-- **Icons**: `lucide-react`.
-- **State Management**: `zustand` for client-side state.
-- **Data Fetching**: `@tanstack/react-query` with generated hooks from Orval.
-
-### Path Aliases
-- `@/` points to `apps/web/`.
-
----
-
-## Shared Packages
-
-- **@unishare/types**: Shared TypeScript types in `packages/types`.
-- **@unishare/tsconfig**: Shared TypeScript configuration in `packages/tsconfig`.
+*Convention analysis: 2025-05-24*

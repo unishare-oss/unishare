@@ -1,45 +1,76 @@
 # Codebase Concerns
 
-**Analysis Date:** 2025-03-20
+**Analysis Date:** 2025-05-22
 
 ## Tech Debt
 
-**Mock Data Dependency:**
-- Issue: Extensive use of hardcoded mock data in the frontend for core features. Components and pages import directly from `mock-data.ts` instead of exclusively using API hooks.
-- Files: `apps/web/lib/mock-data.ts`, `apps/web/app/(app)/posts/[id]/page.tsx`, `apps/web/components/post-card.tsx`
-- Impact: Risk of mock data leaking into production or making the transition to real API data fragmented and error-prone.
-- Fix approach: Transition to using generated API clients (Orval/OpenAPI) and ensure all components consume data from hooks or a centralized store.
+**User Deletion Logic:**
+- Issue: Critical TODO identified in user deletion function.
+- Files: `apps/web/components/admin/users/users-table.tsx`
+- Impact: Potential data inconsistency or failure to properly clean up user data.
+- Fix approach: Verify the user removal logic and ensure all associated data is handled correctly.
 
-**Large Component/Service Logic:**
-- Issue: Several files are exceeding 400-500 lines of code, combining multiple responsibilities.
-- Files: `apps/web/components/boards/room-card.tsx` (549 lines), `apps/api/src/modules/posts/posts.service.ts` (461 lines), `apps/web/components/post-detail/post-files.tsx` (467 lines)
-- Impact: High cognitive load for maintainers and increased risk of bugs during modification.
-- Fix approach: Break down large components into smaller, focused sub-components. Refactor services into smaller helper classes or utility modules.
+**Database-Stored Text Extraction:**
+- Issue: Full text extracted from study materials is stored in the PostgreSQL database.
+- Files: `apps/api/prisma/schema.prisma` (`StudyMaterial` model)
+- Impact: Rapid database growth and potential performance degradation of full-text search as content grows.
+- Fix approach: Consider storing extracted text in a specialized search engine (e.g., Elasticsearch, Meilisearch) or as separate files in S3 if the volume is high.
 
-## Security Considerations
+## Test Coverage Gaps
 
-**Custom Auth Decorators:**
-- Issue: Reliance on `@OptionalAuth()`, `@Roles()`, and `@Session()` from `nestjs-better-auth`.
-- Files: `apps/api/src/modules/posts/posts.controller.ts`
-- Current mitigation: Global guards and pipes are configured in `main.ts`.
-- Recommendations: Ensure rigorous integration testing for these decorators to prevent unauthorized access, especially for `@OptionalAuth()` routes where logic forks based on session existence.
+**API Core Modules:**
+- What's not tested: Key business logic in `posts`, `users`, `quizzes`, `notifications`, `storage`, and `reports`.
+- Files: `apps/api/src/modules/posts/`, `apps/api/src/modules/users/`, `apps/api/src/modules/quizzes/`, etc.
+- Risk: Regressions in critical user flows could go unnoticed.
+- Priority: High
+
+**Web Frontend:**
+- What's not tested: Almost all UI components, hooks, and context providers. Only 3 test files exist in the entire web app.
+- Files: `apps/web/`
+- Risk: High fragility when refactoring or adding new features.
+- Priority: High
 
 ## Performance Bottlenecks
 
-**Database Search Implementation:**
-- Issue: Using `Unsupported("tsvector")` in Prisma for full-text search.
-- Files: `apps/api/prisma/schema.prisma`
-- Cause: This is a Postgres-specific feature. While performant, it bypasses standard Prisma types and requires raw SQL for certain operations.
-- Improvement path: Ensure GIN indexes are properly maintained and consider a dedicated search engine (e.g., Meilisearch) if search complexity or data volume grows significantly.
+**Trending Score Calculation:**
+- Problem: `refreshTrendingScores` updates all published posts in a single database transaction.
+- Files: `apps/api/src/modules/trending/trending.service.ts`
+- Cause: The current implementation maps all posts and executes a transaction for the entire set of updates.
+- Improvement path: Batch updates into smaller transactions or use a raw SQL bulk update for better performance.
+
+**Multipart Upload Proxying:**
+- Problem: Multipart file chunks are uploaded to the API server, which then proxies them to S3.
+- Files: `apps/api/src/modules/storage/storage.service.ts`, `apps/web/lib/posts/upload-post-file.ts`
+- Cause: The architecture uses the API as a relay for chunked uploads instead of direct-to-S3 part uploads.
+- Improvement path: Implement presigned URLs for each part of the multipart upload to allow the client to upload directly to S3.
 
 ## Fragile Areas
 
-**Generated Code Bloat:**
-- Files: `apps/api/src/generated/prisma/`
-- Why fragile: Generated files for Prisma models are extremely large (e.g., `User.ts` is 5.7k lines).
-- Safe modification: Never modify files in `generated/` manually.
-- Test coverage: Ensure unit tests cover the services that consume these models, as the models themselves are too large to audit manually.
+**Multipart Upload State:**
+- Files: `apps/api/src/modules/storage/storage.service.ts`
+- Why fragile: `partEtagCache` is an in-memory `Map`. If the API server restarts during a large file upload, the ETag list is lost, and the upload will fail upon completion.
+- Safe modification: Transition to a persistent storage (e.g., Redis or Database) for tracking multipart upload ETags.
+- Test coverage: None detected for multipart upload state management.
+
+**Search Vector Implementation:**
+- Files: `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/`
+- Why fragile: Uses `Unsupported("tsvector")` in Prisma, requiring manual maintenance of migrations for indices and triggers.
+- Safe modification: Ensure all search-related changes are rigorously tested with raw SQL migrations.
+- Test coverage: No automated tests for search vector generation.
+
+## Observability & Error Handling
+
+**Missing External Error Tracking:**
+- Area: Global application monitoring.
+- Problem: No Sentry or similar service integrated. Errors are only logged to the console/local logs.
+- Blocks: Real-time visibility into production errors and performance issues.
+
+**Silent Promise Failures:**
+- Area: Background operations in `PostsService`.
+- Files: `apps/api/src/modules/posts/posts.service.ts`
+- Current mitigation: Using `void` with promises (e.g., `void this.followsService.getFollowers(...)`).
+- Recommendations: Replace with proper error handling or use a robust background task queue (e.g., BullMQ) for tasks like notifications and content screening.
 
 ---
 
-*Concerns audit: 2025-03-20*
+*Concerns audit: 2025-05-22*

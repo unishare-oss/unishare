@@ -1,71 +1,108 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-23
+**Analysis Date:** 2024-05-24
 
 ## Directory Layout
 
 ```
 unishare/
 ├── apps/
-│   ├── api/            # NestJS Backend
-│   │   ├── prisma/     # Database schema and migrations
-│   │   └── src/        # Backend source code
-│   └── web/            # Next.js Frontend
-│       ├── app/        # App Router pages and routes
-│       ├── components/ # React components (shadcn/ui + custom)
-│       └── src/        # Generated API clients and providers
+│   ├── api/            # NestJS Backend Application
+│   └── web/            # Next.js Frontend Application
 ├── packages/
-│   ├── tsconfig/       # Shared TypeScript configurations
-│   └── types/          # Shared TypeScript types
-└── docs/               # Project documentation
+│   ├── types/          # Shared TypeScript type definitions
+│   └── tsconfig/       # Shared TypeScript configurations
+├── docs/               # Project documentation
+└── .planning/          # GSD planning and codebase maps
 ```
 
 ## Directory Purposes
 
-**apps/api/src/modules:**
-- Purpose: Domain-driven modules containing backend logic.
-- Key files: `posts/`, `users/`, `auth/`, `notifications/`.
+**apps/api:**
+- Purpose: Backend API logic, database interaction, authentication.
+- Contains: NestJS modules, Prisma schema, server-side tests.
+- Key files: `apps/api/src/main.ts`, `apps/api/prisma/schema.prisma`, `apps/api/src/app.module.ts`
 
-**apps/web/app:**
-- Purpose: Routing and layout for the frontend.
-- Contains: Route groups like `(app)` for the main application and `(auth)` for authentication.
+**apps/web:**
+- Purpose: Frontend UI, client-side logic, API consumption.
+- Contains: Next.js pages (App Router), React components, stores (Zustand), hooks.
+- Key files: `apps/web/app/layout.tsx`, `apps/web/lib/store.ts`, `apps/web/orval.config.ts`
 
-**apps/web/components:**
-- Purpose: Reusable UI components.
-- Key files: `ui/` (shadcn components), `posts/`, `shared/`.
+**packages/types:**
+- Purpose: Central repository for shared TypeScript interfaces and types.
+- Contains: Domain entities, API request/response types.
+- Key files: `packages/types/src/index.ts`
+
+**docs/:**
+- Purpose: Technical documentation and guides.
+- Contains: Markdown files for various systems (Zustand, Storage, Chat).
 
 ## Key File Locations
 
 **Entry Points:**
-- `apps/api/src/main.ts`: Backend entry point.
-- `apps/web/app/layout.tsx`: Frontend root layout.
+- `apps/api/src/main.ts`: NestJS server entry.
+- `apps/web/app/layout.tsx`: Web application root layout.
 
 **Configuration:**
-- `apps/api/prisma/schema.prisma`: Database schema definition.
-- `apps/web/next.config.ts`: Next.js configuration and API rewrites.
-- `turbo.json`: Monorepo build pipeline config.
+- `apps/api/prisma.config.ts`: Prisma database config.
+- `apps/web/next.config.ts`: Next.js config.
+- `apps/web/orval.config.ts`: API hook generation config.
+- `turbo.json`: Turborepo pipeline config.
 
 **Core Logic:**
-- `apps/api/src/modules/*/`: Domain logic per module.
-- `apps/web/lib/store.ts`: Zustand global state.
+- `apps/api/src/modules/`: Domain modules (e.g., `posts`, `users`, `chat`).
+- `apps/web/src/features/`: Frontend feature modules.
+- `apps/web/lib/`: Web shared libraries and utilities.
+
+**Testing:**
+- `apps/api/test/`: E2E tests for the backend.
+- `apps/web/vitest.config.ts`: Web unit testing config.
 
 ## Naming Conventions
 
 **Files:**
-- Backend: `name.controller.ts`, `name.service.ts`, `name.repository.ts`.
-- Frontend: `kebab-case.tsx` for components and hooks.
+- **NestJS**: Kebab-case with suffix (e.g., `posts.controller.ts`, `posts.service.ts`).
+- **React Components**: PascalCase (e.g., `PostCard.tsx`).
+- **Hooks**: CamelCase with `use` prefix (e.g., `usePosts.ts`).
+- **Utilities**: CamelCase or Kebab-case (e.g., `utils.ts`, `api-types.ts`).
 
 **Directories:**
-- Kebab-case for all directories.
+- **NestJS Modules**: Kebab-case (e.g., `reading-lists`).
+- **Next.js Pages**: App Router standard (e.g., `(app)`, `(auth)`).
+- **Features**: Kebab-case (e.g., `ai-summary`).
 
 ## Where to Add New Code
 
-**New Feature (Full-stack):**
-1. Define DB schema in `apps/api/prisma/schema.prisma`.
-2. Create a new module in `apps/api/src/modules/`.
-3. Update `openapi.json` or let Swagger generate it to update frontend API hooks via Orval.
-4. Add pages in `apps/web/app/` and components in `apps/web/components/`.
+**New Feature:**
+- Backend Module: `apps/api/src/modules/[feature-name]`
+- Frontend Feature: `apps/web/src/features/[feature-name]`
+- Shared Types: `packages/types/src/index.ts`
+
+**New Component/Module:**
+- Shared UI Component: `apps/web/components/ui/[component-name].tsx`
+- Domain-specific Component: `apps/web/src/features/[feature-name]/components/`
 
 **Utilities:**
-- Backend: `apps/api/src/common/utils/`.
-- Frontend: `apps/web/lib/utils.ts`.
+- Backend Utils: `apps/api/src/common/utils/`
+- Frontend Utils: `apps/web/lib/utils.ts`
+
+## Special Directories
+
+**.planning/:**
+- Purpose: Contains GSD-specific planning files and codebase maps.
+- Generated: No (Created by GSD).
+- Committed: Yes.
+
+**apps/api/src/generated/:**
+- Purpose: Code generated by Prisma or other tools.
+- Generated: Yes.
+- Committed: Usually no (check `.gitignore`).
+
+**apps/web/src/lib/api/generated/:**
+- Purpose: Orval-generated API hooks.
+- Generated: Yes.
+- Committed: Yes.
+
+---
+
+*Structure analysis: 2024-05-24*

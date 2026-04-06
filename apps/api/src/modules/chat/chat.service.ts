@@ -53,6 +53,14 @@ export class ChatService {
     // Verify participant and get room details
     const room = await this.getRoom(roomId, userId)
 
+    // Validate parentId if provided
+    if (data.parentId) {
+      const parentMessage = await this.chatRepository.findMessageById(data.parentId)
+      if (!parentMessage || parentMessage.roomId !== roomId) {
+        throw new NotFoundException('Parent message not found in this room')
+      }
+    }
+
     // 1. Persist to database
     const message = await this.chatRepository.createMessage({
       roomId,

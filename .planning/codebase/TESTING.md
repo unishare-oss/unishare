@@ -1,69 +1,171 @@
-# Testing Strategies
+# Testing Patterns
 
-This document describes the testing frameworks, locations, and practices used in the Unishare project.
+**Analysis Date:** 2025-05-24
 
-## API (apps/api) - Jest
+## Test Framework
 
-### Framework
-- **Jest**: The primary testing framework for the API.
-- **ts-jest**: TypeScript support for Jest.
-- **Supertest**: Used for E2E testing.
+**Runner:**
+- **API:** Jest (Version: `^29.x.x` implied) - Config: `apps/api/package.json` and `apps/api/test/jest-e2e.json`.
+- **Web:** Vitest (Version: `latest`) - Config: `apps/web/vitest.config.ts`.
 
-### Unit & Integration Tests
-- **Location**: `apps/api/src/**/*.spec.ts` (alongside the source code).
-- **Execution**: `pnpm --filter api test`.
-- **Mocks**: Global mocks are stored in `apps/api/test/__mocks__`.
+**Assertion Library:**
+- **API:** Jest built-in.
+- **Web:** Vitest built-in.
 
-### E2E Tests
-- **Location**: `apps/api/test/*.e2e-spec.ts`.
-- **Configuration**: Uses `apps/api/test/jest-e2e.json`.
-- **Execution**: `pnpm --filter api test:e2e`.
+**Run Commands:**
+```bash
+pnpm --filter api test          # Run API unit tests
+pnpm --filter api test:watch    # Watch mode for API
+pnpm --filter api test:e2e      # Run API end-to-end tests
+pnpm --filter web test          # Run Web unit tests
+pnpm --filter web test:watch    # Watch mode for Web
+```
 
-### Coverage
-- Coverage reports are generated using Jest.
-- **Execution**: `pnpm --filter api test:cov`.
+## Test File Organization
+
+**Location:**
+- **Unit Tests:** Co-located with source files (e.g., `src/modules/chat/chat.service.spec.ts`).
+- **E2E Tests (API):** Located in `apps/api/test/` directory (e.g., `apps/api/test/app.e2e-spec.ts`).
+
+**Naming:**
+- **API:** `*.spec.ts` for unit tests, `*.e2e-spec.ts` for end-to-end tests.
+- **Web:** `*.test.ts` or `*.spec.ts`.
+
+**Structure:**
+```
+apps/api/src/
+├── modules/
+│   └── chat/
+│       ├── chat.service.ts
+│       └── chat.service.spec.ts
+apps/api/test/
+├── app.e2e-spec.ts
+└── jest-e2e.json
+apps/web/src/
+└── lib/
+    ├── presence.ts
+    └── presence.test.ts
+```
+
+## Test Structure
+
+**Suite Organization:**
+```typescript
+// Typical API Unit Test Pattern (NestJS/Jest)
+describe('ChatService', () => {
+  let service: ChatService
+  let repository: jest.Mocked<ChatRepository>
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ChatService,
+        {
+          provide: ChatRepository,
+          useValue: { /* mocks */ },
+        },
+      ],
+    }).compile()
+
+    service = module.get<ChatService>(ChatService)
+    repository = module.get(ChatRepository)
+  })
+
+  it('should be defined', () => {
+    expect(service).toBeDefined()
+  })
+
+  it('should get rooms', async () => {
+    // ... test logic
+  })
+})
+```
+
+**Patterns:**
+- **Setup:** `beforeEach` used for dependency injection setup (NestJS `TestingModule`) and mock resetting.
+- **Assertion:** standard Jest/Vitest assertions (`expect(val).toBe(expected)`, `expect(fn).toHaveBeenCalled()`).
+
+## Mocking
+
+**Framework:**
+- **API:** Jest built-in mocking (`jest.fn()`, `jest.Mocked`).
+- **Web:** Vitest built-in mocking.
+
+**Patterns:**
+```typescript
+// Mocking a repository in NestJS
+const repositoryMock = {
+  findRoomsByUserId: jest.fn(),
+  findRoomById: jest.fn(),
+  // ... other methods
+}
+
+// In TestingModule setup
+{
+  provide: ChatRepository,
+  useValue: repositoryMock,
+}
+```
+
+**What to Mock:**
+- External services (API calls, databases, message brokers).
+- Repositories (to isolate service logic).
+- Event emitters.
+
+**What NOT to Mock:**
+- Domain entities.
+- Pure utility functions.
+
+## Fixtures and Factories
+
+**Test Data:**
+- Often defined within `beforeEach` or at the top of the test file as constants.
+
+**Location:**
+- API E2E mocks are found in `apps/api/test/__mocks__/`.
+
+## Coverage
+
+**Requirements:**
+- No hard threshold enforced in the project configuration files, but coverage reporting is available.
+
+**View Coverage:**
+```bash
+pnpm --filter api test:cov
+```
+
+## Test Types
+
+**Unit Tests:**
+- Focus on individual services, controllers, and utility functions in `apps/api/src` and `apps/web/src`.
+
+**Integration Tests:**
+- API integration tests for gateway and repository interactions (e.g., `apps/api/src/modules/collab/collab.gateway.integration.spec.ts`).
+
+**E2E Tests:**
+- API end-to-end tests in `apps/api/test/` using `supertest`.
+- Test real API endpoints with a running application instance.
+
+## Common Patterns
+
+**Async Testing:**
+- Standard `async/await` in `it` blocks.
+```typescript
+it('should perform async action', async () => {
+  const result = await service.doSomething()
+  expect(result).toEqual(expected)
+})
+```
+
+**Error Testing:**
+- Testing for specific exceptions in API.
+```typescript
+it('should throw NotFoundException if room doesn't exist', async () => {
+  repository.findRoomById.mockResolvedValue(null)
+  await expect(service.getRoom('id', 'userId')).rejects.toThrow(NotFoundException)
+})
+```
 
 ---
 
-## Web (apps/web) - Vitest
-
-### Framework
-- **Vitest**: The primary testing framework for the web app.
-- **jsdom**: Provides a DOM environment for testing components.
-- **@vitejs/plugin-react**: React support for Vitest.
-
-### Test Files
-- **Location**: `apps/web/**/*.test.ts` or `apps/web/**/*.test.tsx`.
-- **Execution**: `pnpm --filter web test`.
-- **Watch Mode**: `pnpm --filter web test:watch`.
-
-### Configuration
-- Defined in `apps/web/vitest.config.ts`.
-- Path aliases: `@/` is correctly mapped to the project root.
-
----
-
-## CI/CD - GitHub Actions
-
-### Workflow
-- **Location**: `.github/workflows/ci.yml`.
-- **Trigger**: Runs on `push` to `main` and all `pull_request` to `main`.
-- **Environment**: Node.js 24, pnpm.
-
-### CI Steps
-1. Checkout code.
-2. Setup pnpm and Node.js.
-3. Install dependencies.
-4. Generate Prisma client (`pnpm --filter api db:generate`).
-5. Generate Orval API client (`pnpm --filter web api:generate`).
-6. Run `pnpm lint`.
-7. Run `pnpm build`.
-   - *Note: Tests are currently not run in CI according to the `ci.yml` but are available locally.*
-
----
-
-## Local Development Workflow
-
-- Run `pnpm test` from the root to execute all tests in all apps.
-- For individual apps, use the `pnpm --filter <app-name> <script-name>` syntax.
-- Ensure the database is running and Prisma client is generated before running API tests.
+*Testing analysis: 2025-05-24*
