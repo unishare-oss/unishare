@@ -313,14 +313,17 @@ export function UnifiedChatWindow({
   }
 
   const handleScrollToMessage = async (messageId: string) => {
-    const tryScroll = () => {
+    const tryScroll = (scrollDelay = 500) => {
       const el = messagesContainerRef.current?.querySelector(
         `[data-message-id="${messageId}"]`,
       ) as HTMLElement | null
       if (!el || !scrollContainerRef.current) return false
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      setHighlightedMessageId(messageId)
-      setTimeout(() => setHighlightedMessageId(null), 1500)
+      // Delay highlight until scroll animation completes
+      setTimeout(() => {
+        setHighlightedMessageId(messageId)
+        setTimeout(() => setHighlightedMessageId(null), 1600)
+      }, scrollDelay)
       return true
     }
 
@@ -331,7 +334,8 @@ export function UnifiedChatWindow({
       if (!hasNextPage) break
       await fetchNextPage()
       await new Promise((resolve) => setTimeout(resolve, 250))
-      if (tryScroll()) return
+      // Give extra scroll delay after page fetch since DOM just re-rendered
+      if (tryScroll(700)) return
     }
   }
 
