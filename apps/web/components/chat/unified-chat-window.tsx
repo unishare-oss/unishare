@@ -31,6 +31,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { Socket } from 'socket.io-client'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { useChatLastSeenStore } from '@/lib/store'
 
 // Helper function to format date separator
 function getDateSeparatorText(date: Date): string {
@@ -84,6 +85,9 @@ export function UnifiedChatWindow({
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
+
+  const { getLastSeen, setLastSeen } = useChatLastSeenStore()
 
   // Force scroll to bottom immediately on initial load (before render completes)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -189,19 +193,43 @@ export function UnifiedChatWindow({
     return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
   }, [initialMsgs, searchQuery])
 
-  // Scroll to bottom on initial load
+  // Scroll to first unread (or bottom) on initial load
   useEffect(() => {
     if (
-      scrollContainerRef.current &&
-      !messagesLoading &&
-      messages.length > 0 &&
-      !hasScrolledInitiallyRef.current
-    ) {
-      // Scroll immediately without setTimeout
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-      hasScrolledInitiallyRef.current = true
+      !scrollContainerRef.current ||
+      messagesLoading ||
+      messages.length === 0 ||
+      hasScrolledInitiallyRef.current ||
+      !roomId
+    )
+      return
+
+    const lastSeenId = getLastSeen(roomId)
+
+    if (lastSeenId) {
+      const idx = messages.findIndex((m) => m.id === lastSeenId)
+      // idx === -1 means last-seen is older than loaded page → all 50 are unread
+      const unreadMsg = idx === -1 ? messages[0] : (messages[idx + 1] ?? null)
+
+      if (unreadMsg) {
+        setFirstUnreadId(unreadMsg.id)
+        const el = messagesContainerRef.current?.querySelector(
+          `[data-message-id="${unreadMsg.id}"]`,
+        ) as HTMLElement | null
+        if (el) {
+          el.scrollIntoView({ block: 'center' })
+        } else {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+        }
+        hasScrolledInitiallyRef.current = true
+        return
+      }
     }
-  }, [messagesLoading, messages.length])
+
+    // No unread messages or no last-seen — scroll to bottom as usual
+    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+    hasScrolledInitiallyRef.current = true
+  }, [messagesLoading, messages.length, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track scroll position to show/hide scroll-to-bottom button
   useEffect(() => {
@@ -236,29 +264,43 @@ export function UnifiedChatWindow({
     )
   }, [lastSocketMessage, roomId, queryClient, user])
 
-  // Reset scroll flag when room changes
+  // Reset scroll flag and unread divider when room changes
   useEffect(() => {
     hasScrolledInitiallyRef.current = false
+    setFirstUnreadId(null)
   }, [roomId])
+
+  // Mark messages as read when at bottom
+  useEffect(() => {
+    if (!isAtBottom || !roomId || messages.length === 0) return
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg && !lastMsg.id.startsWith('temp-')) {
+      setLastSeen(roomId, lastMsg.id)
+    }
+  }, [isAtBottom, messages, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get typing users for current room
   const roomTypingUsers = typingByRoom.get(roomId || '') || []
 
-  // Auto-scroll to bottom for new messages and typing indicators
+  // Auto-scroll to bottom when new messages arrive (if already near bottom)
   useEffect(() => {
-    if (scrollContainerRef.current && !isLoadingMore.current && hasScrolledInitiallyRef.current) {
-      const isNearBottom =
-        scrollContainerRef.current.scrollHeight -
-          scrollContainerRef.current.scrollTop -
-          scrollContainerRef.current.clientHeight <
-        150
-
-      if (isNearBottom) {
-        // Scroll immediately for typing indicators, smoothly for regular messages
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-      }
+    if (!scrollContainerRef.current || isLoadingMore.current || !hasScrolledInitiallyRef.current)
+      return
+    const el = scrollContainerRef.current
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distFromBottom < 150) {
+      el.scrollTop = el.scrollHeight
     }
-  }, [messages.length, roomTypingUsers.length])
+  }, [messages.length])
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior,
+      })
+    }
+  }
 
   const handleSend = async () => {
     if (!content.trim() || !roomId) return
@@ -274,7 +316,6 @@ export function UnifiedChatWindow({
       editMessage({ id: editingMessage.id, data: { content: messageContent } })
       setEditingMessage(null)
     } else {
-      // Send message with optional parentId for replies
       sendMessage({
         id: roomId,
         data: {
@@ -284,6 +325,8 @@ export function UnifiedChatWindow({
         },
       })
       setReplyingToMessage(null)
+      // Defer scroll so optimistic message renders before we scroll
+      requestAnimationFrame(() => scrollToBottom())
     }
   }
 
@@ -447,6 +490,17 @@ export function UnifiedChatWindow({
                         </div>
                       )}
 
+                      {/* Unread divider */}
+                      {firstUnreadId === msg.id && (
+                        <div className="flex items-center gap-3 my-3">
+                          <div className="flex-1 h-px bg-primary/25" />
+                          <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                            ↓ new messages
+                          </span>
+                          <div className="flex-1 h-px bg-primary/25" />
+                        </div>
+                      )}
+
                       {/* Message Bubble */}
                       <ChatMessageBubble
                         message={msg}
@@ -485,14 +539,7 @@ export function UnifiedChatWindow({
                 variant="outline"
                 size="icon"
                 className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border-border hover:bg-accent hover:text-accent-foreground animate-in fade-in zoom-in-95 duration-150"
-                onClick={() => {
-                  if (scrollContainerRef.current) {
-                    scrollContainerRef.current.scrollTo({
-                      top: scrollContainerRef.current.scrollHeight,
-                      behavior: 'smooth',
-                    })
-                  }
-                }}
+                onClick={() => scrollToBottom()}
                 aria-label="Scroll to bottom"
               >
                 <ArrowDown className="h-3.5 w-3.5" />
