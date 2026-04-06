@@ -53,7 +53,7 @@ export function ChatMessageBubble({
         </div>
       )}
 
-      <div className={cn('flex flex-col max-w-[70%]', isMe ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col max-w-[60%]', isMe ? 'items-end' : 'items-start')}>
         {/* Reply Bubble - Behind */}
         {message.parent && (
           <div className={cn('flex flex-col mb-0', isMe ? 'items-end' : 'items-start')}>
@@ -72,14 +72,14 @@ export function ChatMessageBubble({
             {/* Reply bubble content - Sized to content up to max-w */}
             <div
               className={cn(
-                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent transition-colors w-fit max-w-full',
+                'px-4 pt-2 pb-4 rounded-2xl text-[13px] border border-transparent transition-colors w-fit max-w-full overflow-hidden',
                 isMe
                   ? 'bg-primary/60 text-primary-foreground border-primary-foreground/10'
                   : 'bg-secondary/40 text-muted-foreground border-border/40',
                 isMe ? 'rounded-br-sm' : 'rounded-bl-sm',
               )}
             >
-              <p className="line-clamp-2 italic">
+              <p className="line-clamp-2 italic break-all">
                 {message.parent.content || (message.parent.imageUrl ? 'Image' : 'Message deleted')}
               </p>
             </div>
@@ -89,7 +89,7 @@ export function ChatMessageBubble({
         {/* Main Message Bubble - Overlapping on top */}
         <div
           className={cn(
-            'px-4 py-2 text-[13px] rounded-2xl shadow-sm transition-all hover:shadow-md relative z-10 w-fit max-w-full',
+            'px-4 py-2 text-[13px] rounded-2xl shadow-sm transition-all hover:shadow-md relative z-10 w-fit max-w-full overflow-hidden',
             message.parent && '-mt-3',
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'
@@ -101,7 +101,7 @@ export function ChatMessageBubble({
               {message.user?.name}
             </span>
           )}
-          <p className="whitespace-pre-wrap break-words">
+          <p className="whitespace-pre-wrap break-all">
             {renderWithLinks(
               message.content ?? '',
               isMe ? 'text-primary-foreground/90' : 'text-primary',
