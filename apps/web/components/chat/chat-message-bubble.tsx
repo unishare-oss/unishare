@@ -94,7 +94,6 @@ export function ChatMessageBubble({
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'
               : 'bg-secondary text-secondary-foreground rounded-bl-sm',
-            message.parent && (isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'),
           )}
         >
           {!isMe && showAvatar && (
