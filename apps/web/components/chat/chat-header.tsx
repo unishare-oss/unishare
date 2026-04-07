@@ -37,7 +37,7 @@ export function ChatHeader({ user }: ChatHeaderProps) {
         </Avatar>
         <div className="flex flex-col">
           <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          <span className="text-[0.625rem] text-muted-foreground uppercase tracking-widest">
             {getStatus()}
           </span>
         </div>

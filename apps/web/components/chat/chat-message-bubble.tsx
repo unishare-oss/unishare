@@ -46,7 +46,7 @@ export function ChatMessageBubble({
           {showAvatar && (
             <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
               <AvatarImage src={message.user?.image || ''} />
-              <AvatarFallback className="text-[10px] rounded-none bg-border text-foreground font-mono font-medium">
+              <AvatarFallback className="text-[0.625rem] rounded-none bg-border text-foreground font-mono font-medium">
                 {message.user?.name?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -71,7 +71,7 @@ export function ChatMessageBubble({
           }
           transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
-            'text-[13px] rounded-2xl shadow-sm relative z-10 w-fit max-w-full overflow-hidden',
+            'text-sm rounded-2xl shadow-sm relative z-10 w-fit max-w-full overflow-hidden',
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'
               : 'bg-secondary text-secondary-foreground rounded-bl-sm',
@@ -101,7 +101,7 @@ export function ChatMessageBubble({
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(
-                    'text-[9px] font-bold font-mono tracking-widest uppercase mb-0.5 truncate',
+                    'text-[0.5625rem] font-bold font-mono tracking-widest uppercase mb-0.5 truncate',
                     isMe ? 'text-primary-foreground/70' : 'text-accent-foreground',
                   )}
                 >
@@ -109,7 +109,7 @@ export function ChatMessageBubble({
                 </p>
                 <p
                   className={cn(
-                    'text-[11px] leading-snug italic',
+                    'text-[0.6875rem] leading-snug italic',
                     isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
                   )}
                 >
@@ -122,7 +122,7 @@ export function ChatMessageBubble({
           {/* Message body */}
           <div className="px-4 py-2">
             {!isMe && showAvatar && (
-              <span className="text-[10px] font-semibold block mb-1 opacity-70">
+              <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
                 {message.user?.name}
               </span>
             )}
@@ -136,7 +136,7 @@ export function ChatMessageBubble({
             {/* Metadata: timestamp + edited */}
             <div
               className={cn(
-                'text-[9px] mt-1 opacity-60 flex gap-1',
+                'text-[0.5625rem] mt-1 opacity-60 flex gap-1',
                 isMe ? 'justify-end' : 'justify-start',
               )}
             >

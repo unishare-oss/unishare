@@ -33,10 +33,10 @@ export function ChatInputContextBar({
           <div className="flex items-center gap-2 min-w-0">
             <Icon className="h-3 w-3 text-primary shrink-0" />
             <div className="min-w-0">
-              <p className="text-[9px] font-bold font-mono tracking-widest uppercase text-primary leading-none mb-0.5">
+              <p className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary leading-none mb-0.5">
                 {label}
               </p>
-              <p className="text-[11px] text-muted-foreground truncate italic opacity-80 leading-snug">
+              <p className="text-[0.6875rem] text-muted-foreground truncate italic opacity-80 leading-snug">
                 {message.content || (isEdit ? '' : '📷 Photo')}
               </p>
             </div>

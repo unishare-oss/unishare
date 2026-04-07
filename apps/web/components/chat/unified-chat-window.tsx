@@ -513,7 +513,7 @@ export function UnifiedChatWindow({
                         {/* Date Separator */}
                         {showDateSeparator && (
                           <div className="flex items-center justify-center my-4">
-                            <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[10px] text-secondary-foreground font-medium">
+                            <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[0.625rem] text-secondary-foreground font-medium">
                               {getDateSeparatorText(new Date(msg.createdAt))}
                             </div>
                           </div>
@@ -523,7 +523,7 @@ export function UnifiedChatWindow({
                         {firstUnreadId === msg.id && (
                           <div className="flex items-center gap-3 my-3">
                             <div className="flex-1 h-px bg-primary/25" />
-                            <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                            <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
                               ↓ new messages
                             </span>
                             <div className="flex-1 h-px bg-primary/25" />
