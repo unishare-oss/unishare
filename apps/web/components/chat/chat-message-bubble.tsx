@@ -273,24 +273,25 @@ export function ChatMessageBubble({
                   </p>
                 )}
 
-                {/* Metadata: timestamp + edited */}
-                <div
-                  className={cn(
-                    'text-[0.5625rem] mt-1 opacity-60 flex gap-1',
-                    isMe ? 'justify-end' : 'justify-start',
-                  )}
-                >
-                  {isMe && isEdited && (
-                    <span className="italic font-light opacity-80">(edited)</span>
-                  )}
-                  <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
-                  {!isMe && isEdited && (
-                    <span className="italic font-light opacity-80">(edited)</span>
-                  )}
-                </div>
+                {/* Metadata removed — timestamp shown as side tooltip on hover */}
               </div>
             )}
           </motion.div>
+        </div>
+
+        {/* Timestamp + edited — outside bubble, to the side */}
+        <div
+          className={cn(
+            'self-end mb-1 shrink-0 flex flex-col gap-0.5',
+            isMe ? 'items-end' : 'items-start',
+          )}
+        >
+          {isEdited && (
+            <span className="text-[0.5625rem] italic text-muted-foreground opacity-70">edited</span>
+          )}
+          <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            {format(new Date(message.createdAt), 'HH:mm')}
+          </span>
         </div>
 
         {/* Hover action pill */}
