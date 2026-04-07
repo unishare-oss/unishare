@@ -3,7 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, Loader2, Paperclip } from 'lucide-react'
+import { Send, Loader2, Paperclip, ImageIcon } from 'lucide-react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { ChatInputContextBar } from './chat-input-context-bar'
 
@@ -12,6 +12,7 @@ interface ChatInputProps {
   onChange: (value: string) => void
   onSend: () => void
   onImageSelect?: (file: File) => void
+  onFileSelect?: (file: File) => void
   disabled?: boolean
   placeholder?: string
   editingMessage?: ChatMessageEntity | null
@@ -26,6 +27,7 @@ export function ChatInput({
   onChange,
   onSend,
   onImageSelect,
+  onFileSelect,
   disabled,
   placeholder = 'Type a message...',
   editingMessage,
@@ -36,6 +38,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const attachInputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when editing or replying mode is activated
   useEffect(() => {
@@ -73,7 +76,7 @@ export function ChatInput({
       {/* Original Input Area */}
       <div className="p-3.5 border-t">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
-          {/* Hidden file input */}
+          {/* Hidden image input */}
           <Input
             ref={fileInputRef}
             type="file"
@@ -85,19 +88,41 @@ export function ChatInput({
               e.target.value = ''
             }}
           />
+          {/* Hidden file input */}
+          <Input
+            ref={attachInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onFileSelect?.(file)
+              e.target.value = ''
+            }}
+          />
           {onImageSelect && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
-              title="Attach image"
+              title="Send image"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
             >
-              <Paperclip className="h-4 w-4" />
+              <ImageIcon className="h-4 w-4" />
             </Button>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            title="Attach file"
+            onClick={() => attachInputRef.current?.click()}
+            disabled={disabled}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Input
             ref={inputRef}
             placeholder={getPlaceholder()}

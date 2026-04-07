@@ -37,6 +37,7 @@ import { ChatHeader } from './chat-header'
 import { ChatInfoPane } from './chat-info-pane'
 import { ChatMessageBubble } from './chat-message-bubble'
 import { ChatImageSendModal } from './chat-image-send-modal'
+import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
@@ -100,6 +101,8 @@ export function UnifiedChatWindow({
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
   const [imageModalOpen, setImageModalOpen] = useState(false)
+  const [pendingFileFile, setPendingFileFile] = useState<File | null>(null)
+  const [fileModalOpen, setFileModalOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   const { getLastSeen, setLastSeen } = useChatLastSeenStore()
@@ -382,9 +385,9 @@ export function UnifiedChatWindow({
     const presignedRes = await storageControllerGetPresignedUploadUrl({
       mimeType,
       uploadType: 'image',
-      purpose: 'chat-attachment' as any,
+      purpose: 'chat-attachment',
     })
-    const { url, publicUrl } = presignedRes.data as any
+    const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
     await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
     sendMessage({
       id: roomId,
@@ -398,6 +401,37 @@ export function UnifiedChatWindow({
     setReplyingToMessage(null)
     setImageModalOpen(false)
     setPendingImageFile(null)
+    requestAnimationFrame(() => scrollToBottom())
+  }
+
+  const openFileModal = useCallback((file: File) => {
+    setPendingFileFile(file)
+    setFileModalOpen(true)
+  }, [])
+
+  const handleSendFile = async (file: File, caption: string) => {
+    if (!roomId) return
+    const mimeType = file.type || 'application/octet-stream'
+    const presignedRes = await storageControllerGetPresignedUploadUrl({
+      mimeType,
+      uploadType: 'document',
+      purpose: 'chat-attachment',
+    })
+    const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
+    await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
+    sendMessage({
+      id: roomId,
+      data: {
+        fileUrl: publicUrl,
+        fileName: file.name,
+        ...(caption && { content: caption }),
+        type: 'FILE',
+        ...(replyingToMessage && { parentId: replyingToMessage.id }),
+      },
+    })
+    setReplyingToMessage(null)
+    setFileModalOpen(false)
+    setPendingFileFile(null)
     requestAnimationFrame(() => scrollToBottom())
   }
 
@@ -502,6 +536,16 @@ export function UnifiedChatWindow({
           if (!open) setPendingImageFile(null)
         }}
         onSend={handleSendImage}
+        replyingTo={replyingToMessage}
+      />
+      <ChatFileSendModal
+        file={pendingFileFile}
+        open={fileModalOpen}
+        onOpenChange={(open) => {
+          setFileModalOpen(open)
+          if (!open) setPendingFileFile(null)
+        }}
+        onSend={handleSendFile}
         replyingTo={replyingToMessage}
       />
       {/* Chat Header */}
@@ -682,6 +726,7 @@ export function UnifiedChatWindow({
             onChange={setContent}
             onSend={handleSend}
             onImageSelect={openImageModal}
+            onFileSelect={openFileModal}
             editingMessage={editingMessage}
             replyingToMessage={replyingToMessage}
             currentUserId={user?.id}

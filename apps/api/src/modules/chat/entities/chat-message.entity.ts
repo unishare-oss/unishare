@@ -32,6 +32,12 @@ export class ChatMessageParentEntity {
   imageUrl: string | null
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  fileUrl: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  fileName: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
   linkUrl: string | null
 
   @ApiPropertyOptional({ type: String, nullable: true })
@@ -65,6 +71,12 @@ export class ChatMessageEntity {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   imageUrl: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  fileUrl: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  fileName: string | null
 
   @ApiPropertyOptional({ type: String, nullable: true })
   linkUrl: string | null

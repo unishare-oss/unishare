@@ -4,7 +4,7 @@ import { ChatMessageType } from '@/generated/prisma/client'
 
 export class SendMessageDto {
   @ApiPropertyOptional()
-  @ValidateIf((o) => !o.imageUrl && !o.linkUrl)
+  @ValidateIf((o) => !o.imageUrl && !o.linkUrl && !o.fileUrl)
   @IsString()
   @IsNotEmpty()
   content?: string
@@ -18,6 +18,16 @@ export class SendMessageDto {
   @IsUrl()
   @IsOptional()
   imageUrl?: string
+
+  @ApiPropertyOptional()
+  @IsUrl()
+  @IsOptional()
+  fileUrl?: string
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  fileName?: string
 
   @ApiPropertyOptional()
   @IsUrl()

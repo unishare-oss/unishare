@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { renderWithLinks } from '@/lib/render-with-links'
-import { Pencil, Trash2, Reply, ImageIcon } from 'lucide-react'
+import { Pencil, Trash2, Reply, ImageIcon, FileIcon, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatImageLightbox } from './chat-image-lightbox'
 
@@ -131,6 +131,16 @@ export function ChatMessageBubble({
                       <ImageIcon className="size-3 shrink-0" />
                       Photo
                     </span>
+                  ) : message.parent?.fileUrl && !message.parent?.content ? (
+                    <span
+                      className={cn(
+                        'flex items-center gap-1 text-[0.6875rem] italic',
+                        isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
+                      )}
+                    >
+                      <FileIcon className="size-3 shrink-0" />
+                      {message.parent?.fileName ?? 'File'}
+                    </span>
                   ) : (
                     <p
                       className={cn(
@@ -182,10 +192,51 @@ export function ChatMessageBubble({
               </div>
             )}
 
-            {/* Message body — only render if there is text content or no image */}
-            {(message.content || !message.imageUrl) && (
+            {/* File */}
+            {message.fileUrl && (
+              <div className="px-3 pt-2.5 pb-2">
+                {!isMe && showAvatar && (
+                  <span className="text-[0.625rem] font-semibold block mb-1.5 opacity-70">
+                    {message.user?.name}
+                  </span>
+                )}
+                <a
+                  href={message.fileUrl}
+                  download={message.fileName ?? true}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-xl border transition-opacity hover:opacity-80',
+                    isMe
+                      ? 'bg-primary-foreground/10 border-primary-foreground/20'
+                      : 'bg-muted/50 border-border',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex items-center justify-center w-10 h-10 rounded-lg shrink-0',
+                      isMe
+                        ? 'bg-primary-foreground/15 text-primary-foreground'
+                        : 'bg-primary/10 text-primary',
+                    )}
+                  >
+                    <FileIcon className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[0.8125rem] font-medium truncate leading-snug">
+                      {message.fileName ?? 'File'}
+                    </p>
+                    <p className="text-[0.625rem] opacity-60 mt-0.5">Tap to download</p>
+                  </div>
+                  <Download className="size-4 shrink-0 opacity-50" />
+                </a>
+              </div>
+            )}
+
+            {/* Message body — only render if there is text content or no image/file */}
+            {(message.content || (!message.imageUrl && !message.fileUrl)) && (
               <div className="px-4 py-2">
-                {!isMe && showAvatar && !message.imageUrl && (
+                {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
                   <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
                     {message.user?.name}
                   </span>

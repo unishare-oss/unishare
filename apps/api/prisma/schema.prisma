@@ -477,6 +477,8 @@ model ChatMessage {
   type      ChatMessageType @default(TEXT)
   content   String?
   imageUrl  String?
+  fileUrl   String?
+  fileName  String?
   linkUrl   String?
   parentId  String?
   createdAt DateTime        @default(now())
@@ -675,6 +677,7 @@ enum ChatRoomType {
 enum ChatMessageType {
   TEXT
   IMAGE
+  FILE
   LINK
   SYSTEM
 }

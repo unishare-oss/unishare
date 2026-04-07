@@ -11,6 +11,7 @@ import type {
   ChatMessageEntity,
   ChatRoomEntity,
   UserProfileEntity,
+  ChatMessageEntityType,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import {
   addMessageToInfiniteCache,
@@ -28,14 +29,18 @@ function createOptimisticMessage({
   content,
   type = 'TEXT',
   imageUrl,
+  fileUrl,
+  fileName,
   user,
   parent,
 }: {
   tempId: string
   roomId: string
   content: string
-  type?: string
+  type?: ChatMessageEntityType
   imageUrl?: string | null
+  fileUrl?: string | null
+  fileName?: string | null
   user?: UserProfileEntity | null
   parent?: ChatMessageEntity
 }): ChatMessageEntity {
@@ -43,9 +48,11 @@ function createOptimisticMessage({
     id: tempId,
     roomId,
     userId: user?.id || null,
-    type: type as any,
+    type: type ?? 'TEXT',
     content,
     imageUrl: imageUrl ?? null,
+    fileUrl: fileUrl ?? null,
+    fileName: fileName ?? null,
     linkUrl: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -105,6 +112,8 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
           content: variables.data.content || '',
           type: variables.data.type,
           imageUrl: variables.data.imageUrl,
+          fileUrl: variables.data.fileUrl,
+          fileName: variables.data.fileName,
           user,
           parent: parentMessage,
         })

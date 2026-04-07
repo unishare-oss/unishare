@@ -170,6 +170,8 @@ export class ChatRepository {
     content?: string
     type?: ChatMessageType
     imageUrl?: string
+    fileUrl?: string
+    fileName?: string
     linkUrl?: string
     parentId?: string
   }) {

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { X, Pencil, Reply, ImageIcon } from 'lucide-react'
+import { X, Pencil, Reply, ImageIcon, FileIcon } from 'lucide-react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 interface ChatInputContextBarProps {
@@ -24,7 +24,9 @@ export function ChatInputContextBar({
   const label = isEdit
     ? message.imageUrl
       ? 'Editing Caption'
-      : 'Editing Message'
+      : message.fileUrl
+        ? 'Editing Message'
+        : 'Editing Message'
     : `Replying to ${replyTargetName}`
 
   return (
@@ -48,6 +50,15 @@ export function ChatInputContextBar({
                     <>
                       <ImageIcon className="size-3 shrink-0" />
                       Photo
+                    </>
+                  )
+                ) : message.fileUrl && !message.content ? (
+                  isEdit ? (
+                    'Add a message…'
+                  ) : (
+                    <>
+                      <FileIcon className="size-3 shrink-0" />
+                      {message.fileName ?? 'File'}
                     </>
                   )
                 ) : (
