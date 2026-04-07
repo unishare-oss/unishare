@@ -33,7 +33,7 @@ export class ChatService {
       ...result,
       items: result.items.map((msg: any) => ({
         ...msg,
-        parent: msg.parent ? sanitizeParent(msg.parent) : msg.parent,
+        parent: msg.parent ? this.sanitizeParent(msg.parent) : msg.parent,
       })),
     }
   }
