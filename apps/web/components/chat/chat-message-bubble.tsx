@@ -194,9 +194,9 @@ export function ChatMessageBubble({
 
             {/* File */}
             {message.fileUrl && (
-              <div className="px-3 pt-2.5 pb-2">
+              <div className="relative overflow-hidden">
                 {!isMe && showAvatar && (
-                  <span className="text-[0.625rem] font-semibold block mb-1.5 opacity-70">
+                  <span className="absolute top-2 left-3 text-[0.625rem] font-semibold drop-shadow z-10 opacity-70">
                     {message.user?.name}
                   </span>
                 )}
@@ -206,15 +206,13 @@ export function ChatMessageBubble({
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    'flex items-center gap-3 p-3 rounded-xl border transition-opacity hover:opacity-80',
-                    isMe
-                      ? 'bg-primary-foreground/10 border-primary-foreground/20'
-                      : 'bg-muted/50 border-border',
+                    'flex items-center gap-3 px-4 py-3.5 transition-opacity hover:opacity-80',
+                    isMe ? 'bg-primary-foreground/10' : 'bg-muted/50',
                   )}
                 >
                   <div
                     className={cn(
-                      'flex items-center justify-center w-10 h-10 rounded-lg shrink-0',
+                      'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
                       isMe
                         ? 'bg-primary-foreground/15 text-primary-foreground'
                         : 'bg-primary/10 text-primary',
@@ -226,10 +224,35 @@ export function ChatMessageBubble({
                     <p className="text-[0.8125rem] font-medium truncate leading-snug">
                       {message.fileName ?? 'File'}
                     </p>
-                    <p className="text-[0.625rem] opacity-60 mt-0.5">Tap to download</p>
+                    <p
+                      className={cn(
+                        'text-[0.625rem] mt-0.5',
+                        isMe ? 'text-primary-foreground/50' : 'text-muted-foreground',
+                      )}
+                    >
+                      Tap to download
+                    </p>
                   </div>
-                  <Download className="size-4 shrink-0 opacity-50" />
+                  <Download
+                    className={cn(
+                      'size-4 shrink-0',
+                      isMe ? 'text-primary-foreground/40' : 'text-muted-foreground/50',
+                    )}
+                  />
                 </a>
+                {/* Timestamp overlay when no caption */}
+                {!message.content && (
+                  <div
+                    className={cn(
+                      'absolute bottom-1.5 flex gap-1 text-[0.5625rem] opacity-50 px-2',
+                      isMe ? 'right-1.5 text-primary-foreground' : 'left-1.5 text-foreground',
+                    )}
+                  >
+                    {isMe && isEdited && <span className="italic">(edited)</span>}
+                    <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
+                    {!isMe && isEdited && <span className="italic">(edited)</span>}
+                  </div>
+                )}
               </div>
             )}
 
