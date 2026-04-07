@@ -362,11 +362,16 @@ export function useDeleteMessage({ roomId }: { roomId: string }) {
 
         return { previousMessages, previousRooms, messagesQueryKey, roomsQueryKey }
       },
-      onSuccess: (_data, variables, context) => {
+      onSuccess: (data, _variables, context) => {
+        // Reapply soft delete with server response to ensure cache is in sync
+        queryClient.setQueryData(context.messagesQueryKey, (old: any) =>
+          deleteMessageFromInfiniteCache(old, data.data.id),
+        )
+
         // If deleted message was the preview message, invalidate rooms to get the next one from server
         const rooms: any = context.previousRooms
         const room = rooms?.data?.find((r: any) => r.id === roomId)
-        if (room?.messages?.[0]?.id === variables.id) {
+        if (room?.messages?.[0]?.id === data.data.id) {
           queryClient.invalidateQueries({ queryKey: context.roomsQueryKey })
         }
       },

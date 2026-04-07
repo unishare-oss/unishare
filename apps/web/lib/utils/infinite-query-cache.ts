@@ -90,7 +90,8 @@ export function updateMessageInInfiniteCache(
 }
 
 /**
- * Deletes a message from the infinite query cache
+ * Removes a deleted message from the infinite query cache
+ * Updates parent references in child messages before removal
  */
 export function deleteMessageFromInfiniteCache(oldData: any, messageId: string): any {
   if (!oldData?.pages) return oldData
@@ -102,7 +103,21 @@ export function deleteMessageFromInfiniteCache(oldData: any, messageId: string):
         ...page,
         data: {
           ...page.data,
-          items: page.data.items.filter((item: any) => item.id !== messageId),
+          items: page.data.items
+            .map((item: ChatMessageEntity) => {
+              // Update parent reference if it was the deleted message
+              if (item.parent?.id === messageId) {
+                return {
+                  ...item,
+                  parent: {
+                    ...item.parent,
+                    content: null,
+                  },
+                }
+              }
+              return item
+            })
+            .filter((item: ChatMessageEntity) => item.id !== messageId), // Remove the deleted message
         },
       }
     }),

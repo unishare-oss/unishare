@@ -1612,7 +1612,16 @@
         "parameters": [
           { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": { "200": { "description": "" } },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteMessageResponseDto" }
+              }
+            }
+          }
+        },
         "tags": ["chat"]
       }
     },
@@ -3111,6 +3120,7 @@
           "parentId": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
+          "deletedAt": { "type": "string", "nullable": true },
           "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" }
         },
         "required": ["id", "roomId", "type", "createdAt", "updatedAt"]
@@ -3130,6 +3140,7 @@
           "parentId": { "type": "string", "nullable": true },
           "createdAt": { "format": "date-time", "type": "string" },
           "updatedAt": { "format": "date-time", "type": "string" },
+          "deletedAt": { "type": "string", "nullable": true },
           "user": { "$ref": "#/components/schemas/ChatMessageUserEntity" },
           "parent": { "$ref": "#/components/schemas/ChatMessageParentEntity" }
         },
@@ -3192,6 +3203,11 @@
         "type": "object",
         "properties": { "content": { "type": "string" } },
         "required": ["content"]
+      },
+      "DeleteMessageResponseDto": {
+        "type": "object",
+        "properties": { "id": { "type": "string" } },
+        "required": ["id"]
       },
       "CreateReadingListDto": {
         "type": "object",
