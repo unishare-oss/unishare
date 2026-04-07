@@ -125,7 +125,7 @@ export class ChatService {
       participants: room.participants,
     })
 
-    return { success: true }
+    return { id }
   }
 
   async markAsRead(roomId: string, userId: string) {

@@ -29,6 +29,9 @@ export class ChatRepository {
           },
         },
         messages: {
+          where: {
+            deletedAt: null,
+          },
           take: 1,
           orderBy: {
             createdAt: 'desc',
@@ -74,6 +77,9 @@ export class ChatRepository {
           },
         },
         messages: {
+          where: {
+            deletedAt: null,
+          },
           take: 1,
           orderBy: {
             createdAt: 'desc',
@@ -201,7 +207,7 @@ export class ChatRepository {
 
   async findMessageById(id: string) {
     return this.prisma.chatMessage.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
         user: {
           select: {

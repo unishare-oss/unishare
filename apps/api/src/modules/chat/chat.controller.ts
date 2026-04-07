@@ -7,6 +7,7 @@ import { CreateRoomDto } from './dto/create-room.dto'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
+import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
 import { ChatMemberGuard } from './guards/chat-member.guard'
@@ -76,6 +77,7 @@ export class ChatController {
 
   @Delete('messages/:id')
   @UseGuards(ChatMemberGuard)
+  @ApiOkResponse({ type: DeleteMessageResponseDto })
   @ResponseMessage('Message deleted successfully')
   deleteMessage(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.deleteMessage(id, session.user.id)
