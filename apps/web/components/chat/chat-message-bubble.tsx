@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -55,10 +56,22 @@ export function ChatMessageBubble({
 
       <div className={cn('flex flex-col max-w-[60%]', isMe ? 'items-end' : 'items-start')}>
         {/* Main Message Bubble */}
-        <div
+        <motion.div
+          animate={
+            isHighlighted
+              ? {
+                  boxShadow: [
+                    '0 0 0 0px color-mix(in srgb, var(--color-primary) 0%, transparent)',
+                    '0 0 0 6px color-mix(in srgb, var(--color-primary) 75%, transparent)',
+                    '0 0 0 4px color-mix(in srgb, var(--color-primary) 35%, transparent)',
+                    '0 0 0 0px color-mix(in srgb, var(--color-primary) 0%, transparent)',
+                  ],
+                }
+              : { boxShadow: '0 0 0 0px transparent' }
+          }
+          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
-            'text-[13px] rounded-2xl shadow-sm transition-shadow relative z-10 w-fit max-w-full overflow-hidden',
-            isHighlighted && 'msg-highlight',
+            'text-[13px] rounded-2xl shadow-sm relative z-10 w-fit max-w-full overflow-hidden',
             isMe
               ? 'bg-primary text-primary-foreground rounded-br-sm'
               : 'bg-secondary text-secondary-foreground rounded-bl-sm',
@@ -132,7 +145,7 @@ export function ChatMessageBubble({
               {!isMe && isEdited && <span className="italic font-light opacity-80">(edited)</span>}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Hover action pill */}

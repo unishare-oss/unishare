@@ -561,18 +561,34 @@ export function UnifiedChatWindow({
             </ScrollArea>
           )}
 
-          {/* Scroll to bottom button */}
-          {!isAtBottom && (
+          {/* Scroll to bottom / typing indicator FAB */}
+          {(!isAtBottom || roomTypingUsers.length > 0) && (
             <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
-              <Button
-                variant="outline"
-                size="icon"
-                className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border-border hover:bg-accent hover:text-accent-foreground animate-in fade-in zoom-in-95 duration-150"
+              <button
+                className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
                 onClick={() => scrollToBottom()}
                 aria-label="Scroll to bottom"
               >
-                <ArrowDown className="h-3.5 w-3.5" />
-              </Button>
+                {roomTypingUsers.length > 0 ? (
+                  <span className="flex items-center gap-[3px]">
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-primary block"
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{
+                          duration: 0.6,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                          delay: i * 0.15,
+                        }}
+                      />
+                    ))}
+                  </span>
+                ) : (
+                  <ArrowDown className="h-3.5 w-3.5" />
+                )}
+              </button>
             </div>
           )}
 
