@@ -661,7 +661,10 @@ export function UnifiedChatWindow({
           {!isAtBottom && (
             <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
               <button
-                className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
+                className={cn(
+                  'pointer-events-auto h-8 shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all',
+                  roomTypingUsers.length > 0 ? 'rounded-full px-3 gap-1' : 'w-8 rounded-full',
+                )}
                 onClick={() => scrollToBottom()}
                 aria-label="Scroll to bottom"
               >
