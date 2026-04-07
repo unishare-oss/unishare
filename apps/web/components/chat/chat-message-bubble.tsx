@@ -35,6 +35,8 @@ export function ChatMessageBubble({
 
   const parentIsMe = message.parent?.userId === currentUserId
   const parentName = parentIsMe ? 'you' : message.parent?.user?.name
+  const parentText =
+    message.parent?.content || (message.parent?.imageUrl ? '📷 Photo' : 'Message deleted')
 
   return (
     <div className={cn('flex items-end gap-2 group', isMe ? 'flex-row-reverse' : 'flex-row')}>
@@ -94,12 +96,11 @@ export function ChatMessageBubble({
                 </p>
                 <p
                   className={cn(
-                    'text-[11px] line-clamp-1 leading-snug italic truncate',
+                    'text-[11px] leading-snug italic',
                     isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
                   )}
                 >
-                  {message.parent.content ||
-                    (message.parent.imageUrl ? '📷 Photo' : 'Message deleted')}
+                  {parentText.length > 80 ? `${parentText.slice(0, 80)}…` : parentText}
                 </p>
               </div>
             </div>
