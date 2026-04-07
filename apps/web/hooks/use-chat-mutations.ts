@@ -27,6 +27,7 @@ function createOptimisticMessage({
   roomId,
   content,
   type = 'TEXT',
+  imageUrl,
   user,
   parent,
 }: {
@@ -34,6 +35,7 @@ function createOptimisticMessage({
   roomId: string
   content: string
   type?: string
+  imageUrl?: string | null
   user?: UserProfileEntity | null
   parent?: ChatMessageEntity
 }): ChatMessageEntity {
@@ -43,7 +45,7 @@ function createOptimisticMessage({
     userId: user?.id || null,
     type: type as any,
     content,
-    imageUrl: null,
+    imageUrl: imageUrl ?? null,
     linkUrl: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -102,6 +104,7 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
           roomId: variables.id,
           content: variables.data.content || '',
           type: variables.data.type,
+          imageUrl: variables.data.imageUrl,
           user,
           parent: parentMessage,
         })

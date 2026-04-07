@@ -3,7 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, Paperclip } from 'lucide-react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { ChatInputContextBar } from './chat-input-context-bar'
 
@@ -11,6 +11,7 @@ interface ChatInputProps {
   value: string
   onChange: (value: string) => void
   onSend: () => void
+  onImageSelect?: (file: File) => void
   disabled?: boolean
   placeholder?: string
   editingMessage?: ChatMessageEntity | null
@@ -24,6 +25,7 @@ export function ChatInput({
   value,
   onChange,
   onSend,
+  onImageSelect,
   disabled,
   placeholder = 'Type a message...',
   editingMessage,
@@ -33,6 +35,7 @@ export function ChatInput({
   onCancelReply,
 }: ChatInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when editing or replying mode is activated
   useEffect(() => {
@@ -70,6 +73,31 @@ export function ChatInput({
       {/* Original Input Area */}
       <div className="p-3.5 border-t">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
+          {/* Hidden file input */}
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onImageSelect?.(file)
+              e.target.value = ''
+            }}
+          />
+          {onImageSelect && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+              title="Attach image"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          )}
           <Input
             ref={inputRef}
             placeholder={getPlaceholder()}

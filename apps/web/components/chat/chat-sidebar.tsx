@@ -15,7 +15,7 @@ import { format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
-import { Users, MessageSquare, Loader2 } from 'lucide-react'
+import { Users, MessageSquare, Loader2, ImageIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
@@ -185,9 +185,16 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
                     <p className="text-xs text-muted-foreground line-clamp-2 opacity-70 mt-0.5">
-                      {lastMessage?.content!.length > 25
-                        ? `${lastMessage?.content!.substring(0, 25)}...`
-                        : lastMessage.content}
+                      {lastMessage.imageUrl && !lastMessage.content ? (
+                        <span className="flex items-center gap-1">
+                          <ImageIcon className="size-3 shrink-0" />
+                          Photo
+                        </span>
+                      ) : (lastMessage.content?.length ?? 0) > 25 ? (
+                        `${lastMessage.content!.substring(0, 25)}...`
+                      ) : (
+                        lastMessage.content
+                      )}
                     </p>
                   ) : null}
                 </div>

@@ -2127,7 +2127,10 @@
             "pattern": "^[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_]*\\/[a-zA-Z0-9][a-zA-Z0-9!#$&\\-^_.+]*$"
           },
           "uploadType": { "type": "string", "enum": ["document", "image", "video"] },
-          "purpose": { "type": "string", "enum": ["profile-picture", "post-attachment"] }
+          "purpose": {
+            "type": "string",
+            "enum": ["profile-picture", "post-attachment", "chat-attachment"]
+          }
         },
         "required": ["mimeType", "uploadType", "purpose"]
       },

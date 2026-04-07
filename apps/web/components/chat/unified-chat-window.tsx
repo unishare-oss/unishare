@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, RefObject } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback, RefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
@@ -12,13 +12,21 @@ import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useEditMessage, useDeleteMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff, ArrowDown } from 'lucide-react'
+import {
+  ArrowLeft,
+  PanelRightOpen,
+  PanelRightClose,
+  WifiOff,
+  ArrowDown,
+  ImageIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { TypingIndicator } from './typing-indicator'
@@ -28,6 +36,7 @@ import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
 import { ChatInfoPane } from './chat-info-pane'
 import { ChatMessageBubble } from './chat-message-bubble'
+import { ChatImageSendModal } from './chat-image-send-modal'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
@@ -89,6 +98,9 @@ export function UnifiedChatWindow({
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
+  const [imageModalOpen, setImageModalOpen] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   const { getLastSeen, setLastSeen } = useChatLastSeenStore()
 
@@ -345,6 +357,50 @@ export function UnifiedChatWindow({
     setContent('')
   }
 
+  const openImageModal = useCallback((file: File) => {
+    setPendingImageFile(file)
+    setImageModalOpen(true)
+  }, [])
+
+  // Paste handler — intercept image/* items from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items ?? [])
+      const imageItem = items.find((item) => item.type.startsWith('image/'))
+      if (!imageItem) return
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (file) openImageModal(file)
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [openImageModal])
+
+  const handleSendImage = async (file: File, caption: string) => {
+    if (!roomId) return
+    const mimeType = file.type
+    const presignedRes = await storageControllerGetPresignedUploadUrl({
+      mimeType,
+      uploadType: 'image',
+      purpose: 'chat-attachment' as any,
+    })
+    const { url, publicUrl } = presignedRes.data as any
+    await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
+    sendMessage({
+      id: roomId,
+      data: {
+        imageUrl: publicUrl,
+        ...(caption && { content: caption }),
+        type: 'IMAGE',
+        ...(replyingToMessage && { parentId: replyingToMessage.id }),
+      },
+    })
+    setReplyingToMessage(null)
+    setImageModalOpen(false)
+    setPendingImageFile(null)
+    requestAnimationFrame(() => scrollToBottom())
+  }
+
   const handleDelete = (messageId: string) => {
     setMessageToDelete(messageId)
     setDeleteDialogOpen(true)
@@ -411,7 +467,43 @@ export function UnifiedChatWindow({
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div
+      className="flex flex-col h-full bg-background relative"
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          e.preventDefault()
+          setIsDragging(true)
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false)
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        setIsDragging(false)
+        const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'))
+        if (file) openImageModal(file)
+      }}
+    >
+      {/* Drag-drop overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-none pointer-events-none">
+          <ImageIcon className="size-10 text-primary opacity-80" />
+          <p className="text-sm font-medium text-primary">Drop image to send</p>
+        </div>
+      )}
+
+      {/* Image send modal */}
+      <ChatImageSendModal
+        file={pendingImageFile}
+        open={imageModalOpen}
+        onOpenChange={(open) => {
+          setImageModalOpen(open)
+          if (!open) setPendingImageFile(null)
+        }}
+        onSend={handleSendImage}
+        replyingTo={replyingToMessage}
+      />
       {/* Chat Header */}
       <div className="flex items-center justify-between border-b pr-3 bg-background">
         <div className="flex items-center">
@@ -493,11 +585,13 @@ export function UnifiedChatWindow({
                     const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
                     const isDeleting = deletingIds.has(msg.id)
 
+                    const isTemp = msg.id.startsWith('temp-')
+
                     return (
                       <motion.div
                         key={msg.id || i}
                         data-message-id={msg.id}
-                        layout="position"
+                        initial={isTemp ? { opacity: 0, scale: 0.97, y: 8 } : false}
                         animate={
                           isDeleting
                             ? {
@@ -509,6 +603,7 @@ export function UnifiedChatWindow({
                               }
                             : { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }
                         }
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                       >
                         {/* Date Separator */}
                         {showDateSeparator && (
@@ -583,6 +678,7 @@ export function UnifiedChatWindow({
             value={content}
             onChange={setContent}
             onSend={handleSend}
+            onImageSelect={openImageModal}
             editingMessage={editingMessage}
             replyingToMessage={replyingToMessage}
             currentUserId={user?.id}

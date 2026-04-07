@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { renderWithLinks } from '@/lib/render-with-links'
-import { Pencil, Trash2, Reply } from 'lucide-react'
+import { Pencil, Trash2, Reply, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface ChatMessageBubbleProps {
@@ -37,7 +37,7 @@ export function ChatMessageBubble({
   const parentIsMe = message.parent?.userId === currentUserId
   const parentName = parentIsMe ? 'you' : message.parent?.user?.name
   const parentText =
-    message.parent?.content || (message.parent?.imageUrl ? '📷 Photo' : 'Message deleted')
+    message.parent?.content || (message.parent?.imageUrl ? null : 'Message deleted')
 
   return (
     <div className={cn('flex items-end gap-2 group', isMe ? 'flex-row-reverse' : 'flex-row')}>
@@ -107,44 +107,94 @@ export function ChatMessageBubble({
                 >
                   {parentName || 'Deleted User'}
                 </p>
-                <p
-                  className={cn(
-                    'text-[0.6875rem] leading-snug italic',
-                    isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
-                  )}
-                >
-                  {parentText.length > 80 ? `${parentText.slice(0, 80)}…` : parentText}
-                </p>
+                {message.parent?.imageUrl && !message.parent?.content ? (
+                  <span
+                    className={cn(
+                      'flex items-center gap-1 text-[0.6875rem] italic',
+                      isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
+                    )}
+                  >
+                    <ImageIcon className="size-3 shrink-0" />
+                    Photo
+                  </span>
+                ) : (
+                  <p
+                    className={cn(
+                      'text-[0.6875rem] leading-snug italic',
+                      isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
+                    )}
+                  >
+                    {(parentText?.length ?? 0) > 80 ? `${parentText!.slice(0, 80)}…` : parentText}
+                  </p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Message body */}
-          <div className="px-4 py-2">
-            {!isMe && showAvatar && (
-              <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
-                {message.user?.name}
-              </span>
-            )}
-            <p className="whitespace-pre-wrap break-all">
-              {renderWithLinks(
-                message.content ?? '',
-                isMe ? 'text-primary-foreground/90' : 'text-primary',
-              )}
-            </p>
-
-            {/* Metadata: timestamp + edited */}
+          {/* Image */}
+          {message.imageUrl && (
             <div
-              className={cn(
-                'text-[0.5625rem] mt-1 opacity-60 flex gap-1',
-                isMe ? 'justify-end' : 'justify-start',
-              )}
+              className="relative overflow-hidden cursor-zoom-in group/img"
+              onClick={() => window.open(message.imageUrl!, '_blank')}
             >
-              {isMe && isEdited && <span className="italic font-light opacity-80">(edited)</span>}
-              <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
-              {!isMe && isEdited && <span className="italic font-light opacity-80">(edited)</span>}
+              {!isMe && showAvatar && (
+                <span className="absolute top-2 left-3 text-[0.625rem] font-semibold text-white drop-shadow z-10">
+                  {message.user?.name}
+                </span>
+              )}
+              <img
+                src={message.imageUrl}
+                alt={message.content || 'Photo'}
+                className="max-h-72 max-w-full object-cover w-full"
+              />
+              {/* Timestamp overlay on image-only messages */}
+              {!message.content && (
+                <div
+                  className={cn(
+                    'absolute bottom-1.5 flex gap-1 text-[0.5625rem] text-white/80 drop-shadow px-2',
+                    isMe ? 'right-1.5' : 'left-1.5',
+                  )}
+                >
+                  {isMe && isEdited && <span className="italic">(edited)</span>}
+                  <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
+                  {!isMe && isEdited && <span className="italic">(edited)</span>}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Message body — only render if there is text content or no image */}
+          {(message.content || !message.imageUrl) && (
+            <div className="px-4 py-2">
+              {!isMe && showAvatar && !message.imageUrl && (
+                <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
+                  {message.user?.name}
+                </span>
+              )}
+              {message.content && (
+                <p className="whitespace-pre-wrap break-all">
+                  {renderWithLinks(
+                    message.content ?? '',
+                    isMe ? 'text-primary-foreground/90' : 'text-primary',
+                  )}
+                </p>
+              )}
+
+              {/* Metadata: timestamp + edited */}
+              <div
+                className={cn(
+                  'text-[0.5625rem] mt-1 opacity-60 flex gap-1',
+                  isMe ? 'justify-end' : 'justify-start',
+                )}
+              >
+                {isMe && isEdited && <span className="italic font-light opacity-80">(edited)</span>}
+                <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
+                {!isMe && isEdited && (
+                  <span className="italic font-light opacity-80">(edited)</span>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
 
