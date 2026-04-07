@@ -1,11 +1,15 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Req } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
+import type { Request } from 'express'
+import { fromNodeHeaders } from 'better-auth/node'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { auth } from '@/auth/auth.config'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
+import { SetPasswordDto } from './dto/set-password.dto'
 import { UserProfileEntity } from './entities/user-profile.entity'
 
 @ApiTags('users')
@@ -24,6 +28,22 @@ export class UsersController {
   @ResponseMessage('Data exported successfully')
   exportMyData(@Session() session: UserSession) {
     return this.usersService.exportData(session.user.id)
+  }
+
+  @Post('me/set-password')
+  @ResponseMessage('Password set successfully')
+  async setPassword(
+    @Session() session: UserSession,
+    @Req() req: Request,
+    @Body() dto: SetPasswordDto,
+  ) {
+    void session
+    const result = await auth.api.setPassword({
+      body: { newPassword: dto.newPassword },
+      headers: fromNodeHeaders(req.headers),
+    })
+    if (!result?.status) throw new BadRequestException('Failed to set password')
+    return null
   }
 
   @Get(':id')
