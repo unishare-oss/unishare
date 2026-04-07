@@ -153,6 +153,25 @@
   animation: reaction-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+@keyframes msg-highlight {
+  0% {
+    box-shadow: 0 0 0 0px color-mix(in srgb, var(--primary) 60%, transparent);
+  }
+  30% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 50%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0px color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+}
+
+.msg-highlight {
+  animation: msg-highlight 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 @keyframes note-sheet-front {
   0%,
   100% {
