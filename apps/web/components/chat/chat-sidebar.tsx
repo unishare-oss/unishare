@@ -173,10 +173,10 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium truncate text-sm">{displayName}</span>
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
+                    <span className="font-medium truncate text-sm min-w-0">{displayName}</span>
                     {lastMessage && (
-                      <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap ml-2">
+                      <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
                         {format(new Date(lastMessage.createdAt), 'h:mm a')}
                       </span>
                     )}
