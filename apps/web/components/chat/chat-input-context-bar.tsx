@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { X, Pencil, Reply } from 'lucide-react'
+import { X, Pencil, Reply, ImageIcon } from 'lucide-react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 interface ChatInputContextBarProps {
@@ -40,13 +40,28 @@ export function ChatInputContextBar({
               <p className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary leading-none mb-0.5">
                 {label}
               </p>
-              <p className="text-[0.6875rem] text-muted-foreground truncate italic opacity-80 leading-snug">
-                {message.imageUrl && !message.content
-                  ? isEdit
-                    ? 'Add a caption…'
-                    : '📷 Photo'
-                  : message.content || (isEdit ? '' : '📷 Photo')}
-              </p>
+              <div className="text-[0.6875rem] text-muted-foreground truncate italic opacity-80 leading-snug flex items-center gap-1">
+                {message.imageUrl && !message.content ? (
+                  isEdit ? (
+                    'Add a caption…'
+                  ) : (
+                    <>
+                      <ImageIcon className="size-3 shrink-0" />
+                      Photo
+                    </>
+                  )
+                ) : (
+                  message.content ||
+                  (isEdit ? (
+                    ''
+                  ) : (
+                    <>
+                      <ImageIcon className="size-3 shrink-0" />
+                      Photo
+                    </>
+                  ))
+                )}
+              </div>
             </div>
           </div>
           <Button
