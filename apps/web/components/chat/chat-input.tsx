@@ -90,7 +90,7 @@ export function ChatInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
               title="Attach image"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
