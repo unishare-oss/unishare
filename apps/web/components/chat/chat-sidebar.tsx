@@ -27,7 +27,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session, user } = useAuth()
+  const { session } = useAuth()
   const currentUserId = session?.user?.id
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
 
@@ -193,7 +193,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                       ) : lastMessage.fileUrl && !lastMessage.content ? (
                         <>
                           <FileIcon className="size-3 shrink-0" />
-                          <span className="truncate">{lastMessage.fileName ?? 'File'}</span>
+                          <span>{'File'}</span>
                         </>
                       ) : (
                         <span className="truncate">
