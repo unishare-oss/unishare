@@ -240,19 +240,6 @@ export function ChatMessageBubble({
                     )}
                   />
                 </a>
-                {/* Timestamp overlay when no caption */}
-                {!message.content && (
-                  <div
-                    className={cn(
-                      'absolute bottom-1.5 flex gap-1 text-[0.5625rem] opacity-50 px-2',
-                      isMe ? 'right-1.5 text-primary-foreground' : 'left-1.5 text-foreground',
-                    )}
-                  >
-                    {isMe && isEdited && <span className="italic">(edited)</span>}
-                    <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
-                    {!isMe && isEdited && <span className="italic">(edited)</span>}
-                  </div>
-                )}
               </div>
             )}
 
