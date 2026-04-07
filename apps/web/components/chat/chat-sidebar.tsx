@@ -161,7 +161,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 key={room.id}
                 onClick={() => router.push(`/chat/${room.id}`)}
                 className={cn(
-                  'relative flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
+                  'relative w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
                   isSelected &&
                     'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
@@ -172,7 +172,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     {displayName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
                     <span className="font-medium truncate text-sm min-w-0">{displayName}</span>
                     {lastMessage && (
@@ -184,23 +184,25 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
-                    <p className="text-xs text-muted-foreground line-clamp-2 opacity-70 mt-0.5">
+                    <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
                       {lastMessage.imageUrl && !lastMessage.content ? (
-                        <span className="flex items-center gap-1">
+                        <>
                           <ImageIcon className="size-3 shrink-0" />
-                          Photo
-                        </span>
+                          <span>Photo</span>
+                        </>
                       ) : lastMessage.fileUrl && !lastMessage.content ? (
-                        <span className="flex items-center gap-1">
+                        <>
                           <FileIcon className="size-3 shrink-0" />
-                          {lastMessage.fileName ?? 'File'}
-                        </span>
-                      ) : (lastMessage.content?.length ?? 0) > 25 ? (
-                        `${lastMessage.content!.substring(0, 25)}...`
+                          <span className="truncate">{lastMessage.fileName ?? 'File'}</span>
+                        </>
                       ) : (
-                        lastMessage.content
+                        <span className="truncate">
+                          {(lastMessage.content?.length ?? 0) > 25
+                            ? `${lastMessage.content!.substring(0, 25)}...`
+                            : lastMessage.content}
+                        </span>
                       )}
-                    </p>
+                    </div>
                   ) : null}
                 </div>
               </button>
