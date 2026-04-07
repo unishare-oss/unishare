@@ -22,6 +22,7 @@ import { ArrowLeft, PanelRightOpen, PanelRightClose, WifiOff, ArrowDown } from '
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
 import { TypingIndicator } from './typing-indicator'
+import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 import { cn } from '@/lib/utils'
 import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
@@ -562,7 +563,7 @@ export function UnifiedChatWindow({
           )}
 
           {/* Scroll to bottom / typing indicator FAB */}
-          {(!isAtBottom || roomTypingUsers.length > 0) && (
+          {!isAtBottom && (
             <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
               <button
                 className="pointer-events-auto h-8 w-8 rounded-full shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
@@ -570,21 +571,7 @@ export function UnifiedChatWindow({
                 aria-label="Scroll to bottom"
               >
                 {roomTypingUsers.length > 0 ? (
-                  <span className="flex items-center gap-[3px]">
-                    {[0, 1, 2].map((i) => (
-                      <motion.span
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-primary block"
-                        animate={{ y: [0, -4, 0] }}
-                        transition={{
-                          duration: 0.6,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                          delay: i * 0.15,
-                        }}
-                      />
-                    ))}
-                  </span>
+                  <SidebarTypingIndicator />
                 ) : (
                   <ArrowDown className="h-3.5 w-3.5" />
                 )}
