@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
 import type { Request } from 'express'
+import { fromNodeHeaders } from 'better-auth/node'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { auth } from '@/auth/auth.config'
 import { UsersService } from './users.service'
@@ -31,10 +32,15 @@ export class UsersController {
 
   @Post('me/set-password')
   @ResponseMessage('Password set successfully')
-  async setPassword(@Req() req: Request, @Body() dto: SetPasswordDto) {
+  async setPassword(
+    @Session() session: UserSession,
+    @Req() req: Request,
+    @Body() dto: SetPasswordDto,
+  ) {
+    void session
     const result = await auth.api.setPassword({
       body: { newPassword: dto.newPassword },
-      headers: new Headers(req.headers as Record<string, string>),
+      headers: fromNodeHeaders(req.headers),
     })
     if (!result?.status) throw new BadRequestException('Failed to set password')
     return null
