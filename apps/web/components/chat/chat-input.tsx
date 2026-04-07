@@ -50,7 +50,7 @@ export function ChatInput({
 
   // Determine input placeholder based on context
   const getPlaceholder = () => {
-    if (editingMessage) return 'Edit your message...'
+    if (editingMessage) return editingMessage.imageUrl ? 'Edit caption…' : 'Edit your message…'
     if (replyingToMessage) return 'Reply to message...'
     return placeholder
   }

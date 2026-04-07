@@ -21,7 +21,11 @@ export function ChatInputContextBar({
   const isReplyingToMe = mode === 'reply' && message.userId === currentUserId
   const replyTargetName = isReplyingToMe ? 'you' : message.user?.name
 
-  const label = isEdit ? 'Editing Message' : `Replying to ${replyTargetName}`
+  const label = isEdit
+    ? message.imageUrl
+      ? 'Editing Caption'
+      : 'Editing Message'
+    : `Replying to ${replyTargetName}`
 
   return (
     <div className="w-full border-t border-border/50 bg-muted/20 animate-in slide-in-from-bottom-1 duration-200">
@@ -37,7 +41,11 @@ export function ChatInputContextBar({
                 {label}
               </p>
               <p className="text-[0.6875rem] text-muted-foreground truncate italic opacity-80 leading-snug">
-                {message.content || (isEdit ? '' : '📷 Photo')}
+                {message.imageUrl && !message.content
+                  ? isEdit
+                    ? 'Add a caption…'
+                    : '📷 Photo'
+                  : message.content || (isEdit ? '' : '📷 Photo')}
               </p>
             </div>
           </div>

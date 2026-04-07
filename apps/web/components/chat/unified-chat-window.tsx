@@ -324,7 +324,7 @@ export function UnifiedChatWindow({
     setContent('')
 
     if (editingMessage) {
-      if (editingMessage!.content!.trim() === content.trim()) {
+      if ((editingMessage.content ?? '').trim() === content.trim()) {
         setEditingMessage(null)
         return
       }
