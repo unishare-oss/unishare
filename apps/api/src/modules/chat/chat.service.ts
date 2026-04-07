@@ -26,9 +26,16 @@ export class ChatService {
   }
 
   async getMessages(roomId: string, userId: string, options: CursorPaginationOptions) {
-    // Verify user is participant
     await this.getRoom(roomId, userId)
-    return this.chatRepository.findMessages(roomId, options)
+    const result = await this.chatRepository.findMessages(roomId, options)
+    // Sanitize deleted parents so reply quotes show "Message deleted"
+    return {
+      ...result,
+      items: result.items.map((msg: any) => ({
+        ...msg,
+        parent: msg.parent ? sanitizeParent(msg.parent) : msg.parent,
+      })),
+    }
   }
 
   async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
@@ -123,5 +130,18 @@ export class ChatService {
 
   async markAsRead(roomId: string, userId: string) {
     return this.chatRepository.markAsRead(roomId, userId)
+  }
+
+  private sanitizeParent<
+    T extends {
+      deletedAt?: Date | null
+      content?: string | null
+      imageUrl?: string | null
+      fileUrl?: string | null
+      fileName?: string | null
+    },
+  >(msg: T): T {
+    if (!msg.deletedAt) return msg
+    return { ...msg, content: null, imageUrl: null, fileUrl: null, fileName: null }
   }
 }

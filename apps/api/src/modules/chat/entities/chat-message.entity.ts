@@ -49,6 +49,9 @@ export class ChatMessageParentEntity {
   @ApiProperty()
   updatedAt: Date
 
+  @ApiPropertyOptional({ type: String, nullable: true })
+  deletedAt: Date | null
+
   @ApiPropertyOptional({ type: ChatMessageUserEntity })
   user?: ChatMessageUserEntity
 }
@@ -89,6 +92,9 @@ export class ChatMessageEntity {
 
   @ApiProperty()
   updatedAt: Date
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  deletedAt: Date | null
 
   @ApiPropertyOptional({ type: ChatMessageUserEntity })
   user?: ChatMessageUserEntity

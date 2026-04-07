@@ -96,32 +96,21 @@ export class ChatRepository {
     return paginateWithCursor(
       this.prisma.chatMessage,
       {
-        where: { roomId },
+        where: { roomId, deletedAt: null },
         include: {
           user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
+            select: { id: true, name: true, image: true },
           },
           parent: {
             include: {
               user: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                },
+                select: { id: true, name: true, image: true },
               },
             },
           },
         },
       },
-      {
-        ...options,
-        cursorField: 'id', // Use id for cursor (guaranteed unique)
-      },
+      { ...options, cursorField: 'id' },
     )
   }
 
@@ -264,8 +253,9 @@ export class ChatRepository {
   }
 
   async deleteMessage(id: string) {
-    return this.prisma.chatMessage.delete({
+    return this.prisma.chatMessage.update({
       where: { id },
+      data: { deletedAt: new Date() },
     })
   }
 
