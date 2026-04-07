@@ -265,6 +265,27 @@ export class ChatRepository {
     })
   }
 
+  async setFileDeleteAt(id: string, date: Date) {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { fileDeleteAt: date },
+    })
+  }
+
+  async findMessagesReadyForS3Cleanup() {
+    return this.prisma.chatMessage.findMany({
+      where: { deletedAt: { not: null }, fileDeleteAt: { lte: new Date() } },
+      select: { id: true, fileUrl: true },
+    })
+  }
+
+  async clearFileAfterCleanup(ids: string[]) {
+    return this.prisma.chatMessage.updateMany({
+      where: { id: { in: ids } },
+      data: { fileDeleteAt: null, fileUrl: null, fileName: null },
+    })
+  }
+
   async markAsRead(roomId: string, userId: string) {
     return this.prisma.chatRoomParticipant.update({
       where: {

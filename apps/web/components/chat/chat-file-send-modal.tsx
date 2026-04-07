@@ -134,6 +134,9 @@ export function ChatFileSendModal({
         )}
 
         <DialogFooter className="gap-2">
+          <p className="text-[0.65rem] text-muted-foreground mr-auto self-center">
+            Files are deleted after 7 days
+          </p>
           <Button
             variant="ghost"
             size="sm"

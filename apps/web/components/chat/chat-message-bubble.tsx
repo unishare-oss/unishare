@@ -230,7 +230,7 @@ export function ChatMessageBubble({
                         isMe ? 'text-primary-foreground/50' : 'text-muted-foreground',
                       )}
                     >
-                      Tap to download
+                      Tap to download · deleted after 7 days
                     </p>
                   </div>
                   <Download

@@ -1,16 +1,20 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { ChatRepository } from './chat.repository'
-import { ChatRoomType } from '@/generated/prisma/client'
+import { ChatMessageType, ChatRoomType } from '@/generated/prisma/client'
 import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
+import { StorageService } from '../storage/storage.service'
+
+const FILE_DELETE_GRACE_DAYS = 7
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly chatRepository: ChatRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly storageService: StorageService,
   ) {}
 
   async getRooms(userId: string) {
@@ -117,6 +121,16 @@ export class ChatService {
     }
 
     await this.chatRepository.deleteMessage(id)
+
+    // Clean up S3 assets
+    if (existingMessage.type === ChatMessageType.IMAGE && existingMessage.imageUrl) {
+      const key = this.storageService.extractKeyFromUrl(existingMessage.imageUrl)
+      this.storageService.deleteFile(key).catch(() => {})
+    } else if (existingMessage.type === ChatMessageType.FILE && existingMessage.fileUrl) {
+      const expiresAt = new Date(Date.now() + FILE_DELETE_GRACE_DAYS * 24 * 60 * 60 * 1000)
+      await this.chatRepository.setFileDeleteAt(id, expiresAt)
+    }
+
     const room = await this.getRoom(existingMessage.roomId, userId)
 
     this.eventEmitter.emit('chat.message_deleted', {

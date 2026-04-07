@@ -483,8 +483,9 @@ model ChatMessage {
   parentId  String?
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
-  deletedAt DateTime?
-  room      ChatRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  deletedAt    DateTime?
+  fileDeleteAt DateTime?
+  room         ChatRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent    ChatMessage?    @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
   children  ChatMessage[]   @relation("MessageReplies")
