@@ -7,10 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Bell, BellOff, LogOut, Trash2, X } from 'lucide-react'
+import { Bell, BellOff, LogOut, Trash2 } from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { OverviewPane } from './overview-pane'
 import { DetailPane } from './detail-pane'
+import { ChatImageLightbox } from '../chat-image-lightbox'
 import { URL_REGEX, slideVariants, getHostname, type PaneView } from './types'
 
 interface ChatInfoPaneProps {
@@ -71,28 +72,11 @@ export function ChatInfoPane({
 
   return (
     <>
-      {lightboxSrc && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-          onClick={() => setLightboxSrc(null)}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/10"
-            onClick={() => setLightboxSrc(null)}
-          >
-            <X className="size-5" />
-          </Button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightboxSrc}
-            alt=""
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+      <ChatImageLightbox
+        src={lightboxSrc ?? ''}
+        open={!!lightboxSrc}
+        onClose={() => setLightboxSrc(null)}
+      />
 
       <div
         className={cn(
