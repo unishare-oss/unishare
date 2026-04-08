@@ -1,6 +1,6 @@
 export const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
 
-export type PaneView = 'overview' | 'members' | 'photos' | 'links' | 'settings'
+export type PaneView = 'overview' | 'members' | 'photos' | 'files' | 'links' | 'settings'
 
 export const slideVariants = {
   enterForward: { x: '100%', opacity: 0 },

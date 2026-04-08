@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Bell, BellOff, LogOut, Trash2 } from 'lucide-react'
+import { Bell, BellOff, LogOut, Trash2, FileIcon, Download } from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { OverviewPane } from './overview-pane'
 import { DetailPane } from './detail-pane'
@@ -58,6 +58,11 @@ export function ChatInfoPane({
     [messages],
   )
 
+  const sharedFiles = useMemo(
+    () => messages.filter((m) => m.type === 'FILE' && m.fileUrl),
+    [messages],
+  )
+
   const sharedLinks = useMemo(() => {
     const explicit = messages
       .filter((m) => m.type === 'LINK' && m.linkUrl)
@@ -105,6 +110,7 @@ export function ChatInfoPane({
                 onSearchChange={onSearchChange}
                 membersCount={room?.participants?.length ?? 0}
                 photosCount={sharedPhotos.length}
+                filesCount={sharedFiles.length}
                 linksCount={sharedLinks.length}
                 photosPreviews={sharedPhotos.slice(0, 3).map((m) => m.imageUrl as string)}
                 onNavigate={navigate}
@@ -170,6 +176,40 @@ export function ChatInfoPane({
                         </button>
                       ))}
                     </div>
+                  )}
+                </div>
+              </DetailPane>
+            )}
+
+            {view === 'files' && (
+              <DetailPane title="Files" onBack={goBack} onClose={onClose}>
+                <div className="flex flex-col gap-1 px-3 py-3">
+                  {sharedFiles.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">No files yet</p>
+                  ) : (
+                    sharedFiles.map((msg) => (
+                      <a
+                        key={msg.id}
+                        href={msg.fileUrl as string}
+                        download={msg.fileName ?? true}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 rounded-[6px] hover:bg-muted px-2 py-2 transition-colors group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-primary/10 text-primary">
+                          <FileIcon className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">{msg.fileName ?? 'File'}</p>
+                          {msg.content && (
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {msg.content}
+                            </p>
+                          )}
+                        </div>
+                        <Download className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                      </a>
+                    ))
                   )}
                 </div>
               </DetailPane>
