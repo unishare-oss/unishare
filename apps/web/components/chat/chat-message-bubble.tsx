@@ -54,9 +54,14 @@ export function ChatMessageBubble({
           onClose={() => setLightboxOpen(false)}
         />
       )}
-      <div className={cn('flex items-end gap-2 group', isMe ? 'flex-row-reverse' : 'flex-row')}>
+      <div
+        className={cn(
+          'flex items-end gap-2 group w-full min-w-0',
+          isMe ? 'flex-row-reverse' : 'flex-row',
+        )}
+      >
         {!isMe && (
-          <div className="w-8">
+          <div className="w-8 shrink-0">
             {showAvatar && (
               <Avatar className="h-8 w-8 mb-1 rounded-[6px]">
                 <AvatarImage src={message.user?.image || ''} />
@@ -68,7 +73,12 @@ export function ChatMessageBubble({
           </div>
         )}
 
-        <div className={cn('flex flex-col max-w-[60%]', isMe ? 'items-end' : 'items-start')}>
+        <div
+          className={cn(
+            'flex flex-col min-w-0 max-w-[75%] md:max-w-[60%]',
+            isMe ? 'items-end' : 'items-start',
+          )}
+        >
           {/* Main Message Bubble */}
           <motion.div
             animate={
@@ -85,7 +95,8 @@ export function ChatMessageBubble({
             }
             transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              'text-sm rounded-2xl shadow-sm relative z-10 w-fit max-w-full overflow-hidden',
+              'text-sm rounded-2xl shadow-sm relative z-10 max-w-full overflow-hidden',
+              message.imageUrl || message.fileUrl ? 'w-full' : 'w-fit',
               isMe
                 ? 'bg-primary text-primary-foreground rounded-br-sm'
                 : 'bg-secondary text-secondary-foreground rounded-bl-sm',
@@ -166,14 +177,14 @@ export function ChatMessageBubble({
                     {message.user?.name}
                   </span>
                 )}
-                <div className="relative max-h-72 w-full overflow-hidden">
+                <div className="relative max-h-52 md:max-h-72 w-full overflow-hidden">
                   <Image
                     src={message.imageUrl}
                     alt={message.content || 'Photo'}
-                    width={600}
-                    height={400}
-                    className="max-h-72 max-w-full object-cover w-full h-auto"
-                    sizes="(max-width: 768px) 80vw, 400px"
+                    width={0}
+                    height={0}
+                    sizes="(max-width: 640px) 70vw, 400px"
+                    className="max-h-52 md:max-h-72 max-w-full object-cover w-full h-auto"
                   />
                 </div>
                 {/* Timestamp overlay on image-only messages */}
@@ -206,7 +217,7 @@ export function ChatMessageBubble({
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3.5 transition-opacity hover:opacity-80',
+                    'flex items-center gap-3 px-4 py-3.5 transition-opacity hover:opacity-80 w-full min-w-0',
                     isMe ? 'bg-primary-foreground/10' : 'bg-muted/50',
                   )}
                 >
@@ -245,14 +256,14 @@ export function ChatMessageBubble({
 
             {/* Message body — only render if there is text content or no image/file */}
             {(message.content || (!message.imageUrl && !message.fileUrl)) && (
-              <div className="px-4 py-2">
+              <div className="px-4 py-2 min-w-0">
                 {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
                   <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
                     {message.user?.name}
                   </span>
                 )}
                 {message.content && (
-                  <p className="whitespace-pre-wrap break-all">
+                  <p className="whitespace-pre-wrap break-words min-w-0">
                     {renderWithLinks(
                       message.content ?? '',
                       isMe ? 'text-primary-foreground/90' : 'text-primary',
