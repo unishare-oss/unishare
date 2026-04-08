@@ -58,10 +58,7 @@ export function ChatInfoPane({
     [messages],
   )
 
-  const sharedFiles = useMemo(
-    () => messages.filter((m) => m.type === 'FILE' && m.fileUrl),
-    [messages],
-  )
+  const sharedFiles = useMemo(() => messages.filter((m) => m.type === 'FILE'), [messages])
 
   const sharedLinks = useMemo(() => {
     const explicit = messages
@@ -187,29 +184,52 @@ export function ChatInfoPane({
                   {sharedFiles.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-4 text-center">No files yet</p>
                   ) : (
-                    sharedFiles.map((msg) => (
-                      <a
-                        key={msg.id}
-                        href={msg.fileUrl as string}
-                        download={msg.fileName ?? true}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2.5 rounded-[6px] hover:bg-muted px-2 py-2 transition-colors group"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-primary/10 text-primary">
-                          <FileIcon className="size-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">{msg.fileName ?? 'File'}</p>
-                          {msg.content && (
-                            <p className="text-[10px] text-muted-foreground truncate">
-                              {msg.content}
+                    sharedFiles.map((msg) => {
+                      const expired = !msg.fileUrl
+                      return expired ? (
+                        <div
+                          key={msg.id}
+                          className="flex items-center gap-2.5 rounded-[6px] px-2 py-2 opacity-40 select-none"
+                          title="File expired and has been deleted"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-muted text-muted-foreground">
+                            <FileIcon className="size-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate line-through text-muted-foreground">
+                              {msg.fileName ?? 'File'}
                             </p>
-                          )}
+                            <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                              Expired
+                            </p>
+                          </div>
                         </div>
-                        <Download className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                      </a>
-                    ))
+                      ) : (
+                        <a
+                          key={msg.id}
+                          href={msg.fileUrl as string}
+                          download={msg.fileName ?? true}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={msg.fileName ?? undefined}
+                          className="flex items-center gap-2.5 rounded-[6px] hover:bg-muted px-2 py-2 transition-colors group"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-primary/10 text-primary">
+                            <FileIcon className="size-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{msg.fileName ?? 'File'}</p>
+                            {msg.content && (
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {msg.content}
+                              </p>
+                            )}
+                          </div>
+                          <Download className="size-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                        </a>
+                      )
+                    })
                   )}
                 </div>
               </DetailPane>
