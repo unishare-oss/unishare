@@ -15,7 +15,7 @@ import { format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
-import { Users, MessageSquare, Loader2 } from 'lucide-react'
+import { Users, MessageSquare, Loader2, ImageIcon, FileIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
@@ -27,7 +27,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session, user } = useAuth()
+  const { session } = useAuth()
   const currentUserId = session?.user?.id
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
 
@@ -140,7 +140,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
             <div className="px-4 py-2 mt-2">
-              <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <h3 className="text-[0.625rem] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <MessageSquare className="h-3 w-3" /> Recent Chats
               </h3>
             </div>
@@ -161,7 +161,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 key={room.id}
                 onClick={() => router.push(`/chat/${room.id}`)}
                 className={cn(
-                  'relative flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
+                  'relative w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
                   isSelected &&
                     'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
@@ -172,11 +172,11 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     {displayName.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium truncate text-sm">{displayName}</span>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
+                    <span className="font-medium truncate text-sm min-w-0">{displayName}</span>
                     {lastMessage && (
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                      <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
                         {format(new Date(lastMessage.createdAt), 'h:mm a')}
                       </span>
                     )}
@@ -184,11 +184,25 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
-                    <p className="text-xs text-muted-foreground line-clamp-2 opacity-70 mt-0.5">
-                      {lastMessage?.content!.length > 25
-                        ? `${lastMessage?.content!.substring(0, 25)}...`
-                        : lastMessage.content}
-                    </p>
+                    <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
+                      {lastMessage.imageUrl && !lastMessage.content ? (
+                        <>
+                          <ImageIcon className="size-3 shrink-0" />
+                          <span>Photo</span>
+                        </>
+                      ) : lastMessage.fileUrl && !lastMessage.content ? (
+                        <>
+                          <FileIcon className="size-3 shrink-0" />
+                          <span>{'File'}</span>
+                        </>
+                      ) : (
+                        <span className="truncate">
+                          {(lastMessage.content?.length ?? 0) > 25
+                            ? `${lastMessage.content!.substring(0, 25)}...`
+                            : lastMessage.content}
+                        </span>
+                      )}
+                    </div>
                   ) : null}
                 </div>
               </button>
@@ -200,7 +214,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
             <>
               {roomsWithMessages.length > 0 && <Separator className="my-2" />}
               <div className="px-4 py-2 mt-2">
-                <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <h3 className="text-[0.625rem] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                   <Users className="h-3 w-3" /> Network
                 </h3>
               </div>

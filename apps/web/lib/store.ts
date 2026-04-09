@@ -167,6 +167,24 @@ export const useLibraryStore = create<LibraryStore>()(
   ),
 )
 
+interface ChatLastSeenStore {
+  lastSeenByRoom: Record<string, string>
+  setLastSeen: (roomId: string, messageId: string) => void
+  getLastSeen: (roomId: string) => string | null
+}
+
+export const useChatLastSeenStore = create<ChatLastSeenStore>()(
+  persist(
+    (set, get) => ({
+      lastSeenByRoom: {},
+      setLastSeen: (roomId, messageId) =>
+        set((s) => ({ lastSeenByRoom: { ...s.lastSeenByRoom, [roomId]: messageId } })),
+      getLastSeen: (roomId) => get().lastSeenByRoom[roomId] ?? null,
+    }),
+    { name: 'unishare-chat-last-seen' },
+  ),
+)
+
 interface SettingsStore {
   fontSize: 'xsmall' | 'small' | 'normalsmall' | 'medium' | 'mediumlarge' | 'large' | 'xlarge'
   setFontSize: (

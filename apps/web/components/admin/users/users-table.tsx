@@ -121,6 +121,7 @@ export function UsersTable({ users, onRefresh }: { users: User[]; onRefresh: () 
     if (!deleteDialog) return
     setLoadingId(deleteDialog.userId)
     setDeleteDialog(null)
+    //TODO: must fix it later
     await authClient.admin.removeUser({ userId: deleteDialog.userId })
     onRefresh()
     setLoadingId(null)

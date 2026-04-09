@@ -42,9 +42,7 @@ export function replaceMessageInInfiniteCache(
 
   return {
     ...oldData,
-    pages: oldData.pages.map((page: any, index: number) => {
-      if (index !== 0) return page // Only update first page (newest)
-
+    pages: oldData.pages.map((page: any) => {
       return {
         ...page,
         data: {
@@ -56,6 +54,82 @@ export function replaceMessageInInfiniteCache(
             }
             return item
           }),
+        },
+      }
+    }),
+  }
+}
+
+/**
+ * Updates a message in the infinite query cache
+ * Also updates parent references in child messages that reference this message
+ */
+export function updateMessageInInfiniteCache(
+  oldData: any,
+  messageId: string,
+  updatedMessage: Partial<ChatMessageEntity> & { id: string },
+): any {
+  if (!oldData?.pages) return oldData
+
+  return {
+    ...oldData,
+    pages: oldData.pages.map((page: any) => {
+      return {
+        ...page,
+        data: {
+          ...page.data,
+          items: page.data.items.map((item: ChatMessageEntity) => {
+            // Update the message itself (merge with existing)
+            if (item.id === messageId) {
+              return { ...item, ...updatedMessage }
+            }
+            // Update parent reference if it's this message
+            if (item.parent?.id === messageId) {
+              return {
+                ...item,
+                parent: {
+                  ...item.parent,
+                  content: updatedMessage.content ?? item.parent.content,
+                },
+              }
+            }
+            return item
+          }),
+        },
+      }
+    }),
+  }
+}
+
+/**
+ * Removes a deleted message from the infinite query cache
+ * Updates parent references in child messages before removal
+ */
+export function deleteMessageFromInfiniteCache(oldData: any, messageId: string): any {
+  if (!oldData?.pages) return oldData
+
+  return {
+    ...oldData,
+    pages: oldData.pages.map((page: any) => {
+      return {
+        ...page,
+        data: {
+          ...page.data,
+          items: page.data.items
+            .map((item: ChatMessageEntity) => {
+              // Update parent reference if it was the deleted message
+              if (item.parent?.id === messageId) {
+                return {
+                  ...item,
+                  parent: {
+                    ...item.parent,
+                    content: null,
+                  },
+                }
+              }
+              return item
+            })
+            .filter((item: ChatMessageEntity) => item.id !== messageId), // Remove the deleted message
         },
       }
     }),

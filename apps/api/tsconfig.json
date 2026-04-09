@@ -4,7 +4,8 @@
     "outDir": "dist",
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
-    "types": ["multer"],
+    "rootDir": "src",
+    "types": ["multer", "jest", "node"],
     "paths": {
       "@/*": ["src/*"]
     }

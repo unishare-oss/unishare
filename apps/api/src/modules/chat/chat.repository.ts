@@ -29,6 +29,9 @@ export class ChatRepository {
           },
         },
         messages: {
+          where: {
+            deletedAt: null,
+          },
           take: 1,
           orderBy: {
             createdAt: 'desc',
@@ -74,6 +77,9 @@ export class ChatRepository {
           },
         },
         messages: {
+          where: {
+            deletedAt: null,
+          },
           take: 1,
           orderBy: {
             createdAt: 'desc',
@@ -96,21 +102,21 @@ export class ChatRepository {
     return paginateWithCursor(
       this.prisma.chatMessage,
       {
-        where: { roomId },
+        where: { roomId, deletedAt: null },
         include: {
           user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
+            select: { id: true, name: true, image: true },
+          },
+          parent: {
+            include: {
+              user: {
+                select: { id: true, name: true, image: true },
+              },
             },
           },
         },
       },
-      {
-        ...options,
-        cursorField: 'id', // Use id for cursor (guaranteed unique)
-      },
+      { ...options, cursorField: 'id' },
     )
   }
 
@@ -159,10 +165,49 @@ export class ChatRepository {
     content?: string
     type?: ChatMessageType
     imageUrl?: string
+    fileUrl?: string
+    fileName?: string
     linkUrl?: string
+    parentId?: string
   }) {
-    const message = await this.prisma.chatMessage.create({
-      data,
+    return this.prisma.$transaction(async (tx) => {
+      const message = await tx.chatMessage.create({
+        data,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          parent: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+          },
+        },
+      })
+
+      // Update room's updatedAt to bring it to top of list
+      await tx.chatRoom.update({
+        where: { id: data.roomId },
+        data: { updatedAt: new Date() },
+      })
+
+      return message
+    })
+  }
+
+  async findMessageById(id: string) {
+    return this.prisma.chatMessage.findUnique({
+      where: { id, deletedAt: null },
       include: {
         user: {
           select: {
@@ -171,16 +216,74 @@ export class ChatRepository {
             image: true,
           },
         },
+        parent: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
       },
     })
+  }
 
-    // Update room's updatedAt to bring it to top of list
-    await this.prisma.chatRoom.update({
-      where: { id: data.roomId },
-      data: { updatedAt: new Date() },
+  async updateMessage(id: string, content: string) {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { content },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        parent: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+          },
+        },
+      },
     })
+  }
 
-    return message
+  async deleteMessage(id: string) {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    })
+  }
+
+  async setFileDeleteAt(id: string, date: Date) {
+    return this.prisma.chatMessage.update({
+      where: { id },
+      data: { fileDeleteAt: date },
+    })
+  }
+
+  async findMessagesReadyForS3Cleanup() {
+    return this.prisma.chatMessage.findMany({
+      where: { deletedAt: { not: null }, fileDeleteAt: { lte: new Date() } },
+      select: { id: true, fileUrl: true },
+    })
+  }
+
+  async clearFileAfterCleanup(ids: string[]) {
+    return this.prisma.chatMessage.updateMany({
+      where: { id: { in: ids } },
+      data: { fileDeleteAt: null, fileUrl: null, fileName: null },
+    })
   }
 
   async markAsRead(roomId: string, userId: string) {

@@ -22,35 +22,35 @@ model User {
   banExpires              DateTime?
   banReason               String?
   banned                  Boolean?                 @default(false)
-  isAnonymous             Boolean?                 @default(false)
   bio                     String?
   enrollmentYear          Int?
+  isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
   accounts                Account[]
+  adminActions            AdminAction[]            @relation("AdminActions")
+  chatMessages            ChatMessage[]
+  chatParticipants        ChatRoomParticipant[]
   comments                Comment[]
+  feedbacks               Feedback[]
+  following               Follow[]                 @relation("Followers")
+  followers               Follow[]                 @relation("Following")
   notifications           Notification[]
   posts                   Post[]                   @relation("AuthorPosts")
-  postViews               PostView[]
-  reactions               Reaction[]
-  savedPosts              SavedPost[]
-  sessions                Session[]
-  department              Department?              @relation(fields: [departmentId], references: [id])
-  university              University?              @relation(fields: [universityId], references: [id])
   postRequests            PostRequest[]            @relation("PostRequestAuthor")
-  postRequestUpvotes      PostRequestUpvote[]
   postRequestFulfillments PostRequestFulfillment[]
-  followers               Follow[]                 @relation("Following")
-  following               Follow[]                 @relation("Followers")
-  reports                 Report[]                 @relation("ReportsSubmitted")
-  adminActions            AdminAction[]            @relation("AdminActions")
-  rooms                   Room[]
-  chatParticipants        ChatRoomParticipant[]
-  chatMessages            ChatMessage[]
-  readingLists            ReadingList[]
-  feedbacks               Feedback[]
-  studyMaterialsUploaded  StudyMaterial[]          @relation("StudyMaterialsUploaded")
+  postRequestUpvotes      PostRequestUpvote[]
+  postViews               PostView[]
   quizzesCreated          Quiz[]                   @relation("QuizzesCreated")
   quizSessions            QuizSession[]            @relation("QuizSessions")
+  reactions               Reaction[]
+  readingLists            ReadingList[]
+  reports                 Report[]                 @relation("ReportsSubmitted")
+  rooms                   Room[]
+  savedPosts              SavedPost[]
+  sessions                Session[]
+  studyMaterialsUploaded  StudyMaterial[]          @relation("StudyMaterialsUploaded")
+  department              Department?              @relation(fields: [departmentId], references: [id])
+  university              University?              @relation(fields: [universityId], references: [id])
 
   @@map("user")
 }
@@ -79,13 +79,13 @@ model Course {
   code           String
   name           String
   departmentId   String
-  yearLevel      Int?
   createdAt      DateTime        @default(now())
+  yearLevel      Int?
   department     Department      @relation(fields: [departmentId], references: [id])
   posts          Post[]
   postRequests   PostRequest[]
-  studyMaterials StudyMaterial[]
   quizzes        Quiz[]
+  studyMaterials StudyMaterial[]
 
   @@unique([code, departmentId])
   @@index([departmentId])
@@ -112,24 +112,24 @@ model Post {
   shortCode           String                   @unique
   views               Int                      @default(0)
   searchVector        Unsupported("tsvector")?
-  trendingScore       Float                    @default(0)
   publicationStatus   PostPublicationStatus    @default(PUBLISHED)
-  summary             String?
+  trendingScore       Float                    @default(0)
   summarizedAt        DateTime?
+  summary             String?
   contentWarning      String?
   comments            Comment[]
   files               File[]
   notifications       Notification[]
   author              User                     @relation("AuthorPosts", fields: [authorId], references: [id])
   course              Course                   @relation(fields: [courseId], references: [id])
-  postViews           PostView[]
-  reactions           Reaction[]
-  savedBy             SavedPost[]
-  tags                PostTag[]
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
-  reports             Report[]                 @relation("PostReports")
+  tags                PostTag[]
+  postViews           PostView[]
+  reactions           Reaction[]
   readingListItems    ReadingListPost[]
+  reports             Report[]                 @relation("PostReports")
+  savedBy             SavedPost[]
 
   @@index([authorId])
   @@index([courseId])
@@ -185,13 +185,13 @@ model Comment {
   content   String
   userId    String
   postId    String
-  parentId  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-  post      Post      @relation(fields: [postId], references: [id])
+  parentId  String?
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   children  Comment[] @relation("CommentReplies")
+  post      Post      @relation(fields: [postId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -297,8 +297,8 @@ model Notification {
   message   String
   read      Boolean          @default(false)
   postId    String?
-  requestId String?
   createdAt DateTime         @default(now())
+  requestId String?
   post      Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   request   PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -317,12 +317,12 @@ model PostRequest {
   fulfilledByPostId String?
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
+  notifications     Notification[]
   author            User                     @relation("PostRequestAuthor", fields: [authorId], references: [id])
   course            Course                   @relation(fields: [courseId], references: [id])
   fulfilledByPost   Post?                    @relation("FulfilledRequests", fields: [fulfilledByPostId], references: [id])
-  upvotes           PostRequestUpvote[]
   suggestions       PostRequestFulfillment[]
-  notifications     Notification[]
+  upvotes           PostRequestUpvote[]
 
   @@index([authorId])
   @@index([courseId])
@@ -336,8 +336,8 @@ model PostRequestFulfillment {
   postId    String
   userId    String
   createdAt DateTime    @default(now())
-  request   PostRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  request   PostRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([requestId, userId])
@@ -361,8 +361,8 @@ model PostRequestUpvote {
   userId    String
   requestId String
   createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   request   PostRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, requestId])
   @@index([requestId])
@@ -383,6 +383,225 @@ model Room {
 
   @@index([ownerId])
   @@map("room")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  color     String    @default("#3B82F6")
+  createdAt DateTime  @default(now())
+  posts     PostTag[]
+
+  @@index([slug])
+  @@map("tag")
+}
+
+model PostTag {
+  postId    String
+  tagId     String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tag")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  postId      String
+  userId      String
+  reason      ReportReason
+  comment     String?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  adminAction AdminAction?
+  post        Post         @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
+  reporter    User         @relation("ReportsSubmitted", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([status])
+  @@index([reason])
+  @@index([createdAt])
+  @@map("report")
+}
+
+model AdminAction {
+  id        String   @id @default(cuid())
+  reportId  String   @unique
+  adminId   String
+  action    String
+  reason    String?
+  createdAt DateTime @default(now())
+  admin     User     @relation("AdminActions", fields: [adminId], references: [id])
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("admin_action")
+}
+
+model ChatRoom {
+  id           String                @id @default(cuid())
+  type         ChatRoomType          @default(DM)
+  name         String?
+  imageUrl     String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  messages     ChatMessage[]
+  participants ChatRoomParticipant[]
+
+  @@map("chat_room")
+}
+
+model ChatRoomParticipant {
+  id         String   @id @default(cuid())
+  roomId     String
+  userId     String
+  lastReadAt DateTime @default(now())
+  joinedAt   DateTime @default(now())
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("chat_room_participant")
+}
+
+model ChatMessage {
+  id        String          @id @default(cuid())
+  roomId    String
+  userId    String?
+  type      ChatMessageType @default(TEXT)
+  content   String?
+  imageUrl  String?
+  fileUrl   String?
+  fileName  String?
+  linkUrl   String?
+  parentId  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt    DateTime?
+  fileDeleteAt DateTime?
+  room         ChatRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    ChatMessage?    @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  children  ChatMessage[]   @relation("MessageReplies")
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@index([roomId, parentId, createdAt])
+  @@map("chat_message")
+}
+
+model Feedback {
+  id        String       @id @default(cuid())
+  type      FeedbackType
+  message   String
+  userId    String?
+  createdAt DateTime     @default(now())
+  user      User?        @relation(fields: [userId], references: [id])
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+model StudyMaterial {
+  id             String   @id @default(cuid())
+  courseId       String
+  title          String
+  content        String
+  uploadedBy     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  fileKey        String?
+  quizzes        Quiz[]
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  uploadedByUser User     @relation("StudyMaterialsUploaded", fields: [uploadedBy], references: [id])
+
+  @@index([courseId])
+  @@index([uploadedBy])
+  @@map("study_material")
+}
+
+model Quiz {
+  id              String         @id @default(cuid())
+  courseId        String
+  studyMaterialId String?
+  title           String
+  description     String?
+  isPublished     Boolean        @default(false)
+  createdBy       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  questionsCount  Int            @default(0)
+  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdByUser   User           @relation("QuizzesCreated", fields: [createdBy], references: [id])
+  studyMaterial   StudyMaterial? @relation(fields: [studyMaterialId], references: [id])
+  questions       QuizQuestion[]
+  sessions        QuizSession[]
+
+  @@index([courseId])
+  @@index([isPublished])
+  @@index([createdBy])
+  @@map("quiz")
+}
+
+model QuizQuestion {
+  id               String            @id @default(cuid())
+  quizId           String
+  content          String
+  correctAnswer    Int
+  options          String[]
+  explanation      String?
+  difficulty       String            @default("medium")
+  createdAt        DateTime          @default(now())
+  questionAttempts QuestionAttempt[]
+  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@map("quiz_question")
+}
+
+model QuizSession {
+  id               String            @id @default(cuid())
+  quizId           String
+  studentId        String
+  score            Int               @default(0)
+  totalPoints      Int               @default(0)
+  attemptedAt      DateTime          @default(now())
+  completedAt      DateTime?
+  timeSpentSec     Int?
+  questionAttempts QuestionAttempt[]
+  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student          User              @relation("QuizSessions", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@index([studentId])
+  @@index([attemptedAt])
+  @@map("quiz_session")
+}
+
+model QuestionAttempt {
+  id            String       @id @default(cuid())
+  sessionId     String
+  questionId    String
+  studentAnswer Int?
+  isCorrect     Boolean?
+  timeSpentSec  Int?
+  createdAt     DateTime     @default(now())
+  question      QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  session       QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@index([sessionId])
+  @@index([questionId])
+  @@map("question_attempt")
 }
 
 enum RoomVisibility {
@@ -432,84 +651,23 @@ enum ReactionType {
   FUNNY
 }
 
-model Tag {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  color     String    @default("#3B82F6")
-  createdAt DateTime  @default(now())
-  posts     PostTag[]
-
-  @@index([slug])
-  @@map("tag")
-}
-
-model PostTag {
-  postId    String
-  tagId     String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([postId, tagId])
-  @@index([tagId])
-  @@map("post_tag")
-}
-
 enum PostPublicationStatus {
   PUBLISHED
-  PENDING_REVIEW // Soft-deleted: reported, pending admin review
-  REJECTED // Permanently deleted: admin rejected report
+  PENDING_REVIEW
+  REJECTED
 }
 
 enum ReportReason {
-  SPAM // Duplicate, off-topic
-  OFFENSIVE // Inappropriate language
-  COPYRIGHT // IP violation
-  OTHER // Policy violation
+  SPAM
+  OFFENSIVE
+  COPYRIGHT
+  OTHER
 }
 
 enum ReportStatus {
-  PENDING // Awaiting admin review
-  APPROVED // Admin approved report
-  REJECTED // Admin rejected report (post remains published)
-}
-
-model Report {
-  id        String       @id @default(cuid())
-  postId    String
-  userId    String // Reporter
-  reason    ReportReason
-  comment   String?      @db.Text
-  status    ReportStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  post     Post @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
-  reporter User @relation("ReportsSubmitted", fields: [userId], references: [id], onDelete: Cascade)
-
-  adminAction AdminAction?
-
-  @@unique([postId, userId]) // One report per user per post
-  @@index([status])
-  @@index([reason])
-  @@index([createdAt])
-  @@map("report")
-}
-
-model AdminAction {
-  id        String   @id @default(cuid())
-  reportId  String   @unique
-  adminId   String
-  action    String // 'approve', 'reject'
-  reason    String?  @db.Text
-  createdAt DateTime @default(now())
-
-  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  admin  User   @relation("AdminActions", fields: [adminId], references: [id])
-
-  @@index([createdAt])
-  @@map("admin_action")
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ChatRoomType {
@@ -520,171 +678,12 @@ enum ChatRoomType {
 enum ChatMessageType {
   TEXT
   IMAGE
+  FILE
   LINK
   SYSTEM
-}
-
-model ChatRoom {
-  id           String                @id @default(cuid())
-  type         ChatRoomType          @default(DM)
-  name         String? // Group name (null for DMs)
-  imageUrl     String? // Group icon
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  participants ChatRoomParticipant[]
-  messages     ChatMessage[]
-
-  @@map("chat_room")
-}
-
-model ChatRoomParticipant {
-  id         String   @id @default(cuid())
-  roomId     String
-  userId     String
-  lastReadAt DateTime @default(now())
-  joinedAt   DateTime @default(now())
-
-  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([roomId, userId])
-  @@index([userId])
-  @@map("chat_room_participant")
-}
-
-model ChatMessage {
-  id        String          @id @default(cuid())
-  roomId    String
-  userId    String? // Nullable for generic system messages
-  type      ChatMessageType @default(TEXT)
-  content   String?         @db.Text
-  imageUrl  String? // For type IMAGE
-  linkUrl   String? // For type LINK
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([roomId])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("chat_message")
 }
 
 enum FeedbackType {
   FEEDBACK
   BUG_REPORT
-}
-
-model Feedback {
-  id        String       @id @default(cuid())
-  type      FeedbackType
-  message   String       @db.Text
-  userId    String?
-  createdAt DateTime     @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([type])
-  @@index([createdAt])
-  @@map("feedback")
-}
-
-model StudyMaterial {
-  id         String   @id @default(cuid())
-  courseId   String
-  title      String
-  content    String   @db.Text // Extracted text from PDF
-  uploadedBy String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  course         Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  uploadedByUser User    @relation("StudyMaterialsUploaded", fields: [uploadedBy], references: [id])
-  quizzes        Quiz[]
-  fileKey        String? // S3 key for the original file
-
-  @@index([courseId])
-  @@index([uploadedBy])
-  @@map("study_material")
-}
-
-model Quiz {
-  id              String   @id @default(cuid())
-  courseId        String
-  studyMaterialId String?
-  title           String
-  description     String?
-  isPublished     Boolean  @default(false)
-  createdBy       String // Admin who created/approved
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  questionsCount  Int      @default(0)
-
-  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  studyMaterial StudyMaterial? @relation(fields: [studyMaterialId], references: [id], onDelete: SetNull)
-  createdByUser User           @relation("QuizzesCreated", fields: [createdBy], references: [id])
-  questions     QuizQuestion[]
-  sessions      QuizSession[]
-
-  @@index([courseId])
-  @@index([isPublished])
-  @@index([createdBy])
-  @@map("quiz")
-}
-
-model QuizQuestion {
-  id            String   @id @default(cuid())
-  quizId        String
-  content       String   @db.Text // Question text
-  correctAnswer Int // 0-3, which option is correct
-  options       String[] @db.Text // Array of 4 options
-  explanation   String?  @db.Text // Why the answer is correct
-  difficulty    String   @default("medium") // easy, medium, hard
-  createdAt     DateTime @default(now())
-
-  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  questionAttempts QuestionAttempt[]
-
-  @@index([quizId])
-  @@map("quiz_question")
-}
-
-model QuizSession {
-  id           String    @id @default(cuid())
-  quizId       String
-  studentId    String
-  score        Int       @default(0) // Points earned
-  totalPoints  Int       @default(0) // Max possible points
-  attemptedAt  DateTime  @default(now())
-  completedAt  DateTime?
-  timeSpentSec Int? // Total time in seconds
-
-  quiz             Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  student          User              @relation("QuizSessions", fields: [studentId], references: [id], onDelete: Cascade)
-  questionAttempts QuestionAttempt[]
-
-  @@index([quizId])
-  @@index([studentId])
-  @@index([attemptedAt])
-  @@map("quiz_session")
-}
-
-model QuestionAttempt {
-  id            String   @id @default(cuid())
-  sessionId     String
-  questionId    String
-  studentAnswer Int? // 0-3, or null if skipped
-  isCorrect     Boolean?
-  timeSpentSec  Int? // Time to answer this question
-  createdAt     DateTime @default(now())
-
-  session  QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@unique([sessionId, questionId])
-  @@index([sessionId])
-  @@index([questionId])
-  @@map("question_attempt")
 }

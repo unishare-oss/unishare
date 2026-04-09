@@ -147,6 +147,10 @@ export class StorageService implements OnModuleInit {
     return `${this.publicUrl}/${key}`
   }
 
+  extractKeyFromUrl(url: string): string {
+    return url.replace(`${this.publicUrl}/`, '')
+  }
+
   getAllowedMimeTypes(uploadType: UploadType): string[] {
     return FILE_TYPE_CONFIG[uploadType].allowedMimeTypes
   }

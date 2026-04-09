@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsIn, IsString, Matches, MaxLength } from 'class-validator'
 
-export type UploadPurpose = 'profile-picture' | 'post-attachment'
+export type UploadPurpose = 'profile-picture' | 'post-attachment' | 'chat-attachment'
 
 const UPLOAD_PURPOSE_FOLDER: Record<UploadPurpose, string> = {
   'profile-picture': 'profile',
   'post-attachment': 'posts',
+  'chat-attachment': 'chat',
 }
 
 export function getFolderForPurpose(purpose: UploadPurpose, userId: string): string {
@@ -28,7 +29,7 @@ export class PresignedUploadDto {
   @IsIn(['document', 'image', 'video'])
   uploadType: 'document' | 'image' | 'video'
 
-  @ApiProperty({ enum: ['profile-picture', 'post-attachment'] })
-  @IsIn(['profile-picture', 'post-attachment'])
+  @ApiProperty({ enum: ['profile-picture', 'post-attachment', 'chat-attachment'] })
+  @IsIn(['profile-picture', 'post-attachment', 'chat-attachment'])
   purpose: UploadPurpose
 }

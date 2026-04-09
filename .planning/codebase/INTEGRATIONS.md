@@ -1,43 +1,46 @@
 # External Integrations
 
-**Analysis Date:** 2025-03-24
+**Analysis Date:** 2025-02-13
 
 ## APIs & External Services
 
-**Authentication:**
-- Google - Social login provider integrated via Better-Auth.
-  - SDK/Client: `better-auth`
-  - Auth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-- Microsoft - Social login provider integrated via Better-Auth (Entra ID).
-  - SDK/Client: `better-auth`
-  - Auth: `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`
+**AI Services:**
+- Groq - Used for fast AI summarization of posts.
+  - SDK: `groq-sdk`
+  - Auth: `AI_SUMMARY_API_KEY`
+- Google Gemini - Alternative AI provider for post summarization.
+  - SDK: `@google/generative-ai`
+  - Auth: `AI_SUMMARY_API_KEY`
+- Ollama - Self-hosted AI provider option.
+  - Auth: `AI_SUMMARY_ENDPOINT` (Local/Self-hosted)
 
-**Collaboration:**
-- Socket.io - Real-time synchronization for notifications and whiteboard collaboration.
-  - Client: `socket.io-client`
-  - Auth: `better-auth.session_token` cookie
+**Analytics:**
+- Custom Analytics Service - Track user interactions and site visits.
+  - Implementation: `apps/web/app/layout.tsx` (Script injection)
+  - Endpoint: `https://analytics.psstee.dev/script.js`
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL - Primary relational database provider.
+- PostgreSQL 17 - Primary data storage.
   - Connection: `DATABASE_URL`
-  - Client: Prisma ORM (`@prisma/client`) with `@prisma/adapter-pg`
+  - Client: Prisma ORM (`@prisma/client`)
 
 **File Storage:**
-- S3 (compatible) - Used for storing documents, images, and other file uploads.
-  - Client: `@aws-sdk/client-s3`
-  - Service: Configured via `S3_ENDPOINT` and `S3_BUCKET`.
+- S3-Compatible Storage - Used for storing uploaded files (e.g., lecture notes, past papers).
+  - Providers Supported: Cloudflare R2, MinIO, AWS S3.
+  - SDK: `@aws-sdk/client-s3`
+  - Auth: `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`
 
 **Caching:**
-- None detected (other than client-side `TanStack Query` and `Zustand` state management).
+- None detected - Prisma and TanStack Query handle data caching.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom / Better-Auth - Comprehensive identity and session management.
-  - Implementation: `apps/api/src/auth/auth.config.ts` (backend) and `apps/web/src/lib/auth/client.ts` (frontend).
-  - Plugins: `admin` for role-based access, `anonymous` for guest sessions.
+- Better Auth - Integrated authentication solution.
+  - Implementation: `apps/api/src/auth/auth.config.ts`, `apps/web/contexts/auth-context.tsx`
+  - Social Providers: Google (`GOOGLE_CLIENT_ID`), Microsoft (`MICROSOFT_CLIENT_ID`)
 
 ## Monitoring & Observability
 
@@ -45,37 +48,41 @@
 - None detected.
 
 **Logs:**
-- Console-based logging via NestJS `Logger` and standard output for Next.js.
+- NestJS Logger - API logs in development and production.
+- Custom Logger Middleware - Request/Response logging in NestJS (`apps/api/src/common/middleware/logger.middleware.ts`).
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Self-hosted via Coolify - Triggered via deployment webhooks.
-- Image Registry: GitHub Container Registry (GHCR).
+- Dockerized deployment (Self-hosted or Cloud platform).
+- `docker-compose.yml` optimized for Oracle Cloud instances.
 
 **CI Pipeline:**
-- GitHub Actions - Defined in `.github/workflows/ci.yml` (build/lint) and `.github/workflows/docker.yml` (deploy).
+- GitHub Actions - CI/CD workflow defined in `.github/workflows/`.
+  - `ci.yml`: Standard CI for linting and testing.
+  - `docker.yml`: Build and push Docker images.
+  - `release.yml`: Automated release with Semantic Release and Changesets.
 
 ## Environment Configuration
 
 **Required env vars:**
 - `DATABASE_URL`: PostgreSQL connection string.
-- `BETTER_AUTH_SECRET`: Secret key for authentication.
-- `BETTER_AUTH_URL`: Canonical URL for auth endpoints.
-- `FRONTEND_URL`: URL of the frontend application for CORS/OAuth.
-- `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`: Storage configuration.
+- `BETTER_AUTH_SECRET`: Secret for auth token signing.
+- `BETTER_AUTH_URL`: API URL for auth callback.
+- `FRONTEND_URL`: URL of the web frontend.
 
 **Secrets location:**
-- Managed as environment variables in GitHub Secrets (for CI/CD) and locally via `.env` files.
+- Stored in `.env` (development) and passed via Docker environments or CI/CD secrets (production).
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- `COOLIFY_WEBHOOK_API` / `COOLIFY_WEBHOOK_WEB`: Deployment triggers used by GitHub Actions to notify Coolify of new builds.
+- Better Auth callbacks: `/api/auth/callback/[provider]`
+- OAuth redirects: Handle responses from Google and Microsoft.
 
 **Outgoing:**
-- OAuth callbacks: Redirect URLs for Google and Microsoft authentication handled by Better-Auth.
+- AI API calls: Summarization requests to Groq or Gemini.
 
 ---
 
-*Integration audit: 2025-03-24*
+*Integration audit: 2025-02-13*

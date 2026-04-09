@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 
 interface UseScrollPositionRestoreOptions {
   scrollRef: React.RefObject<HTMLDivElement | null>
@@ -18,17 +18,33 @@ export function useScrollPositionRestore({
   const previousScrollHeightRef = useRef<number>(0)
   const isLoadingMoreRef = useRef(false)
 
-  const prepareForLoad = () => {
-    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+  // Helper to find the scroll viewport element
+  const getScrollViewport = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return null
+    // If the element itself is the viewport, return it
+    if (
+      el.hasAttribute('data-radix-scroll-area-viewport') ||
+      el.getAttribute('data-slot') === 'scroll-area-viewport'
+    ) {
+      return el
+    }
+    // Otherwise look for it inside
+    return el.querySelector(
+      '[data-radix-scroll-area-viewport], [data-slot="scroll-area-viewport"]',
+    ) as HTMLDivElement | null
+  }, [])
+
+  const prepareForLoad = useCallback(() => {
+    const scrollContainer = getScrollViewport(scrollRef.current)
     if (scrollContainer) {
       previousScrollHeightRef.current = scrollContainer.scrollHeight
       isLoadingMoreRef.current = true
     }
-  }
+  }, [getScrollViewport, scrollRef])
 
   useEffect(() => {
     if (!isFetchingNextPage && isLoadingMoreRef.current) {
-      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+      const scrollContainer = getScrollViewport(scrollRef.current)
       if (scrollContainer) {
         const currentScrollHeight = scrollContainer.scrollHeight
         const heightDifference = currentScrollHeight - previousScrollHeightRef.current
@@ -44,7 +60,7 @@ export function useScrollPositionRestore({
         }, delayBeforeNextFetch)
       }
     }
-  }, [isFetchingNextPage, delayBeforeNextFetch, scrollRef])
+  }, [isFetchingNextPage, delayBeforeNextFetch, scrollRef, getScrollViewport])
 
   return {
     prepareForLoad,

@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Users, ImageIcon, Link2, Info, X, Search } from 'lucide-react'
+import { Users, ImageIcon, FileIcon, Link2, Info, X, Search } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatRoomEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { SectionRow } from './section-row'
@@ -20,6 +20,7 @@ interface OverviewPaneProps {
   onSearchChange: (q: string) => void
   membersCount: number
   photosCount: number
+  filesCount: number
   linksCount: number
   photosPreviews: string[]
   onNavigate: (view: PaneView) => void
@@ -35,6 +36,7 @@ export function OverviewPane({
   onSearchChange,
   membersCount,
   photosCount,
+  filesCount,
   linksCount,
   photosPreviews,
   onNavigate,
@@ -133,6 +135,12 @@ export function OverviewPane({
                 ) : null
               }
               onClick={() => onNavigate('photos')}
+            />
+            <SectionRow
+              icon={FileIcon}
+              label="Files"
+              count={filesCount}
+              onClick={() => onNavigate('files')}
             />
             <SectionRow
               icon={Link2}
