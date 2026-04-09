@@ -229,29 +229,17 @@ export function useEditMessage({ roomId }: { roomId: string }) {
         const previousMessages = queryClient.getQueryData(messagesQueryKey)
         const previousRooms = queryClient.getQueryData(roomsQueryKey)
 
+        // Build optimistic message (updateMessageInInfiniteCache will merge with existing)
+        const optimisticUpdate = {
+          id: variables.id,
+          content: variables.data.content,
+          updatedAt: new Date().toISOString(),
+        } as ChatMessageEntity
+
         // Optimistically update message in chat window
-        queryClient.setQueryData(messagesQueryKey, (old: any) => {
-          if (!old?.pages) return old
-          return {
-            ...old,
-            pages: old.pages.map((page: any) => ({
-              ...page,
-              data: {
-                ...page.data,
-                items: page.data.items.map((item: any) => {
-                  if (item.id === variables.id) {
-                    return {
-                      ...item,
-                      content: variables.data.content,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  }
-                  return item
-                }),
-              },
-            })),
-          }
-        })
+        queryClient.setQueryData(messagesQueryKey, (old: any) =>
+          updateMessageInInfiniteCache(old, variables.id, optimisticUpdate),
+        )
 
         // Optimistically update message in sidebar preview
         queryClient.setQueryData(roomsQueryKey, (old: any) => {
@@ -282,6 +270,8 @@ export function useEditMessage({ roomId }: { roomId: string }) {
       },
       onSuccess: (data, _variables, context) => {
         const updatedMessage = data.data
+
+        // Reuse the same function for consistency
         queryClient.setQueryData(context.messagesQueryKey, (old: any) =>
           updateMessageInInfiniteCache(old, updatedMessage.id, updatedMessage),
         )

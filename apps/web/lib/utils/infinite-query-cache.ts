@@ -62,11 +62,12 @@ export function replaceMessageInInfiniteCache(
 
 /**
  * Updates a message in the infinite query cache
+ * Also updates parent references in child messages that reference this message
  */
 export function updateMessageInInfiniteCache(
   oldData: any,
   messageId: string,
-  updatedMessage: ChatMessageEntity,
+  updatedMessage: Partial<ChatMessageEntity> & { id: string },
 ): any {
   if (!oldData?.pages) return oldData
 
@@ -77,9 +78,20 @@ export function updateMessageInInfiniteCache(
         ...page,
         data: {
           ...page.data,
-          items: page.data.items.map((item: any) => {
+          items: page.data.items.map((item: ChatMessageEntity) => {
+            // Update the message itself (merge with existing)
             if (item.id === messageId) {
-              return updatedMessage
+              return { ...item, ...updatedMessage }
+            }
+            // Update parent reference if it's this message
+            if (item.parent?.id === messageId) {
+              return {
+                ...item,
+                parent: {
+                  ...item.parent,
+                  content: updatedMessage.content ?? item.parent.content,
+                },
+              }
             }
             return item
           }),
