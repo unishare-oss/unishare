@@ -230,7 +230,7 @@ export function UnifiedChatWindow({
       const unreadMsg = idx === -1 ? messages[0] : (messages[idx + 1] ?? null)
 
       if (unreadMsg) {
-        setFirstUnreadId(unreadMsg.id)
+        setTimeout(() => setFirstUnreadId(unreadMsg.id), 0)
         const el = messagesContainerRef.current?.querySelector(
           `[data-message-id="${unreadMsg.id}"]`,
         ) as HTMLElement | null
@@ -259,7 +259,7 @@ export function UnifiedChatWindow({
     }
     el.addEventListener('scroll', handleScroll, { passive: true })
     return () => el.removeEventListener('scroll', handleScroll)
-  }, [scrollContainerRef.current]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Socket message handling (only for existing rooms)
   useEffect(() => {
@@ -285,7 +285,7 @@ export function UnifiedChatWindow({
   // Reset scroll flag and unread divider when room changes
   useEffect(() => {
     hasScrolledInitiallyRef.current = false
-    setFirstUnreadId(null)
+    setTimeout(() => setFirstUnreadId(null), 0)
   }, [roomId])
 
   // Mark messages as read when at bottom
