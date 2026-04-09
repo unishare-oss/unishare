@@ -186,6 +186,7 @@ export const useChatLastSeenStore = create<ChatLastSeenStore>()(
 )
 
 interface SettingsStore {
+  fontSize: 'xsmall' | 'small' | 'normalsmall' | 'medium' | 'mediumlarge' | 'large' | 'xlarge'
   setFontSize: (
     size: 'xsmall' | 'small' | 'normalsmall' | 'medium' | 'mediumlarge' | 'large' | 'xlarge',
   ) => void
