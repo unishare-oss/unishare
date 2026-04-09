@@ -1,3 +1,13 @@
+# [0.11.0](https://github.com/unishare-oss/unishare/compare/v0.10.0...v0.11.0) (2026-04-07)
+
+### Bug Fixes
+
+- **users:** address PR [#38](https://github.com/unishare-oss/unishare/issues/38) review comments ([ff2ff34](https://github.com/unishare-oss/unishare/commit/ff2ff348a0585e29f298b44c551df1ce98a6cf16))
+
+### Features
+
+- **auth:** protect last auth method unlink + allow different email linking ([cd5f6e8](https://github.com/unishare-oss/unishare/commit/cd5f6e867b8b07e6c09c6e4309315adaaa9f5898))
+
 # [0.10.0](https://github.com/unishare-oss/unishare/compare/v0.9.2...v0.10.0) (2026-04-05)
 
 ### Bug Fixes

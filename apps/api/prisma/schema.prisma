@@ -17,6 +17,7 @@ model User {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   departmentId            String?
+  universityId            String?
   role                    UserRole                 @default(STUDENT)
   banExpires              DateTime?
   banReason               String?
@@ -25,7 +26,6 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
-  universityId            String?
   accounts                Account[]
   adminActions            AdminAction[]            @relation("AdminActions")
   chatMessages            ChatMessage[]

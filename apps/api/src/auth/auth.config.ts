@@ -44,6 +44,11 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  account: {
+    accountLinking: {
+      allowDifferentEmails: true,
+    },
+  },
   socialProviders: {
     microsoft: {
       clientId: process.env.MICROSOFT_CLIENT_ID as string,
