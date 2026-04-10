@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { CacheModule } from '@nestjs/cache-manager'
 import { ScheduleModule } from '@nestjs/schedule'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
+import KeyvRedis from '@keyv/redis'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { auth } from './auth/auth.config'
@@ -32,6 +34,13 @@ import { UniversitiesModule } from './modules/universities/universities.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        stores: [new KeyvRedis(config.get<string>('REDIS_URL', 'redis://localhost:6379'))],
+      }),
+    }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     PrismaModule,
