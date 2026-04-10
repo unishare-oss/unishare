@@ -304,7 +304,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     if (distFromBottom < 150) {
       el.scrollTop = el.scrollHeight
     }
-  }, [messages.length])
+  }, [messages.length, roomTypingUsers.length])
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (scrollContainerRef.current) {
