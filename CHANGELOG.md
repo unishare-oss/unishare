@@ -1,3 +1,16 @@
+# [0.13.0](https://github.com/unishare-oss/unishare/compare/v0.12.0...v0.13.0) (2026-04-10)
+
+### Bug Fixes
+
+- **chat:** only show unread divider for received messages, not sent ([9b62790](https://github.com/unishare-oss/unishare/commit/9b627907de677d9de882890a210444083dcd4e2d))
+- **chat:** scroll to bottom when typing indicator appears ([edb8e1f](https://github.com/unishare-oss/unishare/commit/edb8e1fefcf6101a9250dca9bef6083221d748e3))
+- **chat:** use theme-aware Tailwind classes in typing indicator bubble ([cad8828](https://github.com/unishare-oss/unishare/commit/cad882881b2310f31a2fd42769d040e567857d0a))
+
+### Features
+
+- **chat:** add Redis-backed presence tracking for active/offline status ([fb5d9a9](https://github.com/unishare-oss/unishare/commit/fb5d9a978a64b019d3bab09c16aa67c9e224f8b3))
+- **chat:** wire presence into frontend sidebar and chat header ([2883c3c](https://github.com/unishare-oss/unishare/commit/2883c3c7e5b2987d2c4e3a2e363ddb23ba5a0363))
+
 # [0.12.0](https://github.com/unishare-oss/unishare/compare/v0.11.0...v0.12.0) (2026-04-09)
 
 ### Bug Fixes
