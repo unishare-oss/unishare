@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback, RefObject } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useSendMessage, useEditMessage, useDeleteMessage } from '@/hooks/use-chat-mutations'
 import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
+import { useChatSocket } from '@/hooks/use-chat-socket'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -41,7 +42,6 @@ import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { Socket } from 'socket.io-client'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
 
@@ -72,18 +72,16 @@ function shouldShowDateSeparator(
 
 interface UnifiedChatWindowProps {
   roomId?: string
-  lastSocketMessage?: ChatMessageEntity
-  isConnected?: boolean
-  socket: RefObject<Socket | null>
 }
 
-export function UnifiedChatWindow({
-  roomId,
-  lastSocketMessage,
-  isConnected = true,
-  socket,
-}: UnifiedChatWindowProps) {
+export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
+  const {
+    presence,
+    lastMessage: lastSocketMessage,
+    isConnected,
+    socketRef: socket,
+  } = useChatSocket()
   const router = useRouter()
   const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -145,12 +143,9 @@ export function UnifiedChatWindow({
     (p: ChatRoomParticipantEntity) => p.userId !== user?.id,
   )
 
-  const headerUser = otherParticipant?.user
-    ? {
-        ...otherParticipant.user,
-        isActive: false,
-        lastSeenAt: undefined,
-      }
+  const headerUser = otherParticipant?.user ?? undefined
+  const headerPresence = otherParticipant?.userId
+    ? presence.get(otherParticipant.userId)
     : undefined
 
   // Fetch messages with infinite scroll (only if roomId exists)
@@ -560,7 +555,7 @@ export function UnifiedChatWindow({
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <ChatHeader user={headerUser} />
+          <ChatHeader user={headerUser} presence={headerPresence} />
         </div>
         <Button
           variant="ghost"

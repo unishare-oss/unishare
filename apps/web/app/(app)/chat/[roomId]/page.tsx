@@ -1,14 +1,13 @@
 'use client'
 
-import { use } from 'react'
+import { use, useEffect } from 'react'
 import { UnifiedChatWindow } from '@/components/chat/unified-chat-window'
 import { ChatPageTransition } from '@/components/chat/chat-page-transition'
 import { useChatSocket } from '@/hooks/use-chat-socket'
-import { useEffect } from 'react'
 
 export default function ChatRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params)
-  const { joinRoom, lastMessage, isConnected, socketRef } = useChatSocket()
+  const { joinRoom } = useChatSocket()
 
   useEffect(() => {
     if (roomId) {
@@ -18,13 +17,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ roomId: str
 
   return (
     <ChatPageTransition direction="forward">
-      <UnifiedChatWindow
-        roomId={roomId}
-        key={roomId}
-        lastSocketMessage={lastMessage ?? undefined}
-        isConnected={isConnected}
-        socket={socketRef}
-      />
+      <UnifiedChatWindow roomId={roomId} key={roomId} />
     </ChatPageTransition>
   )
 }

@@ -11,7 +11,6 @@ import {
 import { Logger, UseGuards, UseFilters } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
-import { ChatService } from './chat.service'
 import { PresenceService } from './presence.service'
 import { ChatRoomGuard } from './guards/chat-room.guard'
 import { ChatWsExceptionFilter } from './filters/ws-exception.filter'

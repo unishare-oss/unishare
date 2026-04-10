@@ -26,11 +26,17 @@ import {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
+export interface PresenceEntry {
+  status: 0 | 1
+  lastSeen?: number
+}
+
 export interface ChatSocketContextValue {
   socketRef: RefObject<Socket | null>
   isConnected: boolean
   lastMessage: ChatMessageEntity | null
   joinRoom: (roomId: string) => void
+  presence: Map<string, PresenceEntry>
 }
 
 export const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
@@ -41,6 +47,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<ChatMessageEntity | null>(null)
+  const [presence, setPresence] = useState<Map<string, PresenceEntry>>(new Map())
 
   useEffect(() => {
     if (!session) return
@@ -152,6 +159,14 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
     })
 
+    socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
+      setPresence((prev) => {
+        const next = new Map(prev)
+        next.set(payload.userId, { status: payload.status, lastSeen: payload.lastSeen })
+        return next
+      })
+    })
+
     socket.on('error', (error: any) => {
       console.error('Chat socket error:', error)
       const message = typeof error === 'string' ? error : error.message || 'Chat connection error'
@@ -174,6 +189,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     isConnected,
     lastMessage,
     joinRoom,
+    presence,
   }
 
   return <ChatSocketContext.Provider value={value}>{children}</ChatSocketContext.Provider>
