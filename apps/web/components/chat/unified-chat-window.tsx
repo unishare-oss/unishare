@@ -655,7 +655,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                           )}
 
                           {/* Unread divider */}
-                          {firstUnreadId === msg.id && (
+                          {firstUnreadId === msg.id && !isMe && (
                             <div className="flex items-center gap-3 my-3">
                               <div className="flex-1 h-px bg-primary/25" />
                               <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
