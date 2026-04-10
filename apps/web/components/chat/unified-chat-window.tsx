@@ -6,12 +6,14 @@ import { useInView } from 'react-intersection-observer'
 import {
   useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
+  useChatControllerMarkAsRead,
   getChatControllerGetMessagesInfiniteQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import type { DeliveryStatus, ChatMessageWithStatus } from '@/hooks/use-chat-mutations'
 import { useAuth } from '@/contexts/auth-context'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
@@ -69,6 +71,20 @@ function shouldShowDateSeparator(
   return !isSameDay(currentDate, previousDate)
 }
 
+function getDeliveryStatus(
+  msg: ChatMessageEntity,
+  otherParticipantLastReadAt: string | Date | undefined,
+): DeliveryStatus {
+  if (msg.id.startsWith('temp-')) return 'sending'
+  if (
+    otherParticipantLastReadAt &&
+    new Date(otherParticipantLastReadAt) >= new Date(msg.createdAt)
+  ) {
+    return 'seen'
+  }
+  return 'delivered'
+}
+
 interface UnifiedChatWindowProps {
   roomId?: string
 }
@@ -91,6 +107,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const [showDisconnected, setShowDisconnected] = useState(false)
 
   const { setLastSeen } = useChatLastSeenStore()
+  const { mutate: markRoomAsRead } = useChatControllerMarkAsRead()
 
   // Only show disconnected banner after 5s to avoid flashing on brief drops
   useEffect(() => {
@@ -266,6 +283,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     const lastMsg = messages[messages.length - 1]
     if (lastMsg && !lastMsg.id.startsWith('temp-')) {
       setLastSeen(roomId, lastMsg.id)
+      markRoomAsRead({ id: roomId })
     }
   }, [isAtBottom, messages, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -417,6 +435,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                       const isDeleting = deletingIds.has(msg.id)
                       const isTemp = msg.id.startsWith('temp-')
 
+                      const msgWithStatus: ChatMessageWithStatus = isMe
+                        ? {
+                            ...msg,
+                            _deliveryStatus: getDeliveryStatus(msg, otherParticipant?.lastReadAt),
+                          }
+                        : msg
+
                       return (
                         <motion.div
                           key={msg.id || i}
@@ -457,7 +482,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
                           {/* Message Bubble */}
                           <ChatMessageBubble
-                            message={msg}
+                            message={msgWithStatus}
                             isMe={isMe}
                             showAvatar={showAvatar}
                             currentUserId={user?.id}

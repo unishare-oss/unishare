@@ -20,6 +20,12 @@ import {
   deleteMessageFromInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
 
+export type DeliveryStatus = 'sending' | 'delivered' | 'seen'
+
+export type ChatMessageWithStatus = ChatMessageEntity & {
+  _deliveryStatus?: DeliveryStatus
+}
+
 /**
  * Helper function to create an optimistic message with consistent shape
  */
@@ -43,7 +49,7 @@ function createOptimisticMessage({
   fileName?: string | null
   user?: UserProfileEntity | null
   parent?: ChatMessageEntity
-}): ChatMessageEntity {
+}): ChatMessageWithStatus {
   return {
     id: tempId,
     roomId,
@@ -56,6 +62,7 @@ function createOptimisticMessage({
     linkUrl: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    _deliveryStatus: 'sending',
     user: user
       ? {
           id: user.id,
@@ -150,7 +157,7 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
       onSuccess: (data, _variables, context) => {
         if (!context?.messagesQueryKey) return
 
-        const realMessage = data.data
+        const realMessage: ChatMessageWithStatus = { ...data.data, _deliveryStatus: 'delivered' }
 
         // Replace optimistic message with real one in chat window
         queryClient.setQueryData(context.messagesQueryKey, (old: any) =>

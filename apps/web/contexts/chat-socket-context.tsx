@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   getChatControllerGetRoomsQueryKey,
   getChatControllerGetMessagesInfiniteQueryKey,
+  getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import {
   addMessageToInfiniteCache,
@@ -150,6 +151,24 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
           queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
         }
         return old
+      })
+    })
+
+    socket.on('room-read', (payload: { roomId: string; userId: string; lastReadAt: string }) => {
+      const { roomId, userId, lastReadAt } = payload
+
+      // Update the individual room cache so delivery ticks re-compute
+      queryClient.setQueryData(getChatControllerGetRoomQueryKey(roomId), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            participants: old.data.participants.map((p: any) =>
+              p.userId === userId ? { ...p, lastReadAt } : p,
+            ),
+          },
+        }
       })
     })
 
