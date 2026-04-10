@@ -83,7 +83,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
   }
 
-  const { socketRef } = useChatSocket()
+  const { socketRef, presence } = useChatSocket()
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
 
   // Merge Following and Followers into a unique list of "Network" users
@@ -156,6 +156,10 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
             const roomTypingUsers = typingByRoom.get(room.id || '') || []
 
+            const isOnline = otherParticipant
+              ? presence.get(otherParticipant.userId)?.status === 1
+              : false
+
             return (
               <button
                 key={room.id}
@@ -166,7 +170,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
               >
-                <Avatar className="h-10 w-10 rounded-[6px]">
+                <Avatar
+                  className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
+                >
                   <AvatarImage src={displayImage} alt={displayName} />
                   <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
                     {displayName.substring(0, 2).toUpperCase()}
@@ -226,6 +232,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 )
                 const isSelected = userRoom && selectedRoomId === userRoom.id
                 const roomTypingUsers = userRoom ? typingByRoom.get(userRoom.id) || [] : []
+                const isOnline = presence.get(user.id)?.status === 1
 
                 return (
                   <button
@@ -238,7 +245,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                         'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                     )}
                   >
-                    <Avatar className="h-10 w-10 rounded-[6px]">
+                    <Avatar
+                      className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
+                    >
                       <AvatarImage src={user.image || ''} alt={user.name} />
                       <AvatarFallback className="text-xs rounded-none bg-border text-foreground font-mono font-medium">
                         {user.name.substring(0, 2).toUpperCase()}

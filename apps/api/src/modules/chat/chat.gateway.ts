@@ -11,7 +11,7 @@ import {
 import { Logger, UseGuards, UseFilters } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
-import { ChatService } from './chat.service'
+import { PresenceService } from './presence.service'
 import { ChatRoomGuard } from './guards/chat-room.guard'
 import { ChatWsExceptionFilter } from './filters/ws-exception.filter'
 import { OnEvent } from '@nestjs/event-emitter'
@@ -32,9 +32,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @WebSocketServer() server: Server
   private readonly logger = new Logger(ChatGateway.name)
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly presenceService: PresenceService) {}
 
   afterInit(server: Server) {
+    this.presenceService.setServer(server)
+
     server.use(async (socket: Socket, next: (err?: Error) => void) => {
       const session = await auth.api.getSession({
         headers: new Headers(socket.handshake.headers as any),
@@ -55,14 +57,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   handleConnection(client: Socket) {
     this.logger.log(`Connection established! Socket ID: ${client.id}`)
 
-    // Join personal room for global notifications
     const userId = client.data.user.id
     client.join(`user-${userId}`)
     this.logger.log(`User ${userId} joined personal room: user-${userId}`)
+
+    this.presenceService.connect(userId)
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`)
+
+    const userId = client.data?.user?.id
+    if (userId) this.presenceService.disconnect(userId)
   }
 
   @UseGuards(ChatRoomGuard)
