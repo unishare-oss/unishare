@@ -143,7 +143,13 @@ export class ChatService {
   }
 
   async markAsRead(roomId: string, userId: string) {
-    return this.chatRepository.markAsRead(roomId, userId)
+    const participant = await this.chatRepository.markAsRead(roomId, userId)
+    this.eventEmitter.emit('chat.room_read', {
+      roomId,
+      userId,
+      lastReadAt: participant.lastReadAt,
+    })
+    return participant
   }
 
   private sanitizeParent<

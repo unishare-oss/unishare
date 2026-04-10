@@ -137,4 +137,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const { roomId, messageId } = payload
     this.server.to(roomId).emit('message-deleted', { roomId, messageId })
   }
+
+  @OnEvent('chat.room_read')
+  async handleRoomReadEvent(payload: { roomId: string; userId: string; lastReadAt: Date }) {
+    const { roomId, userId, lastReadAt } = payload
+    this.server.to(roomId).emit('room-read', { roomId, userId, lastReadAt })
+  }
 }
