@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
@@ -12,10 +12,10 @@ import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
 import { useAuth } from '@/contexts/auth-context'
-import { useSendMessage, useEditMessage, useDeleteMessage } from '@/hooks/use-chat-mutations'
-import { useScrollPositionRestore } from '@/hooks/use-scroll-position-restore'
+import { useScrollManager } from '@/hooks/use-scroll-manager'
+import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
+import { useChatFileUpload } from '@/hooks/use-chat-file-upload'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
 import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
@@ -53,7 +53,6 @@ function getDateSeparatorText(date: Date): string {
   if (isYesterday(date)) {
     return 'Yesterday'
   }
-  // Show full date for older messages
   return format(date, 'MMMM d, yyyy')
 }
 
@@ -85,70 +84,37 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const [content, setContent] = useState('')
-  const [editingMessage, setEditingMessage] = useState<ChatMessageEntity | null>(null)
-  const [replyingToMessage, setReplyingToMessage] = useState<ChatMessageEntity | null>(null)
+
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [messageToDelete, setMessageToDelete] = useState<string | null>(null)
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
-  const [isAtBottom, setIsAtBottom] = useState(true)
-  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null)
-  const [imageModalOpen, setImageModalOpen] = useState(false)
-  const [pendingFileFile, setPendingFileFile] = useState<File | null>(null)
-  const [fileModalOpen, setFileModalOpen] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
 
-  const { getLastSeen, setLastSeen } = useChatLastSeenStore()
+  const { setLastSeen } = useChatLastSeenStore()
 
-  // Force scroll to bottom immediately on initial load (before render completes)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const hasScrolledInitiallyRef = useRef(false)
-
-  // Callback ref to capture the ScrollArea viewport
-  const setScrollContainer = (node: HTMLDivElement | null) => {
-    if (node) {
-      scrollContainerRef.current = node.querySelector(
-        '[data-radix-scroll-area-viewport]',
-      ) as HTMLDivElement
-    }
-  }
-
-  // Global typing indicator (tracks all rooms)
-  const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
-
-  // Emit typing for current room
-  useEmitTyping(socket.current, roomId || '', content.trim())
-
-  // Only show disconnected banner after 5s of being offline to avoid flashing on brief drops
+  // Only show disconnected banner after 5s to avoid flashing on brief drops
   useEffect(() => {
     const delay = isConnected ? 0 : 5000
     const timer = setTimeout(() => setShowDisconnected(!isConnected), delay)
     return () => clearTimeout(timer)
   }, [isConnected])
 
-  // Fetch existing room data
+  // Fetch room data
   const { data: roomResponse, isLoading: roomLoading } = useChatControllerGetRoom(roomId || '', {
     query: { enabled: !!roomId },
   })
 
   const room = roomResponse?.data
 
-  // Determine the other participant
   const otherParticipant = room?.participants?.find(
     (p: ChatRoomParticipantEntity) => p.userId !== user?.id,
   )
-
   const headerUser = otherParticipant?.user ?? undefined
   const headerPresence = otherParticipant?.userId
     ? presence.get(otherParticipant.userId)
     : undefined
 
-  // Fetch messages with infinite scroll (only if roomId exists)
+  // Fetch messages with infinite scroll
   const {
     data: messagesData,
     isLoading: messagesLoading,
@@ -157,10 +123,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     isFetchingNextPage,
   } = useChatControllerGetMessagesInfinite(
     roomId || '',
-    {
-      limit: 50,
-      direction: 'desc', // Fetch newest first, will reverse for display
-    },
+    { limit: 50, direction: 'desc' },
     {
       query: {
         enabled: !!roomId,
@@ -171,33 +134,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     },
   )
 
-  // Intersection observer for loading more messages
+  // Intersection observer for loading older messages
   const { ref: loadMoreRef, inView } = useInView()
 
-  // Scroll position restoration hook
-  const { prepareForLoad, isLoadingMore } = useScrollPositionRestore({
-    scrollRef: scrollContainerRef,
-    isFetchingNextPage,
-  })
-
-  // Load more when scroll trigger is in view
-  useEffect(() => {
-    // Don't trigger if we're already loading or just finished loading
-    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMore.current) {
-      prepareForLoad()
-      fetchNextPage()
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
-
-  // Send message mutation
-  const { mutate: sendMessage } = useSendMessage({ roomId, user })
-  const { mutate: editMessage } = useEditMessage({ roomId: roomId || '' })
-  const { mutate: deleteMessage } = useDeleteMessage({ roomId: roomId || '' })
-
-  // Flatten all pages and reverse to show oldest first
+  // Flatten pages and reverse to show oldest first
   const initialMsgs = useMemo(() => {
     if (!messagesData?.pages) return []
-    return messagesData.pages.flatMap((page) => page.data.items).reverse() // Reverse because we fetch desc but display asc
+    return messagesData.pages.flatMap((page) => page.data.items).reverse()
   }, [messagesData])
 
   const messages = useMemo(() => {
@@ -206,57 +149,93 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
   }, [initialMsgs, searchQuery])
 
-  // Scroll to first unread (or bottom) on initial load
+  // Typing indicators
+  const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
+  const roomTypingUsers = typingByRoom.get(roomId || '') || []
+
+  // Scroll management
+  const {
+    scrollContainerRef,
+    setScrollContainer,
+    isAtBottom,
+    scrollToBottom,
+    isLoadingMore,
+    prepareForLoad,
+  } = useScrollManager({
+    roomId,
+    messages,
+    messagesLoading,
+    isFetchingNextPage,
+    roomTypingUsersCount: roomTypingUsers.length,
+    messagesContainerRef,
+    setFirstUnreadId,
+  })
+
+  // Message CRUD actions
+  const {
+    content,
+    setContent,
+    editingMessage,
+    setEditingMessage,
+    replyingToMessage,
+    setReplyingToMessage,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    highlightedMessageId,
+    deletingIds,
+    sendMessage,
+    handleSend,
+    handleEdit,
+    handleReply,
+    handleDelete,
+    confirmDelete,
+    handleScrollToMessage,
+  } = useChatMessageActions({
+    roomId,
+    user,
+    scrollToBottom,
+    messagesContainerRef,
+    scrollContainerRef,
+    hasNextPage,
+    fetchNextPage,
+  })
+
+  // Emit typing for current room
+  useEmitTyping(socket.current, roomId || '', content.trim())
+
+  // File / image upload
+  const {
+    pendingImageFile,
+    imageModalOpen,
+    setImageModalOpen,
+    setPendingImageFile,
+    pendingFileFile,
+    fileModalOpen,
+    setFileModalOpen,
+    setPendingFileFile,
+    isDragging,
+    setIsDragging,
+    openImageModal,
+    openFileModal,
+    handleSendImage,
+    handleSendFile,
+  } = useChatFileUpload({
+    roomId,
+    replyingToMessage,
+    sendMessage,
+    setReplyingToMessage,
+    scrollToBottom,
+  })
+
+  // Load more when scroll trigger comes into view
   useEffect(() => {
-    if (
-      !scrollContainerRef.current ||
-      messagesLoading ||
-      messages.length === 0 ||
-      hasScrolledInitiallyRef.current ||
-      !roomId
-    )
-      return
-
-    const lastSeenId = getLastSeen(roomId)
-
-    if (lastSeenId) {
-      const idx = messages.findIndex((m) => m.id === lastSeenId)
-      // idx === -1 means last-seen is older than loaded page → all 50 are unread
-      const unreadMsg = idx === -1 ? messages[0] : (messages[idx + 1] ?? null)
-
-      if (unreadMsg) {
-        setTimeout(() => setFirstUnreadId(unreadMsg.id), 0)
-        const el = messagesContainerRef.current?.querySelector(
-          `[data-message-id="${unreadMsg.id}"]`,
-        ) as HTMLElement | null
-        if (el) {
-          el.scrollIntoView({ block: 'center' })
-        } else {
-          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-        }
-        hasScrolledInitiallyRef.current = true
-        return
-      }
+    if (inView && hasNextPage && !isFetchingNextPage && !isLoadingMore.current) {
+      prepareForLoad()
+      fetchNextPage()
     }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
 
-    // No unread messages or no last-seen — scroll to bottom as usual
-    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-    hasScrolledInitiallyRef.current = true
-  }, [messagesLoading, messages.length, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Track scroll position to show/hide scroll-to-bottom button
-  useEffect(() => {
-    const el = scrollContainerRef.current
-    if (!el) return
-    const handleScroll = () => {
-      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-      setIsAtBottom(distFromBottom < 100)
-    }
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    return () => el.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Socket message handling (only for existing rooms)
+  // Add incoming socket messages from other users to the query cache
   useEffect(() => {
     if (
       !roomId ||
@@ -271,15 +250,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       direction: 'desc',
     })
 
-    // Add socket message to the first page (most recent)
     queryClient.setQueryData(messagesQueryKey, (old: unknown) =>
       addMessageToInfiniteCache(old, lastSocketMessage),
     )
   }, [lastSocketMessage, roomId, queryClient, user])
 
-  // Reset scroll flag and unread divider when room changes
+  // Reset unread divider when room changes
   useEffect(() => {
-    hasScrolledInitiallyRef.current = false
     setTimeout(() => setFirstUnreadId(null), 0)
   }, [roomId])
 
@@ -291,193 +268,6 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       setLastSeen(roomId, lastMsg.id)
     }
   }, [isAtBottom, messages, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Get typing users for current room
-  const roomTypingUsers = typingByRoom.get(roomId || '') || []
-
-  // Auto-scroll to bottom when new messages arrive (if already near bottom)
-  useEffect(() => {
-    if (!scrollContainerRef.current || isLoadingMore.current || !hasScrolledInitiallyRef.current)
-      return
-    const el = scrollContainerRef.current
-    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    if (distFromBottom < 150) {
-      el.scrollTop = el.scrollHeight
-    }
-  }, [messages.length, roomTypingUsers.length])
-
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: scrollContainerRef.current.scrollHeight,
-        behavior,
-      })
-    }
-  }
-
-  const handleSend = async () => {
-    if (!content.trim() || !roomId) return
-
-    const messageContent = content
-    setContent('')
-
-    if (editingMessage) {
-      if ((editingMessage.content ?? '').trim() === content.trim()) {
-        setEditingMessage(null)
-        return
-      }
-      editMessage({ id: editingMessage.id, data: { content: messageContent } })
-      setEditingMessage(null)
-    } else {
-      sendMessage({
-        id: roomId,
-        data: {
-          content: messageContent,
-          type: 'TEXT',
-          ...(replyingToMessage && { parentId: replyingToMessage.id }),
-        },
-      })
-      setReplyingToMessage(null)
-      // Defer scroll so optimistic message renders before we scroll
-      requestAnimationFrame(() => scrollToBottom())
-    }
-  }
-
-  const handleEdit = (message: ChatMessageEntity) => {
-    setEditingMessage(message)
-    setReplyingToMessage(null) // Clear reply when editing
-    setContent(message.content || '')
-  }
-
-  const handleReply = (message: ChatMessageEntity) => {
-    setReplyingToMessage(message)
-    setEditingMessage(null) // Clear edit when replying
-    setContent('')
-  }
-
-  const openImageModal = useCallback((file: File) => {
-    setPendingImageFile(file)
-    setImageModalOpen(true)
-  }, [])
-
-  // Paste handler — intercept image/* items from clipboard
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = Array.from(e.clipboardData?.items ?? [])
-      const imageItem = items.find((item) => item.type.startsWith('image/'))
-      if (!imageItem) return
-      e.preventDefault()
-      const file = imageItem.getAsFile()
-      if (file) openImageModal(file)
-    }
-    document.addEventListener('paste', handlePaste)
-    return () => document.removeEventListener('paste', handlePaste)
-  }, [openImageModal])
-
-  const handleSendImage = async (file: File, caption: string) => {
-    if (!roomId) return
-    const mimeType = file.type
-    const presignedRes = await storageControllerGetPresignedUploadUrl({
-      mimeType,
-      uploadType: 'image',
-      purpose: 'chat-attachment',
-    })
-    const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
-    await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
-    sendMessage({
-      id: roomId,
-      data: {
-        imageUrl: publicUrl,
-        ...(caption && { content: caption }),
-        type: 'IMAGE',
-        ...(replyingToMessage && { parentId: replyingToMessage.id }),
-      },
-    })
-    setReplyingToMessage(null)
-    setImageModalOpen(false)
-    setPendingImageFile(null)
-    requestAnimationFrame(() => scrollToBottom())
-  }
-
-  const openFileModal = useCallback((file: File) => {
-    setPendingFileFile(file)
-    setFileModalOpen(true)
-  }, [])
-
-  const handleSendFile = async (file: File, caption: string) => {
-    if (!roomId) return
-    const mimeType = file.type || 'application/octet-stream'
-    const presignedRes = await storageControllerGetPresignedUploadUrl({
-      mimeType,
-      uploadType: 'document',
-      purpose: 'chat-attachment',
-    })
-    const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
-    await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
-    sendMessage({
-      id: roomId,
-      data: {
-        fileUrl: publicUrl,
-        fileName: file.name,
-        ...(caption && { content: caption }),
-        type: 'FILE',
-        ...(replyingToMessage && { parentId: replyingToMessage.id }),
-      },
-    })
-    setReplyingToMessage(null)
-    setFileModalOpen(false)
-    setPendingFileFile(null)
-    requestAnimationFrame(() => scrollToBottom())
-  }
-
-  const handleDelete = (messageId: string) => {
-    setMessageToDelete(messageId)
-    setDeleteDialogOpen(true)
-  }
-
-  const confirmDelete = () => {
-    if (!messageToDelete) return
-    const id = messageToDelete
-    setDeleteDialogOpen(false)
-    setMessageToDelete(null)
-    // Mark as deleting — AnimatePresence plays exit, then we remove from cache
-    setDeletingIds((prev) => new Set(prev).add(id))
-    setTimeout(() => {
-      deleteMessage({ id })
-      setDeletingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    }, 400)
-  }
-
-  const handleScrollToMessage = async (messageId: string) => {
-    const tryScroll = (scrollDelay = 500) => {
-      const el = messagesContainerRef.current?.querySelector(
-        `[data-message-id="${messageId}"]`,
-      ) as HTMLElement | null
-      if (!el || !scrollContainerRef.current) return false
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      // Delay highlight until scroll animation completes
-      setTimeout(() => {
-        setHighlightedMessageId(messageId)
-        setTimeout(() => setHighlightedMessageId(null), 1600)
-      }, scrollDelay)
-      return true
-    }
-
-    if (tryScroll()) return
-
-    // Message not yet in DOM — fetch older pages until found (max 5 pages)
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (!hasNextPage) break
-      await fetchNextPage()
-      await new Promise((resolve) => setTimeout(resolve, 250))
-      // Give extra scroll delay after page fetch since DOM just re-rendered
-      if (tryScroll(700)) return
-    }
-  }
 
   if (!roomId || roomLoading) {
     return (
@@ -543,6 +333,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         onSend={handleSendFile}
         replyingTo={replyingToMessage}
       />
+
       {/* Chat Header */}
       <div className="flex items-center justify-between border-b pr-3 bg-background">
         <div className="flex items-center">
@@ -624,7 +415,6 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                       const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
                       const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
                       const isDeleting = deletingIds.has(msg.id)
-
                       const isTemp = msg.id.startsWith('temp-')
 
                       return (
