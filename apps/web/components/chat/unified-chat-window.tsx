@@ -29,6 +29,7 @@ import {
   WifiOff,
   ArrowDown,
   ImageIcon,
+  UsersRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -38,7 +39,9 @@ import { cn } from '@/lib/utils'
 import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
 import { ChatInfoPane } from './chat-info-pane'
+import { CreateGroupDialog } from './create-group-dialog'
 import { ChatMessageBubble } from './chat-message-bubble'
+import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
@@ -103,6 +106,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
   const [infoPaneOpen, setInfoPaneOpen] = useState(false)
+  const [createGroupOpen, setCreateGroupOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
 
@@ -354,31 +358,59 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
       {/* Chat Header */}
       <div className="flex items-center justify-between border-b pr-3 bg-background">
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0">
           <Button
             variant="ghost"
             size="icon-sm"
-            className="md:hidden ml-1"
+            className="md:hidden ml-1 shrink-0"
             onClick={() => router.push('/chat')}
             aria-label="Back to chats"
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <ChatHeader user={headerUser} presence={headerPresence} />
-        </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setInfoPaneOpen((v) => !v)}
-          aria-label="Toggle info pane"
-        >
-          {infoPaneOpen ? (
-            <PanelRightClose className="size-4" strokeWidth={1.5} />
+          {room?.type === 'GROUP' ? (
+            <ChatHeader
+              mode="group"
+              groupName={room.name}
+              groupImage={room.imageUrl}
+              participants={room.participants}
+              presenceMap={presence}
+            />
           ) : (
-            <PanelRightOpen className="size-4" strokeWidth={1.5} />
+            <ChatHeader mode="dm" user={headerUser} presence={headerPresence} />
           )}
-        </Button>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setCreateGroupOpen(true)}
+            aria-label="Create group chat"
+            title="Create group chat"
+          >
+            <UsersRound className="size-4" strokeWidth={1.5} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setInfoPaneOpen((v) => !v)}
+            aria-label="Toggle info pane"
+          >
+            {infoPaneOpen ? (
+              <PanelRightClose className="size-4" strokeWidth={1.5} />
+            ) : (
+              <PanelRightOpen className="size-4" strokeWidth={1.5} />
+            )}
+          </Button>
+        </div>
       </div>
+
+      <CreateGroupDialog
+        open={createGroupOpen}
+        onOpenChange={setCreateGroupOpen}
+        defaultName={room?.type === 'DM' && headerUser?.name ? `${headerUser.name}'s Group` : ''}
+        defaultParticipantIds={otherParticipant?.userId ? [otherParticipant.userId] : []}
+      />
 
       {/* Disconnected banner */}
       {showDisconnected && (
@@ -411,20 +443,12 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                   )}
 
                   {/* Conversation Start Header */}
-                  {otherParticipant?.user && !hasNextPage && (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                      <Avatar className="h-20 w-20 mb-4 rounded-[6px]">
-                        <AvatarImage src={otherParticipant.user.image || ''} />
-                        <AvatarFallback className="text-xl rounded-none bg-border text-foreground font-mono font-medium">
-                          {otherParticipant.user.name?.[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <h2 className="text-xl font-bold">{otherParticipant.user.name}</h2>
-                      <p className="text-sm text-muted-foreground max-w-xs mt-2">
-                        This is the beginning of your conversation with {otherParticipant.user.name}
-                        .{messages.length === 0 ? ' Send a message to start chatting.' : ''}
-                      </p>
-                    </div>
+                  {!hasNextPage && (
+                    <ChatConversationStart
+                      room={room}
+                      currentUserId={user?.id}
+                      messageCount={messages.length}
+                    />
                   )}
 
                   <AnimatePresence initial={false}>
