@@ -107,7 +107,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   return (
     <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]>div]:block! [&>[data-radix-scroll-area-viewport]>div]:w-full!">
         <div className="flex flex-col pb-20">
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
@@ -174,11 +174,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                           <span>{'File'}</span>
                         </>
                       ) : (
-                        <span className="truncate">
-                          {(lastMessage.content?.length ?? 0) > 25
-                            ? `${lastMessage.content!.substring(0, 25)}...`
-                            : lastMessage.content}
-                        </span>
+                        <span className="truncate">{lastMessage.content}</span>
                       )}
                     </div>
                   ) : null}
