@@ -218,6 +218,18 @@ export function useCreateDM() {
   })
 }
 
+export function useCreateGroup() {
+  const queryClient = useQueryClient()
+
+  return useChatControllerCreateRoom({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      },
+    },
+  })
+}
+
 export function useEditMessage({ roomId }: { roomId: string }) {
   const queryClient = useQueryClient()
 
