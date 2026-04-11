@@ -42,7 +42,13 @@ export class ChatService {
     }
   }
 
-  async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
+  async createRoom(
+    creatorId: string,
+    participantIds: string[],
+    type: ChatRoomType,
+    name?: string,
+    imageUrl?: string,
+  ) {
     const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
 
     if (type === ChatRoomType.DM) {
@@ -57,7 +63,7 @@ export class ChatService {
       }
     }
 
-    return this.chatRepository.createRoom(type, allParticipantIds, name)
+    return this.chatRepository.createRoom(type, allParticipantIds, name, imageUrl)
   }
 
   async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
@@ -149,7 +155,10 @@ export class ChatService {
 
     const result = await this.chatRepository.removeParticipant(roomId, userId)
 
-    if (!result.roomDeleted) {
+    if (result.roomDeleted && room.imageUrl) {
+      const key = this.storageService.extractKeyFromUrl(room.imageUrl)
+      await this.storageService.deleteFile(key)
+    } else {
       const systemMessage = await this.chatRepository.createMessage({
         roomId,
         type: ChatMessageType.SYSTEM,

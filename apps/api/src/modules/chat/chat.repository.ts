@@ -120,11 +120,12 @@ export class ChatRepository {
     )
   }
 
-  async createRoom(type: ChatRoomType, participantIds: string[], name?: string) {
+  async createRoom(type: ChatRoomType, participantIds: string[], name?: string, imageUrl?: string) {
     return this.prisma.chatRoom.create({
       data: {
         type,
         name,
+        imageUrl,
         participants: {
           create: participantIds.map((userId) => ({
             userId,
