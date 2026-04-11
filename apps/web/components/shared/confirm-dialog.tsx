@@ -98,14 +98,10 @@ export function ConfirmDialog({
             disabled={isPending}
             className="rounded-[6px]"
           >
-            {isPending ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" />
-                Deleting…
-              </>
-            ) : (
-              confirmLabel
-            )}
+            <>
+              {isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {confirmLabel}
+            </>
           </Button>
         </DialogFooter>
       </DialogContent>
