@@ -110,7 +110,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDisconnected, setShowDisconnected] = useState(false)
 
-  const { setLastSeen } = useChatLastSeenStore()
+  const { setLastSeen, getLastSeen } = useChatLastSeenStore()
   const { mutate: markRoomAsRead } = useChatControllerMarkAsRead()
 
   // Only show disconnected banner after 5s to avoid flashing on brief drops
@@ -281,11 +281,11 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     setTimeout(() => setFirstUnreadId(null), 0)
   }, [roomId])
 
-  // Mark messages as read when at bottom
+  // Mark messages as read when at bottom — only when the last message changes
   useEffect(() => {
     if (!isAtBottom || !roomId || messages.length === 0) return
     const lastMsg = messages[messages.length - 1]
-    if (lastMsg && !lastMsg.id.startsWith('temp-')) {
+    if (lastMsg && !lastMsg.id.startsWith('temp-') && lastMsg.id !== getLastSeen(roomId)) {
       setLastSeen(roomId, lastMsg.id)
       markRoomAsRead({ id: roomId })
     }
