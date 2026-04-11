@@ -89,4 +89,14 @@ export class ChatController {
   markAsRead(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.markAsRead(id, session.user.id)
   }
+
+  @Delete('rooms/:id/leave')
+  @UseGuards(ChatMemberGuard)
+  @ApiOkResponse({
+    description: 'Left the room. roomDeleted indicates if the room was also deleted.',
+  })
+  @ResponseMessage('Left the chat room successfully')
+  leaveRoom(@Param('id') id: string, @Session() session: UserSession) {
+    return this.chatService.leaveRoom(id, session.user.id)
+  }
 }

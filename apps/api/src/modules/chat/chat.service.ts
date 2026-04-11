@@ -142,6 +142,11 @@ export class ChatService {
     return { id }
   }
 
+  async leaveRoom(roomId: string, userId: string) {
+    await this.getRoom(roomId, userId)
+    return this.chatRepository.removeParticipant(roomId, userId)
+  }
+
   async markAsRead(roomId: string, userId: string) {
     const participant = await this.chatRepository.markAsRead(roomId, userId)
     this.eventEmitter.emit('chat.room_read', {
