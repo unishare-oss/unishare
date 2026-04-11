@@ -406,6 +406,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       </div>
 
       <CreateGroupDialog
+        key={createGroupOpen ? 'open' : 'closed'}
         open={createGroupOpen}
         onOpenChange={setCreateGroupOpen}
         defaultName={room?.type === 'DM' && headerUser?.name ? `${headerUser.name}'s Group` : ''}

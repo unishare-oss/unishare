@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -34,15 +34,6 @@ export function CreateGroupDialog({
 
   const { networkUsers, isLoading } = useNetworkUsers({ enabled: open })
   const { mutateAsync: createGroup, isPending } = useCreateGroup()
-
-  // Sync defaults when dialog opens
-  useEffect(() => {
-    if (open) {
-      setGroupName(defaultName)
-      setSelectedIds(new Set(defaultParticipantIds))
-      setSearchQuery('')
-    }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return networkUsers
