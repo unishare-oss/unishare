@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Form,
   FormControl,
@@ -17,7 +18,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
-import { Search, Users, UserPlus, Loader2 } from 'lucide-react'
+import { Camera, Search, Users, UserPlus, Loader2 } from 'lucide-react'
+import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import {
+  PresignedUploadDtoPurpose,
+  PresignedUploadDtoUploadType,
+  type PresignedUploadEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useNetworkUsers } from '@/hooks/use-network-users'
 import { useCreateGroup, useInviteMembers } from '@/hooks/use-chat-mutations'
 import { UserRow, SelectedBadge } from '@/components/chat/group-chat-user-row'
@@ -57,6 +64,10 @@ export function GroupChatDialog({
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(defaultParticipantIds))
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imagePublicUrl, setImagePublicUrl] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<CreateGroupValues>({
     resolver: mode === 'create' ? zodResolver(createGroupSchema) : undefined, //in edit, we don't ue this form
@@ -96,10 +107,35 @@ export function GroupChatDialog({
     })
   }
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImagePreview(URL.createObjectURL(file))
+    setIsUploadingImage(true)
+    try {
+      const res = await storageControllerGetPresignedUploadUrl({
+        mimeType: file.type,
+        uploadType: PresignedUploadDtoUploadType.image,
+        purpose: PresignedUploadDtoPurpose['group-picture'],
+      })
+      const { url, publicUrl } = res.data as PresignedUploadEntity
+      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      setImagePublicUrl(publicUrl)
+    } catch {
+      setImagePreview(null)
+      setImagePublicUrl(null)
+    } finally {
+      setIsUploadingImage(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const handleClose = () => {
     form.reset({ name: defaultName })
     setSearchQuery('')
     setSelectedIds(new Set(defaultParticipantIds))
+    setImagePreview(null)
+    setImagePublicUrl(null)
     onOpenChange(false)
   }
 
@@ -114,7 +150,12 @@ export function GroupChatDialog({
         return
       }
       const response = await createGroup({
-        data: { type: 'GROUP', name: values.name.trim(), participantIds: Array.from(selectedIds) },
+        data: {
+          type: 'GROUP',
+          name: values.name.trim(),
+          participantIds: Array.from(selectedIds),
+          ...(imagePublicUrl && { imageUrl: imagePublicUrl }),
+        },
       })
       handleClose()
       router.push(`/chat/${response.data.id}`)
@@ -145,6 +186,45 @@ export function GroupChatDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-4 p-5">
+              {/* Avatar picker — create mode only */}
+              {mode === 'create' && (
+                <div className="flex items-center gap-4">
+                  <div className="relative group shrink-0">
+                    <Avatar className="h-14 w-14 rounded-[8px] border-2 border-border">
+                      <AvatarImage src={imagePreview || ''} />
+                      <AvatarFallback className="rounded-[8px] bg-muted text-muted-foreground">
+                        {isUploadingImage ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Users className="size-5" strokeWidth={1.5} />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="absolute inset-0 w-full h-full rounded-[8px] bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity disabled:cursor-wait"
+                      aria-label="Upload group photo"
+                    >
+                      <Camera className="size-4 text-white" strokeWidth={1.5} />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Optional group photo.
+                    <br />
+                    JPEG, PNG or WebP.
+                  </p>
+                </div>
+              )}
+
               {/* Group name — create mode only */}
               {mode === 'create' && (
                 <FormField
