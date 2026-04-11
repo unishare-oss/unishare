@@ -108,14 +108,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }) {
     const { roomId, message, participants } = payload
 
-    this.server.to(roomId).emit('receive-message', message)
-
-    participants.forEach((participant) => {
-      this.server.to(`user-${participant.userId}`).emit('new-message-notification', {
-        roomId,
-        message,
-      })
-    })
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    this.server.to(personalRooms).emit('receive-message', message)
   }
 
   @OnEvent('chat.message_updated')

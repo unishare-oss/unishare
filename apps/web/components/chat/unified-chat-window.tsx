@@ -518,17 +518,25 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                           )}
 
                           {/* Message Bubble */}
-                          <ChatMessageBubble
-                            message={msgWithStatus}
-                            isMe={isMe}
-                            showAvatar={showAvatar}
-                            currentUserId={user?.id}
-                            isHighlighted={highlightedMessageId === msg.id}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onReply={handleReply}
-                            onScrollToMessage={handleScrollToMessage}
-                          />
+                          {msg.type === 'SYSTEM' ? (
+                            <div className="flex justify-center my-1">
+                              <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                {msg.content}
+                              </span>
+                            </div>
+                          ) : (
+                            <ChatMessageBubble
+                              message={msgWithStatus}
+                              isMe={isMe}
+                              showAvatar={showAvatar}
+                              currentUserId={user?.id}
+                              isHighlighted={highlightedMessageId === msg.id}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onReply={handleReply}
+                              onScrollToMessage={handleScrollToMessage}
+                            />
+                          )}
                         </motion.div>
                       )
                     })}
