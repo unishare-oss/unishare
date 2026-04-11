@@ -4,6 +4,7 @@ import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { ChatService } from './chat.service'
 import { CreateRoomDto } from './dto/create-room.dto'
+import { InviteMembersDto } from './dto/invite-members.dto'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
@@ -98,5 +99,17 @@ export class ChatController {
   @ResponseMessage('Left the chat room successfully')
   leaveRoom(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.leaveRoom(id, session.user.id)
+  }
+
+  @Post('rooms/:id/participants')
+  @UseGuards(ChatMemberGuard)
+  @ApiOkResponse({ type: ChatRoomEntity })
+  @ResponseMessage('Members invited successfully')
+  inviteMembers(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @Body() dto: InviteMembersDto,
+  ) {
+    return this.chatService.inviteMembers(id, session.user.id, dto.userIds)
   }
 }

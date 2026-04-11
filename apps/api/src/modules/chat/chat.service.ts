@@ -147,6 +147,14 @@ export class ChatService {
     return this.chatRepository.removeParticipant(roomId, userId)
   }
 
+  async inviteMembers(roomId: string, inviterId: string, userIds: string[]) {
+    const room = await this.getRoom(roomId, inviterId)
+    if (room.type !== 'GROUP') {
+      throw new ForbiddenException('Only group rooms support inviting members')
+    }
+    return this.chatRepository.addParticipants(roomId, userIds)
+  }
+
   async markAsRead(roomId: string, userId: string) {
     const participant = await this.chatRepository.markAsRead(roomId, userId)
     this.eventEmitter.emit('chat.room_read', {

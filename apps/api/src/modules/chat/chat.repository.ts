@@ -303,6 +303,14 @@ export class ChatRepository {
     })
   }
 
+  async addParticipants(roomId: string, userIds: string[]) {
+    await this.prisma.chatRoomParticipant.createMany({
+      data: userIds.map((userId) => ({ roomId, userId })),
+      skipDuplicates: true,
+    })
+    return this.findRoomById(roomId)
+  }
+
   async markAsRead(roomId: string, userId: string) {
     return this.prisma.chatRoomParticipant.update({
       where: {
