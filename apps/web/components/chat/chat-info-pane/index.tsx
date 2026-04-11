@@ -2,13 +2,18 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Bell, BellOff, LogOut, Trash2, FileIcon, Download } from 'lucide-react'
+import { Bell, BellOff, LogOut, Trash2, FileIcon, Download, Loader2 } from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { useChatControllerLeaveRoom } from '@/src/lib/api/generated/chat/chat'
+import { getChatControllerGetRoomsQueryKey } from '@/src/lib/api/generated/chat/chat'
+import { useQueryClient } from '@tanstack/react-query'
+import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { OverviewPane } from './overview-pane'
 import { DetailPane } from './detail-pane'
 import { ChatImageLightbox } from '../chat-image-lightbox'
@@ -36,6 +41,18 @@ export function ChatInfoPane({
   const [view, setView] = useState<PaneView>('overview')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { mutate: leaveRoom, isPending: isLeaving } = useChatControllerLeaveRoom({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        router.push('/chat')
+      },
+    },
+  })
 
   const navigate = (to: PaneView) => {
     setDirection('forward')
@@ -74,6 +91,16 @@ export function ChatInfoPane({
 
   return (
     <>
+      <ConfirmDialog
+        open={leaveDialogOpen}
+        onOpenChange={setLeaveDialogOpen}
+        title="Leave group"
+        description="Are you sure you want to leave this group? If you are the last member, the group will be deleted."
+        confirmLabel="Leave"
+        cancelLabel="Cancel"
+        isPending={isLeaving}
+        onConfirm={() => room && leaveRoom({ id: room.id })}
+      />
       <ChatImageLightbox
         src={lightboxSrc ?? ''}
         open={!!lightboxSrc}
@@ -282,10 +309,22 @@ export function ChatInfoPane({
                     </Button>
                   ))}
                   <div className="my-1 border-t" />
-                  {[
-                    { icon: LogOut, label: 'Leave conversation' },
-                    { icon: Trash2, label: 'Delete conversation' },
-                  ].map(({ icon: Icon, label }) => (
+                  {room?.type === 'GROUP' && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setLeaveDialogOpen(true)}
+                      disabled={isLeaving}
+                      className="justify-start gap-3 w-full text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                    >
+                      {isLeaving ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" />
+                      ) : (
+                        <LogOut className="size-4 shrink-0" strokeWidth={1.5} />
+                      )}
+                      <span>Leave group</span>
+                    </Button>
+                  )}
+                  {[{ icon: Trash2, label: 'Delete conversation' }].map(({ icon: Icon, label }) => (
                     <Button
                       key={label}
                       variant="ghost"
