@@ -1,3 +1,23 @@
+# [0.14.0](https://github.com/unishare-oss/unishare/compare/v0.13.0...v0.14.0) (2026-04-11)
+
+### Bug Fixes
+
+- **chat:** replace setState-in-effect with key-based remount for dialog reset ([a383998](https://github.com/unishare-oss/unishare/commit/a383998bbb37ab0a834c1465dcc53f6957f3f679))
+
+### Features
+
+- **chat:** add group chat support and create group dialog ([984dec6](https://github.com/unishare-oss/unishare/commit/984dec6088779066208619d4e721f30664d17927))
+- **chat:** add leave room endpoint with auto-delete when last member ([42cfa6b](https://github.com/unishare-oss/unishare/commit/42cfa6b6c7b6194869623d1e9139b5ab3bbb4fb6))
+- **chat:** emit room-read socket event after markAsRead ([54121b7](https://github.com/unishare-oss/unishare/commit/54121b7b95e0f41f91414b371096a2340149bac1))
+- **chat:** group chat UI — header, create dialog, conversation start ([9630575](https://github.com/unishare-oss/unishare/commit/9630575223c9de9dbe9632826774dbd24c04e644))
+- **chat:** implement seen-by using participant lastReadAt ([7f4b166](https://github.com/unishare-oss/unishare/commit/7f4b1664656e69b2626c9471ebd89527506f20c5))
+- **chat:** leave group UI with loading spinner in confirm dialog ([33dc28e](https://github.com/unishare-oss/unishare/commit/33dc28ef7073e81d1fc78f1086ce4c10c890c127))
+- **chat:** show new group rooms in sidebar network section ([cab898a](https://github.com/unishare-oss/unishare/commit/cab898acbc551bb9d3362ead3dffe1d5420a7e59))
+
+### Performance Improvements
+
+- **chat:** guard markRoomAsRead to only fire on unseen messages ([5eb9427](https://github.com/unishare-oss/unishare/commit/5eb9427ea594e0044caf9c6c22e34ac007242942))
+
 # [0.13.0](https://github.com/unishare-oss/unishare/compare/v0.12.0...v0.13.0) (2026-04-10)
 
 ### Bug Fixes
