@@ -2,17 +2,34 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, Users, UserPlus, Loader2, Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Search, Users, UserPlus, Loader2 } from 'lucide-react'
 import { useNetworkUsers } from '@/hooks/use-network-users'
 import { useCreateGroup, useInviteMembers } from '@/hooks/use-chat-mutations'
+import { UserRow, SelectedBadge } from '@/components/chat/group-chat-user-row'
+
+const GROUP_NAME_MAX = 30
+
+const createGroupSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Group name is required')
+    .max(GROUP_NAME_MAX, `Max ${GROUP_NAME_MAX} characters`),
+})
 
 interface GroupChatDialogProps {
   open: boolean
@@ -26,6 +43,8 @@ interface GroupChatDialogProps {
   existingMemberIds?: string[]
 }
 
+type CreateGroupValues = z.infer<typeof createGroupSchema>
+
 export function GroupChatDialog({
   open,
   onOpenChange,
@@ -36,9 +55,13 @@ export function GroupChatDialog({
   existingMemberIds = [],
 }: GroupChatDialogProps) {
   const router = useRouter()
-  const [groupName, setGroupName] = useState(defaultName)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(defaultParticipantIds))
+
+  const form = useForm<CreateGroupValues>({
+    resolver: mode === 'create' ? zodResolver(createGroupSchema) : undefined, //in edit, we don't ue this form
+    defaultValues: { name: defaultName },
+  })
 
   const { networkUsers, isLoading } = useNetworkUsers({ enabled: open })
   const { mutateAsync: createGroup, isPending: isCreating } = useCreateGroup()
@@ -73,7 +96,16 @@ export function GroupChatDialog({
     })
   }
 
-  const handleSubmit = async () => {
+  const handleClose = () => {
+    form.reset({ name: defaultName })
+    setSearchQuery('')
+    setSelectedIds(new Set(defaultParticipantIds))
+    onOpenChange(false)
+  }
+
+  const canSubmit = selectedIds.size >= 1
+
+  const onSubmit = async (values: CreateGroupValues) => {
     if (!canSubmit) return
     try {
       if (mode === 'invite') {
@@ -82,7 +114,7 @@ export function GroupChatDialog({
         return
       }
       const response = await createGroup({
-        data: { type: 'GROUP', name: groupName.trim(), participantIds: Array.from(selectedIds) },
+        data: { type: 'GROUP', name: values.name.trim(), participantIds: Array.from(selectedIds) },
       })
       handleClose()
       router.push(`/chat/${response.data.id}`)
@@ -91,20 +123,12 @@ export function GroupChatDialog({
     }
   }
 
-  const handleClose = () => {
-    setGroupName(defaultName)
-    setSearchQuery('')
-    setSelectedIds(new Set(defaultParticipantIds))
-    onOpenChange(false)
-  }
-
-  const canSubmit =
-    mode === 'create' ? groupName.trim().length > 0 && selectedIds.size >= 1 : selectedIds.size >= 1
-
   const title = mode === 'create' ? 'New Group Chat' : 'Invite Members'
   const TitleIcon = mode === 'create' ? Users : UserPlus
   const submitLabel = mode === 'create' ? 'Create Group' : 'Invite'
   const submittingLabel = mode === 'create' ? 'Creating…' : 'Inviting…'
+
+  const nameValue = form.watch('name') ?? ''
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -118,147 +142,123 @@ export function GroupChatDialog({
 
         <Separator />
 
-        <div className="flex flex-col gap-4 p-5">
-          {/* Group name — create mode only */}
-          {mode === 'create' && (
-            <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="group-name"
-                className="text-xs font-mono uppercase tracking-widest text-muted-foreground"
-              >
-                Group Name
-              </Label>
-              <Input
-                id="group-name"
-                placeholder="e.g. Study Group, Project Team…"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                className="h-9"
-                maxLength={80}
-              />
-            </div>
-          )}
-
-          {/* Member search */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-              {mode === 'create' ? 'Add Members' : 'Select Members'}
-            </Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder="Search by name…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-8"
-              />
-            </div>
-          </div>
-
-          {/* Selected chips */}
-          {selectedUsers.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedUsers.map((u) => (
-                <Badge
-                  key={u.id}
-                  variant="secondary"
-                  className="flex items-center gap-1 pr-1 py-0.5 text-xs font-normal"
-                >
-                  <Avatar className="h-4 w-4 rounded-[3px]">
-                    <AvatarImage src={u.image || ''} />
-                    <AvatarFallback className="rounded-none text-[8px] font-mono bg-border">
-                      {u.name?.[0]?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="max-w-[80px] truncate">{u.name}</span>
-                  <button
-                    onClick={() => toggleUser(u.id)}
-                    className="ml-0.5 rounded-sm hover:bg-destructive/20 hover:text-destructive p-0.5 transition-colors"
-                    aria-label={`Remove ${u.name}`}
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* User list */}
-          <div className="border rounded-lg overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">
-                {invitableUsers.length === 0
-                  ? mode === 'invite'
-                    ? 'All your connections are already in this group'
-                    : 'No connections found'
-                  : 'No users match your search'}
-              </p>
-            ) : (
-              <div className="flex flex-col py-1 max-h-[260px] overflow-y-auto">
-                {filteredUsers.map((u) => {
-                  const selected = selectedIds.has(u.id)
-                  return (
-                    <button
-                      key={u.id}
-                      onClick={() => toggleUser(u.id)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 hover:bg-accent/50 transition-colors text-left w-full',
-                        selected && 'bg-primary/5',
-                      )}
-                    >
-                      <Avatar className="h-8 w-8 rounded-[5px] shrink-0">
-                        <AvatarImage src={u.image || ''} />
-                        <AvatarFallback className="rounded-none text-xs font-mono bg-border text-foreground font-medium">
-                          {u.name?.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="flex-1 text-sm font-medium truncate">{u.name}</span>
-                      <div
-                        className={cn(
-                          'size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
-                          selected ? 'bg-primary border-primary' : 'border-muted-foreground/30',
-                        )}
-                      >
-                        {selected && (
-                          <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
-                        )}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="flex flex-col gap-4 p-5">
+              {/* Group name — create mode only */}
+              {mode === 'create' && (
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="gap-1.5">
+                      <FormLabel className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                        Group Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Study Group, Project Team…"
+                          className="h-9"
+                          maxLength={GROUP_NAME_MAX}
+                          {...field}
+                        />
+                      </FormControl>
+                      <div className="flex items-center justify-between">
+                        <FormMessage className="text-xs" />
+                        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                          {nameValue.length}/{GROUP_NAME_MAX}
+                        </span>
                       </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Separator />
-
-        <div className="flex items-center justify-between px-5 py-4">
-          <span className="text-xs text-muted-foreground">
-            {selectedIds.size === 0
-              ? 'Select at least 1 member'
-              : `${selectedIds.size} member${selectedIds.size === 1 ? '' : 's'} selected`}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleClose} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || isPending}>
-              {isPending ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  {submittingLabel}
-                </>
-              ) : (
-                submitLabel
+                    </FormItem>
+                  )}
+                />
               )}
-            </Button>
-          </div>
-        </div>
+
+              {/* Member search */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                  {mode === 'create' ? 'Add Members' : 'Select Members'}
+                </span>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="Search by name…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-9 pl-8"
+                  />
+                </div>
+              </div>
+
+              {/* Selected chips */}
+              {selectedUsers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedUsers.map((u) => (
+                    <SelectedBadge key={u.id} user={u} onRemove={toggleUser} />
+                  ))}
+                </div>
+              )}
+
+              {/* User list */}
+              <div className="border rounded-lg overflow-hidden">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredUsers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-8">
+                    {invitableUsers.length === 0
+                      ? mode === 'invite'
+                        ? 'All your connections are already in this group'
+                        : 'No connections found'
+                      : 'No users match your search'}
+                  </p>
+                ) : (
+                  <div className="flex flex-col py-1 max-h-[260px] overflow-y-auto">
+                    {filteredUsers.map((u) => (
+                      <UserRow
+                        key={u.id}
+                        user={u}
+                        selected={selectedIds.has(u.id)}
+                        onToggle={toggleUser}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Separator />
+
+            <div className="flex items-center justify-between px-5 py-4">
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size === 0
+                  ? 'Select at least 1 member'
+                  : `${selectedIds.size} member${selectedIds.size === 1 ? '' : 's'} selected`}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClose}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={!canSubmit || isPending}>
+                  {isPending ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      {submittingLabel}
+                    </>
+                  ) : (
+                    submitLabel
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
