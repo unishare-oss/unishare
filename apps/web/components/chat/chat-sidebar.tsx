@@ -86,6 +86,13 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     return rooms.filter((room) => room.messages && room.messages.length > 0)
   }, [rooms])
 
+  // New group rooms (no messages yet) shown in the Network section
+  const emptyGroupRooms = useMemo(() => {
+    return rooms.filter(
+      (room) => room.type === 'GROUP' && (!room.messages || room.messages.length === 0),
+    )
+  }, [rooms])
+
   if (roomsLoading || networkLoading) {
     return (
       <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
@@ -181,7 +188,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           })}
 
           {/* New Conversations (Network) */}
-          {filteredNetworkUsers.length > 0 && (
+          {(filteredNetworkUsers.length > 0 || emptyGroupRooms.length > 0) && (
             <>
               {roomsWithMessages.length > 0 && <Separator className="my-2" />}
               <div className="px-4 py-2 mt-2">
@@ -189,6 +196,43 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   <Users className="h-3 w-3" /> Network
                 </h3>
               </div>
+
+              {/* Empty group rooms */}
+              {emptyGroupRooms.map((room) => {
+                const isSelected = selectedRoomId === room.id
+                const roomTypingUsers = typingByRoom.get(room.id) || []
+                return (
+                  <button
+                    key={room.id}
+                    onClick={() => router.push(`/chat/${room.id}`)}
+                    className={cn(
+                      'relative w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
+                      isSelected &&
+                        'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
+                    )}
+                  >
+                    <Avatar className="h-10 w-10 rounded-[6px]">
+                      <AvatarImage src={room.imageUrl || ''} />
+                      <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
+                        {(room.name ?? 'G').substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <span className="font-medium truncate text-sm block">
+                        {room.name ?? 'Group Chat'}
+                      </span>
+                      {roomTypingUsers.length > 0 ? (
+                        <SidebarTypingIndicator />
+                      ) : (
+                        <span className="text-xs text-muted-foreground mt-0.5 block">
+                          Say something!
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+
               {filteredNetworkUsers.map((user) => {
                 // Check if this user's DM room is currently selected
                 const userRoom = rooms.find(
@@ -243,11 +287,13 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
             </>
           )}
 
-          {roomsWithMessages.length === 0 && filteredNetworkUsers.length === 0 && (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              No conversations yet
-            </div>
-          )}
+          {roomsWithMessages.length === 0 &&
+            filteredNetworkUsers.length === 0 &&
+            emptyGroupRooms.length === 0 && (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No conversations yet
+              </div>
+            )}
         </div>
       </ScrollArea>
     </Card>

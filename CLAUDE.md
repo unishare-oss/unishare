@@ -114,10 +114,10 @@ After implementation, always ask before staging or committing changes.
 
 ## Implementation Log
 
-After completing any implementation, write a log file at:
+After completing any implementation, ask permission to write a log file at:
 
 ```
-docs/{feature-name}/{YYYY-MM-DD}.md
+docs/{module-name}/{feature-name}-{YYYY-MM-DD}.md
 ```
 
 The log should cover: what was implemented, files changed, any decisions made, and known limitations or follow-ups. Use today's date (ISO format) in the filename.
