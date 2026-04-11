@@ -106,7 +106,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     message: ChatMessageEntity
     participants: ChatRoomParticipantEntity[]
   }) {
-    const { roomId, message, participants } = payload
+    const { message, participants } = payload
 
     const personalRooms = participants.map((p) => `user-${p.userId}`)
     this.server.to(personalRooms).emit('receive-message', message)
