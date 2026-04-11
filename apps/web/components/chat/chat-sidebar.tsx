@@ -1,12 +1,9 @@
 'use client'
 
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
-import {
-  useFollowsControllerGetFollowing,
-  useFollowsControllerGetFollowers,
-} from '@/src/lib/api/generated/follows/follows'
 import { useAuth } from '@/contexts/auth-context'
 import { useCreateDM } from '@/hooks/use-chat-mutations'
+import { useNetworkUsers } from '@/hooks/use-network-users'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
@@ -33,19 +30,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { data: roomsResponse, isLoading: roomsLoading } = useChatControllerGetRooms()
 
-  const { data: followingResponse, isLoading: followingLoading } = useFollowsControllerGetFollowing(
-    currentUserId || '',
-    {
-      query: { enabled: !!currentUserId },
-    },
-  )
-
-  const { data: followersResponse, isLoading: followersLoading } = useFollowsControllerGetFollowers(
-    currentUserId || '',
-    {
-      query: { enabled: !!currentUserId },
-    },
-  )
+  const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
   const rooms = roomsResponse?.data || []
 
@@ -86,42 +71,29 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const { socketRef, presence } = useChatSocket()
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
 
-  // Merge Following and Followers into a unique list of "Network" users
-  const networkUsers = useMemo(() => {
-    const following = followingResponse?.data || []
-    const followers = followersResponse?.data || []
-
-    // Use a Map to deduplicate by ID
-    const userMap = new Map<string, any>()
-
-    following.forEach((user) => userMap.set(user.id, { ...user, relationship: 'following' }))
-    followers.forEach((user) => {
-      if (!userMap.has(user.id)) {
-        userMap.set(user.id, { ...user, relationship: 'follower' })
-      } else {
-        userMap.set(user.id, { ...userMap.get(user.id), relationship: 'mutual' })
-      }
-    })
-
-    const allUsers = Array.from(userMap.values())
-
-    // Filter out users who already have a DM room WITH messages
-    // Keep showing users who have empty rooms (no messages sent yet)
-    return allUsers.filter((user) => {
+  // Filter out network users who already have a DM room with messages
+  const filteredNetworkUsers = useMemo(() => {
+    return networkUsers.filter((user) => {
       const existingRoom = rooms.find(
         (room) => room.type === 'DM' && room.participants.some((p) => p.userId === user.id),
       )
-      // Show in network if no room exists, or room exists but has no messages
       return !existingRoom || !existingRoom.messages || existingRoom.messages.length === 0
     })
-  }, [followingResponse, followersResponse, rooms])
+  }, [networkUsers, rooms])
 
   // Filter rooms to only show those with messages
   const roomsWithMessages = useMemo(() => {
     return rooms.filter((room) => room.messages && room.messages.length > 0)
   }, [rooms])
 
-  if (roomsLoading || followingLoading || followersLoading) {
+  // New group rooms (no messages yet) shown in the Network section
+  const emptyGroupRooms = useMemo(() => {
+    return rooms.filter(
+      (room) => room.type === 'GROUP' && (!room.messages || room.messages.length === 0),
+    )
+  }, [rooms])
+
+  if (roomsLoading || networkLoading) {
     return (
       <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
         <div className="flex flex-col gap-2 p-4">
@@ -216,7 +188,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           })}
 
           {/* New Conversations (Network) */}
-          {networkUsers.length > 0 && (
+          {(filteredNetworkUsers.length > 0 || emptyGroupRooms.length > 0) && (
             <>
               {roomsWithMessages.length > 0 && <Separator className="my-2" />}
               <div className="px-4 py-2 mt-2">
@@ -224,7 +196,44 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                   <Users className="h-3 w-3" /> Network
                 </h3>
               </div>
-              {networkUsers.map((user) => {
+
+              {/* Empty group rooms */}
+              {emptyGroupRooms.map((room) => {
+                const isSelected = selectedRoomId === room.id
+                const roomTypingUsers = typingByRoom.get(room.id) || []
+                return (
+                  <button
+                    key={room.id}
+                    onClick={() => router.push(`/chat/${room.id}`)}
+                    className={cn(
+                      'relative w-full flex items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-accent/50',
+                      isSelected &&
+                        'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
+                    )}
+                  >
+                    <Avatar className="h-10 w-10 rounded-[6px]">
+                      <AvatarImage src={room.imageUrl || ''} />
+                      <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
+                        {(room.name ?? 'G').substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <span className="font-medium truncate text-sm block">
+                        {room.name ?? 'Group Chat'}
+                      </span>
+                      {roomTypingUsers.length > 0 ? (
+                        <SidebarTypingIndicator />
+                      ) : (
+                        <span className="text-xs text-muted-foreground mt-0.5 block">
+                          Say something!
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+
+              {filteredNetworkUsers.map((user) => {
                 // Check if this user's DM room is currently selected
                 const userRoom = rooms.find(
                   (room) =>
@@ -278,11 +287,13 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
             </>
           )}
 
-          {roomsWithMessages.length === 0 && networkUsers.length === 0 && (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              No conversations yet
-            </div>
-          )}
+          {roomsWithMessages.length === 0 &&
+            filteredNetworkUsers.length === 0 &&
+            emptyGroupRooms.length === 0 && (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No conversations yet
+              </div>
+            )}
         </div>
       </ScrollArea>
     </Card>

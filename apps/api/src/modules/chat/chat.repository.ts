@@ -286,6 +286,23 @@ export class ChatRepository {
     })
   }
 
+  async removeParticipant(roomId: string, userId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.chatRoomParticipant.delete({
+        where: { roomId_userId: { roomId, userId } },
+      })
+
+      const remaining = await tx.chatRoomParticipant.count({ where: { roomId } })
+
+      if (remaining === 0) {
+        await tx.chatRoom.delete({ where: { id: roomId } })
+        return { roomDeleted: true }
+      }
+
+      return { roomDeleted: false }
+    })
+  }
+
   async markAsRead(roomId: string, userId: string) {
     return this.prisma.chatRoomParticipant.update({
       where: {

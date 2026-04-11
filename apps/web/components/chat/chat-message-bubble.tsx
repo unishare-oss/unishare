@@ -5,10 +5,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import type { ChatMessageWithStatus, DeliveryStatus } from '@/hooks/use-chat-mutations'
 import { renderWithLinks } from '@/lib/render-with-links'
-import { Pencil, Trash2, Reply, ImageIcon, FileIcon, Download } from 'lucide-react'
+import {
+  Pencil,
+  Trash2,
+  Reply,
+  ImageIcon,
+  FileIcon,
+  Download,
+  Check,
+  CheckCheck,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatImageLightbox } from './chat-image-lightbox'
+
+function DeliveryTick({ status }: { status: DeliveryStatus }) {
+  if (status === 'sending') {
+    return <Check className="size-3 text-primary-foreground/35 shrink-0" />
+  }
+  if (status === 'seen') {
+    return <CheckCheck className="size-3 text-emerald-400 shrink-0" />
+  }
+  // delivered
+  return <CheckCheck className="size-3 text-primary-foreground/60 shrink-0" />
+}
 
 interface ChatMessageBubbleProps {
   message: ChatMessageEntity
@@ -187,17 +208,15 @@ export function ChatMessageBubble({
                     className="max-h-52 md:max-h-72 max-w-full object-cover w-full h-auto"
                   />
                 </div>
-                {/* Timestamp overlay on image-only messages */}
+                {/* Timestamp + tick overlay on image-only messages */}
                 {!message.content && (
-                  <div
-                    className={cn(
-                      'absolute bottom-1.5 flex gap-1 text-[0.5625rem] text-white/80 drop-shadow px-2',
-                      isMe ? 'right-1.5' : 'left-1.5',
+                  <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[0.5625rem] text-white/80 drop-shadow px-2">
+                    {isEdited && <span className="italic">(edited)</span>}
+                    {isMe && (
+                      <DeliveryTick
+                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
+                      />
                     )}
-                  >
-                    {isMe && isEdited && <span className="italic">(edited)</span>}
-                    <span>{format(new Date(message.createdAt), 'HH:mm')}</span>
-                    {!isMe && isEdited && <span className="italic">(edited)</span>}
                   </div>
                 )}
               </div>
@@ -271,22 +290,33 @@ export function ChatMessageBubble({
                   </p>
                 )}
 
-                {/* Metadata removed — timestamp shown as side tooltip on hover */}
+                {/* Edited + tick inside bubble — below text */}
+                {(isMe || isEdited) && (
+                  <div className="flex items-center justify-end gap-1 mt-1">
+                    {isEdited && (
+                      <span
+                        className={cn(
+                          'text-[0.5rem] italic',
+                          isMe ? 'text-primary-foreground/50' : 'text-muted-foreground/60',
+                        )}
+                      >
+                        edited
+                      </span>
+                    )}
+                    {isMe && (
+                      <DeliveryTick
+                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
         </div>
 
-        {/* Timestamp + edited — outside bubble, to the side */}
-        <div
-          className={cn(
-            'self-end mb-1 shrink-0 flex flex-col gap-0.5',
-            isMe ? 'items-end' : 'items-start',
-          )}
-        >
-          {isEdited && (
-            <span className="text-[0.5625rem] italic text-muted-foreground opacity-70">edited</span>
-          )}
+        {/* Timestamp — outside bubble, hover only */}
+        <div className={cn('self-end mb-1 shrink-0', isMe ? 'items-end' : 'items-start')}>
           <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             {format(new Date(message.createdAt), 'HH:mm')}
           </span>

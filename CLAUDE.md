@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before Starting Any Task
+
+Always read the `.planning/` directory to get an up-to-date overview of the project before doing any work:
+
+- `.planning/codebase/` — architecture, stack, conventions, structure, integrations, testing, and concerns docs
+- `.planning/todos/pending/` — outstanding tasks and work in progress
+- `.planning/todos/completed/` — finished work (useful for understanding recent changes)
+
+These files are the authoritative source of project context and should be consulted before planning or implementing anything.
+
 ## Project Overview
 
 **Unishare** is an open-source academic content sharing platform for university students — a self-hostable monorepo with a NestJS API and Next.js frontend.
@@ -101,6 +111,16 @@ Before implementing any feature:
 4. After each step, show what changed and ask before continuing or committing.
 
 After implementation, always ask before staging or committing changes.
+
+## Implementation Log
+
+After completing any implementation, ask permission to write a log file at:
+
+```
+docs/{module-name}/{feature-name}-{YYYY-MM-DD}.md
+```
+
+The log should cover: what was implemented, files changed, any decisions made, and known limitations or follow-ups. Use today's date (ISO format) in the filename.
 
 ## Environment Setup
 
