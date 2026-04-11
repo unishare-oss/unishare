@@ -4,8 +4,10 @@ import {
   useChatControllerCreateRoom,
   useChatControllerEditMessage,
   useChatControllerDeleteMessage,
+  useChatControllerInviteMembers,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomsQueryKey,
+  getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
   ChatMessageEntity,
@@ -224,6 +226,19 @@ export function useCreateGroup() {
   return useChatControllerCreateRoom({
     mutation: {
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      },
+    },
+  })
+}
+
+export function useInviteMembers(roomId: string) {
+  const queryClient = useQueryClient()
+
+  return useChatControllerInviteMembers({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
       },
     },

@@ -8,12 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Bell, BellOff, LogOut, Trash2, FileIcon, Download, Loader2 } from 'lucide-react'
+import { Bell, BellOff, LogOut, Trash2, FileIcon, Download, Loader2, UserPlus } from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useChatControllerLeaveRoom } from '@/src/lib/api/generated/chat/chat'
 import { getChatControllerGetRoomsQueryKey } from '@/src/lib/api/generated/chat/chat'
 import { useQueryClient } from '@tanstack/react-query'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { GroupChatDialog } from '@/components/chat/group-chat-dialog'
 import { OverviewPane } from './overview-pane'
 import { DetailPane } from './detail-pane'
 import { ChatImageLightbox } from '../chat-image-lightbox'
@@ -42,6 +43,7 @@ export function ChatInfoPane({
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
 
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -101,6 +103,16 @@ export function ChatInfoPane({
         isPending={isLeaving}
         onConfirm={() => room && leaveRoom({ id: room.id })}
       />
+      {room?.type === 'GROUP' && (
+        <GroupChatDialog
+          key={inviteDialogOpen ? 'open' : 'closed'}
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          mode="invite"
+          roomId={room.id}
+          existingMemberIds={room.participants?.map((p) => p.userId) ?? []}
+        />
+      )}
       <ChatImageLightbox
         src={lightboxSrc ?? ''}
         open={!!lightboxSrc}
@@ -174,6 +186,20 @@ export function ChatInfoPane({
                           )}
                         </Link>
                       ))}
+                  {room?.type === 'GROUP' && (
+                    <>
+                      <div className="my-1 border-t" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setInviteDialogOpen(true)}
+                        className="justify-start gap-2 w-full text-muted-foreground hover:text-foreground"
+                      >
+                        <UserPlus className="size-3.5 shrink-0" strokeWidth={1.5} />
+                        <span className="text-xs">Add member</span>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </DetailPane>
             )}

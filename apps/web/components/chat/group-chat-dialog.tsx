@@ -9,37 +9,55 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, Users, Loader2, Check } from 'lucide-react'
+import { Search, X, Users, UserPlus, Loader2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNetworkUsers } from '@/hooks/use-network-users'
-import { useCreateGroup } from '@/hooks/use-chat-mutations'
+import { useCreateGroup, useInviteMembers } from '@/hooks/use-chat-mutations'
 
-interface CreateGroupDialogProps {
+interface GroupChatDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // create mode
+  mode?: 'create' | 'invite'
   defaultName?: string
   defaultParticipantIds?: string[]
+  // invite mode
+  roomId?: string
+  existingMemberIds?: string[]
 }
 
-export function CreateGroupDialog({
+export function GroupChatDialog({
   open,
   onOpenChange,
+  mode = 'create',
   defaultName = '',
   defaultParticipantIds = [],
-}: CreateGroupDialogProps) {
+  roomId,
+  existingMemberIds = [],
+}: GroupChatDialogProps) {
   const router = useRouter()
   const [groupName, setGroupName] = useState(defaultName)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(defaultParticipantIds))
 
   const { networkUsers, isLoading } = useNetworkUsers({ enabled: open })
-  const { mutateAsync: createGroup, isPending } = useCreateGroup()
+  const { mutateAsync: createGroup, isPending: isCreating } = useCreateGroup()
+  const { mutateAsync: inviteMembers, isPending: isInviting } = useInviteMembers(roomId ?? '')
+
+  const isPending = mode === 'create' ? isCreating : isInviting
+
+  // In invite mode filter out users already in the room
+  const invitableUsers = useMemo(() => {
+    if (mode === 'create') return networkUsers
+    const existing = new Set(existingMemberIds)
+    return networkUsers.filter((u) => !existing.has(u.id))
+  }, [networkUsers, mode, existingMemberIds])
 
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return networkUsers
+    if (!searchQuery.trim()) return invitableUsers
     const q = searchQuery.toLowerCase()
-    return networkUsers.filter((u) => u.name?.toLowerCase().includes(q))
-  }, [networkUsers, searchQuery])
+    return invitableUsers.filter((u) => u.name?.toLowerCase().includes(q))
+  }, [invitableUsers, searchQuery])
 
   const selectedUsers = useMemo(
     () => networkUsers.filter((u) => selectedIds.has(u.id)),
@@ -55,20 +73,21 @@ export function CreateGroupDialog({
     })
   }
 
-  const handleCreate = async () => {
-    if (!groupName.trim() || selectedIds.size === 0) return
+  const handleSubmit = async () => {
+    if (!canSubmit) return
     try {
+      if (mode === 'invite') {
+        await inviteMembers({ id: roomId!, data: { userIds: Array.from(selectedIds) } })
+        handleClose()
+        return
+      }
       const response = await createGroup({
-        data: {
-          type: 'GROUP',
-          name: groupName.trim(),
-          participantIds: Array.from(selectedIds),
-        },
+        data: { type: 'GROUP', name: groupName.trim(), participantIds: Array.from(selectedIds) },
       })
       handleClose()
       router.push(`/chat/${response.data.id}`)
     } catch (err) {
-      console.error('Failed to create group:', err)
+      console.error(`Failed to ${mode === 'create' ? 'create group' : 'invite members'}:`, err)
     }
   }
 
@@ -79,43 +98,51 @@ export function CreateGroupDialog({
     onOpenChange(false)
   }
 
-  const canCreate = groupName.trim().length > 0 && selectedIds.size >= 1
+  const canSubmit =
+    mode === 'create' ? groupName.trim().length > 0 && selectedIds.size >= 1 : selectedIds.size >= 1
+
+  const title = mode === 'create' ? 'New Group Chat' : 'Invite Members'
+  const TitleIcon = mode === 'create' ? Users : UserPlus
+  const submitLabel = mode === 'create' ? 'Create Group' : 'Invite'
+  const submittingLabel = mode === 'create' ? 'Creating…' : 'Inviting…'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-4">
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Users className="size-4 text-primary" strokeWidth={1.5} />
-            New Group Chat
+            <TitleIcon className="size-4 text-primary" strokeWidth={1.5} />
+            {title}
           </DialogTitle>
         </DialogHeader>
 
         <Separator />
 
         <div className="flex flex-col gap-4 p-5">
-          {/* Group name */}
-          <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="group-name"
-              className="text-xs font-mono uppercase tracking-widest text-muted-foreground"
-            >
-              Group Name
-            </Label>
-            <Input
-              id="group-name"
-              placeholder="e.g. Study Group, Project Team…"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="h-9"
-              maxLength={80}
-            />
-          </div>
+          {/* Group name — create mode only */}
+          {mode === 'create' && (
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="group-name"
+                className="text-xs font-mono uppercase tracking-widest text-muted-foreground"
+              >
+                Group Name
+              </Label>
+              <Input
+                id="group-name"
+                placeholder="e.g. Study Group, Project Team…"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className="h-9"
+                maxLength={80}
+              />
+            </div>
+          )}
 
           {/* Member search */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-              Add Members
+              {mode === 'create' ? 'Add Members' : 'Select Members'}
             </Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
@@ -164,7 +191,11 @@ export function CreateGroupDialog({
               </div>
             ) : filteredUsers.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">
-                {networkUsers.length === 0 ? 'No connections found' : 'No users match your search'}
+                {invitableUsers.length === 0
+                  ? mode === 'invite'
+                    ? 'All your connections are already in this group'
+                    : 'No connections found'
+                  : 'No users match your search'}
               </p>
             ) : (
               <div className="flex flex-col py-1 max-h-[260px] overflow-y-auto">
@@ -216,14 +247,14 @@ export function CreateGroupDialog({
             <Button variant="ghost" size="sm" onClick={handleClose} disabled={isPending}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleCreate} disabled={!canCreate || isPending}>
+            <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || isPending}>
               {isPending ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  Creating…
+                  {submittingLabel}
                 </>
               ) : (
-                'Create Group'
+                submitLabel
               )}
             </Button>
           </div>
