@@ -1,3 +1,21 @@
+# [0.15.0](https://github.com/unishare-oss/unishare/compare/v0.14.0...v0.15.0) (2026-04-12)
+
+### Bug Fixes
+
+- **chat:** remove unused roomId destructure in chat gateway ([061e919](https://github.com/unishare-oss/unishare/commit/061e91979050dee192e2990b5e6bc3be56455a8b))
+
+### Features
+
+- **chat:** add group photo avatar picker to GroupChatDialog ([faad13f](https://github.com/unishare-oss/unishare/commit/faad13fb940f9f38560192c7793531bc35e5cd83))
+- **chat:** add invite members endpoint for group rooms ([78dfb4d](https://github.com/unishare-oss/unishare/commit/78dfb4d4329270b56f765491cf49abccc04ab040))
+- **chat:** add Zod + RHF validation to GroupChatDialog, extract UserRow/SelectedBadge ([99654c1](https://github.com/unishare-oss/unishare/commit/99654c15de6d08666ea062b140fe3003d17877fa))
+- **chat:** enforce max 30 char limit on group name in CreateRoomDto ([e01a6c9](https://github.com/unishare-oss/unishare/commit/e01a6c9a92b0ba938db58977534a21136ceb4669))
+- **chat:** fix sidebar name truncation and simplify message preview ([bc9fe49](https://github.com/unishare-oss/unishare/commit/bc9fe492845d58e93bc36e3b16168f8e1313bd70))
+- **chat:** group photo upload with presigned URL and S3 cleanup ([5fba2c7](https://github.com/unishare-oss/unishare/commit/5fba2c78693a7eae5ac39d95bb2fa8ed2a529ce5))
+- **chat:** invite members UI — rename and extend GroupChatDialog ([6c0eccc](https://github.com/unishare-oss/unishare/commit/6c0eccc5114a1758f6fe36d3c628b31e90c9b298))
+- **chat:** system messages for join/leave events ([f36fb8d](https://github.com/unishare-oss/unishare/commit/f36fb8d04bca1f22b55d0149330509d96278f359))
+- **contexts:** remove duplicate socket ([3774ac3](https://github.com/unishare-oss/unishare/commit/3774ac3dcfe8e1038673005bdf1f23f619e3524a))
+
 # [0.14.0](https://github.com/unishare-oss/unishare/compare/v0.13.0...v0.14.0) (2026-04-11)
 
 ### Bug Fixes
