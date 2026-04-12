@@ -13,7 +13,6 @@ import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
-import type { DeliveryStatus, ChatMessageWithStatus } from '@/hooks/use-chat-mutations'
 import { useAuth } from '@/contexts/auth-context'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
@@ -75,20 +74,6 @@ function shouldShowDateSeparator(
   return !isSameDay(currentDate, previousDate)
 }
 
-function getDeliveryStatus(
-  msg: ChatMessageEntity,
-  otherParticipantLastReadAt: string | Date | undefined,
-): DeliveryStatus {
-  if (msg.id.startsWith('temp-')) return 'sending'
-  if (
-    otherParticipantLastReadAt &&
-    new Date(otherParticipantLastReadAt) >= new Date(msg.createdAt)
-  ) {
-    return 'seen'
-  }
-  return 'delivered'
-}
-
 interface UnifiedChatWindowProps {
   roomId?: string
 }
@@ -128,9 +113,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   const room = roomResponse?.data
 
-  const otherParticipant = room?.participants?.find(
-    (p: ChatRoomParticipantEntity) => p.userId !== user?.id,
-  )
+  //for displaying dm chat header
+  const { otherParticipant } = useMemo(() => {
+    const others =
+      room?.participants?.filter((p: ChatRoomParticipantEntity) => p.userId !== user?.id) ?? []
+    return { otherParticipant: others[0] }
+  }, [room?.participants, user?.id])
+
   const headerUser = otherParticipant?.user ?? undefined
   const headerPresence = otherParticipant?.userId
     ? presence.get(otherParticipant.userId)
@@ -472,13 +461,6 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                       const isDeleting = deletingIds.has(msg.id)
                       const isTemp = msg.id.startsWith('temp-')
 
-                      const msgWithStatus: ChatMessageWithStatus = isMe
-                        ? {
-                            ...msg,
-                            _deliveryStatus: getDeliveryStatus(msg, otherParticipant?.lastReadAt),
-                          }
-                        : msg
-
                       return (
                         <motion.div
                           key={msg.id || i}
@@ -526,11 +508,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                             </div>
                           ) : (
                             <ChatMessageBubble
-                              message={msgWithStatus}
+                              message={msg}
                               isMe={isMe}
                               showAvatar={showAvatar}
                               currentUserId={user?.id}
                               isHighlighted={highlightedMessageId === msg.id}
+                              isGroup={room.type === 'GROUP'}
+                              participants={room.participants}
                               onEdit={handleEdit}
                               onDelete={handleDelete}
                               onReply={handleReply}

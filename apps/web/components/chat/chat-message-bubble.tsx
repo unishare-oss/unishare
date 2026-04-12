@@ -4,8 +4,11 @@ import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import type { ChatMessageWithStatus, DeliveryStatus } from '@/hooks/use-chat-mutations'
+import type {
+  ChatMessageEntity,
+  ChatRoomParticipantEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
+import type { DeliveryStatus } from '@/hooks/use-chat-mutations'
 import { renderWithLinks } from '@/lib/render-with-links'
 import {
   Pencil,
@@ -16,8 +19,10 @@ import {
   Download,
   Check,
   CheckCheck,
+  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChatImageLightbox } from './chat-image-lightbox'
 
 function DeliveryTick({ status }: { status: DeliveryStatus }) {
@@ -37,6 +42,8 @@ interface ChatMessageBubbleProps {
   showAvatar: boolean
   currentUserId?: string
   isHighlighted?: boolean
+  isGroup?: boolean
+  participants?: ChatRoomParticipantEntity[]
   onEdit?: (message: ChatMessageEntity) => void
   onDelete?: (messageId: string) => void
   onReply?: (message: ChatMessageEntity) => void
@@ -53,6 +60,8 @@ export function ChatMessageBubble({
   onScrollToMessage,
   currentUserId,
   isHighlighted,
+  isGroup,
+  participants,
 }: ChatMessageBubbleProps) {
   const isEdited =
     message.updatedAt &&
@@ -62,6 +71,21 @@ export function ChatMessageBubble({
   const parentName = parentIsMe ? 'you' : message.parent?.user?.name
   const parentText =
     message.parent?.content || (message.parent?.imageUrl ? null : 'Message deleted')
+
+  const seenBy = participants
+    ? participants.filter(
+        (p) =>
+          p.userId !== message.userId &&
+          p.lastReadAt &&
+          new Date(p.lastReadAt) >= new Date(message.createdAt),
+      )
+    : []
+
+  const deliveryStatus: DeliveryStatus = message.id.startsWith('temp-')
+    ? 'sending'
+    : seenBy.length > 0
+      ? 'seen'
+      : 'delivered'
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
@@ -212,11 +236,7 @@ export function ChatMessageBubble({
                 {!message.content && (
                   <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[0.5625rem] text-white/80 drop-shadow px-2">
                     {isEdited && <span className="italic">(edited)</span>}
-                    {isMe && (
-                      <DeliveryTick
-                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
-                      />
-                    )}
+                    {isMe && <DeliveryTick status={deliveryStatus} />}
                   </div>
                 )}
               </div>
@@ -303,11 +323,7 @@ export function ChatMessageBubble({
                         edited
                       </span>
                     )}
-                    {isMe && (
-                      <DeliveryTick
-                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
-                      />
-                    )}
+                    {isMe && <DeliveryTick status={deliveryStatus} />}
                   </div>
                 )}
               </div>
@@ -329,6 +345,51 @@ export function ChatMessageBubble({
             'bg-background/95 border border-border/60 rounded-full shadow-sm px-1 py-0.5 gap-0.5',
           )}
         >
+          {/* Seen-by eye — group chats only */}
+          {isGroup && participants && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 rounded-full hover:bg-accent hover:text-accent-foreground"
+                  title="Seen by"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" side="top" align={isMe ? 'end' : 'start'}>
+                <p className="text-[0.625rem] font-bold font-mono tracking-widest uppercase text-muted-foreground px-1 mb-2">
+                  Seen by
+                </p>
+                {seenBy.length === 0 ? (
+                  <p className="text-xs text-muted-foreground px-1">No one yet</p>
+                ) : (
+                  <ul className="flex flex-col gap-1">
+                    {seenBy.map((p) => (
+                      <li key={p.userId} className="flex items-center gap-2 px-1 py-0.5">
+                        <Avatar className="h-6 w-6 rounded-[4px] shrink-0">
+                          <AvatarImage src={p.user?.image || ''} />
+                          <AvatarFallback className="text-[0.5rem] rounded-none bg-border text-foreground font-mono font-medium">
+                            {p.user?.name?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate leading-none">
+                            {p.user?.name}
+                          </p>
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">
+                            {format(new Date(p.lastReadAt), 'HH:mm')}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
