@@ -30,6 +30,7 @@ import {
   ArrowDown,
   ImageIcon,
   UsersRound,
+  UserPlus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -39,7 +40,7 @@ import { cn } from '@/lib/utils'
 import { ChatInput } from './chat-input'
 import { ChatHeader } from './chat-header'
 import { ChatInfoPane } from './chat-info-pane'
-import { CreateGroupDialog } from './create-group-dialog'
+import { GroupChatDialog } from './group-chat-dialog'
 import { ChatMessageBubble } from './chat-message-bubble'
 import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
@@ -385,10 +386,14 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
             variant="ghost"
             size="icon-sm"
             onClick={() => setCreateGroupOpen(true)}
-            aria-label="Create group chat"
-            title="Create group chat"
+            aria-label={room?.type === 'GROUP' ? 'Invite members' : 'Create group chat'}
+            title={room?.type === 'GROUP' ? 'Invite members' : 'Create group chat'}
           >
-            <UsersRound className="size-4" strokeWidth={1.5} />
+            {room?.type === 'GROUP' ? (
+              <UserPlus className="size-4" strokeWidth={1.5} />
+            ) : (
+              <UsersRound className="size-4" strokeWidth={1.5} />
+            )}
           </Button>
           <Button
             variant="ghost"
@@ -405,12 +410,19 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         </div>
       </div>
 
-      <CreateGroupDialog
+      <GroupChatDialog
         key={createGroupOpen ? 'open' : 'closed'}
         open={createGroupOpen}
         onOpenChange={setCreateGroupOpen}
-        defaultName={room?.type === 'DM' && headerUser?.name ? `${headerUser.name}'s Group` : ''}
-        defaultParticipantIds={otherParticipant?.userId ? [otherParticipant.userId] : []}
+        mode={room?.type === 'GROUP' ? 'invite' : 'create'}
+        roomId={room?.id}
+        existingMemberIds={
+          room?.type === 'GROUP' ? (room.participants?.map((p) => p.userId) ?? []) : []
+        }
+        defaultName={room?.type !== 'GROUP' && headerUser?.name ? `${headerUser.name}'s Group` : ''}
+        defaultParticipantIds={
+          room?.type !== 'GROUP' && otherParticipant?.userId ? [otherParticipant.userId] : []
+        }
       />
 
       {/* Disconnected banner */}
@@ -506,17 +518,25 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                           )}
 
                           {/* Message Bubble */}
-                          <ChatMessageBubble
-                            message={msgWithStatus}
-                            isMe={isMe}
-                            showAvatar={showAvatar}
-                            currentUserId={user?.id}
-                            isHighlighted={highlightedMessageId === msg.id}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onReply={handleReply}
-                            onScrollToMessage={handleScrollToMessage}
-                          />
+                          {msg.type === 'SYSTEM' ? (
+                            <div className="flex justify-center my-1">
+                              <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                {msg.content}
+                              </span>
+                            </div>
+                          ) : (
+                            <ChatMessageBubble
+                              message={msgWithStatus}
+                              isMe={isMe}
+                              showAvatar={showAvatar}
+                              currentUserId={user?.id}
+                              isHighlighted={highlightedMessageId === msg.id}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onReply={handleReply}
+                              onScrollToMessage={handleScrollToMessage}
+                            />
+                          )}
                         </motion.div>
                       )
                     })}

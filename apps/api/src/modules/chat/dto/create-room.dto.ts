@@ -1,4 +1,12 @@
-import { IsEnum, IsArray, IsString, IsOptional, ArrayMinSize } from 'class-validator'
+import {
+  IsEnum,
+  IsArray,
+  IsString,
+  IsOptional,
+  ArrayMinSize,
+  MaxLength,
+  IsUrl,
+} from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { ChatRoomType } from '@/generated/prisma/client'
 
@@ -13,8 +21,15 @@ export class CreateRoomDto {
   @ArrayMinSize(1)
   participantIds: string[]
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: 30 })
   @IsString()
+  @MaxLength(30)
   @IsOptional()
   name?: string
+
+  @ApiPropertyOptional({ maxLength: 500 })
+  @IsUrl({ protocols: ['https'] })
+  @MaxLength(500)
+  @IsOptional()
+  imageUrl?: string
 }

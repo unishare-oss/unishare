@@ -120,11 +120,12 @@ export class ChatRepository {
     )
   }
 
-  async createRoom(type: ChatRoomType, participantIds: string[], name?: string) {
+  async createRoom(type: ChatRoomType, participantIds: string[], name?: string, imageUrl?: string) {
     return this.prisma.chatRoom.create({
       data: {
         type,
         name,
+        imageUrl,
         participants: {
           create: participantIds.map((userId) => ({
             userId,
@@ -301,6 +302,14 @@ export class ChatRepository {
 
       return { roomDeleted: false }
     })
+  }
+
+  async addParticipants(roomId: string, userIds: string[]) {
+    await this.prisma.chatRoomParticipant.createMany({
+      data: userIds.map((userId) => ({ roomId, userId })),
+      skipDuplicates: true,
+    })
+    return this.findRoomById(roomId)
   }
 
   async markAsRead(roomId: string, userId: string) {

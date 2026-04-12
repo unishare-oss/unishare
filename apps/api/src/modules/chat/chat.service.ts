@@ -42,7 +42,13 @@ export class ChatService {
     }
   }
 
-  async createRoom(creatorId: string, participantIds: string[], type: ChatRoomType, name?: string) {
+  async createRoom(
+    creatorId: string,
+    participantIds: string[],
+    type: ChatRoomType,
+    name?: string,
+    imageUrl?: string,
+  ) {
     const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
 
     if (type === ChatRoomType.DM) {
@@ -57,7 +63,7 @@ export class ChatService {
       }
     }
 
-    return this.chatRepository.createRoom(type, allParticipantIds, name)
+    return this.chatRepository.createRoom(type, allParticipantIds, name, imageUrl)
   }
 
   async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
@@ -143,8 +149,55 @@ export class ChatService {
   }
 
   async leaveRoom(roomId: string, userId: string) {
-    await this.getRoom(roomId, userId)
-    return this.chatRepository.removeParticipant(roomId, userId)
+    const room = await this.getRoom(roomId, userId)
+    const leavingParticipant = room.participants?.find((p: any) => p.userId === userId)
+    const leavingName = leavingParticipant?.user?.name ?? 'Someone'
+
+    const result = await this.chatRepository.removeParticipant(roomId, userId)
+
+    if (result.roomDeleted && room.imageUrl) {
+      const key = this.storageService.extractKeyFromUrl(room.imageUrl)
+      await this.storageService.deleteFile(key)
+    } else {
+      const systemMessage = await this.chatRepository.createMessage({
+        roomId,
+        type: ChatMessageType.SYSTEM,
+        content: `${leavingName} left the group`,
+      })
+      this.eventEmitter.emit('chat.message_sent', {
+        roomId,
+        message: systemMessage,
+        participants: room.participants.filter((p: any) => p.userId !== userId),
+      })
+    }
+
+    return result
+  }
+
+  async inviteMembers(roomId: string, inviterId: string, userIds: string[]) {
+    const room = await this.getRoom(roomId, inviterId)
+    if (room.type !== 'GROUP') {
+      throw new ForbiddenException('Only group rooms support inviting members')
+    }
+
+    const updatedRoom = await this.chatRepository.addParticipants(roomId, userIds)
+
+    for (const uid of userIds) {
+      const participant = updatedRoom?.participants?.find((p: any) => p.userId === uid)
+      const name = participant?.user?.name ?? 'Someone'
+      const systemMessage = await this.chatRepository.createMessage({
+        roomId,
+        type: ChatMessageType.SYSTEM,
+        content: `${name} joined the group`,
+      })
+      this.eventEmitter.emit('chat.message_sent', {
+        roomId,
+        message: systemMessage,
+        participants: updatedRoom?.participants ?? [],
+      })
+    }
+
+    return updatedRoom
   }
 
   async markAsRead(roomId: string, userId: string) {

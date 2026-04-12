@@ -72,7 +72,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('receive-message', (message: any) => {
-      if (message.userId === session.user.id) {
+      if (message.userId && message.userId === session.user.id) {
         return
       }
       setLastMessage(message)
@@ -170,12 +170,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
           },
         }
       })
-    })
-
-    // Invalidate sidebar when new message notification arrives
-    socket.on('new-message-notification', () => {
-      // Invalidate rooms list to refresh sidebar
-      queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
     })
 
     socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
