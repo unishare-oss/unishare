@@ -1,3 +1,9 @@
+# [0.16.0](https://github.com/unishare-oss/unishare/compare/v0.15.0...v0.16.0) (2026-04-13)
+
+### Features
+
+- **chat:** add seen-by popover for group messages and unify delivery status logic ([3626e39](https://github.com/unishare-oss/unishare/commit/3626e39bf4197f287cef4053c31a04217008c3ea))
+
 # [0.15.0](https://github.com/unishare-oss/unishare/compare/v0.14.0...v0.15.0) (2026-04-12)
 
 ### Bug Fixes
