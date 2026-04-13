@@ -4,32 +4,18 @@ import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import type { ChatMessageWithStatus, DeliveryStatus } from '@/hooks/use-chat-mutations'
+import type {
+  ChatMessageEntity,
+  ChatRoomParticipantEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
+import type { DeliveryStatus } from '@/hooks/use-chat-mutations'
 import { renderWithLinks } from '@/lib/render-with-links'
-import {
-  Pencil,
-  Trash2,
-  Reply,
-  ImageIcon,
-  FileIcon,
-  Download,
-  Check,
-  CheckCheck,
-} from 'lucide-react'
+import { Pencil, Trash2, Reply, FileIcon, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ChatImageLightbox } from './chat-image-lightbox'
-
-function DeliveryTick({ status }: { status: DeliveryStatus }) {
-  if (status === 'sending') {
-    return <Check className="size-3 text-primary-foreground/35 shrink-0" />
-  }
-  if (status === 'seen') {
-    return <CheckCheck className="size-3 text-emerald-400 shrink-0" />
-  }
-  // delivered
-  return <CheckCheck className="size-3 text-primary-foreground/60 shrink-0" />
-}
+import { ChatImageLightbox } from '../chat-image-lightbox'
+import { DeliveryTick } from './delivery-tick'
+import { SeenByPopover } from './seen-by-popover'
+import { ReplyQuote } from './reply-quote'
 
 interface ChatMessageBubbleProps {
   message: ChatMessageEntity
@@ -37,6 +23,8 @@ interface ChatMessageBubbleProps {
   showAvatar: boolean
   currentUserId?: string
   isHighlighted?: boolean
+  isGroup?: boolean
+  participants?: ChatRoomParticipantEntity[]
   onEdit?: (message: ChatMessageEntity) => void
   onDelete?: (messageId: string) => void
   onReply?: (message: ChatMessageEntity) => void
@@ -53,17 +41,32 @@ export function ChatMessageBubble({
   onScrollToMessage,
   currentUserId,
   isHighlighted,
+  isGroup,
+  participants,
 }: ChatMessageBubbleProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+
   const isEdited =
     message.updatedAt &&
     new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() > 1000
 
   const parentIsMe = message.parent?.userId === currentUserId
   const parentName = parentIsMe ? 'you' : message.parent?.user?.name
-  const parentText =
-    message.parent?.content || (message.parent?.imageUrl ? null : 'Message deleted')
 
-  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const seenBy = participants
+    ? participants.filter(
+        (p) =>
+          p.userId !== message.userId &&
+          p.lastReadAt &&
+          new Date(p.lastReadAt) >= new Date(message.createdAt),
+      )
+    : []
+
+  const deliveryStatus: DeliveryStatus = message.id.startsWith('temp-')
+    ? 'sending'
+    : seenBy.length > 0
+      ? 'seen'
+      : 'delivered'
 
   return (
     <>
@@ -75,12 +78,14 @@ export function ChatMessageBubble({
           onClose={() => setLightboxOpen(false)}
         />
       )}
+
       <div
         className={cn(
           'flex items-end gap-2 group w-full min-w-0',
           isMe ? 'flex-row-reverse' : 'flex-row',
         )}
       >
+        {/* Sender avatar */}
         {!isMe && (
           <div className="w-8 shrink-0">
             {showAvatar && (
@@ -94,13 +99,13 @@ export function ChatMessageBubble({
           </div>
         )}
 
+        {/* Bubble column */}
         <div
           className={cn(
             'flex flex-col min-w-0 max-w-[75%] md:max-w-[60%]',
             isMe ? 'items-end' : 'items-start',
           )}
         >
-          {/* Main Message Bubble */}
           <motion.div
             animate={
               isHighlighted
@@ -125,66 +130,12 @@ export function ChatMessageBubble({
           >
             {/* Inline reply quote */}
             {message.parent && (
-              <div
-                className={cn(
-                  'flex gap-2.5 px-3 pt-2.5 pb-2 border-b transition-opacity',
-                  isMe
-                    ? 'bg-primary-foreground/10 border-primary-foreground/15'
-                    : 'bg-accent/70 border-accent-foreground/15',
-                  onScrollToMessage && message.parent?.id
-                    ? 'cursor-pointer hover:opacity-80 active:opacity-60'
-                    : '',
-                )}
-                onClick={() => message.parent?.id && onScrollToMessage?.(message.parent.id)}
-              >
-                {/* Left accent bar */}
-                <div
-                  className={cn(
-                    'w-0.5 rounded-full shrink-0 self-stretch min-h-[1.75rem]',
-                    isMe ? 'bg-primary-foreground/50' : 'bg-accent-foreground',
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={cn(
-                      'text-[0.5625rem] font-bold font-mono tracking-widest uppercase mb-0.5 truncate',
-                      isMe ? 'text-primary-foreground/70' : 'text-accent-foreground',
-                    )}
-                  >
-                    {parentName || 'Deleted User'}
-                  </p>
-                  {message.parent?.imageUrl && !message.parent?.content ? (
-                    <span
-                      className={cn(
-                        'flex items-center gap-1 text-[0.6875rem] italic',
-                        isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
-                      )}
-                    >
-                      <ImageIcon className="size-3 shrink-0" />
-                      Photo
-                    </span>
-                  ) : message.parent?.fileUrl && !message.parent?.content ? (
-                    <span
-                      className={cn(
-                        'flex items-center gap-1 text-[0.6875rem] italic',
-                        isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
-                      )}
-                    >
-                      <FileIcon className="size-3 shrink-0" />
-                      {message.parent?.fileName ?? 'File'}
-                    </span>
-                  ) : (
-                    <p
-                      className={cn(
-                        'text-[0.6875rem] leading-snug italic',
-                        isMe ? 'text-primary-foreground/50' : 'text-foreground/60',
-                      )}
-                    >
-                      {(parentText?.length ?? 0) > 80 ? `${parentText!.slice(0, 80)}…` : parentText}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <ReplyQuote
+                parent={message.parent}
+                isMe={isMe}
+                parentName={parentName}
+                onScrollToMessage={onScrollToMessage}
+              />
             )}
 
             {/* Image */}
@@ -208,15 +159,10 @@ export function ChatMessageBubble({
                     className="max-h-52 md:max-h-72 max-w-full object-cover w-full h-auto"
                   />
                 </div>
-                {/* Timestamp + tick overlay on image-only messages */}
                 {!message.content && (
                   <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[0.5625rem] text-white/80 drop-shadow px-2">
                     {isEdited && <span className="italic">(edited)</span>}
-                    {isMe && (
-                      <DeliveryTick
-                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
-                      />
-                    )}
+                    {isMe && <DeliveryTick status={deliveryStatus} />}
                   </div>
                 )}
               </div>
@@ -273,7 +219,7 @@ export function ChatMessageBubble({
               </div>
             )}
 
-            {/* Message body — only render if there is text content or no image/file */}
+            {/* Text body */}
             {(message.content || (!message.imageUrl && !message.fileUrl)) && (
               <div className="px-4 py-2 min-w-0">
                 {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
@@ -284,13 +230,11 @@ export function ChatMessageBubble({
                 {message.content && (
                   <p className="whitespace-pre-wrap break-words min-w-0">
                     {renderWithLinks(
-                      message.content ?? '',
+                      message.content,
                       isMe ? 'text-primary-foreground/90' : 'text-primary',
                     )}
                   </p>
                 )}
-
-                {/* Edited + tick inside bubble — below text */}
                 {(isMe || isEdited) && (
                   <div className="flex items-center justify-end gap-1 mt-1">
                     {isEdited && (
@@ -303,11 +247,7 @@ export function ChatMessageBubble({
                         edited
                       </span>
                     )}
-                    {isMe && (
-                      <DeliveryTick
-                        status={(message as ChatMessageWithStatus)._deliveryStatus ?? 'delivered'}
-                      />
-                    )}
+                    {isMe && <DeliveryTick status={deliveryStatus} />}
                   </div>
                 )}
               </div>
@@ -315,7 +255,7 @@ export function ChatMessageBubble({
           </motion.div>
         </div>
 
-        {/* Timestamp — outside bubble, hover only */}
+        {/* Hover timestamp */}
         <div className={cn('self-end mb-1 shrink-0', isMe ? 'items-end' : 'items-start')}>
           <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             {format(new Date(message.createdAt), 'HH:mm')}
@@ -329,6 +269,8 @@ export function ChatMessageBubble({
             'bg-background/95 border border-border/60 rounded-full shadow-sm px-1 py-0.5 gap-0.5',
           )}
         >
+          {isGroup && participants && <SeenByPopover seenBy={seenBy} isMe={isMe} />}
+
           <Button
             variant="ghost"
             size="icon"
@@ -338,6 +280,7 @@ export function ChatMessageBubble({
           >
             <Reply className="h-3 w-3" />
           </Button>
+
           {isMe && (
             <>
               <div className="w-px h-3 bg-border/60 mx-0.5" />
