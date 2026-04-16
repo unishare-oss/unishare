@@ -6,6 +6,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
 import { StorageService } from '../storage/storage.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 const FILE_DELETE_GRACE_DAYS = 7
 
@@ -15,6 +16,7 @@ export class ChatService {
     private readonly chatRepository: ChatRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly storageService: StorageService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getRooms(userId: string) {
@@ -90,6 +92,21 @@ export class ChatService {
       message,
       participants: room.participants,
     })
+
+    const sender = room.participants.find((p: any) => p.userId === userId)
+    const senderName = sender?.user?.name ?? 'Someone'
+    const recipientIds = room.participants
+      .filter((p: any) => p.userId !== userId)
+      .map((p: any) => p.userId)
+
+    //notify
+    await this.notificationsService.notifyChatMessage(
+      roomId,
+      senderName,
+      room.name ?? null,
+      room.type === ChatRoomType.DM,
+      recipientIds,
+    )
 
     return message
   }
