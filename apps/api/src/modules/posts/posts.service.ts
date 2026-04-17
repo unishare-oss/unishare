@@ -19,6 +19,7 @@ import { ListPostsDto } from './dto/list-posts.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
+import { AiChatDto, AiChatResponse } from './dto/ai-chat.dto'
 
 @Injectable()
 export class PostsService {
@@ -491,5 +492,22 @@ export class PostsService {
     })
 
     return posts
+  }
+
+  async chatWithPost(postId: string, dto: AiChatDto, userId: string): Promise<AiChatResponse> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId, deletedAt: null },
+      select: { id: true, publicationStatus: true, status: true, deletedAt: true },
+    })
+    if (!post) throw new NotFoundException('Post not found')
+
+    if (
+      post.publicationStatus !== PostPublicationStatus.PUBLISHED ||
+      post.status !== PostStatus.APPROVED
+    ) {
+      throw new ForbiddenException('Post is not available')
+    }
+
+    return this.aiSummaryService.chatWithPost(postId, dto.messages)
   }
 }

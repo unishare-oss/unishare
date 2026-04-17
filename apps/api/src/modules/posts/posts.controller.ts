@@ -1,5 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
-import { ApiCreatedResponse, ApiOkResponse, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
@@ -14,6 +22,7 @@ import { ListPostsDto } from './dto/list-posts.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
+import { AiChatDto } from './dto/ai-chat.dto'
 import { PostDetailEntity } from './entities/post.entity'
 import { PaginatedPostEntity } from './entities/paginated-post.entity'
 
@@ -185,6 +194,16 @@ export class PostsController {
   @ResponseMessage('Post deleted successfully')
   remove(@Param('id') id: string, @Session() session: UserSession) {
     return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
+  }
+
+  @Post(':id/ai-chat')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ApiOperation({ summary: 'Chat with a post using AI' })
+  @ApiOkResponse({ description: 'AI response to the user message' })
+  @ResponseMessage('AI response generated')
+  aiChat(@Param('id') id: string, @Body() dto: AiChatDto, @Session() session: UserSession) {
+    return this.postsService.chatWithPost(id, dto, session.user.id)
   }
 
   @Post(':id/summarize')
