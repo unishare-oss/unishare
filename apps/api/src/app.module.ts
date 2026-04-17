@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { ScheduleModule } from '@nestjs/schedule'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
@@ -34,6 +35,7 @@ import { UniversitiesModule } from './modules/universities/universities.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
