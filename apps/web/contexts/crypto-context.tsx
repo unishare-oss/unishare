@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useRef, useCallback, type ReactNode } from 'react'
+import { createContext, useRef, type ReactNode } from 'react'
 import {
   decryptRoomKey,
   encryptMessage,
@@ -17,7 +17,9 @@ interface CryptoContextValue {
   decrypt: (roomId: string, ciphertext: string) => Promise<string>
   hasRoomKey: (roomId: string) => boolean
   encryptRoomKeyForUser: (roomId: string, publicKeyJwk: string) => Promise<string>
-  generateAndStoreRoomKey: (roomId: string) => Promise<CryptoKey>
+  createEncryptedRoomKeys: (
+    participants: { userId: string; publicKeyJwk: string }[],
+  ) => Promise<{ userId: string; encryptedKey: string }[]>
 }
 
 export const CryptoContext = createContext<CryptoContextValue | null>(null)
@@ -25,40 +27,47 @@ export const CryptoContext = createContext<CryptoContextValue | null>(null)
 export function CryptoProvider({ children }: { children: ReactNode }) {
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
 
-  const loadRoomKey = useCallback(async (roomId: string, encryptedRoomKey: string) => {
+  const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
     const privateKey = await getPrivateKey()
     if (!privateKey) throw new Error('Private key not found')
     const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
     roomKeys.current.set(roomId, roomKey)
-  }, [])
+  }
 
-  const encrypt = useCallback(async (roomId: string, content: string) => {
+  const encrypt = async (roomId: string, content: string) => {
     const roomKey = roomKeys.current.get(roomId)
     if (!roomKey) throw new Error('Room key not loaded')
     return encryptMessage(content, roomKey)
-  }, [])
+  }
 
-  const decrypt = useCallback(async (roomId: string, ciphertext: string) => {
+  const decrypt = async (roomId: string, ciphertext: string) => {
     const roomKey = roomKeys.current.get(roomId)
     if (!roomKey) throw new Error('Room key not loaded')
     return decryptMessage(ciphertext, roomKey)
-  }, [])
+  }
 
-  const hasRoomKey = useCallback((roomId: string) => roomKeys.current.has(roomId), [])
+  const hasRoomKey = (roomId: string) => roomKeys.current.has(roomId)
 
-  const generateAndStoreRoomKey = useCallback(async (roomId: string) => {
-    const roomKey = await generateRoomKey()
-    roomKeys.current.set(roomId, roomKey)
-    return roomKey
-  }, [])
-
-  const encryptRoomKeyForUser = useCallback(async (roomId: string, publicKeyJwk: string) => {
+  const encryptRoomKeyForUser = async (roomId: string, publicKeyJwk: string) => {
     const roomKey = roomKeys.current.get(roomId)
     if (!roomKey) throw new Error('Room key not loaded')
     const publicKey = await importPublicKey(publicKeyJwk)
     return encryptRoomKey(roomKey, publicKey)
-  }, [])
+  }
+
+  const createEncryptedRoomKeys = async (
+    participants: { userId: string; publicKeyJwk: string }[],
+  ) => {
+    const roomKey = await generateRoomKey()
+    return Promise.all(
+      participants.map(async ({ userId, publicKeyJwk }) => {
+        const pubKey = await importPublicKey(publicKeyJwk)
+        const encryptedKey = await encryptRoomKey(roomKey, pubKey)
+        return { userId, encryptedKey }
+      }),
+    )
+  }
 
   return (
     <CryptoContext
@@ -68,7 +77,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
         decrypt,
         hasRoomKey,
         encryptRoomKeyForUser,
-        generateAndStoreRoomKey,
+        createEncryptedRoomKeys,
       }}
     >
       {children}

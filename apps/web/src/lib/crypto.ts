@@ -40,7 +40,7 @@ export async function decryptRoomKey(
 ): Promise<CryptoKey> {
   const bytes = Uint8Array.from(atob(encryptedKey), (c) => c.charCodeAt(0))
   const raw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, bytes)
-  return crypto.subtle.importKey('raw', raw, AES_PARAMS, false, ['encrypt', 'decrypt'])
+  return crypto.subtle.importKey('raw', raw, AES_PARAMS, true, ['encrypt', 'decrypt'])
 }
 
 export async function encryptMessage(content: string, roomKey: CryptoKey): Promise<string> {

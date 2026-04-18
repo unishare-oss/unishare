@@ -25,14 +25,14 @@ async function initEncryptionKeys() {
   const { publicKey, privateKey: newPrivateKey } = await generateKeyPair()
   const publicKeyJwk = await exportPublicKey(publicKey)
 
+  await storePrivateKey(newPrivateKey)
+
   await fetch('/api/users/me/public-key', {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ publicKey: publicKeyJwk }),
   })
-
-  await storePrivateKey(newPrivateKey)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       select: (res) => res.data,
     },
   })
-
   useEffect(() => {
     if (user) {
       initEncryptionKeys().catch(console.error)
@@ -51,17 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   useEffect(() => {
-    if (!session) {
+    if (!sessionPending && !session) {
       clearPrivateKey().catch(console.error)
     }
-  }, [session])
+  }, [session, sessionPending])
 
   const isLoading = sessionPending || (!!session?.user && userPending)
   const isAuthenticated = !!session?.user
 
   return (
     <AuthContext
-      value={{ session: session ?? null, user: user ?? null, isLoading, isAuthenticated }}
+      value={{
+        session: session ?? null,
+        user: user ?? null,
+        isLoading,
+        isAuthenticated,
+      }}
     >
       {children}
     </AuthContext>
