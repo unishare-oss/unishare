@@ -494,10 +494,10 @@ export class PostsService {
     return posts
   }
 
-  async chatWithPost(postId: string, dto: AiChatDto, userId: string): Promise<AiChatResponse> {
-    const post = await this.prisma.post.findUnique({
+  async chatWithPost(postId: string, dto: AiChatDto, _userId: string): Promise<AiChatResponse> {
+    const post = await this.prisma.post.findFirst({
       where: { id: postId, deletedAt: null },
-      select: { id: true, publicationStatus: true, status: true, deletedAt: true },
+      select: { id: true, publicationStatus: true, status: true },
     })
     if (!post) throw new NotFoundException('Post not found')
 
