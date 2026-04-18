@@ -55,6 +55,7 @@ export class ChatController {
       dto.type,
       dto.name,
       dto.imageUrl,
+      dto.encryptedRoomKeys,
     )
   }
 
@@ -116,6 +117,6 @@ export class ChatController {
     @Session() session: UserSession,
     @Body() dto: InviteMembersDto,
   ) {
-    return this.chatService.inviteMembers(id, session.user.id, dto.userIds)
+    return this.chatService.inviteMembers(id, session.user.id, dto.userIds, dto.encryptedRoomKeys)
   }
 }

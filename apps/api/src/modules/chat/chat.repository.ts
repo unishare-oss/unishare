@@ -18,7 +18,13 @@ export class ChatRepository {
       },
       include: {
         participants: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            roomId: true,
+            lastReadAt: true,
+            joinedAt: true,
+            encryptedRoomKey: true,
             user: {
               select: {
                 id: true,
@@ -120,7 +126,13 @@ export class ChatRepository {
     )
   }
 
-  async createRoom(type: ChatRoomType, participantIds: string[], name?: string, imageUrl?: string) {
+  async createRoom(
+    type: ChatRoomType,
+    participantIds: string[],
+    name?: string,
+    imageUrl?: string,
+    encryptedRoomKeys?: { userId: string; encryptedKey: string }[],
+  ) {
     return this.prisma.chatRoom.create({
       data: {
         type,
@@ -129,6 +141,7 @@ export class ChatRepository {
         participants: {
           create: participantIds.map((userId) => ({
             userId,
+            encryptedRoomKey: encryptedRoomKeys?.find((k) => k.userId === userId)?.encryptedKey,
           })),
         },
       },
@@ -304,9 +317,17 @@ export class ChatRepository {
     })
   }
 
-  async addParticipants(roomId: string, userIds: string[]) {
+  async addParticipants(
+    roomId: string,
+    userIds: string[],
+    encryptedRoomKeys?: { userId: string; encryptedKey: string }[],
+  ) {
     await this.prisma.chatRoomParticipant.createMany({
-      data: userIds.map((userId) => ({ roomId, userId })),
+      data: userIds.map((userId) => ({
+        roomId,
+        userId,
+        encryptedRoomKey: encryptedRoomKeys?.find((k) => k.userId === userId)?.encryptedKey,
+      })),
       skipDuplicates: true,
     })
     return this.findRoomById(roomId)

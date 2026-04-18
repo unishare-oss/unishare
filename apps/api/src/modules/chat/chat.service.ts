@@ -50,6 +50,7 @@ export class ChatService {
     type: ChatRoomType,
     name?: string,
     imageUrl?: string,
+    encryptedRoomKeys?: { userId: string; encryptedKey: string }[],
   ) {
     const allParticipantIds = Array.from(new Set([creatorId, ...participantIds]))
 
@@ -65,7 +66,13 @@ export class ChatService {
       }
     }
 
-    return this.chatRepository.createRoom(type, allParticipantIds, name, imageUrl)
+    return this.chatRepository.createRoom(
+      type,
+      allParticipantIds,
+      name,
+      imageUrl,
+      encryptedRoomKeys,
+    )
   }
 
   async sendMessage(roomId: string, userId: string, data: SendMessageDto) {
@@ -191,13 +198,22 @@ export class ChatService {
     return result
   }
 
-  async inviteMembers(roomId: string, inviterId: string, userIds: string[]) {
+  async inviteMembers(
+    roomId: string,
+    inviterId: string,
+    userIds: string[],
+    encryptedRoomKeys?: { userId: string; encryptedKey: string }[],
+  ) {
     const room = await this.getRoom(roomId, inviterId)
     if (room.type !== 'GROUP') {
       throw new ForbiddenException('Only group rooms support inviting members')
     }
 
-    const updatedRoom = await this.chatRepository.addParticipants(roomId, userIds)
+    const updatedRoom = await this.chatRepository.addParticipants(
+      roomId,
+      userIds,
+      encryptedRoomKeys,
+    )
 
     for (const uid of userIds) {
       const participant = updatedRoom?.participants?.find((p: any) => p.userId === uid)
