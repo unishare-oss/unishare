@@ -10,6 +10,7 @@ import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 import { SetPasswordDto } from './dto/set-password.dto'
+import { UpdatePublicKeyDto } from './dto/update-public-key.dto'
 import { UserProfileEntity } from './entities/user-profile.entity'
 
 @ApiTags('users')
@@ -66,5 +67,11 @@ export class UsersController {
   @ResponseMessage('Academic profile updated successfully')
   updateAcademicProfile(@Session() session: UserSession, @Body() dto: UpdateAcademicProfileDto) {
     return this.usersService.updateAcademicProfile(session.user.id, dto)
+  }
+
+  @Patch('me/public-key')
+  @ResponseMessage('Public key updated successfully')
+  updatePublicKey(@Session() session: UserSession, @Body() dto: UpdatePublicKeyDto) {
+    return this.usersService.updatePublicKey(session.user.id, dto.publicKey)
   }
 }

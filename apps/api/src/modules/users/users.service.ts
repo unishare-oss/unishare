@@ -33,6 +33,16 @@ export class UsersService {
     return this.toProfileView(user)
   }
 
+  async updatePublicKey(id: string, publicKey: string) {
+    return this.usersRepository.updatePublicKey(id, publicKey)
+  }
+
+  async getPublicKey(id: string) {
+    const user = await this.usersRepository.findPublicKey(id)
+    if (!user) throw new NotFoundException('User not found')
+    return user
+  }
+
   async updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
     if (
       dto.departmentId === undefined &&
