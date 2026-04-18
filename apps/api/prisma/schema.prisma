@@ -26,6 +26,7 @@ model User {
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
   universityId            String?
+  publicKey               String?
   accounts                Account[]
   adminActions            AdminAction[]            @relation("AdminActions")
   chatMessages            ChatMessage[]
@@ -463,8 +464,9 @@ model ChatRoomParticipant {
   id         String   @id @default(cuid())
   roomId     String
   userId     String
-  lastReadAt DateTime @default(now())
-  joinedAt   DateTime @default(now())
+  lastReadAt       DateTime @default(now())
+  joinedAt         DateTime @default(now())
+  encryptedRoomKey String?
   room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
