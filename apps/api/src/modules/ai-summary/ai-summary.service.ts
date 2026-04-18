@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
 import mammoth from 'mammoth'
@@ -117,6 +119,7 @@ export class AiSummaryService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly tagsService: TagsService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
     this.provider = (config.get<string>('AI_SUMMARY_PROVIDER') as AiProvider) || null
 
@@ -367,6 +370,10 @@ export class AiSummaryService {
   }
 
   private async extractText(key: string, mimeType: string): Promise<string> {
+    const cacheKey = `ai:text:${key}`
+    const cached = await this.cacheManager.get<string>(cacheKey)
+    if (cached !== undefined && cached !== null) return cached
+
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
     const response = await this.s3Client.send(command)
     const chunks: Uint8Array[] = []
@@ -388,7 +395,10 @@ export class AiSummaryService {
       text = result.value
     }
 
-    return text.slice(0, MAX_TEXT_CHARS)
+    const truncated = text.slice(0, MAX_TEXT_CHARS)
+    // Cache the truncated text for 1 hour (3_600_000 ms)
+    await this.cacheManager.set(cacheKey, truncated, 3_600_000)
+    return truncated
   }
 
   private async callLlm(
