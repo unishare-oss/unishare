@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { usePostsControllerAiChat } from '@/src/lib/api/generated/posts/posts'
 
 export interface ChatMessage {
@@ -14,12 +14,22 @@ const OFF_TOPIC_MESSAGE =
 
 export function usePostAiChat(postId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const messagesRef = useRef<ChatMessage[]>([])
   const { mutateAsync, isPending } = usePostsControllerAiChat()
+
+  const updateMessages = useCallback((updater: (prev: ChatMessage[]) => ChatMessage[]) => {
+    setMessages((prev) => {
+      const next = updater(prev)
+      messagesRef.current = next
+      return next
+    })
+  }, [])
 
   const sendMessage = useCallback(
     async (userText: string) => {
       const userMessage: ChatMessage = { role: 'user', content: userText }
-      const updated = [...messages, userMessage]
+      const updated = [...messagesRef.current, userMessage]
+      messagesRef.current = updated
       setMessages(updated)
 
       try {
@@ -33,7 +43,7 @@ export function usePostAiChat(postId: string) {
         const data = (result as any).data as { reply: string; offTopic: boolean }
         const offTopic = data.offTopic
 
-        setMessages((prev) => [
+        updateMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
@@ -42,7 +52,7 @@ export function usePostAiChat(postId: string) {
           },
         ])
       } catch {
-        setMessages((prev) => [
+        updateMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
@@ -52,10 +62,13 @@ export function usePostAiChat(postId: string) {
         ])
       }
     },
-    [messages, mutateAsync, postId],
+    [mutateAsync, postId, updateMessages],
   )
 
-  const reset = useCallback(() => setMessages([]), [])
+  const reset = useCallback(() => {
+    messagesRef.current = []
+    setMessages([])
+  }, [])
 
   return { messages, sendMessage, isPending, reset }
 }
