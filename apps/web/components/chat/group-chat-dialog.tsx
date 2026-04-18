@@ -28,6 +28,8 @@ import {
 import { useNetworkUsers } from '@/hooks/use-network-users'
 import { useCreateGroup, useInviteMembers } from '@/hooks/use-chat-mutations'
 import { UserRow, SelectedBadge } from '@/components/chat/group-chat-user-row'
+import { useAuth } from '@/contexts/auth-context'
+import { useCrypto } from '@/hooks/use-crypto'
 
 const GROUP_NAME_MAX = 30
 
@@ -62,6 +64,9 @@ export function GroupChatDialog({
   existingMemberIds = [],
 }: GroupChatDialogProps) {
   const router = useRouter()
+  const { session, user: currentUser } = useAuth()
+  const currentUserId = session?.user?.id
+  const { hasRoomKey, encryptRoomKeyForUser, createEncryptedRoomKeys } = useCrypto()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(defaultParticipantIds))
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -145,16 +150,56 @@ export function GroupChatDialog({
     if (!canSubmit) return
     try {
       if (mode === 'invite') {
-        await inviteMembers({ id: roomId!, data: { userIds: Array.from(selectedIds) } })
+        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
+
+        if (roomId && hasRoomKey(roomId)) {
+          console.log('ok')
+          const results = await Promise.all(
+            Array.from(selectedIds).map(async (id) => {
+              //TODO: maybe add key in selectedId?
+              const member = networkUsers.find((u) => u.id === id)
+              if (!member?.publicKey) return null
+              const encryptedKey = await encryptRoomKeyForUser(roomId, member.publicKey)
+              return { userId: id, encryptedKey }
+            }),
+          )
+
+          console.log(results)
+          if (results.every((r) => r !== null)) {
+            encryptedRoomKeys = results as { userId: string; encryptedKey: string }[]
+          }
+        }
+
+        await inviteMembers({
+          id: roomId!,
+          data: { userIds: Array.from(selectedIds), encryptedRoomKeys },
+        })
         handleClose()
         return
       }
+
+      // Build encrypted room keys for all participants if everyone has a public key
+      let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
+      const allParticipants = [
+        { id: currentUserId, publicKey: currentUser?.publicKey },
+        ...Array.from(selectedIds).map((id) => ({
+          id,
+          publicKey: networkUsers.find((u) => u.id === id)?.publicKey,
+        })),
+      ]
+      if (allParticipants.every((p) => p.id && p.publicKey)) {
+        encryptedRoomKeys = await createEncryptedRoomKeys(
+          allParticipants.map((p) => ({ userId: p.id!, publicKeyJwk: p.publicKey! })),
+        )
+      }
+
       const response = await createGroup({
         data: {
           type: 'GROUP',
           name: values.name.trim(),
           participantIds: Array.from(selectedIds),
           ...(imagePublicUrl && { imageUrl: imagePublicUrl }),
+          encryptedRoomKeys,
         },
       })
       handleClose()

@@ -14,6 +14,7 @@ import type {
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
+import { useCrypto } from '@/hooks/use-crypto'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload'
@@ -80,6 +81,7 @@ interface UnifiedChatWindowProps {
 
 export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
+  const { loadRoomKey, hasRoomKey, decrypt } = useCrypto()
   const {
     presence,
     lastMessage: lastSocketMessage,
@@ -160,6 +162,39 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
   }, [initialMsgs, searchQuery])
 
+  const [decryptedMessages, setDecryptedMessages] = useState<typeof messages>([])
+
+  useEffect(() => {
+    if (!roomId || messages.length === 0) {
+      setDecryptedMessages(messages)
+      return
+    }
+    if (!hasRoomKey(roomId)) return
+
+    const run = async () => {
+      const result = await Promise.all(
+        messages.map(async (msg) => {
+          let decrypted = msg
+
+          if (msg.content && msg.type === 'TEXT') {
+            const plaintext = await decrypt(roomId, msg.content)
+            decrypted = { ...decrypted, content: plaintext }
+          }
+
+          if (msg.parent?.content && msg.parent.type === 'TEXT') {
+            const parentPlaintext = await decrypt(roomId, msg.parent.content)
+            decrypted = { ...decrypted, parent: { ...decrypted.parent!, content: parentPlaintext } }
+          }
+
+          return decrypted
+        }),
+      )
+      setDecryptedMessages(result)
+    }
+
+    run()
+  }, [messages, roomId]) // eslint-disable-line react-hooks/exhaustive-depas
+
   // Typing indicators
   const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
   const roomTypingUsers = typingByRoom.get(roomId || '') || []
@@ -174,7 +209,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     prepareForLoad,
   } = useScrollManager({
     roomId,
-    messages,
+    messages: decryptedMessages,
     messagesLoading,
     isFetchingNextPage,
     roomTypingUsersCount: roomTypingUsers.length,
@@ -265,6 +300,17 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       addMessageToInfiniteCache(old, lastSocketMessage),
     )
   }, [lastSocketMessage, roomId, queryClient, user])
+
+  // Load room key into CryptoContext when room data arrives and crypto is ready
+  useEffect(() => {
+    if (!room || !user?.id || hasRoomKey(room.id)) return
+    const myParticipant = room.participants?.find((p) => p.userId === user.id)
+    const encryptedRoomKey = myParticipant?.encryptedRoomKey
+
+    if (encryptedRoomKey) {
+      loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
+    }
+  }, [room, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset unread divider when room changes
   useEffect(() => {
@@ -454,10 +500,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                   )}
 
                   <AnimatePresence initial={false}>
-                    {messages.map((msg, i) => {
+                    {decryptedMessages.map((msg, i) => {
                       const isMe = msg.userId === user?.id
-                      const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
-                      const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
+                      const showAvatar = i === 0 || decryptedMessages[i - 1].userId !== msg.userId
+                      const showDateSeparator = shouldShowDateSeparator(
+                        msg,
+                        decryptedMessages[i - 1],
+                      )
                       const isDeleting = deletingIds.has(msg.id)
                       const isTemp = msg.id.startsWith('temp-')
 

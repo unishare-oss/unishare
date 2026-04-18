@@ -20,6 +20,9 @@ export class ChatRoomParticipantEntity {
 
   @ApiProperty({ type: ChatMessageUserEntity })
   user: ChatMessageUserEntity
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  encryptedRoomKey: string | null
 }
 
 export class ChatRoomEntity {

@@ -13,9 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Loader2, ImageIcon, FileIcon } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { generateRoomKey, encryptRoomKey, importPublicKey } from '@/src/lib/crypto'
+import { useMemo, useState, useEffect } from 'react'
+import { useCrypto } from '@/hooks/use-crypto'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
+
 import { useChatSocket } from '@/hooks/use-chat-socket'
 import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
@@ -27,13 +28,50 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
   const { session, user: currentUser } = useAuth()
   const currentUserId = session?.user?.id
+  const { createEncryptedRoomKeys, loadRoomKey, hasRoomKey, decrypt } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
   const { data: roomsResponse, isLoading: roomsLoading } = useChatControllerGetRooms()
 
   const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
   const rooms = roomsResponse?.data || []
+
+  useEffect(() => {
+    if (rooms.length === 0) return
+
+    const loadAndDecrypt = async () => {
+      await Promise.all(
+        rooms.map(async (room) => {
+          if (hasRoomKey(room.id)) return
+          const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+          const encryptedRoomKey = myParticipant?.encryptedRoomKey
+          if (encryptedRoomKey) {
+            await loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
+          }
+        }),
+      )
+
+      const entries = await Promise.all(
+        rooms.map(async (room) => {
+          const lastMsg = room.messages?.[0]
+          if (!lastMsg?.content || !hasRoomKey(room.id))
+            return [room.id, lastMsg?.content ?? ''] as const
+          try {
+            const plaintext = await decrypt(room.id, lastMsg.content)
+            return [room.id, plaintext] as const
+          } catch {
+            return [room.id, lastMsg.content] as const
+          }
+        }),
+      )
+
+      setDecryptedPreviews(Object.fromEntries(entries))
+    }
+
+    loadAndDecrypt()
+  }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
@@ -55,36 +93,23 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         // Build encrypted room keys for both participants if public keys are available
         let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
 
-        console.log(user.publicKey)
-
         if (currentUser?.publicKey && user.publicKey) {
-          const roomKey = await generateRoomKey()
-          const [currentUserPubKey, otherUserPubKey] = await Promise.all([
-            importPublicKey(currentUser.publicKey),
-            importPublicKey(user.publicKey),
+          encryptedRoomKeys = await createEncryptedRoomKeys([
+            { userId: currentUserId!, publicKeyJwk: currentUser.publicKey },
+            { userId: user.id, publicKeyJwk: user.publicKey },
           ])
-          const [currentUserEncryptedKey, otherUserEncryptedKey] = await Promise.all([
-            encryptRoomKey(roomKey, currentUserPubKey),
-            encryptRoomKey(roomKey, otherUserPubKey),
-          ])
-          encryptedRoomKeys = [
-            { userId: currentUserId!, encryptedKey: currentUserEncryptedKey },
-            { userId: user.id, encryptedKey: otherUserEncryptedKey },
-          ]
         }
 
-        // console.log(encryptedRoomKeys)
-
         // Create new DM room
-        // const response = await createDM({
-        //   data: {
-        //     type: 'DM',
-        //     participantIds: [user.id],
-        //     encryptedRoomKeys,
-        //   },
-        // })
-        // // Navigate to the created room
-        // router.push(`/chat/${response.data.id}`)
+        const response = await createDM({
+          data: {
+            type: 'DM',
+            participantIds: [user.id],
+            encryptedRoomKeys,
+          },
+        })
+        // Navigate to the created room
+        router.push(`/chat/${response.data.id}`)
       }
     } catch (error) {
       console.error('Failed to create DM:', error)
@@ -200,7 +225,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                           <span>{'File'}</span>
                         </>
                       ) : (
-                        <span className="truncate">{lastMessage.content}</span>
+                        <span className="truncate">
+                          {decryptedPreviews[room.id] ?? lastMessage.content}
+                        </span>
                       )}
                     </div>
                   ) : null}

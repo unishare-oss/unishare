@@ -6,6 +6,7 @@ import type {
   UserProfileEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useSendMessage, useEditMessage, useDeleteMessage } from './use-chat-mutations'
+import { useCrypto } from './use-crypto'
 
 interface UseChatMessageActionsParams {
   roomId: string | undefined
@@ -34,6 +35,7 @@ export function useChatMessageActions({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
+  const { encrypt } = useCrypto()
   const { mutate: sendMessage } = useSendMessage({ roomId, user })
   const { mutate: editMessage } = useEditMessage({ roomId: roomId || '' })
   const { mutate: deleteMessage } = useDeleteMessage({ roomId: roomId || '' })
@@ -48,13 +50,15 @@ export function useChatMessageActions({
         setEditingMessage(null)
         return
       }
-      editMessage({ id: editingMessage.id, data: { content: messageContent } })
+      const encryptedContent = await encrypt(roomId, messageContent)
+      editMessage({ id: editingMessage.id, data: { content: encryptedContent } })
       setEditingMessage(null)
     } else {
+      const encryptedContent = await encrypt(roomId, messageContent)
       sendMessage({
         id: roomId,
         data: {
-          content: messageContent,
+          content: encryptedContent,
           type: 'TEXT',
           ...(replyingToMessage && { parentId: replyingToMessage.id }),
         },
@@ -62,7 +66,16 @@ export function useChatMessageActions({
       setReplyingToMessage(null)
       requestAnimationFrame(() => scrollToBottom())
     }
-  }, [content, roomId, editingMessage, replyingToMessage, editMessage, sendMessage, scrollToBottom])
+  }, [
+    content,
+    roomId,
+    editingMessage,
+    replyingToMessage,
+    editMessage,
+    sendMessage,
+    scrollToBottom,
+    encrypt,
+  ])
 
   const handleEdit = useCallback((message: ChatMessageEntity) => {
     setEditingMessage(message)
