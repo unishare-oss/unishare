@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Loader2, ImageIcon, FileIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { generateRoomKey, encryptRoomKey, importPublicKey } from '@/src/lib/crypto'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
 import { SidebarTypingIndicator } from './sidebar-typing-indicator'
@@ -24,7 +25,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session } = useAuth()
+  const { session, user: currentUser } = useAuth()
   const currentUserId = session?.user?.id
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
 
@@ -51,15 +52,39 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         // Navigate directly to existing room
         router.push(`/chat/${existingRoom.id}`)
       } else {
+        // Build encrypted room keys for both participants if public keys are available
+        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
+
+        console.log(user.publicKey)
+
+        if (currentUser?.publicKey && user.publicKey) {
+          const roomKey = await generateRoomKey()
+          const [currentUserPubKey, otherUserPubKey] = await Promise.all([
+            importPublicKey(currentUser.publicKey),
+            importPublicKey(user.publicKey),
+          ])
+          const [currentUserEncryptedKey, otherUserEncryptedKey] = await Promise.all([
+            encryptRoomKey(roomKey, currentUserPubKey),
+            encryptRoomKey(roomKey, otherUserPubKey),
+          ])
+          encryptedRoomKeys = [
+            { userId: currentUserId!, encryptedKey: currentUserEncryptedKey },
+            { userId: user.id, encryptedKey: otherUserEncryptedKey },
+          ]
+        }
+
+        // console.log(encryptedRoomKeys)
+
         // Create new DM room
-        const response = await createDM({
-          data: {
-            type: 'DM',
-            participantIds: [user.id],
-          },
-        })
-        // Navigate to the created room
-        router.push(`/chat/${response.data.id}`)
+        // const response = await createDM({
+        //   data: {
+        //     type: 'DM',
+        //     participantIds: [user.id],
+        //     encryptedRoomKeys,
+        //   },
+        // })
+        // // Navigate to the created room
+        // router.push(`/chat/${response.data.id}`)
       }
     } catch (error) {
       console.error('Failed to create DM:', error)
