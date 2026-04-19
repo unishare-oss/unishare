@@ -47,7 +47,8 @@ function ExcalidrawWrapperInner() {
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
 
-  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef })
+  // eslint-disable-next-line react-hooks/refs
+  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef.current })
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
