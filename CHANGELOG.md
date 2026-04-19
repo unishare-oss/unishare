@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/unishare-oss/unishare/compare/v0.16.0...v0.17.0) (2026-04-19)
+
+### Features
+
+- **notifications:** add chat message notification support ([d317c95](https://github.com/unishare-oss/unishare/commit/d317c9567ee3bd50669affd79556698819a69d4c))
+- **web/notifications:** handle CHAT_MESSAGE type and route to chat room ([77a224c](https://github.com/unishare-oss/unishare/commit/77a224c49e5dd9e4b695cb41022bca0c9c8b5757))
+
 # [0.16.0](https://github.com/unishare-oss/unishare/compare/v0.15.0...v0.16.0) (2026-04-13)
 
 ### Features
