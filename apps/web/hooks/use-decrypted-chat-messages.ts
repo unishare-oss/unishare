@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { useChatControllerGetMessagesInfinite } from '@/src/lib/api/generated/chat/chat'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useCrypto } from './use-crypto'
@@ -41,8 +41,8 @@ export function useDecryptedChatMessages(
     return data.pages.flatMap((page) => page.data.items).reverse()
   }, [data])
 
-  const contentCacheRef = useRef<Map<string, string>>(new Map())
-  const parentCacheRef = useRef<Map<string, string>>(new Map())
+  const contentCacheRef = useRef<Map<string, { encrypted: string; decrypted: string }>>(new Map())
+  const parentCacheRef = useRef<Map<string, { encrypted: string; decrypted: string }>>(new Map())
 
   useEffect(() => {
     contentCacheRef.current = new Map()
@@ -54,7 +54,7 @@ export function useDecryptedChatMessages(
 
   useEffect(() => {
     if (!roomId || rawMessages.length === 0) {
-      setDecryptedMessages([])
+      startTransition(() => setDecryptedMessages([]))
       return
     }
     if (!hasRoomKey(roomId)) return
@@ -67,23 +67,36 @@ export function useDecryptedChatMessages(
 
       await Promise.all(
         rawMessages.map(async (msg) => {
-          if (msg.content && msg.type === 'TEXT' && !contentCache.has(msg.id)) {
+          if (
+            msg.content &&
+            (msg.type === 'TEXT' || msg.type === 'LINK') &&
+            contentCache.get(msg.id)?.encrypted !== msg.content
+          ) {
             try {
-              contentCache.set(msg.id, await decrypt(roomId, msg.content))
+              contentCache.set(msg.id, {
+                encrypted: msg.content,
+                decrypted: await decrypt(roomId, msg.content),
+              })
             } catch {
-              contentCache.set(msg.id, msg.content)
+              contentCache.set(msg.id, { encrypted: msg.content, decrypted: msg.content })
             }
           }
           if (
             msg.parent?.id &&
             msg.parent.content &&
-            msg.parent.type === 'TEXT' &&
-            !parentCache.has(msg.parent.id)
+            (msg.parent.type === 'TEXT' || msg.parent.type === 'LINK') &&
+            parentCache.get(msg.parent.id)?.encrypted !== msg.parent.content
           ) {
             try {
-              parentCache.set(msg.parent.id, await decrypt(roomId, msg.parent.content))
+              parentCache.set(msg.parent.id, {
+                encrypted: msg.parent.content,
+                decrypted: await decrypt(roomId, msg.parent.content),
+              })
             } catch {
-              parentCache.set(msg.parent.id, msg.parent.content)
+              parentCache.set(msg.parent.id, {
+                encrypted: msg.parent.content,
+                decrypted: msg.parent.content,
+              })
             }
           }
         }),
@@ -92,10 +105,15 @@ export function useDecryptedChatMessages(
       if (generation !== generationRef.current) return
 
       const mapped = rawMessages.map((msg) => {
-        const content = msg.content && msg.type === 'TEXT' ? contentCache.get(msg.id) : msg.content
+        const content =
+          msg.content && (msg.type === 'TEXT' || msg.type === 'LINK')
+            ? contentCache.get(msg.id)?.decrypted
+            : msg.content
         const parent =
-          msg.parent?.id && msg.parent.content && msg.parent.type === 'TEXT'
-            ? { ...msg.parent, content: parentCache.get(msg.parent.id)! }
+          msg.parent?.id &&
+          msg.parent.content &&
+          (msg.parent.type === 'TEXT' || msg.parent.type === 'LINK')
+            ? { ...msg.parent, content: parentCache.get(msg.parent.id)!.decrypted }
             : msg.parent
         return { ...msg, content, parent }
       })
