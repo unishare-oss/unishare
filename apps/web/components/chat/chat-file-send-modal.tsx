@@ -43,6 +43,7 @@ export function ChatFileSendModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCaption('')
       setError(null)
       if (file && file.size > MAX_FILE_SIZE) {

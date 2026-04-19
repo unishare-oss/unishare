@@ -69,6 +69,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   }
 
   const { socketRef, presence } = useChatSocket()
+  // eslint-disable-next-line react-hooks/refs
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
 
   // Filter out network users who already have a DM room with messages

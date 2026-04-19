@@ -162,6 +162,7 @@ export function PostFiles({ post }: PostFilesProps) {
   const codeElRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCopied(false)
   }, [previewFile?.id])
 
