@@ -1,3 +1,21 @@
+# [0.18.0](https://github.com/unishare-oss/unishare/compare/v0.17.0...v0.18.0) (2026-04-19)
+
+### Bug Fixes
+
+- **dto:** add response class, prompt-injection guard, and maxLength consistency ([87f92ce](https://github.com/unishare-oss/unishare/commit/87f92cee2a42ea3dfcc8c569cc1bb4b5c31d94ca))
+- **posts:** findFirst for soft-delete filter, per-user throttle guard, typed ApiOkResponse ([6e96da1](https://github.com/unishare-oss/unishare/commit/6e96da1af55d430a5d4d49a9a2886c042d6b3713))
+- **web:** fix stale closure in usePostAiChat with ref-based message tracking ([f061cda](https://github.com/unishare-oss/unishare/commit/f061cdad974c4b804c3a1b2cbc327e38f88032ba))
+
+### Features
+
+- add AI chat endpoint with per-user rate limiting on posts ([2824f72](https://github.com/unishare-oss/unishare/commit/2824f723ab2956c4bdc38f6d22ea6f1862ab073e))
+- add AI chat panel to post detail page ([1e0ea42](https://github.com/unishare-oss/unishare/commit/1e0ea42310ef81a383a24acdf2657eb35043a690))
+- install and register @nestjs/throttler ([1f2257b](https://github.com/unishare-oss/unishare/commit/1f2257bae933f5146a4c2dd7f459ae43fdab7f3f))
+
+### Performance Improvements
+
+- **api:** cache extracted file text and use Redis-backed throttler storage ([66b0cc4](https://github.com/unishare-oss/unishare/commit/66b0cc403e268a6f72130d8cc15cea54f6ab659d))
+
 # [0.17.0](https://github.com/unishare-oss/unishare/compare/v0.16.0...v0.17.0) (2026-04-19)
 
 ### Features
