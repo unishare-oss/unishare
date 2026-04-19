@@ -47,7 +47,7 @@ function ExcalidrawWrapperInner() {
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
 
-  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef.current })
+  useHandleLibrary({ excalidrawAPI: excalidrawAPIRef })
 
   const handleAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
