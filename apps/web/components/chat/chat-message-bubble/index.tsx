@@ -16,6 +16,8 @@ import { ChatImageLightbox } from '../chat-image-lightbox'
 import { DeliveryTick } from './delivery-tick'
 import { SeenByPopover } from './seen-by-popover'
 import { ReplyQuote } from './reply-quote'
+import { LinkPreview } from './link-preview'
+import { useChatControllerGetLinkPreview } from '@/src/lib/api/generated/chat/chat'
 
 interface ChatMessageBubbleProps {
   message: ChatMessageEntity
@@ -45,6 +47,15 @@ export function ChatMessageBubble({
   participants,
 }: ChatMessageBubbleProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
+
+  const firstUrl = message.type === 'LINK' ? message.content : null
+
+  const { data: previewData, isLoading: previewLoading } = useChatControllerGetLinkPreview(
+    { url: firstUrl! },
+    { query: { enabled: !!firstUrl, staleTime: 1000 * 60 * 60, retry: false } },
+  )
+  const preview = (previewData?.data as any) ?? null
+  const previewLoaded = !!preview?.title
 
   const isEdited =
     message.updatedAt &&
@@ -219,40 +230,51 @@ export function ChatMessageBubble({
               </div>
             )}
 
-            {/* Text body */}
-            {(message.content || (!message.imageUrl && !message.fileUrl)) && (
-              <div className="px-4 py-2 min-w-0">
-                {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
-                  <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
-                    {message.user?.name}
-                  </span>
-                )}
-                {message.content && (
-                  <p className="whitespace-pre-wrap break-words min-w-0">
-                    {renderWithLinks(
-                      message.content,
-                      isMe ? 'text-primary-foreground/90' : 'text-primary',
-                    )}
-                  </p>
-                )}
-                {(isMe || isEdited) && (
-                  <div className="flex items-center justify-end gap-1 mt-1">
-                    {isEdited && (
-                      <span
-                        className={cn(
-                          'text-[0.5rem] italic',
-                          isMe ? 'text-primary-foreground/50' : 'text-muted-foreground/60',
-                        )}
-                      >
-                        edited
-                      </span>
-                    )}
-                    {isMe && <DeliveryTick status={deliveryStatus} />}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Text body — hidden for LINK messages once preview loads */}
+            {!(previewLoaded && message.type === 'LINK') &&
+              (message.content || (!message.imageUrl && !message.fileUrl)) && (
+                <div className="px-4 py-2 min-w-0">
+                  {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
+                    <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
+                      {message.user?.name}
+                    </span>
+                  )}
+                  {message.content && (
+                    <p className="whitespace-pre-wrap break-words min-w-0">
+                      {renderWithLinks(
+                        message.content,
+                        isMe ? 'text-primary-foreground/90' : 'text-primary',
+                      )}
+                    </p>
+                  )}
+                  {(isMe || isEdited) && (
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      {isEdited && (
+                        <span
+                          className={cn(
+                            'text-[0.5rem] italic',
+                            isMe ? 'text-primary-foreground/50' : 'text-muted-foreground/60',
+                          )}
+                        >
+                          edited
+                        </span>
+                      )}
+                      {isMe && <DeliveryTick status={deliveryStatus} />}
+                    </div>
+                  )}
+                </div>
+              )}
           </motion.div>
+
+          {firstUrl && (
+            <LinkPreview
+              url={firstUrl}
+              preview={preview}
+              isLoading={previewLoading}
+              isMe={isMe}
+              deliveryStatus={deliveryStatus}
+            />
+          )}
         </div>
 
         {/* Hover timestamp */}

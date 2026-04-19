@@ -55,11 +55,12 @@ export function useChatMessageActions({
       setEditingMessage(null)
     } else {
       const encryptedContent = await encrypt(roomId, messageContent)
+      const isLink = /https?:\/\/[^\s<>"{}|\\^`[\]]+/i.test(messageContent)
       sendMessage({
         id: roomId,
         data: {
           content: encryptedContent,
-          type: 'TEXT',
+          type: isLink ? 'LINK' : 'TEXT',
           ...(replyingToMessage && { parentId: replyingToMessage.id }),
         },
       })

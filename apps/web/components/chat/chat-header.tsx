@@ -56,7 +56,7 @@ function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
-            <LockKeyhole className="size-3 text-muted-foreground" title="End-to-end encrypted" />
+            <LockKeyhole className="size-3 text-muted-foreground" />
           </div>
           <span
             className={cn(
@@ -96,10 +96,7 @@ function GroupHeader({
             <span className="font-semibold text-sm tracking-tight truncate">
               {groupName || 'Group Chat'}
             </span>
-            <LockKeyhole
-              className="size-3 text-muted-foreground shrink-0"
-              title="End-to-end encrypted"
-            />
+            <LockKeyhole className="size-3 text-muted-foreground shrink-0" />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.625rem] uppercase tracking-widest text-muted-foreground whitespace-nowrap">
