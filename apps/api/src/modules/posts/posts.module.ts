@@ -10,11 +10,18 @@ import { CommentsService } from './comments/comments.service'
 import { PostsController } from './posts.controller'
 import { PostsRepository } from './posts.repository'
 import { PostsService } from './posts.service'
+import { UserThrottlerGuard } from './guards/user-throttler.guard'
 
 @Module({
   imports: [NotificationsModule, FollowsModule, TagsModule, TrendingModule, AiSummaryModule],
   controllers: [PostsController, CommentsController],
-  providers: [PostsService, PostsRepository, CommentsService, CommentsRepository],
+  providers: [
+    PostsService,
+    PostsRepository,
+    CommentsService,
+    CommentsRepository,
+    UserThrottlerGuard,
+  ],
   exports: [PostsService, PostsRepository],
 })
 export class PostsModule {}

@@ -17,6 +17,7 @@ import { CommentSection } from '@/components/post-detail/comment-section'
 import { RelatedPosts } from '@/components/post-detail/related-posts'
 import { PostReactions } from '@/components/post-detail/post-reactions'
 import { PostSummary } from '@/components/post-detail/post-summary'
+import { PostAiChat } from '@/components/post-detail/post-ai-chat'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
@@ -117,6 +118,9 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               <PostSummary post={post} />
             </div>
           )}
+          <div className="mt-4">
+            <PostAiChat post={post} />
+          </div>
           <div className="mt-8">
             <PostFiles post={post} />
           </div>

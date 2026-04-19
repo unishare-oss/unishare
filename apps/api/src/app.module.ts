@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { ScheduleModule } from '@nestjs/schedule'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
@@ -30,10 +31,20 @@ import { ReadingListsModule } from './modules/reading-lists/reading-lists.module
 import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
+import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
+import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRootAsync({
+      imports: [RedisThrottlerStorageModule],
+      inject: [RedisThrottlerStorageService],
+      useFactory: (storage: RedisThrottlerStorageService) => ({
+        throttlers: [{ ttl: 60000, limit: 20 }],
+        storage,
+      }),
+    }),
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
