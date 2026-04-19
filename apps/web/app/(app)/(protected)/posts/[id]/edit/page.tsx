@@ -111,7 +111,9 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         return
       }
       form.reset(postToFormValues(post))
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewFiles([])
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemovedFileIds(new Set())
     }
     // Only reset when post.id changes (first load)

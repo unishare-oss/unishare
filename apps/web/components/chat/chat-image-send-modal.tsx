@@ -36,12 +36,14 @@ export function ChatImageSendModal({
   useEffect(() => {
     if (!file) return
     const url = URL.createObjectURL(file)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setObjectUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [file])
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCaption('')
       setTimeout(() => captionRef.current?.focus(), 100)
     }

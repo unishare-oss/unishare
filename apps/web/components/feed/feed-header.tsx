@@ -30,6 +30,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
   const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(searchQuery)
   }, [searchQuery])
 
@@ -50,6 +51,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
 
   // Reset active index when suggestions change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(-1)
   }, [suggestions])
 
