@@ -4,10 +4,8 @@ import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useInView } from 'react-intersection-observer'
 import {
-  useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
   useChatControllerMarkAsRead,
-  getChatControllerGetMessagesInfiniteQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
   ChatMessageEntity,
@@ -15,12 +13,12 @@ import type {
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 import { useCrypto } from '@/hooks/use-crypto'
+import { useDecryptedChatMessages } from '@/hooks/use-decrypted-chat-messages'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
-import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   ArrowLeft,
@@ -46,7 +44,6 @@ import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
@@ -81,15 +78,9 @@ interface UnifiedChatWindowProps {
 
 export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
-  const { loadRoomKey, hasRoomKey, decrypt } = useCrypto()
-  const {
-    presence,
-    lastMessage: lastSocketMessage,
-    isConnected,
-    socketRef: socket,
-  } = useChatSocket()
+  const { loadRoomKey, hasRoomKey } = useCrypto()
+  const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
-  const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
@@ -127,73 +118,25 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     ? presence.get(otherParticipant.userId)
     : undefined
 
-  // Fetch messages with infinite scroll
+  // Fetch + decrypt messages with infinite scroll
   const {
-    data: messagesData,
+    messages: decryptedMessages,
     isLoading: messagesLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useChatControllerGetMessagesInfinite(
-    roomId || '',
-    { limit: 50, direction: 'desc' },
-    {
-      query: {
-        enabled: !!roomId,
-        getNextPageParam: (lastPage) => {
-          return lastPage.data.hasMore ? lastPage.data.nextCursor : undefined
-        },
-      },
-    },
-  )
+  } = useDecryptedChatMessages(roomId)
 
   // Intersection observer for loading older messages
   const { ref: loadMoreRef, inView } = useInView()
 
-  // Flatten pages and reverse to show oldest first
-  const initialMsgs = useMemo(() => {
-    if (!messagesData?.pages) return []
-    return messagesData.pages.flatMap((page) => page.data.items).reverse()
-  }, [messagesData])
-
   const messages = useMemo(() => {
-    if (!searchQuery.trim()) return initialMsgs
+    if (!searchQuery.trim()) return decryptedMessages
     const q = searchQuery.toLowerCase()
-    return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
-  }, [initialMsgs, searchQuery])
-
-  const [decryptedMessages, setDecryptedMessages] = useState<typeof messages>([])
-
-  useEffect(() => {
-    if (!roomId || messages.length === 0) {
-      setDecryptedMessages(messages)
-      return
-    }
-    if (!hasRoomKey(roomId)) return
-
-    const run = async () => {
-      const result = await Promise.all(
-        messages.map(async (msg) => {
-          let decrypted = msg
-
-          if (msg.content && msg.type === 'TEXT') {
-            const plaintext = await decrypt(roomId, msg.content)
-            decrypted = { ...decrypted, content: plaintext }
-          }
-
-          if (msg.parent?.content && msg.parent.type === 'TEXT') {
-            const parentPlaintext = await decrypt(roomId, msg.parent.content)
-            decrypted = { ...decrypted, parent: { ...decrypted.parent!, content: parentPlaintext } }
-          }
-
-          return decrypted
-        }),
-      )
-      setDecryptedMessages(result)
-    }
-
-    run()
-  }, [messages, roomId]) // eslint-disable-line react-hooks/exhaustive-depas
+    return decryptedMessages.filter(
+      (m) => m.content && (m.content as string).toLowerCase().includes(q),
+    )
+  }, [decryptedMessages, searchQuery])
 
   // Typing indicators
   const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
@@ -209,7 +152,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     prepareForLoad,
   } = useScrollManager({
     roomId,
-    messages: decryptedMessages,
+    messages,
     messagesLoading,
     isFetchingNextPage,
     roomTypingUsersCount: roomTypingUsers.length,
@@ -280,26 +223,6 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       fetchNextPage()
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
-
-  // Add incoming socket messages from other users to the query cache
-  useEffect(() => {
-    if (
-      !roomId ||
-      !lastSocketMessage ||
-      lastSocketMessage.roomId !== roomId ||
-      lastSocketMessage.user?.id === user!.id
-    )
-      return
-
-    const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
-      limit: 50,
-      direction: 'desc',
-    })
-
-    queryClient.setQueryData(messagesQueryKey, (old: unknown) =>
-      addMessageToInfiniteCache(old, lastSocketMessage),
-    )
-  }, [lastSocketMessage, roomId, queryClient, user])
 
   // Load room key into CryptoContext when room data arrives and crypto is ready
   useEffect(() => {
@@ -500,13 +423,10 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                   )}
 
                   <AnimatePresence initial={false}>
-                    {decryptedMessages.map((msg, i) => {
+                    {messages.map((msg, i) => {
                       const isMe = msg.userId === user?.id
-                      const showAvatar = i === 0 || decryptedMessages[i - 1].userId !== msg.userId
-                      const showDateSeparator = shouldShowDateSeparator(
-                        msg,
-                        decryptedMessages[i - 1],
-                      )
+                      const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
+                      const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
                       const isDeleting = deletingIds.has(msg.id)
                       const isTemp = msg.id.startsWith('temp-')
 
