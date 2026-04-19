@@ -17,7 +17,6 @@ model User {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   departmentId            String?
-  universityId            String?
   role                    UserRole                 @default(STUDENT)
   banExpires              DateTime?
   banReason               String?
@@ -26,6 +25,7 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
+  universityId            String?
   accounts                Account[]
   adminActions            AdminAction[]            @relation("AdminActions")
   chatMessages            ChatMessage[]
@@ -291,17 +291,19 @@ model Verification {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  message   String
-  read      Boolean          @default(false)
-  postId    String?
-  createdAt DateTime         @default(now())
-  requestId String?
-  post      Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
-  request   PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  message    String
+  read       Boolean          @default(false)
+  postId     String?
+  createdAt  DateTime         @default(now())
+  requestId  String?
+  chatRoomId String?
+  post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  request    PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  chatRoom   ChatRoom?        @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("notification")
@@ -444,14 +446,15 @@ model AdminAction {
 }
 
 model ChatRoom {
-  id           String                @id @default(cuid())
-  type         ChatRoomType          @default(DM)
-  name         String?
-  imageUrl     String?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  messages     ChatMessage[]
-  participants ChatRoomParticipant[]
+  id            String                @id @default(cuid())
+  type          ChatRoomType          @default(DM)
+  name          String?
+  imageUrl      String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  messages      ChatMessage[]
+  notifications Notification[]
+  participants  ChatRoomParticipant[]
 
   @@map("chat_room")
 }
@@ -471,24 +474,24 @@ model ChatRoomParticipant {
 }
 
 model ChatMessage {
-  id        String          @id @default(cuid())
-  roomId    String
-  userId    String?
-  type      ChatMessageType @default(TEXT)
-  content   String?
-  imageUrl  String?
-  fileUrl   String?
-  fileName  String?
-  linkUrl   String?
-  parentId  String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  roomId       String
+  userId       String?
+  type         ChatMessageType @default(TEXT)
+  content      String?
+  imageUrl     String?
+  linkUrl      String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  parentId     String?
   deletedAt    DateTime?
+  fileName     String?
+  fileUrl      String?
   fileDeleteAt DateTime?
+  parent       ChatMessage?    @relation("MessageReplies", fields: [parentId], references: [id])
+  children     ChatMessage[]   @relation("MessageReplies")
   room         ChatRoom        @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    ChatMessage?    @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  children  ChatMessage[]   @relation("MessageReplies")
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId])
   @@index([userId])
@@ -622,6 +625,7 @@ enum NotificationType {
   REQUEST_SUGGESTION_ADDED
   REQUEST_FULFILLED
   NEW_POST_FROM_FOLLOWED
+  CHAT_MESSAGE
 }
 
 enum UserRole {
@@ -678,9 +682,9 @@ enum ChatRoomType {
 enum ChatMessageType {
   TEXT
   IMAGE
-  FILE
   LINK
   SYSTEM
+  FILE
 }
 
 enum FeedbackType {

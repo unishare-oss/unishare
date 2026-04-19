@@ -128,6 +128,32 @@ export class NotificationsService {
     )
   }
 
+  async notifyChatMessage(
+    chatRoomId: string,
+    senderName: string,
+    roomName: string | null,
+    isDm: boolean,
+    recipientIds: string[],
+  ) {
+    if (recipientIds.length === 0) return
+
+    const message = isDm
+      ? `${senderName} sent you a message`
+      : `${senderName} sent a message in ${roomName ?? 'a group'}`
+
+    await Promise.all(
+      recipientIds.map(async (userId) => {
+        const notification = await this.notificationsRepository.create({
+          userId,
+          type: NotificationType.CHAT_MESSAGE,
+          message,
+          chatRoomId,
+        })
+        this.events$.next({ userId, data: notification })
+      }),
+    )
+  }
+
   findByUser(userId: string) {
     return this.notificationsRepository.findByUser(userId)
   }
