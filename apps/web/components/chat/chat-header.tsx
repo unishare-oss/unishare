@@ -1,7 +1,7 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User as UserIcon, Users } from 'lucide-react'
+import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import type { PresenceEntry } from '@/contexts/chat-socket-context'
@@ -54,7 +54,10 @@ function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-          <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
+            <LockKeyhole className="size-3 text-muted-foreground" title="End-to-end encrypted" />
+          </div>
           <span
             className={cn(
               'text-[0.625rem] uppercase tracking-widest',
@@ -89,9 +92,15 @@ function GroupHeader({
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col min-w-0">
-          <span className="font-semibold text-sm tracking-tight truncate">
-            {groupName || 'Group Chat'}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-semibold text-sm tracking-tight truncate">
+              {groupName || 'Group Chat'}
+            </span>
+            <LockKeyhole
+              className="size-3 text-muted-foreground shrink-0"
+              title="End-to-end encrypted"
+            />
+          </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.625rem] uppercase tracking-widest text-muted-foreground whitespace-nowrap">
               {total} {total === 1 ? 'member' : 'members'}
