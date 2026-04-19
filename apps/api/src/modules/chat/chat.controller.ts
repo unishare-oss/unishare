@@ -108,6 +108,13 @@ export class ChatController {
     return this.chatService.leaveRoom(id, session.user.id)
   }
 
+  @Get('link-preview')
+  @ApiOkResponse({ description: 'Link preview metadata' })
+  @ResponseMessage('Link preview fetched successfully')
+  getLinkPreview(@Query('url') url: string) {
+    return this.chatService.getLinkPreview(url)
+  }
+
   @Post('rooms/:id/participants')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatRoomEntity })

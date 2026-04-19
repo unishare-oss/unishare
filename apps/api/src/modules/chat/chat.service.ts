@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { getLinkPreview } from 'link-preview-js'
 import { ChatRepository } from './chat.repository'
 import { ChatMessageType, ChatRoomType } from '@/generated/prisma/client'
 import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
@@ -241,6 +247,19 @@ export class ChatService {
       lastReadAt: participant.lastReadAt,
     })
     return participant
+  }
+
+  async getLinkPreview(url: string) {
+    if (!url) throw new BadRequestException('url is required')
+    try {
+      const data = await getLinkPreview(url, {
+        timeout: 5000,
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; Unishare/1.0)' },
+      })
+      return data
+    } catch {
+      throw new BadRequestException('Could not fetch link preview')
+    }
   }
 
   private sanitizeParent<
