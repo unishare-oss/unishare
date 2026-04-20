@@ -10,6 +10,9 @@ export class ChatMessageUserEntity {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   image: string | null
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  publicKey: string | null
 }
 
 export class ChatMessageParentEntity {

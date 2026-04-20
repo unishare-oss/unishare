@@ -10,6 +10,7 @@ import { InviteMembersDto } from './dto/invite-members.dto'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
+import { UpgradeEncryptionDto } from './dto/upgrade-encryption.dto'
 import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
@@ -98,6 +99,18 @@ export class ChatController {
   @ResponseMessage('Room marked as read successfully')
   markAsRead(@Param('id') id: string, @Session() session: UserSession) {
     return this.chatService.markAsRead(id, session.user.id)
+  }
+
+  @Post('rooms/:id/upgrade-encryption')
+  @UseGuards(ChatMemberGuard)
+  @ApiOkResponse({ type: ChatRoomEntity })
+  @ResponseMessage('Room encryption upgraded successfully')
+  upgradeEncryption(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @Body() dto: UpgradeEncryptionDto,
+  ) {
+    return this.chatService.upgradeEncryption(id, session.user.id, dto.encryptedRoomKeys)
   }
 
   @Delete('rooms/:id/leave')
