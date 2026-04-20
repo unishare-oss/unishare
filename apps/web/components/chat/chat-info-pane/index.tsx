@@ -355,18 +355,18 @@ export function ChatInfoPane({
                   <Button
                     variant="ghost"
                     onClick={() => setExportKeysOpen(true)}
-                    className="justify-start gap-3 w-full"
+                    className="justify-start gap-3 w-full overflow-hidden"
                   >
                     <QrCode className="size-4 shrink-0" strokeWidth={1.5} />
-                    <span>Export encryption keys</span>
+                    <span className="truncate">Export encryption keys</span>
                   </Button>
                   <Button
                     variant="ghost"
                     onClick={() => setImportKeysOpen(true)}
-                    className="justify-start gap-3 w-full"
+                    className="justify-start gap-3 w-full overflow-hidden"
                   >
                     <ScanLine className="size-4 shrink-0" strokeWidth={1.5} />
-                    <span>Import keys from another device</span>
+                    <span className="truncate">Import keys from another device</span>
                   </Button>
                   <div className="my-1 border-t" />
                   {room?.type === 'GROUP' && (
