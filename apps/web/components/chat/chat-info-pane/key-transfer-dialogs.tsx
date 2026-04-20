@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { AlertTriangle, Loader2, ScanLine, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,13 +32,14 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!open) {
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
       setJwk(null)
       setConfirmed(false)
       setError(null)
     }
-  }, [open])
+    onOpenChange(next)
+  }
 
   const handleConfirm = async () => {
     try {
@@ -53,7 +54,7 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Export encryption keys</DialogTitle>
@@ -156,14 +157,6 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
     }
   }
 
-  useEffect(() => {
-    if (!open) {
-      stopScanner()
-      setStatus('idle')
-      setErrorMsg(null)
-    }
-  }, [open])
-
   const handleSuccess = () => {
     onOpenChange(false)
     window.location.reload()
@@ -173,7 +166,11 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) stopScanner()
+        if (!v) {
+          stopScanner()
+          setStatus('idle')
+          setErrorMsg(null)
+        }
         onOpenChange(v)
       }}
     >
