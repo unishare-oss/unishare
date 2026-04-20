@@ -48,7 +48,12 @@ export function ChatMessageBubble({
 }: ChatMessageBubbleProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
-  const firstUrl = message.type === 'LINK' ? message.content : null
+  const firstUrl =
+    message.type === 'LINK'
+      ? message.content
+      : message.type === 'TEXT' && message.content
+        ? (message.content.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i)?.[0] ?? null)
+        : null
 
   const { data: previewData, isLoading: previewLoading } = useChatControllerGetLinkPreview(
     { url: firstUrl! },
