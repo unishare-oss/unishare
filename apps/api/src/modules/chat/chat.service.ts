@@ -108,19 +108,19 @@ export class ChatService {
     })
 
     const sender = room.participants.find((p: any) => p.userId === userId)
-    const senderName = sender?.user?.name ?? 'Someone'
-    const recipientIds = room.participants
+    const _senderName = sender?.user?.name ?? 'Someone'
+    const _recipientIds = room.participants
       .filter((p: any) => p.userId !== userId)
       .map((p: any) => p.userId)
 
-    //notify
-    await this.notificationsService.notifyChatMessage(
-      roomId,
-      senderName,
-      room.name ?? null,
-      room.type === ChatRoomType.DM,
-      recipientIds,
-    )
+    // Chat message notifications suppressed — unread count handled via Socket.io
+    // await this.notificationsService.notifyChatMessage(
+    //   roomId,
+    //   senderName,
+    //   room.name ?? null,
+    //   room.type === ChatRoomType.DM,
+    //   recipientIds,
+    // )
 
     return message
   }

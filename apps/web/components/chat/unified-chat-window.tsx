@@ -33,6 +33,7 @@ import {
   UsersRound,
   UserPlus,
   LockKeyholeOpen,
+  ScanLine,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -48,6 +49,7 @@ import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
+import { ImportKeysDialog } from './chat-info-pane/key-transfer-dialogs'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
 
@@ -81,7 +83,8 @@ interface UnifiedChatWindowProps {
 
 export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
-  const { loadRoomKey, hasRoomKey, createEncryptedRoomKeys } = useCrypto()
+  const { loadRoomKey, hasRoomKey, createEncryptedRoomKeys, hasPrivateKey } = useCrypto()
+  const [importKeysOpen, setImportKeysOpen] = useState(false)
   const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -446,6 +449,24 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         </div>
       )}
 
+      {/* No local key banner */}
+      {room && isEncrypted && !hasPrivateKey && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-xs">
+          <ScanLine className="size-3 shrink-0" />
+          <span className="flex-1">
+            Messages are encrypted but your decryption key is not on this device.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+            onClick={() => setImportKeysOpen(true)}
+          >
+            Import key
+          </Button>
+        </div>
+      )}
+
       {/* Body: messages + optional info pane */}
       <div className="flex flex-1 overflow-hidden">
         {/* Messages Area */}
@@ -634,6 +655,11 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         onConfirm={confirmDelete}
+      />
+      <ImportKeysDialog
+        open={importKeysOpen}
+        onOpenChange={setImportKeysOpen}
+        userPublicKey={user?.publicKey ?? ''}
       />
     </div>
   )

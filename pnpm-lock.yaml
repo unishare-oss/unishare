@@ -350,6 +350,9 @@ importers:
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      html5-qrcode:
+        specifier: ^2.3.8
+        version: 2.3.8
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
@@ -11089,6 +11092,12 @@ packages:
         integrity: sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA==,
       }
     engines: { node: '>=8.0.0' }
+
+  html5-qrcode@2.3.8:
+    resolution:
+      {
+        integrity: sha512-jsr4vafJhwoLVEDW3n1KvPnCCXWaQfRng0/EEYk1vNcQGcG/htAdhJX0be8YyqMoSz7+hZvOZSTAepsabiuhiQ==,
+      }
 
   htmlparser2@8.0.2:
     resolution:
@@ -24910,6 +24919,8 @@ snapshots:
       css-line-break: 2.1.0
       text-segmentation: 1.0.3
     optional: true
+
+  html5-qrcode@2.3.8: {}
 
   htmlparser2@8.0.2:
     dependencies:
