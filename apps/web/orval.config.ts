@@ -25,6 +25,9 @@ export default defineConfig({
           ChatController_getMessages: {
             query: { useInfiniteQueryParam: 'cursor' },
           },
+          ChatController_getLinkPreview: {
+            query: { useInfinite: false },
+          },
           TagsController_autocomplete: {
             query: { useInfinite: false },
           },
