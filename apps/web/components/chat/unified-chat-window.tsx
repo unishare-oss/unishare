@@ -48,7 +48,6 @@ import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -54,10 +54,9 @@ export function ChatMessageBubble({
   participants,
 }: ChatMessageBubbleProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [isTouch, setIsTouch] = useState(false)
-  useEffect(() => {
-    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
-  }, [])
+  const [isTouch] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(pointer: coarse)').matches : false,
+  )
 
   const firstUrl =
     message.type === 'LINK'
