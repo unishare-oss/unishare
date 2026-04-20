@@ -70,7 +70,8 @@ export function useChatMessageActions({
     } else {
       const encryptedContent = await prepareContent()
       if (encryptedContent === null) return
-      const isLink = /https?:\/\/[^\s<>"{}|\\^`[\]]+/i.test(messageContent)
+      const trimmed = messageContent.trim()
+      const isLink = /^https?:\/\/[^\s<>"{}|\\^`[\]]+$/i.test(trimmed)
       sendMessage({
         id: roomId,
         data: {
