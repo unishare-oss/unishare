@@ -125,7 +125,9 @@ export function ChatMessageBubble({
         {/* Bubble column */}
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            <div
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               className={cn(
                 'flex flex-col min-w-0 max-w-[75%] md:max-w-[60%]',
                 isMe ? 'items-end' : 'items-start',
@@ -291,7 +293,7 @@ export function ChatMessageBubble({
                   deliveryStatus={deliveryStatus}
                 />
               )}
-            </div>
+            </motion.div>
           </ContextMenuTrigger>
           <ContextMenuContent className="min-w-40">
             <ContextMenuItem onClick={() => onReply?.(message)}>
