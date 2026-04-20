@@ -81,8 +81,8 @@ export function ChatInfoPane({
 
   const sharedLinks = useMemo(() => {
     const explicit = messages
-      .filter((m) => m.type === 'LINK' && m.linkUrl)
-      .map((m) => m.linkUrl as string)
+      .filter((m) => m.type === 'LINK' && m.content)
+      .map((m) => m.content as string)
     const inText = messages
       .filter((m) => m.type === 'TEXT' && m.content)
       .flatMap((m) => (m.content as string).match(URL_REGEX) ?? [])
