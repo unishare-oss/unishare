@@ -53,6 +53,14 @@ export async function encryptMessage(content: string, roomKey: CryptoKey): Promi
   return btoa(String.fromCharCode(...combined))
 }
 
+export async function decryptMessage(ciphertext: string, roomKey: CryptoKey): Promise<string> {
+  const combined = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0))
+  const iv = combined.slice(0, 12)
+  const data = combined.slice(12)
+  const decoded = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, roomKey, data)
+  return new TextDecoder().decode(decoded)
+}
+
 export async function exportPrivateKeyAsJwk(key: CryptoKey): Promise<string> {
   const jwk = await crypto.subtle.exportKey('jwk', key)
   return JSON.stringify(jwk)
