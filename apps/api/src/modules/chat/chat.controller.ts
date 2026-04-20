@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger'
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
+import { Throttle } from '@nestjs/throttler'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ChatService } from './chat.service'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { InviteMembersDto } from './dto/invite-members.dto'
@@ -110,7 +111,7 @@ export class ChatController {
   }
 
   @Get('link-preview')
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(UserThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOkResponse({ description: 'Link preview metadata' })
   @ResponseMessage('Link preview fetched successfully')
