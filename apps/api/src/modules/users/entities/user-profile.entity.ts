@@ -88,4 +88,7 @@ export class UserProfileEntity {
 
   @ApiPropertyOptional({ nullable: true, type: Boolean })
   isFollowing: boolean | null
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  publicKey: string | null
 }

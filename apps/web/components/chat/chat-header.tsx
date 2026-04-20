@@ -1,7 +1,8 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User as UserIcon, Users } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
 import type { PresenceEntry } from '@/contexts/chat-socket-context'
@@ -9,6 +10,7 @@ import type { ChatRoomParticipantEntity } from '@/src/lib/api/generated/unishare
 
 interface DMHeaderProps {
   mode: 'dm'
+  isEncrypted?: boolean
   user?: {
     name: string
     image?: string | null
@@ -18,6 +20,7 @@ interface DMHeaderProps {
 
 interface GroupHeaderProps {
   mode: 'group'
+  isEncrypted?: boolean
   groupName?: string | null
   groupImage?: string | null
   participants?: ChatRoomParticipantEntity[]
@@ -33,7 +36,7 @@ export function ChatHeader(props: ChatHeaderProps) {
   return <DMHeader {...props} />
 }
 
-function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
+function DMHeader({ user, presence, isEncrypted }: Omit<DMHeaderProps, 'mode'>) {
   const isOnline = presence?.status === 1
 
   const getStatus = () => {
@@ -54,7 +57,19 @@ function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-          <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
+            {isEncrypted && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <LockKeyhole className="size-3 text-green-500 cursor-default" />
+                  </TooltipTrigger>
+                  <TooltipContent>End-to-end encrypted</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           <span
             className={cn(
               'text-[0.625rem] uppercase tracking-widest',
@@ -74,6 +89,7 @@ function GroupHeader({
   groupImage,
   participants = [],
   presenceMap,
+  isEncrypted,
 }: Omit<GroupHeaderProps, 'mode'>) {
   const total = participants.length
   const onlineCount = participants.filter((p) => presenceMap?.get(p.userId)?.status === 1).length
@@ -89,9 +105,21 @@ function GroupHeader({
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col min-w-0">
-          <span className="font-semibold text-sm tracking-tight truncate">
-            {groupName || 'Group Chat'}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-semibold text-sm tracking-tight truncate">
+              {groupName || 'Group Chat'}
+            </span>
+            {isEncrypted && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <LockKeyhole className="size-3 text-green-500 shrink-0 cursor-default" />
+                  </TooltipTrigger>
+                  <TooltipContent>End-to-end encrypted</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.625rem] uppercase tracking-widest text-muted-foreground whitespace-nowrap">
               {total} {total === 1 ? 'member' : 'members'}

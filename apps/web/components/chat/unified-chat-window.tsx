@@ -4,22 +4,21 @@ import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useInView } from 'react-intersection-observer'
 import {
-  useChatControllerGetMessagesInfinite,
   useChatControllerGetRoom,
   useChatControllerMarkAsRead,
-  getChatControllerGetMessagesInfiniteQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
+import { useCrypto } from '@/hooks/use-crypto'
+import { useDecryptedChatMessages } from '@/hooks/use-decrypted-chat-messages'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
-import { addMessageToInfiniteCache } from '@/lib/utils/infinite-query-cache'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   ArrowLeft,
@@ -45,7 +44,6 @@ import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
@@ -80,14 +78,9 @@ interface UnifiedChatWindowProps {
 
 export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
-  const {
-    presence,
-    lastMessage: lastSocketMessage,
-    isConnected,
-    socketRef: socket,
-  } = useChatSocket()
+  const { loadRoomKey, hasRoomKey } = useCrypto()
+  const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
-  const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
@@ -124,41 +117,26 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const headerPresence = otherParticipant?.userId
     ? presence.get(otherParticipant.userId)
     : undefined
-
-  // Fetch messages with infinite scroll
+  const isEncrypted = !!room?.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
+  // Fetch + decrypt messages with infinite scroll
   const {
-    data: messagesData,
+    messages: decryptedMessages,
     isLoading: messagesLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useChatControllerGetMessagesInfinite(
-    roomId || '',
-    { limit: 50, direction: 'desc' },
-    {
-      query: {
-        enabled: !!roomId,
-        getNextPageParam: (lastPage) => {
-          return lastPage.data.hasMore ? lastPage.data.nextCursor : undefined
-        },
-      },
-    },
-  )
+  } = useDecryptedChatMessages(roomId)
 
   // Intersection observer for loading older messages
   const { ref: loadMoreRef, inView } = useInView()
 
-  // Flatten pages and reverse to show oldest first
-  const initialMsgs = useMemo(() => {
-    if (!messagesData?.pages) return []
-    return messagesData.pages.flatMap((page) => page.data.items).reverse()
-  }, [messagesData])
-
   const messages = useMemo(() => {
-    if (!searchQuery.trim()) return initialMsgs
+    if (!searchQuery.trim()) return decryptedMessages
     const q = searchQuery.toLowerCase()
-    return initialMsgs.filter((m) => m.content && (m.content as string).toLowerCase().includes(q))
-  }, [initialMsgs, searchQuery])
+    return decryptedMessages.filter(
+      (m) => m.content && (m.content as string).toLowerCase().includes(q),
+    )
+  }, [decryptedMessages, searchQuery])
 
   // Typing indicators
   const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
@@ -203,6 +181,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     handleScrollToMessage,
   } = useChatMessageActions({
     roomId,
+    isEncrypted,
     user,
     scrollToBottom,
     messagesContainerRef,
@@ -246,25 +225,16 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
 
-  // Add incoming socket messages from other users to the query cache
+  // Load room key into CryptoContext when room data arrives and crypto is ready
   useEffect(() => {
-    if (
-      !roomId ||
-      !lastSocketMessage ||
-      lastSocketMessage.roomId !== roomId ||
-      lastSocketMessage.user?.id === user!.id
-    )
-      return
+    if (!room || !user?.id || hasRoomKey(room.id)) return
+    const myParticipant = room.participants?.find((p) => p.userId === user.id)
+    const encryptedRoomKey = myParticipant?.encryptedRoomKey
 
-    const messagesQueryKey = getChatControllerGetMessagesInfiniteQueryKey(roomId, {
-      limit: 50,
-      direction: 'desc',
-    })
-
-    queryClient.setQueryData(messagesQueryKey, (old: unknown) =>
-      addMessageToInfiniteCache(old, lastSocketMessage),
-    )
-  }, [lastSocketMessage, roomId, queryClient, user])
+    if (encryptedRoomKey) {
+      loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
+    }
+  }, [room, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset unread divider when room changes
   useEffect(() => {
@@ -365,9 +335,15 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               groupImage={room.imageUrl}
               participants={room.participants}
               presenceMap={presence}
+              isEncrypted={isEncrypted}
             />
           ) : (
-            <ChatHeader mode="dm" user={headerUser} presence={headerPresence} />
+            <ChatHeader
+              mode="dm"
+              user={headerUser}
+              presence={headerPresence}
+              isEncrypted={isEncrypted}
+            />
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">

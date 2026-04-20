@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useCallback, RefObject } from 'react'
+import { toast } from 'sonner'
 import type {
   ChatMessageEntity,
   UserProfileEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useSendMessage, useEditMessage, useDeleteMessage } from './use-chat-mutations'
+import { useCrypto } from './use-crypto'
 
 interface UseChatMessageActionsParams {
   roomId: string | undefined
+  isEncrypted?: boolean
   user: UserProfileEntity | null | undefined
   scrollToBottom: (behavior?: ScrollBehavior) => void
   messagesContainerRef: RefObject<HTMLDivElement | null>
@@ -19,6 +22,7 @@ interface UseChatMessageActionsParams {
 
 export function useChatMessageActions({
   roomId,
+  isEncrypted,
   user,
   scrollToBottom,
   messagesContainerRef,
@@ -34,6 +38,7 @@ export function useChatMessageActions({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
 
+  const { encrypt, hasRoomKey } = useCrypto()
   const { mutate: sendMessage } = useSendMessage({ roomId, user })
   const { mutate: editMessage } = useEditMessage({ roomId: roomId || '' })
   const { mutate: deleteMessage } = useDeleteMessage({ roomId: roomId || '' })
@@ -43,26 +48,53 @@ export function useChatMessageActions({
     const messageContent = content
     setContent('')
 
+    const prepareContent = async (): Promise<string | null> => {
+      if (!isEncrypted) return messageContent
+      if (!hasRoomKey(roomId)) {
+        toast.error('Encryption key not ready — please try again in a moment')
+        setContent(messageContent)
+        return null
+      }
+      return encrypt(roomId, messageContent)
+    }
+
     if (editingMessage) {
       if ((editingMessage.content ?? '').trim() === messageContent.trim()) {
         setEditingMessage(null)
         return
       }
-      editMessage({ id: editingMessage.id, data: { content: messageContent } })
+      const encryptedContent = await prepareContent()
+      if (encryptedContent === null) return
+      editMessage({ id: editingMessage.id, data: { content: encryptedContent } })
       setEditingMessage(null)
     } else {
+      const encryptedContent = await prepareContent()
+      if (encryptedContent === null) return
+      const trimmed = messageContent.trim()
+      const isLink = /^https?:\/\/[^\s<>"{}|\\^`[\]]+$/i.test(trimmed)
       sendMessage({
         id: roomId,
         data: {
-          content: messageContent,
-          type: 'TEXT',
+          content: encryptedContent,
+          type: isLink ? 'LINK' : 'TEXT',
           ...(replyingToMessage && { parentId: replyingToMessage.id }),
         },
       })
       setReplyingToMessage(null)
       requestAnimationFrame(() => scrollToBottom())
     }
-  }, [content, roomId, editingMessage, replyingToMessage, editMessage, sendMessage, scrollToBottom])
+  }, [
+    content,
+    roomId,
+    isEncrypted,
+    editingMessage,
+    replyingToMessage,
+    editMessage,
+    sendMessage,
+    scrollToBottom,
+    encrypt,
+    hasRoomKey,
+  ])
 
   const handleEdit = useCallback((message: ChatMessageEntity) => {
     setEditingMessage(message)

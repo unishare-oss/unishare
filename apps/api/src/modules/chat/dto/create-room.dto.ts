@@ -6,9 +6,21 @@ import {
   ArrayMinSize,
   MaxLength,
   IsUrl,
+  ValidateNested,
 } from 'class-validator'
+import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { ChatRoomType } from '@/generated/prisma/client'
+
+export class EncryptedRoomKeyDto {
+  @ApiProperty()
+  @IsString()
+  userId: string
+
+  @ApiProperty()
+  @IsString()
+  encryptedKey: string
+}
 
 export class CreateRoomDto {
   @ApiProperty({ enum: ChatRoomType })
@@ -32,4 +44,11 @@ export class CreateRoomDto {
   @MaxLength(500)
   @IsOptional()
   imageUrl?: string
+
+  @ApiPropertyOptional({ type: [EncryptedRoomKeyDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EncryptedRoomKeyDto)
+  @IsOptional()
+  encryptedRoomKeys?: EncryptedRoomKeyDto[]
 }

@@ -1,5 +1,7 @@
-import { IsArray, IsString, ArrayMinSize } from 'class-validator'
-import { ApiProperty } from '@nestjs/swagger'
+import { IsArray, IsString, ArrayMinSize, IsOptional, ValidateNested } from 'class-validator'
+import { Type } from 'class-transformer'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { EncryptedRoomKeyDto } from './create-room.dto'
 
 export class InviteMembersDto {
   @ApiProperty({ type: [String] })
@@ -7,4 +9,11 @@ export class InviteMembersDto {
   @IsString({ each: true })
   @ArrayMinSize(1)
   userIds: string[]
+
+  @ApiPropertyOptional({ type: [EncryptedRoomKeyDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EncryptedRoomKeyDto)
+  @IsOptional()
+  encryptedRoomKeys?: EncryptedRoomKeyDto[]
 }

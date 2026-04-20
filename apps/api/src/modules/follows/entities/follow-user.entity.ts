@@ -9,4 +9,7 @@ export class FollowUserEntity {
 
   @ApiPropertyOptional({ nullable: true, type: String })
   image: string | null
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  publicKey: string | null
 }

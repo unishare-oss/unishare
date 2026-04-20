@@ -9,6 +9,7 @@ import { ChatCleanupService } from './chat-cleanup.service'
 import { PresenceService } from './presence.service'
 import { StorageModule } from '../storage/storage.module'
 import { NotificationsModule } from '../notifications/notifications.module'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 
 @Module({
   imports: [StorageModule, ConfigModule, NotificationsModule],
@@ -25,6 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module'
     ChatGateway,
     ChatCleanupService,
     PresenceService,
+    UserThrottlerGuard,
   ],
   exports: [ChatService, ChatGateway, PresenceService],
 })

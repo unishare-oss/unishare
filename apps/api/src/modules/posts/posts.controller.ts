@@ -8,7 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
-import { UserThrottlerGuard } from './guards/user-throttler.guard'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'

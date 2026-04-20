@@ -10,7 +10,7 @@ import { CommentsService } from './comments/comments.service'
 import { PostsController } from './posts.controller'
 import { PostsRepository } from './posts.repository'
 import { PostsService } from './posts.service'
-import { UserThrottlerGuard } from './guards/user-throttler.guard'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 
 @Module({
   imports: [NotificationsModule, FollowsModule, TagsModule, TrendingModule, AiSummaryModule],

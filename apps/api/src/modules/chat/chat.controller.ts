@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ChatService } from './chat.service'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { InviteMembersDto } from './dto/invite-members.dto'
@@ -55,6 +57,7 @@ export class ChatController {
       dto.type,
       dto.name,
       dto.imageUrl,
+      dto.encryptedRoomKeys,
     )
   }
 
@@ -107,6 +110,15 @@ export class ChatController {
     return this.chatService.leaveRoom(id, session.user.id)
   }
 
+  @Get('link-preview')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOkResponse({ description: 'Link preview metadata' })
+  @ResponseMessage('Link preview fetched successfully')
+  getLinkPreview(@Query('url') url: string, @Session() _session: UserSession) {
+    return this.chatService.getLinkPreview(url)
+  }
+
   @Post('rooms/:id/participants')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatRoomEntity })
@@ -116,6 +128,6 @@ export class ChatController {
     @Session() session: UserSession,
     @Body() dto: InviteMembersDto,
   ) {
-    return this.chatService.inviteMembers(id, session.user.id, dto.userIds)
+    return this.chatService.inviteMembers(id, session.user.id, dto.userIds, dto.encryptedRoomKeys)
   }
 }

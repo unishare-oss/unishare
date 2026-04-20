@@ -3,7 +3,10 @@ import {
   useFollowsControllerGetFollowing,
   useFollowsControllerGetFollowers,
 } from '@/src/lib/api/generated/follows/follows'
+import type { FollowUserEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
+
+type NetworkUser = FollowUserEntity & { relationship: 'following' | 'follower' | 'mutual' }
 
 export function useNetworkUsers({ enabled = true }: { enabled?: boolean } = {}) {
   const { session } = useAuth()
@@ -22,16 +25,11 @@ export function useNetworkUsers({ enabled = true }: { enabled?: boolean } = {}) 
   const networkUsers = useMemo(() => {
     const following = followingResponse?.data || []
     const followers = followersResponse?.data || []
-    const userMap = new Map<string, any>()
-    following.forEach((u) => userMap.set(u.id, u))
+    const userMap = new Map<string, NetworkUser>()
+    following.forEach((u) => userMap.set(u.id, { ...u, relationship: 'following' }))
     followers.forEach((u) => {
       if (!userMap.has(u.id)) userMap.set(u.id, { ...u, relationship: 'follower' })
-      else userMap.set(u.id, { ...userMap.get(u.id), relationship: 'mutual' })
-    })
-    following.forEach((u) => {
-      if (userMap.get(u.id)?.relationship !== 'mutual') {
-        userMap.set(u.id, { ...u, relationship: 'following' })
-      }
+      else userMap.set(u.id, { ...userMap.get(u.id)!, relationship: 'mutual' })
     })
     return Array.from(userMap.values())
   }, [followingResponse, followersResponse])

@@ -13,8 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
 import { Users, MessageSquare, Loader2, ImageIcon, FileIcon } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useCrypto } from '@/hooks/use-crypto'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
+
 import { useChatSocket } from '@/hooks/use-chat-socket'
 import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
@@ -24,15 +26,53 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session } = useAuth()
+  const { session, user: currentUser } = useAuth()
   const currentUserId = session?.user?.id
+  const { createEncryptedRoomKeys, loadRoomKey, hasRoomKey, decrypt } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
   const { data: roomsResponse, isLoading: roomsLoading } = useChatControllerGetRooms()
 
   const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
   const rooms = roomsResponse?.data || []
+
+  useEffect(() => {
+    if (rooms.length === 0) return
+
+    const loadAndDecrypt = async () => {
+      await Promise.all(
+        rooms.map(async (room) => {
+          if (hasRoomKey(room.id)) return
+          const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+          const encryptedRoomKey = myParticipant?.encryptedRoomKey
+          if (encryptedRoomKey) {
+            await loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
+          }
+        }),
+      )
+
+      const entries = await Promise.all(
+        rooms.map(async (room) => {
+          const lastMsg = room.messages?.[0]
+          const isTextual = lastMsg?.type === 'TEXT' || lastMsg?.type === 'LINK'
+          if (!lastMsg?.content || !isTextual || !hasRoomKey(room.id))
+            return [room.id, lastMsg?.content ?? ''] as const
+          try {
+            const plaintext = await decrypt(room.id, lastMsg.content)
+            return [room.id, plaintext] as const
+          } catch {
+            return [room.id, lastMsg.content] as const
+          }
+        }),
+      )
+
+      setDecryptedPreviews(Object.fromEntries(entries))
+    }
+
+    loadAndDecrypt()
+  }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
@@ -51,11 +91,22 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         // Navigate directly to existing room
         router.push(`/chat/${existingRoom.id}`)
       } else {
+        // Build encrypted room keys for both participants if public keys are available
+        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
+
+        if (currentUser?.publicKey && user.publicKey) {
+          encryptedRoomKeys = await createEncryptedRoomKeys([
+            { userId: currentUserId!, publicKeyJwk: currentUser.publicKey },
+            { userId: user.id, publicKeyJwk: user.publicKey },
+          ])
+        }
+
         // Create new DM room
         const response = await createDM({
           data: {
             type: 'DM',
             participantIds: [user.id],
+            encryptedRoomKeys,
           },
         })
         // Navigate to the created room
@@ -164,18 +215,20 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
                     <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
-                      {lastMessage.imageUrl && !lastMessage.content ? (
+                      {lastMessage.type === 'IMAGE' ? (
                         <>
                           <ImageIcon className="size-3 shrink-0" />
                           <span>Photo</span>
                         </>
-                      ) : lastMessage.fileUrl && !lastMessage.content ? (
+                      ) : lastMessage.type === 'FILE' ? (
                         <>
                           <FileIcon className="size-3 shrink-0" />
-                          <span>{'File'}</span>
+                          <span>File</span>
                         </>
                       ) : (
-                        <span className="truncate">{lastMessage.content}</span>
+                        <span className="truncate">
+                          {decryptedPreviews[room.id] ?? lastMessage.content}
+                        </span>
                       )}
                     </div>
                   ) : null}

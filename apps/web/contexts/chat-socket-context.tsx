@@ -12,7 +12,6 @@ import {
 import { io, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
-import { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getChatControllerGetRoomsQueryKey,
@@ -35,7 +34,6 @@ export interface PresenceEntry {
 export interface ChatSocketContextValue {
   socketRef: RefObject<Socket | null>
   isConnected: boolean
-  lastMessage: ChatMessageEntity | null
   joinRoom: (roomId: string) => void
   presence: Map<string, PresenceEntry>
 }
@@ -47,7 +45,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [lastMessage, setLastMessage] = useState<ChatMessageEntity | null>(null)
   const [presence, setPresence] = useState<Map<string, PresenceEntry>>(new Map())
 
   useEffect(() => {
@@ -75,7 +72,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       if (message.userId && message.userId === session.user.id) {
         return
       }
-      setLastMessage(message)
 
       // Update messages cache
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
@@ -200,7 +196,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const value: ChatSocketContextValue = {
     socketRef,
     isConnected,
-    lastMessage,
     joinRoom,
     presence,
   }

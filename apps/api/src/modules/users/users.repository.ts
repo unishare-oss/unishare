@@ -111,4 +111,19 @@ export class UsersRepository {
       include: this.countInclude,
     })
   }
+
+  updatePublicKey(id: string, publicKey: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { publicKey },
+      select: { id: true, publicKey: true },
+    })
+  }
+
+  findPublicKey(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, publicKey: true },
+    })
+  }
 }
