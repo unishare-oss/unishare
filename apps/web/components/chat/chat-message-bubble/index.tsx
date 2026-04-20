@@ -205,59 +205,104 @@ export function ChatMessageBubble({
                 )}
 
                 {/* File */}
-                {message.fileUrl && (
+                {message.type === 'FILE' && (
                   <div className="relative overflow-hidden">
-                    {!isMe && showAvatar && (
-                      <span className="absolute top-2 left-3 text-[0.625rem] font-semibold drop-shadow z-10 opacity-70">
-                        {message.user?.name}
-                      </span>
-                    )}
-                    <a
-                      href={message.fileUrl}
-                      download={message.fileName ?? true}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3.5 transition-opacity hover:opacity-80 w-full min-w-0',
-                        isMe ? 'bg-primary-foreground/10' : 'bg-muted/50',
-                      )}
-                    >
-                      <div
+                    {message.fileUrl ? (
+                      <a
+                        href={message.fileUrl}
+                        download={message.fileName ?? true}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={cn(
-                          'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
-                          isMe
-                            ? 'bg-primary-foreground/15 text-primary-foreground'
-                            : 'bg-primary/10 text-primary',
+                          'flex items-center gap-3 px-4 py-3.5 transition-opacity hover:opacity-80 w-full min-w-0',
+                          isMe ? 'bg-primary-foreground/10' : 'bg-muted/50',
+                          !isMe && showAvatar && 'pt-2',
                         )}
                       >
-                        <FileIcon className="size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[0.8125rem] font-medium truncate leading-snug">
-                          {message.fileName ?? 'File'}
-                        </p>
-                        <p
-                          className={cn(
-                            'text-[0.625rem] mt-0.5',
-                            isMe ? 'text-primary-foreground/50' : 'text-muted-foreground',
+                        <div className="flex flex-col min-w-0 flex-1 gap-0">
+                          {!isMe && showAvatar && (
+                            <span className="text-[0.625rem] font-semibold mb-1.5 opacity-70">
+                              {message.user?.name}
+                            </span>
                           )}
-                        >
-                          Tap to download · deleted after 7 days
-                        </p>
-                      </div>
-                      <Download
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
+                                isMe
+                                  ? 'bg-primary-foreground/15 text-primary-foreground'
+                                  : 'bg-primary/10 text-primary',
+                              )}
+                            >
+                              <FileIcon className="size-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[0.8125rem] font-medium truncate leading-snug">
+                                {message.fileName ?? 'File'}
+                              </p>
+                              <p
+                                className={cn(
+                                  'text-[0.625rem] mt-0.5',
+                                  isMe ? 'text-primary-foreground/50' : 'text-muted-foreground',
+                                )}
+                              >
+                                Tap to download · deleted after 7 days
+                              </p>
+                            </div>
+                            <Download
+                              className={cn(
+                                'size-4 shrink-0',
+                                isMe ? 'text-primary-foreground/40' : 'text-muted-foreground/50',
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </a>
+                    ) : (
+                      <div
                         className={cn(
-                          'size-4 shrink-0',
-                          isMe ? 'text-primary-foreground/40' : 'text-muted-foreground/50',
+                          'flex items-center gap-3 px-4 py-3.5 w-full min-w-0 opacity-50 cursor-default select-none',
+                          isMe ? 'bg-primary-foreground/10' : 'bg-muted/50',
+                          !isMe && showAvatar && 'pt-2',
                         )}
-                      />
-                    </a>
+                      >
+                        <div className="flex flex-col min-w-0 flex-1 gap-0">
+                          {!isMe && showAvatar && (
+                            <span className="text-[0.625rem] font-semibold mb-1.5">
+                              {message.user?.name}
+                            </span>
+                          )}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
+                                isMe
+                                  ? 'bg-primary-foreground/15 text-primary-foreground'
+                                  : 'bg-muted-foreground/20 text-muted-foreground',
+                              )}
+                            >
+                              <FileIcon className="size-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[0.8125rem] font-medium truncate leading-snug line-through">
+                                {message.fileName ?? 'File'}
+                              </p>
+                              <p className="text-[0.625rem] mt-0.5 text-muted-foreground">
+                                File expired and has been deleted
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Text body — hidden for LINK messages once preview loads */}
                 {!(previewLoaded && message.type === 'LINK') &&
-                  (message.content || (!message.imageUrl && !message.fileUrl)) && (
+                  message.type !== 'FILE' &&
+                  message.type !== 'IMAGE' &&
+                  (message.content || message.type === 'TEXT') && (
                     <div className="px-4 py-2 min-w-0">
                       {!isMe && showAvatar && !message.imageUrl && !message.fileUrl && (
                         <span className="text-[0.625rem] font-semibold block mb-1 opacity-70">
