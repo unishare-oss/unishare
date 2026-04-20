@@ -42,6 +42,8 @@ RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
+RUN test -f apps/api/dist/main.js || (echo "Build failed: dist/main.js not found" && exit 1)
+
 WORKDIR /app/apps/api
 
 EXPOSE 3001

@@ -13,6 +13,10 @@ on:
         description: Force build Web
         type: boolean
         default: false
+      no_cache:
+        description: Bust build cache (clean rebuild)
+        type: boolean
+        default: false
 
 env:
   OWNER: ${{ github.repository_owner }}
@@ -76,6 +80,7 @@ jobs:
           context: .
           file: Dockerfile.api
           push: true
+          no-cache: ${{ inputs.no_cache == true }}
           tags: ghcr.io/${{ env.OWNER }}/unishare-api:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
@@ -113,6 +118,7 @@ jobs:
           context: .
           file: Dockerfile.web
           push: true
+          no-cache: ${{ inputs.no_cache == true }}
           tags: ghcr.io/${{ env.OWNER }}/unishare-web:latest
           build-args: |
             API_URL=${{ secrets.API_URL }}
