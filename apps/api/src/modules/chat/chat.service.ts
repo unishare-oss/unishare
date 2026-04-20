@@ -108,8 +108,8 @@ export class ChatService {
     })
 
     const sender = room.participants.find((p: any) => p.userId === userId)
-    const senderName = sender?.user?.name ?? 'Someone'
-    const recipientIds = room.participants
+    const _senderName = sender?.user?.name ?? 'Someone'
+    const _recipientIds = room.participants
       .filter((p: any) => p.userId !== userId)
       .map((p: any) => p.userId)
 
