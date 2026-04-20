@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -54,6 +54,10 @@ export function ChatMessageBubble({
   participants,
 }: ChatMessageBubbleProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [isTouch, setIsTouch] = useState(false)
+  useEffect(() => {
+    setIsTouch(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
 
   const firstUrl =
     message.type === 'LINK'
@@ -126,8 +130,12 @@ export function ChatMessageBubble({
         <ContextMenu>
           <ContextMenuTrigger asChild>
             <motion.div
-              whileTap={{ scale: 0.95 }}
+              whileTap={isTouch ? { scale: 0.95 } : undefined}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              style={{
+                transformOrigin: isMe ? 'right bottom' : 'left bottom',
+                willChange: 'transform',
+              }}
               className={cn(
                 'flex flex-col min-w-0 max-w-[75%] md:max-w-[60%]',
                 isMe ? 'items-end' : 'items-start',
@@ -147,6 +155,7 @@ export function ChatMessageBubble({
                     : { boxShadow: '0 0 0 0px transparent' }
                 }
                 transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ isolation: 'isolate' }}
                 className={cn(
                   'text-sm rounded-2xl shadow-sm relative z-10 max-w-full overflow-hidden',
                   message.imageUrl || message.fileUrl ? 'w-full' : 'w-fit',
