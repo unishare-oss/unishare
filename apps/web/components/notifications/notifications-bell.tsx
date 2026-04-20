@@ -15,7 +15,7 @@ export function NotificationsBell({ collapsed = false }: { collapsed?: boolean }
     query: { select: (r) => r.data },
   })
 
-  const unreadCount = (data ?? []).filter((n) => !n.read).length
+  const unreadCount = (data ?? []).filter((n) => !n.read && n.type !== 'CHAT_MESSAGE').length
 
   const link = (
     <Link

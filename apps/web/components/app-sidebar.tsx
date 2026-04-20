@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useUIStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { NotificationsBell } from '@/components/notifications/notifications-bell'
+import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useUniversitiesControllerFindOne } from '@/src/lib/api/generated/universities/universities'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -91,12 +92,14 @@ function NavItem({
   icon: Icon,
   isActive,
   collapsed,
+  badge,
 }: {
   href: string
   label: string
   icon: React.ElementType
   isActive: boolean
   collapsed: boolean
+  badge?: number
 }) {
   const link = (
     <Link
@@ -116,14 +119,24 @@ function NavItem({
           isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
         )}
       />
-      <Icon
-        className={cn(
-          'size-4 shrink-0 transition-colors duration-200',
-          isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+      <span className="relative shrink-0">
+        <Icon
+          className={cn(
+            'size-4 transition-colors duration-200',
+            isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+          )}
+          strokeWidth={1.5}
+        />
+        {badge != null && badge > 0 && (
+          <span className="absolute -top-1 -right-1 size-1.5 rounded-full bg-amber" />
         )}
-        strokeWidth={1.5}
-      />
+      </span>
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && badge != null && badge > 0 && (
+        <span className="ml-auto font-mono text-[10px] bg-amber/20 text-amber px-1.5 py-0.5 rounded-full">
+          {badge}
+        </span>
+      )}
     </Link>
   )
 
@@ -131,7 +144,10 @@ function NavItem({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
+        <TooltipContent side="right">
+          {label}
+          {badge != null && badge > 0 ? ` (${badge})` : ''}
+        </TooltipContent>
       </Tooltip>
     )
   }
@@ -157,6 +173,7 @@ export function AppSidebar() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isSuperAdmin = user?.role === 'ADMIN'
+  const unreadChatCount = useUnreadChatCount()
 
   const { data: userUniversity } = useUniversitiesControllerFindOne(user?.universityId ?? '', {
     query: { select: (r) => r.data, enabled: !!user?.universityId },
@@ -312,6 +329,7 @@ export function AppSidebar() {
                               icon={item.icon}
                               isActive={pathname.startsWith(item.href)}
                               collapsed={collapsed}
+                              badge={item.href === '/chat' ? unreadChatCount : undefined}
                             />
                           ))}
                           {gi === 0 && user && <NotificationsBell collapsed={collapsed} />}

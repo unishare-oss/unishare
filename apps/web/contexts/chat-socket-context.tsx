@@ -166,6 +166,23 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
           },
         }
       })
+
+      // Also update the rooms list cache so unread badge re-computes
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map((room: any) => {
+            if (room.id !== roomId) return room
+            return {
+              ...room,
+              participants: room.participants.map((p: any) =>
+                p.userId === userId ? { ...p, lastReadAt } : p,
+              ),
+            }
+          }),
+        }
+      })
     })
 
     socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
