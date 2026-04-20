@@ -58,7 +58,7 @@ export default function NotificationsPage() {
     },
   })
 
-  const notifications = data ?? []
+  const notifications = (data ?? []).filter((n) => n.type !== 'CHAT_MESSAGE')
   const unreadCount = notifications.filter((n) => !n.read).length
 
   function handleClick(n: NotificationEntity) {

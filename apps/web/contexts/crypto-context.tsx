@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useRef, type ReactNode } from 'react'
+import { createContext, useRef, useState, type ReactNode } from 'react'
 import {
   decryptRoomKey,
   encryptMessage,
@@ -20,12 +20,15 @@ interface CryptoContextValue {
   createEncryptedRoomKeys: (
     participants: { userId: string; publicKeyJwk: string }[],
   ) => Promise<{ userId: string; encryptedKey: string }[]>
+  /** Increments each time a new room key is loaded — use as a React dependency. */
+  roomKeyVersion: number
 }
 
 export const CryptoContext = createContext<CryptoContextValue | null>(null)
 
 export function CryptoProvider({ children }: { children: ReactNode }) {
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
+  const [roomKeyVersion, setRoomKeyVersion] = useState(0)
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
@@ -33,6 +36,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
     if (!privateKey) throw new Error('Private key not found')
     const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
     roomKeys.current.set(roomId, roomKey)
+    setRoomKeyVersion((v) => v + 1)
   }
 
   const encrypt = async (roomId: string, content: string) => {
@@ -78,6 +82,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
         hasRoomKey,
         encryptRoomKeyForUser,
         createEncryptedRoomKeys,
+        roomKeyVersion,
       }}
     >
       {children}

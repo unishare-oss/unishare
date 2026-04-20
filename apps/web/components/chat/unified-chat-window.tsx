@@ -3,9 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useInView } from 'react-intersection-observer'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerGetRoom,
   useChatControllerMarkAsRead,
+  useChatControllerUpgradeEncryption,
+  getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
   ChatMessageEntity,
@@ -29,6 +32,7 @@ import {
   ImageIcon,
   UsersRound,
   UserPlus,
+  LockKeyholeOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -44,7 +48,6 @@ import { ChatConversationStart } from './chat-conversation-start'
 import { ChatImageSendModal } from './chat-image-send-modal'
 import { ChatFileSendModal } from './chat-file-send-modal'
 import { Loader2 } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useChatLastSeenStore } from '@/lib/store'
 
@@ -78,9 +81,10 @@ interface UnifiedChatWindowProps {
 
 export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
-  const { loadRoomKey, hasRoomKey } = useCrypto()
+  const { loadRoomKey, hasRoomKey, createEncryptedRoomKeys } = useCrypto()
   const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null)
@@ -118,6 +122,26 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     ? presence.get(otherParticipant.userId)
     : undefined
   const isEncrypted = !!room?.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
+
+  // Upgrade mutation — silently upgrades unencrypted DMs when both users have keys
+  const { mutate: upgradeEncryption } = useChatControllerUpgradeEncryption({
+    mutation: {
+      onSettled: (_data, _error, variables) => {
+        if (!variables?.id) return
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(variables.id) })
+      },
+    },
+  })
+
+  // True only when room is a DM and every participant has a public key
+  const allParticipantsHaveKeys = useMemo(
+    () =>
+      room?.type === 'DM' &&
+      !!room.participants?.length &&
+      room.participants.every((p) => p.user?.publicKey),
+    [room],
+  )
+
   // Fetch + decrypt messages with infinite scroll
   const {
     messages: decryptedMessages,
@@ -125,7 +149,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useDecryptedChatMessages(roomId)
+  } = useDecryptedChatMessages(roomId, isEncrypted)
 
   // Intersection observer for loading older messages
   const { ref: loadMoreRef, inView } = useInView()
@@ -235,6 +259,22 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
     }
   }, [room, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-upgrade DM to E2E encryption when both participants have public keys
+  useEffect(() => {
+    if (!room || !user?.id || isEncrypted || !allParticipantsHaveKeys) return
+
+    const publicKeys = room.participants!.map((p) => ({
+      userId: p.userId,
+      publicKeyJwk: p.user!.publicKey!,
+    }))
+
+    createEncryptedRoomKeys(publicKeys)
+      .then((encryptedRoomKeys) => {
+        upgradeEncryption({ id: room.id, data: { encryptedRoomKeys } })
+      })
+      .catch(console.error)
+  }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset unread divider when room changes
   useEffect(() => {
@@ -395,6 +435,14 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs">
           <WifiOff className="size-3 shrink-0" />
           <span>Reconnecting… Messages may be delayed.</span>
+        </div>
+      )}
+
+      {/* Unencrypted banner */}
+      {room && !isEncrypted && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
+          <LockKeyholeOpen className="size-3 shrink-0" />
+          <span>Messages in this chat are not end-to-end encrypted.</span>
         </div>
       )}
 

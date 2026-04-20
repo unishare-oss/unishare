@@ -30,6 +30,7 @@ export class ChatRepository {
                 id: true,
                 name: true,
                 image: true,
+                publicKey: true,
               },
             },
           },
@@ -78,6 +79,7 @@ export class ChatRepository {
                 id: true,
                 name: true,
                 image: true,
+                publicKey: true,
               },
             },
           },
@@ -330,6 +332,21 @@ export class ChatRepository {
       })),
       skipDuplicates: true,
     })
+    return this.findRoomById(roomId)
+  }
+
+  async upgradeEncryption(
+    roomId: string,
+    encryptedRoomKeys: { userId: string; encryptedKey: string }[],
+  ) {
+    await this.prisma.$transaction(
+      encryptedRoomKeys.map(({ userId, encryptedKey }) =>
+        this.prisma.chatRoomParticipant.update({
+          where: { roomId_userId: { roomId, userId } },
+          data: { encryptedRoomKey: encryptedKey },
+        }),
+      ),
+    )
     return this.findRoomById(roomId)
   }
 

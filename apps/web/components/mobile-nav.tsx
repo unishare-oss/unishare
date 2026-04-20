@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
+import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useState } from 'react'
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
 import { authClient } from '@/src/lib/auth/client'
@@ -68,7 +69,10 @@ export function MobileNav() {
   const { data: notifications } = useNotificationsControllerFindAll({
     query: { select: (r) => r.data, enabled: isAuthenticated, staleTime: 1000 * 60 },
   })
-  const unreadCount = (notifications ?? []).filter((n) => !n.read).length
+  const unreadCount = (notifications ?? []).filter(
+    (n) => !n.read && n.type !== 'CHAT_MESSAGE',
+  ).length
+  const unreadChatCount = useUnreadChatCount()
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
   const isMoreActive =
@@ -93,7 +97,9 @@ export function MobileNav() {
       <div className="flex items-center justify-around h-14">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href)
-          const showBadge = tab.href === '/notifications' && unreadCount > 0
+          const showBadge =
+            (tab.href === '/notifications' && unreadCount > 0) ||
+            (tab.href === '/chat' && unreadChatCount > 0)
           return (
             <Link
               key={tab.href}

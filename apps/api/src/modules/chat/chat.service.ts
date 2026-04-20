@@ -240,6 +240,45 @@ export class ChatService {
     return updatedRoom
   }
 
+  async upgradeEncryption(
+    roomId: string,
+    userId: string,
+    encryptedRoomKeys: { userId: string; encryptedKey: string }[],
+  ) {
+    const room = await this.getRoom(roomId, userId)
+
+    const alreadyEncrypted = room.participants.some((p: any) => p.encryptedRoomKey)
+    if (alreadyEncrypted) {
+      throw new BadRequestException('Room is already encrypted')
+    }
+
+    const participantIds = new Set(room.participants.map((p: any) => p.userId))
+    const providedUserIds = encryptedRoomKeys.map(({ userId: uid }) => uid)
+    const providedUserIdSet = new Set(providedUserIds)
+
+    if (providedUserIds.length !== providedUserIdSet.size) {
+      throw new BadRequestException('Duplicate encrypted room keys are not allowed')
+    }
+
+    if (!providedUserIdSet.has(userId)) {
+      throw new BadRequestException('Caller must include their own encrypted room key')
+    }
+
+    if (providedUserIdSet.size !== participantIds.size) {
+      throw new BadRequestException(
+        'Encrypted room keys must be provided for every participant in the room',
+      )
+    }
+
+    for (const uid of providedUserIdSet) {
+      if (!participantIds.has(uid)) {
+        throw new BadRequestException(`User ${uid} is not a participant of this room`)
+      }
+    }
+
+    return this.chatRepository.upgradeEncryption(roomId, encryptedRoomKeys)
+  }
+
   async markAsRead(roomId: string, userId: string) {
     const participant = await this.chatRepository.markAsRead(roomId, userId)
     this.eventEmitter.emit('chat.room_read', {
