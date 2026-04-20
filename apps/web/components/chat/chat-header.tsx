@@ -1,7 +1,7 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -60,12 +60,14 @@ function DMHeader({ user, presence, isEncrypted }: Omit<DMHeaderProps, 'mode'>) 
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
             {isEncrypted && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <LockKeyhole className="size-3 text-green-500 cursor-default" />
-                </TooltipTrigger>
-                <TooltipContent>End-to-end encrypted</TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <LockKeyhole className="size-3 text-green-500 cursor-default" />
+                  </TooltipTrigger>
+                  <TooltipContent>End-to-end encrypted</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <span
@@ -108,12 +110,14 @@ function GroupHeader({
               {groupName || 'Group Chat'}
             </span>
             {isEncrypted && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <LockKeyhole className="size-3 text-green-500 shrink-0 cursor-default" />
-                </TooltipTrigger>
-                <TooltipContent>End-to-end encrypted</TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <LockKeyhole className="size-3 text-green-500 shrink-0 cursor-default" />
+                  </TooltipTrigger>
+                  <TooltipContent>End-to-end encrypted</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
