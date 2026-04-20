@@ -15,8 +15,9 @@ interface UseDecryptedChatMessagesResult {
 
 export function useDecryptedChatMessages(
   roomId: string | undefined,
+  isEncrypted?: boolean,
 ): UseDecryptedChatMessagesResult {
-  const { decrypt, hasRoomKey } = useCrypto()
+  const { decrypt, hasRoomKey, roomKeyVersion } = useCrypto()
 
   const {
     data,
@@ -57,6 +58,13 @@ export function useDecryptedChatMessages(
       startTransition(() => setDecryptedMessages([]))
       return
     }
+
+    // Unencrypted room — show messages as-is without decryption
+    if (isEncrypted === false) {
+      startTransition(() => setDecryptedMessages(rawMessages))
+      return
+    }
+
     if (!hasRoomKey(roomId)) return
 
     const generation = ++generationRef.current
@@ -122,12 +130,14 @@ export function useDecryptedChatMessages(
     }
 
     run()
-  }, [rawMessages, roomId, decrypt, hasRoomKey])
+  }, [rawMessages, roomId, decrypt, hasRoomKey, roomKeyVersion, isEncrypted])
 
   const hasRawData = rawMessages.length > 0
-  const isLoading = queryLoading || (hasRawData && decryptedMessages.length === 0)
+  const isLoading =
+    queryLoading || (hasRawData && isEncrypted !== false && decryptedMessages.length === 0)
   const isFetchingNextPageCombined =
-    isFetchingNextPage || (hasRawData && rawMessages.length > decryptedMessages.length)
+    isFetchingNextPage ||
+    (hasRawData && isEncrypted !== false && rawMessages.length > decryptedMessages.length)
 
   return {
     messages: decryptedMessages,
