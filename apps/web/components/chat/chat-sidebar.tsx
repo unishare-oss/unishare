@@ -56,7 +56,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
       const entries = await Promise.all(
         rooms.map(async (room) => {
           const lastMsg = room.messages?.[0]
-          if (!lastMsg?.content || !hasRoomKey(room.id))
+          const isTextual = lastMsg?.type === 'TEXT' || lastMsg?.type === 'LINK'
+          if (!lastMsg?.content || !isTextual || !hasRoomKey(room.id))
             return [room.id, lastMsg?.content ?? ''] as const
           try {
             const plaintext = await decrypt(room.id, lastMsg.content)
@@ -214,15 +215,15 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
                     <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
-                      {lastMessage.imageUrl && !lastMessage.content ? (
+                      {lastMessage.type === 'IMAGE' ? (
                         <>
                           <ImageIcon className="size-3 shrink-0" />
                           <span>Photo</span>
                         </>
-                      ) : lastMessage.fileUrl && !lastMessage.content ? (
+                      ) : lastMessage.type === 'FILE' ? (
                         <>
                           <FileIcon className="size-3 shrink-0" />
-                          <span>{'File'}</span>
+                          <span>File</span>
                         </>
                       ) : (
                         <span className="truncate">
