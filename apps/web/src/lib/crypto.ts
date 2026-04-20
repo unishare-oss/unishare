@@ -6,6 +6,51 @@ const RSA_PARAMS = {
 } as const
 
 const AES_PARAMS = { name: 'AES-GCM', length: 256 } as const
+const KEY_TRANSFER_VERSION = 1 as const
+const KEY_TRANSFER_ITERATIONS = 250_000
+
+interface EncryptedKeyTransferPayloadV1 {
+  v: typeof KEY_TRANSFER_VERSION
+  alg: 'PBKDF2-AES-GCM'
+  i: number
+  s: string
+  iv: string
+  ct: string
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+}
+
+async function derivePassphraseKey(
+  passphrase: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<CryptoKey> {
+  const passphraseKey = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(passphrase),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey'],
+  )
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations,
+      hash: 'SHA-256',
+    },
+    passphraseKey,
+    AES_PARAMS,
+    false,
+    ['encrypt', 'decrypt'],
+  )
+}
 
 export async function generateKeyPair() {
   return crypto.subtle.generateKey(RSA_PARAMS, true, [
@@ -82,5 +127,68 @@ export function privateKeyMatchesPublicKey(
     return priv.n === pub.n && priv.e === pub.e
   } catch {
     return false
+  }
+}
+
+export async function encryptPrivateKeyTransferPayload(
+  privateKeyJwk: string,
+  passphrase: string,
+): Promise<string> {
+  const normalizedPassphrase = passphrase.trim()
+  if (normalizedPassphrase.length < 8) {
+    throw new Error('Passphrase must be at least 8 characters.')
+  }
+
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await derivePassphraseKey(normalizedPassphrase, salt, KEY_TRANSFER_ITERATIONS)
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(privateKeyJwk),
+  )
+
+  const payload: EncryptedKeyTransferPayloadV1 = {
+    v: KEY_TRANSFER_VERSION,
+    alg: 'PBKDF2-AES-GCM',
+    i: KEY_TRANSFER_ITERATIONS,
+    s: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(new Uint8Array(encrypted)),
+  }
+  return JSON.stringify(payload)
+}
+
+export async function decryptPrivateKeyTransferPayload(
+  payloadString: string,
+  passphrase: string,
+): Promise<string> {
+  const normalizedPassphrase = passphrase.trim()
+  if (!normalizedPassphrase) {
+    throw new Error('Passphrase is required.')
+  }
+
+  try {
+    const payload = JSON.parse(payloadString) as Partial<EncryptedKeyTransferPayloadV1>
+    if (
+      payload.v !== KEY_TRANSFER_VERSION ||
+      payload.alg !== 'PBKDF2-AES-GCM' ||
+      payload.i !== KEY_TRANSFER_ITERATIONS ||
+      !payload.s ||
+      !payload.iv ||
+      !payload.ct
+    ) {
+      throw new Error('Invalid transfer payload format.')
+    }
+
+    const key = await derivePassphraseKey(normalizedPassphrase, base64ToBytes(payload.s), payload.i)
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64ToBytes(payload.iv) },
+      key,
+      base64ToBytes(payload.ct),
+    )
+    return new TextDecoder().decode(decrypted)
+  } catch {
+    throw new Error('Could not decrypt transfer payload. Check the passphrase and try again.')
   }
 }

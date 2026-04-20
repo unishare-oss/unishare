@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { AlertTriangle, Loader2, ScanLine, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
 import {
+  decryptPrivateKeyTransferPayload,
+  encryptPrivateKeyTransferPayload,
   exportPrivateKeyAsJwk,
   importPrivateKeyFromJwk,
   privateKeyMatchesPublicKey,
@@ -28,25 +31,36 @@ interface ExportKeysDialogProps {
 }
 
 export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) {
-  const [jwk, setJwk] = useState<string | null>(null)
+  const [payload, setPayload] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [passphrase, setPassphrase] = useState('')
+  const [confirmPassphrase, setConfirmPassphrase] = useState('')
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
-      setJwk(null)
+      setPayload(null)
       setConfirmed(false)
       setError(null)
+      setPassphrase('')
+      setConfirmPassphrase('')
     }
     onOpenChange(next)
   }
 
   const handleConfirm = async () => {
     try {
+      if (passphrase.trim().length < 8) {
+        throw new Error('Use a passphrase with at least 8 characters.')
+      }
+      if (passphrase !== confirmPassphrase) {
+        throw new Error('Passphrases do not match.')
+      }
       const key = await getPrivateKey()
       if (!key) throw new Error('No private key found on this device.')
       const exported = await exportPrivateKeyAsJwk(key)
-      setJwk(exported)
+      const encryptedPayload = await encryptPrivateKeyTransferPayload(exported, passphrase)
+      setPayload(encryptedPayload)
       setConfirmed(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to export key.')
@@ -59,7 +73,8 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
         <DialogHeader>
           <DialogTitle>Export encryption keys</DialogTitle>
           <DialogDescription>
-            Scan this QR code from your new device to transfer your private key.
+            Scan this QR code from your new device, then enter the same passphrase there to decrypt
+            the key transfer.
           </DialogDescription>
         </DialogHeader>
 
@@ -72,6 +87,20 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
                 show it in private.
               </AlertDescription>
             </Alert>
+            <div className="space-y-3">
+              <Input
+                type="password"
+                value={passphrase}
+                placeholder="Set transfer passphrase"
+                onChange={(e) => setPassphrase(e.target.value)}
+              />
+              <Input
+                type="password"
+                value={confirmPassphrase}
+                placeholder="Confirm transfer passphrase"
+                onChange={(e) => setConfirmPassphrase(e.target.value)}
+              />
+            </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -85,10 +114,10 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
         ) : (
           <div className="flex flex-col items-center gap-4 py-2">
             <div className="rounded-xl border p-4 bg-white">
-              <QRCodeSVG value={jwk!} size={220} level="L" />
+              <QRCodeSVG value={payload!} size={220} level="L" />
             </div>
             <p className="text-xs text-muted-foreground text-center">
-              Scan from the new device, then close this dialog.
+              Scan from the new device and enter your transfer passphrase to import.
             </p>
             <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
               Done
@@ -112,6 +141,7 @@ interface ImportKeysDialogProps {
 export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKeysDialogProps) {
   const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [passphrase, setPassphrase] = useState('')
   const scannerRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null)
   const divId = 'qr-scanner-container'
 
@@ -138,10 +168,11 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
         async (decodedText) => {
           await stopScanner()
           try {
-            if (!privateKeyMatchesPublicKey(decodedText, userPublicKey)) {
+            const privateKeyJwk = await decryptPrivateKeyTransferPayload(decodedText, passphrase)
+            if (!privateKeyMatchesPublicKey(privateKeyJwk, userPublicKey)) {
               throw new Error("This QR does not match your account's encryption keys.")
             }
-            const key = await importPrivateKeyFromJwk(decodedText)
+            const key = await importPrivateKeyFromJwk(privateKeyJwk)
             await storePrivateKey(key)
             setStatus('success')
           } catch (e) {
@@ -170,6 +201,7 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
           stopScanner()
           setStatus('idle')
           setErrorMsg(null)
+          setPassphrase('')
         }
         onOpenChange(v)
       }}
@@ -188,11 +220,17 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
               Open the chat info panel on your other device, go to Settings, and choose{' '}
               <strong>Export encryption keys</strong>.
             </p>
+            <Input
+              type="password"
+              value={passphrase}
+              placeholder="Enter transfer passphrase"
+              onChange={(e) => setPassphrase(e.target.value)}
+            />
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={startScanner}>
+              <Button onClick={startScanner} disabled={passphrase.trim().length < 8}>
                 <ScanLine className="size-4 mr-2" />
                 Start scanning
               </Button>
