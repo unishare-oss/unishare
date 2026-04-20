@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useRef, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   decryptRoomKey,
   encryptMessage,
@@ -22,6 +22,8 @@ interface CryptoContextValue {
   ) => Promise<{ userId: string; encryptedKey: string }[]>
   /** Increments each time a new room key is loaded — use as a React dependency. */
   roomKeyVersion: number
+  /** Whether the user has a private key stored in IndexedDB on this device. */
+  hasPrivateKey: boolean
 }
 
 export const CryptoContext = createContext<CryptoContextValue | null>(null)
@@ -29,6 +31,11 @@ export const CryptoContext = createContext<CryptoContextValue | null>(null)
 export function CryptoProvider({ children }: { children: ReactNode }) {
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
   const [roomKeyVersion, setRoomKeyVersion] = useState(0)
+  const [hasPrivateKey, setHasPrivateKey] = useState(false)
+
+  useEffect(() => {
+    getPrivateKey().then((key) => setHasPrivateKey(!!key))
+  }, [])
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
@@ -83,6 +90,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
         encryptRoomKeyForUser,
         createEncryptedRoomKeys,
         roomKeyVersion,
+        hasPrivateKey,
       }}
     >
       {children}

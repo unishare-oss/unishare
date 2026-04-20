@@ -8,16 +8,29 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Bell, BellOff, LogOut, Trash2, FileIcon, Download, Loader2, UserPlus } from 'lucide-react'
+import {
+  Bell,
+  BellOff,
+  LogOut,
+  Trash2,
+  FileIcon,
+  Download,
+  Loader2,
+  UserPlus,
+  QrCode,
+  ScanLine,
+} from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useChatControllerLeaveRoom } from '@/src/lib/api/generated/chat/chat'
 import { getChatControllerGetRoomsQueryKey } from '@/src/lib/api/generated/chat/chat'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/auth-context'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { GroupChatDialog } from '@/components/chat/group-chat-dialog'
 import { OverviewPane } from './overview-pane'
 import { DetailPane } from './detail-pane'
 import { ChatImageLightbox } from '../chat-image-lightbox'
+import { ExportKeysDialog, ImportKeysDialog } from './key-transfer-dialogs'
 import { URL_REGEX, slideVariants, getHostname, type PaneView } from './types'
 
 interface ChatInfoPaneProps {
@@ -44,6 +57,10 @@ export function ChatInfoPane({
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [exportKeysOpen, setExportKeysOpen] = useState(false)
+  const [importKeysOpen, setImportKeysOpen] = useState(false)
+
+  const { user: currentUser } = useAuth()
 
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -335,6 +352,23 @@ export function ChatInfoPane({
                     </Button>
                   ))}
                   <div className="my-1 border-t" />
+                  <Button
+                    variant="ghost"
+                    onClick={() => setExportKeysOpen(true)}
+                    className="justify-start gap-3 w-full"
+                  >
+                    <QrCode className="size-4 shrink-0" strokeWidth={1.5} />
+                    <span>Export encryption keys</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setImportKeysOpen(true)}
+                    className="justify-start gap-3 w-full"
+                  >
+                    <ScanLine className="size-4 shrink-0" strokeWidth={1.5} />
+                    <span>Import keys from another device</span>
+                  </Button>
+                  <div className="my-1 border-t" />
                   {room?.type === 'GROUP' && (
                     <Button
                       variant="ghost"
@@ -370,6 +404,12 @@ export function ChatInfoPane({
           </motion.div>
         </AnimatePresence>
       </div>
+      <ExportKeysDialog open={exportKeysOpen} onOpenChange={setExportKeysOpen} />
+      <ImportKeysDialog
+        open={importKeysOpen}
+        onOpenChange={setImportKeysOpen}
+        userPublicKey={currentUser?.publicKey ?? ''}
+      />
     </>
   )
 }

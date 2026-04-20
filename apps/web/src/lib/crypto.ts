@@ -53,10 +53,26 @@ export async function encryptMessage(content: string, roomKey: CryptoKey): Promi
   return btoa(String.fromCharCode(...combined))
 }
 
-export async function decryptMessage(ciphertext: string, roomKey: CryptoKey): Promise<string> {
-  const bytes = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0))
-  const iv = bytes.slice(0, 12)
-  const data = bytes.slice(12)
-  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, roomKey, data)
-  return new TextDecoder().decode(decrypted)
+export async function exportPrivateKeyAsJwk(key: CryptoKey): Promise<string> {
+  const jwk = await crypto.subtle.exportKey('jwk', key)
+  return JSON.stringify(jwk)
+}
+
+export async function importPrivateKeyFromJwk(jwkString: string): Promise<CryptoKey> {
+  const jwk = JSON.parse(jwkString)
+  return crypto.subtle.importKey('jwk', jwk, RSA_PARAMS, false, ['decrypt'])
+}
+
+/** Returns true if the private key JWK belongs to the given public key JWK string. */
+export function privateKeyMatchesPublicKey(
+  privateJwkString: string,
+  publicJwkString: string,
+): boolean {
+  try {
+    const priv = JSON.parse(privateJwkString)
+    const pub = JSON.parse(publicJwkString)
+    return priv.n === pub.n && priv.e === pub.e
+  } catch {
+    return false
+  }
 }
