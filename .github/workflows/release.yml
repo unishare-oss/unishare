@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - main
+      - release
 
 jobs:
   release:
@@ -48,7 +48,7 @@ jobs:
           semantic_version: 25
           branches: |
             [
-              'main'
+              'release'
             ]
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
