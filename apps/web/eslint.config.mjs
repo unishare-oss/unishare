@@ -13,7 +13,8 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
-    // Test files
+    // Auto-generated or maintained files
+    'app/changelog/**',
     '**/*.test.ts',
     '**/*.test.tsx',
     '**/*.spec.ts',

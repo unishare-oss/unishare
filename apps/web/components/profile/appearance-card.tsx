@@ -3,7 +3,6 @@
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/lib/store'
-import { Button } from '@/components/ui/button'
 
 interface ThemeOption {
   id: string
@@ -174,7 +173,6 @@ function ThemePreview({ t }: { t: ThemeOption }) {
 export function AppearanceCard() {
   const { theme, setTheme } = useTheme()
   const fontSize = useSettingsStore((s) => s.fontSize)
-  const setFontSize = useSettingsStore((s) => s.setFontSize)
 
   return (
     <section className="mb-8">
