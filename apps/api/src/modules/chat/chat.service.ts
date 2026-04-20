@@ -113,14 +113,14 @@ export class ChatService {
       .filter((p: any) => p.userId !== userId)
       .map((p: any) => p.userId)
 
-    //notify
-    await this.notificationsService.notifyChatMessage(
-      roomId,
-      senderName,
-      room.name ?? null,
-      room.type === ChatRoomType.DM,
-      recipientIds,
-    )
+    // Chat message notifications suppressed — unread count handled via Socket.io
+    // await this.notificationsService.notifyChatMessage(
+    //   roomId,
+    //   senderName,
+    //   room.name ?? null,
+    //   room.type === ChatRoomType.DM,
+    //   recipientIds,
+    // )
 
     return message
   }
