@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { ChatService } from './chat.service'
@@ -109,9 +110,11 @@ export class ChatController {
   }
 
   @Get('link-preview')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOkResponse({ description: 'Link preview metadata' })
   @ResponseMessage('Link preview fetched successfully')
-  getLinkPreview(@Query('url') url: string) {
+  getLinkPreview(@Query('url') url: string, @Session() _session: UserSession) {
     return this.chatService.getLinkPreview(url)
   }
 
