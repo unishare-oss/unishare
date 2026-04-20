@@ -245,22 +245,22 @@ export function ChatMessageBubble({
                         message.content,
                         isMe ? 'text-primary-foreground/90' : 'text-primary',
                       )}
-                    </p>
-                  )}
-                  {(isMe || isEdited) && (
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      {isEdited && (
-                        <span
-                          className={cn(
-                            'text-[0.5rem] italic',
-                            isMe ? 'text-primary-foreground/50' : 'text-muted-foreground/60',
+                      {(isMe || isEdited) && (
+                        <span className="inline-flex items-center gap-1 float-right ml-2 mt-1 translate-y-1.5">
+                          {isEdited && (
+                            <span
+                              className={cn(
+                                'text-[0.5rem] italic',
+                                isMe ? 'text-primary-foreground/50' : 'text-muted-foreground/60',
+                              )}
+                            >
+                              edited
+                            </span>
                           )}
-                        >
-                          edited
+                          {isMe && <DeliveryTick status={deliveryStatus} />}
                         </span>
                       )}
-                      {isMe && <DeliveryTick status={deliveryStatus} />}
-                    </div>
+                    </p>
                   )}
                 </div>
               )}
