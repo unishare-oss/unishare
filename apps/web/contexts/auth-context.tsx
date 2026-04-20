@@ -25,13 +25,16 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 async function generateAndUploadKeys(): Promise<string> {
   const { publicKey, privateKey: newPrivateKey } = await generateKeyPair()
   const publicKeyJwk = await exportPublicKey(publicKey)
-  await storePrivateKey(newPrivateKey)
-  await fetch('/api/users/me/public-key', {
+  const res = await fetch('/api/users/me/public-key', {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ publicKey: publicKeyJwk }),
   })
+  if (!res.ok) {
+    throw new Error(`Failed to upload public key: ${res.status}`)
+  }
+  await storePrivateKey(newPrivateKey)
   return publicKeyJwk
 }
 

@@ -132,6 +132,15 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     },
   })
 
+  // True only when room is a DM and every participant has a public key
+  const allParticipantsHaveKeys = useMemo(
+    () =>
+      room?.type === 'DM' &&
+      !!room.participants?.length &&
+      room.participants.every((p) => p.user?.publicKey),
+    [room?.type, room?.participants],
+  )
+
   // Fetch + decrypt messages with infinite scroll
   const {
     messages: decryptedMessages,
@@ -252,9 +261,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   // Auto-upgrade DM to E2E encryption when both participants have public keys
   useEffect(() => {
-    if (!room || !user?.id || isEncrypted || room.type !== 'DM') return
-    const allHaveKeys = room.participants?.every((p) => p.user?.publicKey)
-    if (!allHaveKeys) return
+    if (!room || !user?.id || isEncrypted || !allParticipantsHaveKeys) return
 
     const publicKeys = room.participants!.map((p) => ({
       userId: p.userId,
@@ -266,7 +273,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         upgradeEncryption({ id: room.id, data: { encryptedRoomKeys } })
       })
       .catch(console.error)
-  }, [room?.id, isEncrypted]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset unread divider when room changes
   useEffect(() => {
