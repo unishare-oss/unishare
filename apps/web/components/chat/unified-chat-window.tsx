@@ -126,8 +126,9 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   // Upgrade mutation — silently upgrades unencrypted DMs when both users have keys
   const { mutate: upgradeEncryption } = useChatControllerUpgradeEncryption({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId || '') })
+      onSettled: (_data, _error, variables) => {
+        if (!variables?.id) return
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(variables.id) })
       },
     },
   })
@@ -138,7 +139,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       room?.type === 'DM' &&
       !!room.participants?.length &&
       room.participants.every((p) => p.user?.publicKey),
-    [room?.type, room?.participants],
+    [room],
   )
 
   // Fetch + decrypt messages with infinite scroll
