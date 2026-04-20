@@ -181,6 +181,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     handleScrollToMessage,
   } = useChatMessageActions({
     roomId,
+    isEncrypted,
     user,
     scrollToBottom,
     messagesContainerRef,
