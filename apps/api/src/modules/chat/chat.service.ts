@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { getLinkPreview } from 'link-preview-js'
+import * as dns from 'dns'
 import { ChatRepository } from './chat.repository'
 import { ChatMessageType, ChatRoomType } from '@/generated/prisma/client'
 import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
@@ -251,9 +252,51 @@ export class ChatService {
 
   async getLinkPreview(url: string) {
     if (!url) throw new BadRequestException('url is required')
+    if (url.length > 2000) throw new BadRequestException('URL too long')
+
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      throw new BadRequestException('Invalid URL')
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new BadRequestException('Only http and https URLs are allowed')
+    }
+
+    const hostname = parsed.hostname.toLowerCase()
+
+    // Block private/loopback hostnames and IP literals
+    const blockedHostnames = new Set(['localhost', '0.0.0.0'])
+    const privateRanges = [
+      /^127\./, // 127.0.0.0/8 loopback
+      /^10\./, // 10.0.0.0/8 private
+      /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12 private
+      /^192\.168\./, // 192.168.0.0/16 private
+      /^169\.254\./, // 169.254.0.0/16 link-local (cloud metadata)
+      /^::1$/, // IPv6 loopback
+      /^fc00:/, // IPv6 unique local
+      /^fe80:/, // IPv6 link-local
+    ]
+
+    const isPrivate = (host: string) =>
+      blockedHostnames.has(host) || privateRanges.some((r) => r.test(host))
+
+    if (isPrivate(hostname)) throw new BadRequestException('URL not allowed')
+
+    // DNS resolution check to block hostnames that resolve to private IPs
+    try {
+      const { address } = await dns.promises.lookup(hostname)
+      if (isPrivate(address)) throw new BadRequestException('URL not allowed')
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err
+      throw new BadRequestException('Could not resolve host')
+    }
+
     try {
       const data = await getLinkPreview(url, {
-        timeout: 5000,
+        timeout: 3000,
         headers: { 'user-agent': 'Mozilla/5.0 (compatible; Unishare/1.0)' },
       })
       return data
