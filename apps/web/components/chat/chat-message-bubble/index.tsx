@@ -155,6 +155,7 @@ export function ChatMessageBubble({
                     : { boxShadow: '0 0 0 0px transparent' }
                 }
                 transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+                whileTap={isTouch ? { filter: 'brightness(0.88)' } : undefined}
                 style={{ isolation: 'isolate' }}
                 className={cn(
                   'text-sm rounded-2xl shadow-sm relative z-10 max-w-full overflow-hidden',
