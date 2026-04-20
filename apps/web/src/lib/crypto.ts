@@ -8,6 +8,8 @@ const RSA_PARAMS = {
 const AES_PARAMS = { name: 'AES-GCM', length: 256 } as const
 const KEY_TRANSFER_VERSION = 1 as const
 const KEY_TRANSFER_ITERATIONS = 250_000
+const MIN_KEY_TRANSFER_ITERATIONS = 100_000
+export const MIN_KEY_TRANSFER_PASSPHRASE_LENGTH = 8
 
 interface EncryptedKeyTransferPayloadV1 {
   v: typeof KEY_TRANSFER_VERSION
@@ -31,6 +33,9 @@ async function derivePassphraseKey(
   salt: Uint8Array,
   iterations: number,
 ): Promise<CryptoKey> {
+  if (iterations < MIN_KEY_TRANSFER_ITERATIONS) {
+    throw new Error('Invalid key transfer iteration count.')
+  }
   const passphraseKey = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(passphrase),
@@ -50,6 +55,18 @@ async function derivePassphraseKey(
     false,
     ['encrypt', 'decrypt'],
   )
+}
+
+export function normalizeKeyTransferPassphrase(passphrase: string): string {
+  return passphrase.trim()
+}
+
+function validateKeyTransferPassphrase(passphrase: string): string {
+  const normalizedPassphrase = normalizeKeyTransferPassphrase(passphrase)
+  if (normalizedPassphrase.length < MIN_KEY_TRANSFER_PASSPHRASE_LENGTH) {
+    throw new Error(`Passphrase must be at least ${MIN_KEY_TRANSFER_PASSPHRASE_LENGTH} characters.`)
+  }
+  return normalizedPassphrase
 }
 
 export async function generateKeyPair() {
@@ -134,10 +151,7 @@ export async function encryptPrivateKeyTransferPayload(
   privateKeyJwk: string,
   passphrase: string,
 ): Promise<string> {
-  const normalizedPassphrase = passphrase.trim()
-  if (normalizedPassphrase.length < 8) {
-    throw new Error('Passphrase must be at least 8 characters.')
-  }
+  const normalizedPassphrase = validateKeyTransferPassphrase(passphrase)
 
   const salt = crypto.getRandomValues(new Uint8Array(16))
   const iv = crypto.getRandomValues(new Uint8Array(12))
@@ -163,24 +177,27 @@ export async function decryptPrivateKeyTransferPayload(
   payloadString: string,
   passphrase: string,
 ): Promise<string> {
-  const normalizedPassphrase = passphrase.trim()
-  if (!normalizedPassphrase) {
-    throw new Error('Passphrase is required.')
+  const normalizedPassphrase = validateKeyTransferPassphrase(passphrase)
+
+  let payload: Partial<EncryptedKeyTransferPayloadV1>
+  try {
+    payload = JSON.parse(payloadString) as Partial<EncryptedKeyTransferPayloadV1>
+  } catch {
+    throw new Error('Invalid transfer payload format.')
+  }
+  if (
+    payload.v !== KEY_TRANSFER_VERSION ||
+    payload.alg !== 'PBKDF2-AES-GCM' ||
+    typeof payload.i !== 'number' ||
+    payload.i < MIN_KEY_TRANSFER_ITERATIONS ||
+    !payload.s ||
+    !payload.iv ||
+    !payload.ct
+  ) {
+    throw new Error('Invalid transfer payload format.')
   }
 
   try {
-    const payload = JSON.parse(payloadString) as Partial<EncryptedKeyTransferPayloadV1>
-    if (
-      payload.v !== KEY_TRANSFER_VERSION ||
-      payload.alg !== 'PBKDF2-AES-GCM' ||
-      payload.i !== KEY_TRANSFER_ITERATIONS ||
-      !payload.s ||
-      !payload.iv ||
-      !payload.ct
-    ) {
-      throw new Error('Invalid transfer payload format.')
-    }
-
     const key = await derivePassphraseKey(normalizedPassphrase, base64ToBytes(payload.s), payload.i)
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: base64ToBytes(payload.iv) },
@@ -188,7 +205,8 @@ export async function decryptPrivateKeyTransferPayload(
       base64ToBytes(payload.ct),
     )
     return new TextDecoder().decode(decrypted)
-  } catch {
+  } catch (error) {
+    console.error('Failed to decrypt key transfer payload', error)
     throw new Error('Could not decrypt transfer payload. Check the passphrase and try again.')
   }
 }

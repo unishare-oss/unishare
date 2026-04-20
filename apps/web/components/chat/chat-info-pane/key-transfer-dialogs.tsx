@@ -16,10 +16,12 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
 import {
+  MIN_KEY_TRANSFER_PASSPHRASE_LENGTH,
   decryptPrivateKeyTransferPayload,
   encryptPrivateKeyTransferPayload,
   exportPrivateKeyAsJwk,
   importPrivateKeyFromJwk,
+  normalizeKeyTransferPassphrase,
   privateKeyMatchesPublicKey,
 } from '@/src/lib/crypto'
 
@@ -50,16 +52,23 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
 
   const handleConfirm = async () => {
     try {
-      if (passphrase.trim().length < 8) {
-        throw new Error('Use a passphrase with at least 8 characters.')
+      const normalizedPassphrase = normalizeKeyTransferPassphrase(passphrase)
+      const normalizedConfirmPassphrase = normalizeKeyTransferPassphrase(confirmPassphrase)
+      if (normalizedPassphrase.length < MIN_KEY_TRANSFER_PASSPHRASE_LENGTH) {
+        throw new Error(
+          `Use a passphrase with at least ${MIN_KEY_TRANSFER_PASSPHRASE_LENGTH} characters.`,
+        )
       }
-      if (passphrase !== confirmPassphrase) {
+      if (normalizedPassphrase !== normalizedConfirmPassphrase) {
         throw new Error('Passphrases do not match.')
       }
       const key = await getPrivateKey()
       if (!key) throw new Error('No private key found on this device.')
       const exported = await exportPrivateKeyAsJwk(key)
-      const encryptedPayload = await encryptPrivateKeyTransferPayload(exported, passphrase)
+      const encryptedPayload = await encryptPrivateKeyTransferPayload(
+        exported,
+        normalizedPassphrase,
+      )
       setPayload(encryptedPayload)
       setConfirmed(true)
     } catch (e) {
@@ -155,6 +164,14 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
   }
 
   const startScanner = async () => {
+    const scanPassphrase = normalizeKeyTransferPassphrase(passphrase)
+    if (scanPassphrase.length < MIN_KEY_TRANSFER_PASSPHRASE_LENGTH) {
+      setErrorMsg(
+        `Enter a transfer passphrase with at least ${MIN_KEY_TRANSFER_PASSPHRASE_LENGTH} characters before scanning.`,
+      )
+      setStatus('error')
+      return
+    }
     setStatus('scanning')
     setErrorMsg(null)
     const { Html5Qrcode } = await import('html5-qrcode')
@@ -168,9 +185,14 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
         async (decodedText) => {
           await stopScanner()
           try {
-            const privateKeyJwk = await decryptPrivateKeyTransferPayload(decodedText, passphrase)
+            const privateKeyJwk = await decryptPrivateKeyTransferPayload(
+              decodedText,
+              scanPassphrase,
+            )
             if (!privateKeyMatchesPublicKey(privateKeyJwk, userPublicKey)) {
-              throw new Error("This QR does not match your account's encryption keys.")
+              throw new Error(
+                "Key transfer decrypted, but this key pair doesn't match your account.",
+              )
             }
             const key = await importPrivateKeyFromJwk(privateKeyJwk)
             await storePrivateKey(key)
@@ -230,7 +252,13 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={startScanner} disabled={passphrase.trim().length < 8}>
+              <Button
+                onClick={startScanner}
+                disabled={
+                  normalizeKeyTransferPassphrase(passphrase).length <
+                  MIN_KEY_TRANSFER_PASSPHRASE_LENGTH
+                }
+              >
                 <ScanLine className="size-4 mr-2" />
                 Start scanning
               </Button>
