@@ -7,22 +7,11 @@ const RSA_PARAMS = {
 
 const AES_PARAMS = { name: 'AES-GCM', length: 256 } as const
 
-export async function generateKeyPair(): Promise<CryptoKeyPair> {
-  const keyPair = (await crypto.subtle.generateKey(RSA_PARAMS, true, [
+export async function generateKeyPair() {
+  return crypto.subtle.generateKey(RSA_PARAMS, true, [
     'encrypt',
     'decrypt',
-  ])) as CryptoKeyPair
-
-  const privateKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey)
-  const nonExtractablePrivateKey = await crypto.subtle.importKey(
-    'jwk',
-    privateKeyJwk,
-    RSA_PARAMS,
-    false,
-    ['decrypt'],
-  )
-
-  return { publicKey: keyPair.publicKey, privateKey: nonExtractablePrivateKey }
+  ]) as Promise<CryptoKeyPair>
 }
 
 export async function exportPublicKey(key: CryptoKey): Promise<string> {
