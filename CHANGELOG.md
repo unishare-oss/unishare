@@ -1,3 +1,47 @@
+# [0.19.0](https://github.com/unishare-oss/unishare/compare/v0.18.0...v0.19.0) (2026-04-20)
+
+### Bug Fixes
+
+- **api:** add SSRF protection to getLinkPreview ([a140ccb](https://github.com/unishare-oss/unishare/commit/a140ccb577dc768bbc2c24808b07eec05315d7d5))
+- **api:** require auth and rate-limit GET /chat/link-preview ([209231b](https://github.com/unishare-oss/unishare/commit/209231bd27710d0ea92e80c071be69ae0133cb2c))
+- **chat:** address PR review findings ([0a83c5e](https://github.com/unishare-oss/unishare/commit/0a83c5e4838c448a01449c1943d16e5505be7c57))
+- **chat:** fix e2e decryption and first-time key generation ([d978940](https://github.com/unishare-oss/unishare/commit/d978940319ec43fad83ce9392d5ba034dae3e367))
+- **chat:** fix useMemo deps and refetch room on upgrade settled ([7eed548](https://github.com/unishare-oss/unishare/commit/7eed548d640901b764d86ee31c39b2e2bf4f422d))
+- **chat:** gate encryption on hasRoomKey with user-facing error ([3a764a9](https://github.com/unishare-oss/unishare/commit/3a764a98cedd8ee98cb79ef386c7474c1a8e97ee))
+- **chat:** only apply press animation on touch devices ([e918167](https://github.com/unishare-oss/unishare/commit/e918167a1f9147c560669fba38fb58a2f0e01aac))
+- **chat:** only mark message as LINK when content is exactly one URL ([7739090](https://github.com/unishare-oss/unishare/commit/77390903a5c7a286fa1627d7c77b22de4eb51318))
+- **chat:** re-decrypt edited messages by comparing ciphertext in cache ([9014439](https://github.com/unishare-oss/unishare/commit/90144391c6e7360417dfc60040ad8b5f48037749))
+- **chat:** show lock icon only when E2E encrypted, green with tooltip ([7916cc4](https://github.com/unishare-oss/unishare/commit/7916cc4831b01270a353a4a22317d91a0b8e8ea7))
+- **chat:** use content (not linkUrl) to extract URLs in info pane ([a6cc7b1](https://github.com/unishare-oss/unishare/commit/a6cc7b14576576e121c893f78fae7d03a8dd8166))
+- **chat:** use message type to display last message in sidebar ([0864567](https://github.com/unishare-oss/unishare/commit/0864567641eb26b6bd1b3cda30a6fccbdcbcd193))
+- **chat:** wrap lock icon Tooltip with TooltipProvider ([86730e0](https://github.com/unishare-oss/unishare/commit/86730e021880b877fe8736bd2620705ac032f5d1))
+- pass ref object to useHandleLibrary instead of .current ([#52](https://github.com/unishare-oss/unishare/issues/52)) ([fd01c73](https://github.com/unishare-oss/unishare/commit/fd01c73ccce592ae5f3ace525013d0bca231f5d8))
+- **web:** disable infinite query for ChatController_getLinkPreview ([14a8026](https://github.com/unishare-oss/unishare/commit/14a802690d46455750ac2071af92060396a19e46))
+- **web:** resolve lint warnings in chat components ([039be00](https://github.com/unishare-oss/unishare/commit/039be0047502ceb0c64eb59d0759b05aa7edf3f9))
+- **web:** wrap eslint-config-next with fixupConfigRules for ESLint v10 ([a3606ef](https://github.com/unishare-oss/unishare/commit/a3606ef80d7db00af939c47d312d6a0399bcdf0d))
+
+### Features
+
+- **chat:** add E2E encryption lock icon to chat header ([b0a86a7](https://github.com/unishare-oss/unishare/commit/b0a86a7b2968dad634426d1f969f171f7ef00f70))
+- **chat:** add encryption upgrade flow and unencrypted indicator ([e6cce41](https://github.com/unishare-oss/unishare/commit/e6cce41c7a738e407c02efae0e68f0a9240543dc))
+- **chat:** add link preview API endpoint using link-preview-js ([8355fee](https://github.com/unishare-oss/unishare/commit/8355fee1c25a58d071e4a2ba1dbf037503456c16))
+- **chat:** add link preview component for LINK messages ([0ad638f](https://github.com/unishare-oss/unishare/commit/0ad638fba31ee50b1c9c775b5ec1c8a225673943))
+- **chat:** E2E encryption + link preview redesign ([#53](https://github.com/unishare-oss/unishare/issues/53)) ([8581cac](https://github.com/unishare-oss/unishare/commit/8581cacaf2b97d2db3080d6a5bcfd67d3acb0b18))
+- **chat:** encrypt DM room keys on creation using participants' public keys ([e364d22](https://github.com/unishare-oss/unishare/commit/e364d22734b97dad547bef130c523e75438d61d1))
+- **chat:** implement E2E encryption for messages and previews ([18f53e1](https://github.com/unishare-oss/unishare/commit/18f53e1d6220e7664c4dae2fd831ac91b2c85ff4))
+- **chat:** long-press context menu on messages (Telegram-style) ([8b77641](https://github.com/unishare-oss/unishare/commit/8b77641477341e2170c04f41d7823c5e162ca5a9))
+- **chat:** redesign link preview with WhatsApp-style layout and inline delivery tick ([52c3d96](https://github.com/unishare-oss/unishare/commit/52c3d96960245aee92c78a1941c921ebf40c2c19))
+- **chat:** show link preview for URLs embedded in text messages ([9db6e48](https://github.com/unishare-oss/unishare/commit/9db6e487969b29b785b76d3dc0d11bddd1d4aa12))
+- **chat:** show strikethrough expired file state in message bubble ([9baf30a](https://github.com/unishare-oss/unishare/commit/9baf30a7b9ae5193228ee18f0682d449cf52f970))
+- **chat:** show unread count badge on chat nav item ([2221b25](https://github.com/unishare-oss/unishare/commit/2221b25d89b36b76003a98fcb536ed2ef789f83c))
+- **chat:** spring press animation on message bubble ([34c2c31](https://github.com/unishare-oss/unishare/commit/34c2c310a720ca5e68809470dabb5245ed7b9c80))
+- **chat:** wire encryptedRoomKeys through create-room and invite-members flows ([f3e792c](https://github.com/unishare-oss/unishare/commit/f3e792c4259acfe5fef600925d54b5ea7933c2e0))
+- **crypto:** fix key storage ordering and refactor room key creation API ([1324d69](https://github.com/unishare-oss/unishare/commit/1324d69e719eee9aa3db0616d255036482711734))
+- **hooks:** add types ([8057e48](https://github.com/unishare-oss/unishare/commit/8057e48c1b158077de082745e1e9d8bc649231ae))
+- **prisma:** add encrypedKey cols for chat encryption ([b4cb177](https://github.com/unishare-oss/unishare/commit/b4cb17751ccecbc739edc3ef5e73a7e09ec9deb9))
+- **storage:** allow image uploads as document file type ([df6430e](https://github.com/unishare-oss/unishare/commit/df6430e4f4ba46c7c117f3f617d4060ac71b1668))
+- **users:** add public key storage and PATCH me/public-key endpoint ([d4204ce](https://github.com/unishare-oss/unishare/commit/d4204ce463a6a56245893447de654259a009536f))
+
 # [0.18.0](https://github.com/unishare-oss/unishare/compare/v0.17.0...v0.18.0) (2026-04-19)
 
 ### Bug Fixes
