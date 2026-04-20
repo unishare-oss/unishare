@@ -117,7 +117,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const headerPresence = otherParticipant?.userId
     ? presence.get(otherParticipant.userId)
     : undefined
-
+  const isEncrypted = !!room?.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
   // Fetch + decrypt messages with infinite scroll
   const {
     messages: decryptedMessages,
@@ -334,9 +334,15 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               groupImage={room.imageUrl}
               participants={room.participants}
               presenceMap={presence}
+              isEncrypted={isEncrypted}
             />
           ) : (
-            <ChatHeader mode="dm" user={headerUser} presence={headerPresence} />
+            <ChatHeader
+              mode="dm"
+              user={headerUser}
+              presence={headerPresence}
+              isEncrypted={isEncrypted}
+            />
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">

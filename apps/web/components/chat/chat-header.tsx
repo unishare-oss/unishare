@@ -1,6 +1,7 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -9,6 +10,7 @@ import type { ChatRoomParticipantEntity } from '@/src/lib/api/generated/unishare
 
 interface DMHeaderProps {
   mode: 'dm'
+  isEncrypted?: boolean
   user?: {
     name: string
     image?: string | null
@@ -18,6 +20,7 @@ interface DMHeaderProps {
 
 interface GroupHeaderProps {
   mode: 'group'
+  isEncrypted?: boolean
   groupName?: string | null
   groupImage?: string | null
   participants?: ChatRoomParticipantEntity[]
@@ -33,7 +36,7 @@ export function ChatHeader(props: ChatHeaderProps) {
   return <DMHeader {...props} />
 }
 
-function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
+function DMHeader({ user, presence, isEncrypted }: Omit<DMHeaderProps, 'mode'>) {
   const isOnline = presence?.status === 1
 
   const getStatus = () => {
@@ -56,7 +59,14 @@ function DMHeader({ user, presence }: Omit<DMHeaderProps, 'mode'>) {
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
-            <LockKeyhole className="size-3 text-muted-foreground" />
+            {isEncrypted && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <LockKeyhole className="size-3 text-green-500 cursor-default" />
+                </TooltipTrigger>
+                <TooltipContent>End-to-end encrypted</TooltipContent>
+              </Tooltip>
+            )}
           </div>
           <span
             className={cn(
@@ -77,6 +87,7 @@ function GroupHeader({
   groupImage,
   participants = [],
   presenceMap,
+  isEncrypted,
 }: Omit<GroupHeaderProps, 'mode'>) {
   const total = participants.length
   const onlineCount = participants.filter((p) => presenceMap?.get(p.userId)?.status === 1).length
@@ -96,7 +107,14 @@ function GroupHeader({
             <span className="font-semibold text-sm tracking-tight truncate">
               {groupName || 'Group Chat'}
             </span>
-            <LockKeyhole className="size-3 text-muted-foreground shrink-0" />
+            {isEncrypted && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <LockKeyhole className="size-3 text-green-500 shrink-0 cursor-default" />
+                </TooltipTrigger>
+                <TooltipContent>End-to-end encrypted</TooltipContent>
+              </Tooltip>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[0.625rem] uppercase tracking-widest text-muted-foreground whitespace-nowrap">
