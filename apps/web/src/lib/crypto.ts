@@ -24,13 +24,13 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes))
 }
 
-function base64ToBytes(base64: string): Uint8Array {
-  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>
 }
 
 async function derivePassphraseKey(
   passphrase: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number,
 ): Promise<CryptoKey> {
   if (iterations < MIN_KEY_TRANSFER_ITERATIONS) {
@@ -46,7 +46,7 @@ async function derivePassphraseKey(
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: salt.buffer as ArrayBuffer,
+      salt: salt.buffer,
       iterations,
       hash: 'SHA-256',
     },
@@ -153,8 +153,8 @@ export async function encryptPrivateKeyTransferPayload(
 ): Promise<string> {
   const normalizedPassphrase = validateKeyTransferPassphrase(passphrase)
 
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const salt = crypto.getRandomValues(new Uint8Array(16)) as Uint8Array<ArrayBuffer>
+  const iv = crypto.getRandomValues(new Uint8Array(12)) as Uint8Array<ArrayBuffer>
   const key = await derivePassphraseKey(normalizedPassphrase, salt, KEY_TRANSFER_ITERATIONS)
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
