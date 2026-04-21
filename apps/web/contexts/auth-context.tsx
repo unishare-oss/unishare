@@ -9,7 +9,7 @@ import {
 } from '@/src/lib/api/generated/users/users'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { generateKeyPair, exportPublicKey } from '@/src/lib/crypto'
-import { getPrivateKey, storePrivateKey, clearPrivateKey } from '@/src/lib/indexeddb'
+import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
 
 type Session = NonNullable<ReturnType<typeof authClient.useSession>['data']>
 
@@ -63,12 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     init().catch(console.error)
   }, [user, queryClient])
-
-  useEffect(() => {
-    if (!sessionPending && !session) {
-      clearPrivateKey().catch(console.error)
-    }
-  }, [session, sessionPending])
 
   const isLoading = sessionPending || (!!session?.user && userPending)
   const isAuthenticated = !!session?.user

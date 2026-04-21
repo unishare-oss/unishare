@@ -1,8 +1,6 @@
-const RSA_PARAMS = {
-  name: 'RSA-OAEP',
-  modulusLength: 2048,
-  publicExponent: new Uint8Array([1, 0, 1]),
-  hash: 'SHA-256',
+const ECDH_PARAMS = {
+  name: 'ECDH',
+  namedCurve: 'P-256',
 } as const
 
 const AES_PARAMS = { name: 'AES-GCM', length: 256 } as const
@@ -69,11 +67,8 @@ function validateKeyTransferPassphrase(passphrase: string): string {
   return normalizedPassphrase
 }
 
-export async function generateKeyPair() {
-  return crypto.subtle.generateKey(RSA_PARAMS, true, [
-    'encrypt',
-    'decrypt',
-  ]) as Promise<CryptoKeyPair>
+export async function generateKeyPair(): Promise<CryptoKeyPair> {
+  return crypto.subtle.generateKey(ECDH_PARAMS, true, ['deriveKey']) as Promise<CryptoKeyPair>
 }
 
 export async function exportPublicKey(key: CryptoKey): Promise<string> {
@@ -83,26 +78,62 @@ export async function exportPublicKey(key: CryptoKey): Promise<string> {
 
 export async function importPublicKey(jwkString: string): Promise<CryptoKey> {
   const jwk = JSON.parse(jwkString)
-  return crypto.subtle.importKey('jwk', jwk, RSA_PARAMS, false, ['encrypt'])
+  return crypto.subtle.importKey('jwk', jwk, ECDH_PARAMS, false, [])
 }
 
 export async function generateRoomKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(AES_PARAMS, true, ['encrypt', 'decrypt'])
 }
 
-export async function encryptRoomKey(roomKey: CryptoKey, publicKey: CryptoKey): Promise<string> {
-  const raw = await crypto.subtle.exportKey('raw', roomKey)
-  const encrypted = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, raw)
-  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+// Encrypts a room key for a recipient using ECDH + AES-GCM key wrap.
+// Wire format: ephemeral public key (65 bytes raw) | IV (12 bytes) | ciphertext (48 bytes)
+export async function encryptRoomKey(
+  roomKey: CryptoKey,
+  recipientPublicKey: CryptoKey,
+): Promise<string> {
+  const ephemeral = await crypto.subtle.generateKey(ECDH_PARAMS, true, ['deriveKey'])
+
+  const sharedKey = await crypto.subtle.deriveKey(
+    { name: 'ECDH', public: recipientPublicKey },
+    ephemeral.privateKey,
+    AES_PARAMS,
+    false,
+    ['encrypt'],
+  )
+
+  const rawRoomKey = await crypto.subtle.exportKey('raw', roomKey)
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, sharedKey, rawRoomKey)
+
+  const epkRaw = await crypto.subtle.exportKey('raw', ephemeral.publicKey)
+  const packed = new Uint8Array(65 + 12 + ciphertext.byteLength)
+  packed.set(new Uint8Array(epkRaw), 0)
+  packed.set(iv, 65)
+  packed.set(new Uint8Array(ciphertext), 77)
+
+  return btoa(String.fromCharCode(...packed))
 }
 
 export async function decryptRoomKey(
   encryptedKey: string,
   privateKey: CryptoKey,
 ): Promise<CryptoKey> {
-  const bytes = Uint8Array.from(atob(encryptedKey), (c) => c.charCodeAt(0))
-  const raw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, bytes)
-  return crypto.subtle.importKey('raw', raw, AES_PARAMS, true, ['encrypt', 'decrypt'])
+  const packed = Uint8Array.from(atob(encryptedKey), (c) => c.charCodeAt(0))
+
+  const epk = await crypto.subtle.importKey('raw', packed.slice(0, 65), ECDH_PARAMS, false, [])
+  const iv = packed.slice(65, 77)
+  const ciphertext = packed.slice(77)
+
+  const sharedKey = await crypto.subtle.deriveKey(
+    { name: 'ECDH', public: epk },
+    privateKey,
+    AES_PARAMS,
+    false,
+    ['decrypt'],
+  )
+
+  const rawRoomKey = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sharedKey, ciphertext)
+  return crypto.subtle.importKey('raw', rawRoomKey, AES_PARAMS, true, ['encrypt', 'decrypt'])
 }
 
 export async function encryptMessage(content: string, roomKey: CryptoKey): Promise<string> {
@@ -130,7 +161,7 @@ export async function exportPrivateKeyAsJwk(key: CryptoKey): Promise<string> {
 
 export async function importPrivateKeyFromJwk(jwkString: string): Promise<CryptoKey> {
   const jwk = JSON.parse(jwkString)
-  return crypto.subtle.importKey('jwk', jwk, RSA_PARAMS, false, ['decrypt'])
+  return crypto.subtle.importKey('jwk', jwk, ECDH_PARAMS, false, ['deriveKey'])
 }
 
 /** Returns true if the private key JWK belongs to the given public key JWK string. */
@@ -141,7 +172,7 @@ export function privateKeyMatchesPublicKey(
   try {
     const priv = JSON.parse(privateJwkString)
     const pub = JSON.parse(publicJwkString)
-    return priv.n === pub.n && priv.e === pub.e
+    return priv.x === pub.x && priv.y === pub.y
   } catch {
     return false
   }
