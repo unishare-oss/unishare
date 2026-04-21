@@ -153,7 +153,6 @@ export function GroupChatDialog({
         let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
 
         if (roomId && hasRoomKey(roomId)) {
-          console.log('ok')
           const results = await Promise.all(
             Array.from(selectedIds).map(async (id) => {
               //TODO: maybe add key in selectedId?
