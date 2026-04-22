@@ -15,13 +15,31 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/src/lib/auth/client'
+import { useUsersControllerClearMyKeys } from '@/src/lib/api/generated/users/users'
+import { clearPrivateKey } from '@/src/lib/indexeddb'
+import { useAuth } from '@/contexts/auth-context'
 
 export function DangerZoneCard() {
   const router = useRouter()
+  const { session } = useAuth()
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [downloading, setDownloading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [removeKeysOpen, setRemoveKeysOpen] = useState(false)
+  const [removeKeysError, setRemoveKeysError] = useState('')
+
+  const { mutate: clearMyKeys, isPending: removingKeys } = useUsersControllerClearMyKeys({
+    mutation: {
+      onSuccess: async () => {
+        const userId = session?.user?.id
+        if (userId) await clearPrivateKey(userId)
+        setRemoveKeysOpen(false)
+        window.location.reload()
+      },
+      onError: () => setRemoveKeysError('Failed to remove encryption keys. Please try again.'),
+    },
+  })
 
   async function handleDownload() {
     setDownloading(true)
@@ -80,6 +98,67 @@ export function DangerZoneCard() {
         <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
           {downloading ? 'Preparing...' : 'Download'}
         </Button>
+      </div>
+
+      {/* Remove encryption keys */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="text-sm font-medium text-foreground">Remove encryption keys</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            Wipe your encryption keys from this device and the server.
+          </p>
+        </div>
+        <AlertDialog
+          open={removeKeysOpen}
+          onOpenChange={(v) => {
+            setRemoveKeysOpen(v)
+            if (!v) setRemoveKeysError('')
+          }}
+        >
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm">
+              Remove keys
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove encryption keys?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    This will permanently remove your encryption keys. Before you continue,
+                    understand what this means:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>
+                      All encrypted chat messages will become{' '}
+                      <strong className="text-foreground">permanently unreadable</strong>
+                    </li>
+                    <li>Your private key will be wiped from this device</li>
+                    <li>New keys will be generated automatically on your next sign-in</li>
+                    <li>
+                      Old messages <strong className="text-foreground">cannot be recovered</strong>
+                    </li>
+                  </ul>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {removeKeysError && <p className="text-xs text-destructive px-1">{removeKeysError}</p>}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault()
+                  clearMyKeys()
+                }}
+                disabled={removingKeys}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {removingKeys ? 'Removing...' : 'Remove keys'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Delete account */}
