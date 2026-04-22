@@ -10,7 +10,6 @@ import {
   generateRoomKey,
 } from '@/src/lib/crypto'
 import { getPrivateKey } from '@/src/lib/indexeddb'
-import { useAuth } from '@/contexts/auth-context'
 
 interface CryptoContextValue {
   loadRoomKey: (roomId: string, encryptedRoomKey: string) => Promise<void>
@@ -30,15 +29,13 @@ interface CryptoContextValue {
 export const CryptoContext = createContext<CryptoContextValue | null>(null)
 
 export function CryptoProvider({ children }: { children: ReactNode }) {
-  const { keyReady } = useAuth()
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
   const [roomKeyVersion, setRoomKeyVersion] = useState(0)
   const [hasPrivateKey, setHasPrivateKey] = useState(false)
 
   useEffect(() => {
-    if (!keyReady) return
     getPrivateKey().then((key) => setHasPrivateKey(!!key))
-  }, [keyReady])
+  }, [])
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
