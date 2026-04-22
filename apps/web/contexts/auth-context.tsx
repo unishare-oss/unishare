@@ -56,12 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       const privateKey = await getPrivateKey()
-      if (!privateKey) {
-        await generateAndUploadKeys()
-        // refresh the user profile so publicKey is available in the cache
-        queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
-      }
-      setKeyReady(true)
+      if (privateKey) return // already set up on this device
+      if (user.publicKey) return // key exists on another device — import required
+
+      await generateAndUploadKeys()
+
+      // refresh the user profile so publicKey is available in the cache
+      queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
     }
 
     init().catch(console.error)
