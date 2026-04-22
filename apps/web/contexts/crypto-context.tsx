@@ -30,19 +30,21 @@ interface CryptoContextValue {
 export const CryptoContext = createContext<CryptoContextValue | null>(null)
 
 export function CryptoProvider({ children }: { children: ReactNode }) {
-  const { keyReady } = useAuth()
+  const { session } = useAuth()
+  const userId = session?.user?.id
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
   const [roomKeyVersion, setRoomKeyVersion] = useState(0)
   const [hasPrivateKey, setHasPrivateKey] = useState(false)
 
   useEffect(() => {
-    if (!keyReady) return
-    getPrivateKey().then((key) => setHasPrivateKey(!!key))
-  }, [keyReady])
+    if (!userId) return
+    getPrivateKey(userId).then((key) => setHasPrivateKey(!!key))
+  }, [userId])
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
-    const privateKey = await getPrivateKey()
+    if (!userId) throw new Error('User not authenticated')
+    const privateKey = await getPrivateKey(userId)
     if (!privateKey) throw new Error('Private key not found')
     const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
     roomKeys.current.set(roomId, roomKey)

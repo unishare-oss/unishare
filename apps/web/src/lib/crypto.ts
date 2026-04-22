@@ -164,6 +164,14 @@ export async function importPrivateKeyFromJwk(jwkString: string): Promise<Crypto
   return crypto.subtle.importKey('jwk', jwk, ECDH_PARAMS, true, ['deriveKey'])
 }
 
+export function isEcPublicKey(jwkString: string): boolean {
+  try {
+    return JSON.parse(jwkString).kty === 'EC'
+  } catch {
+    return false
+  }
+}
+
 /** Returns true if the private key JWK belongs to the given public key JWK string. */
 export function privateKeyMatchesPublicKey(
   privateJwkString: string,
