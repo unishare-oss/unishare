@@ -161,7 +161,7 @@ export async function exportPrivateKeyAsJwk(key: CryptoKey): Promise<string> {
 
 export async function importPrivateKeyFromJwk(jwkString: string): Promise<CryptoKey> {
   const jwk = JSON.parse(jwkString)
-  return crypto.subtle.importKey('jwk', jwk, ECDH_PARAMS, false, ['deriveKey'])
+  return crypto.subtle.importKey('jwk', jwk, ECDH_PARAMS, true, ['deriveKey'])
 }
 
 export function isEcPublicKey(jwkString: string): boolean {
