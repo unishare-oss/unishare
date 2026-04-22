@@ -8,7 +8,7 @@ import {
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { generateKeyPair, exportPublicKey } from '@/src/lib/crypto'
+import { generateKeyPair, exportPublicKey, isEcPublicKey } from '@/src/lib/crypto'
 import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
 
 type Session = NonNullable<ReturnType<typeof authClient.useSession>['data']>
@@ -24,7 +24,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-async function generateAndUploadKeys(): Promise<string> {
+async function generateAndUploadKeys(userId: string): Promise<string> {
   const { publicKey, privateKey: newPrivateKey } = await generateKeyPair()
   const publicKeyJwk = await exportPublicKey(publicKey)
   const res = await fetch('/api/users/me/public-key', {
@@ -36,7 +36,7 @@ async function generateAndUploadKeys(): Promise<string> {
   if (!res.ok) {
     throw new Error(`Failed to upload public key: ${res.status}`)
   }
-  await storePrivateKey(newPrivateKey)
+  await storePrivateKey(newPrivateKey, userId)
   return publicKeyJwk
 }
 
@@ -55,11 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return
 
     const init = async () => {
-      const privateKey = await getPrivateKey()
+      const privateKey = await getPrivateKey(user.id)
       if (privateKey) return // already set up on this device
-      if (user.publicKey) return // key exists on another device — import required
+      if (user.publicKey && isEcPublicKey(user.publicKey)) return // EC key exists on another device — import required
 
-      await generateAndUploadKeys()
+      await generateAndUploadKeys(user.id)
 
       // refresh the user profile so publicKey is available in the cache
       queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })

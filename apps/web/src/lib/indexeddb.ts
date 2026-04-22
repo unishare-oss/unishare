@@ -1,6 +1,5 @@
 const DB_NAME = 'unishare-crypto'
 const STORE_NAME = 'keys'
-const PRIVATE_KEY_ID = 'private-key'
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -11,31 +10,31 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-export async function storePrivateKey(key: CryptoKey): Promise<void> {
+export async function storePrivateKey(key: CryptoKey, userId: string): Promise<void> {
   const db = await openDb()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite')
-    const req = tx.objectStore(STORE_NAME).put(key, PRIVATE_KEY_ID)
+    const req = tx.objectStore(STORE_NAME).put(key, userId)
     req.onsuccess = () => resolve()
     req.onerror = () => reject(req.error)
   })
 }
 
-export async function getPrivateKey(): Promise<CryptoKey | null> {
+export async function getPrivateKey(userId: string): Promise<CryptoKey | null> {
   const db = await openDb()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly')
-    const req = tx.objectStore(STORE_NAME).get(PRIVATE_KEY_ID)
+    const req = tx.objectStore(STORE_NAME).get(userId)
     req.onsuccess = () => resolve(req.result ?? null)
     req.onerror = () => reject(req.error)
   })
 }
 
-export async function clearPrivateKey(): Promise<void> {
+export async function clearPrivateKey(userId: string): Promise<void> {
   const db = await openDb()
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite')
-    const req = tx.objectStore(STORE_NAME).delete(PRIVATE_KEY_ID)
+    const req = tx.objectStore(STORE_NAME).delete(userId)
     req.onsuccess = () => resolve()
     req.onerror = () => reject(req.error)
   })

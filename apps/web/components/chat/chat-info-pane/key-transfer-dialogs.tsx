@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useAuth } from '@/contexts/auth-context'
 import { QRCodeSVG } from 'qrcode.react'
 import { AlertTriangle, Loader2, ScanLine, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,8 @@ interface ExportKeysDialogProps {
 }
 
 export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) {
+  const { session } = useAuth()
+  const userId = session?.user?.id
   const [payload, setPayload] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +65,8 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
       if (normalizedPassphrase !== normalizedConfirmPassphrase) {
         throw new Error('Passphrases do not match.')
       }
-      const key = await getPrivateKey()
+      if (!userId) throw new Error('User not authenticated.')
+      const key = await getPrivateKey(userId)
       if (!key) throw new Error('No private key found on this device.')
       const exported = await exportPrivateKeyAsJwk(key)
       const encryptedPayload = await encryptPrivateKeyTransferPayload(
@@ -148,6 +152,8 @@ interface ImportKeysDialogProps {
 }
 
 export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKeysDialogProps) {
+  const { session } = useAuth()
+  const userId = session?.user?.id
   const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [passphrase, setPassphrase] = useState('')
@@ -194,8 +200,9 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
                 "Key transfer decrypted, but this key pair doesn't match your account.",
               )
             }
+            if (!userId) throw new Error('User not authenticated.')
             const key = await importPrivateKeyFromJwk(privateKeyJwk)
-            await storePrivateKey(key)
+            await storePrivateKey(key, userId)
             setStatus('success')
           } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : 'Invalid QR code.')
