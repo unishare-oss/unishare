@@ -18,8 +18,6 @@ interface AuthContextValue {
   user: UserProfileEntity | null
   isLoading: boolean
   isAuthenticated: boolean
-  /** True once the local private key has been confirmed present or generated for this session. */
-  keyReady: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -49,8 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       select: (res) => res.data,
     },
   })
-  const [keyReady, setKeyReady] = useState(false)
-
   useEffect(() => {
     if (!user) return
 
@@ -78,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         isLoading,
         isAuthenticated,
-        keyReady,
       }}
     >
       {children}

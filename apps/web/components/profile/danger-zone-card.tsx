@@ -34,8 +34,8 @@ export function DangerZoneCard() {
       onSuccess: async () => {
         const userId = session?.user?.id
         if (userId) await clearPrivateKey(userId)
-        setRemoveKeysOpen(false)
-        window.location.reload()
+        await authClient.signOut()
+        router.replace('/login')
       },
       onError: () => setRemoveKeysError('Failed to remove encryption keys. Please try again.'),
     },
@@ -135,7 +135,10 @@ export function DangerZoneCard() {
                       <strong className="text-foreground">permanently unreadable</strong>
                     </li>
                     <li>Your private key will be wiped from this device</li>
-                    <li>New keys will be generated automatically on your next sign-in</li>
+                    <li>
+                      You will be <strong className="text-foreground">signed out</strong> and new
+                      keys will be generated on your next sign-in
+                    </li>
                     <li>
                       Old messages <strong className="text-foreground">cannot be recovered</strong>
                     </li>
