@@ -1,40 +1,122 @@
 # Flutter Mobile App
 
-Future mobile client for Unishare — cross-platform iOS & Android app consuming the existing NestJS backend. No new API needed; the mobile app is purely a new client surface.
+Cross-platform iOS & Android app for Unishare — built standalone with Firebase as the backend. Same concept as the web platform (academic content sharing) but Firebase-native. No dependency on the NestJS API for v1.
+
+> **Future:** NestJS/Postgres sync or migration to a single source of truth is a later consideration once the app is stable.
+
+---
+
+## Architecture
+
+```
+Flutter app
+    ├── Firebase Auth       — authentication
+    ├── Firestore           — posts, users, departments, courses
+    ├── Firebase Storage    — file & image uploads
+    └── FCM                 — push notifications (future)
+```
+
+Standalone — no NestJS calls in v1. People can use this app independently to learn and practice the same domain concepts.
 
 ---
 
 ## Scope (v1)
 
-Focus on core content consumption and account features. Chat, E2E encryption, and real-time notifications are **out of scope** for v1.
+| Feature                | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| Auth                   | Register, login, logout (email + Google OAuth) |
+| Feed                   | Browse published posts (paginated)             |
+| Post detail            | View post content, attachments, tags           |
+| Upload                 | Create a new post with file attachment         |
+| Search                 | Search posts by keyword, tag, course           |
+| Profile                | View & edit own profile                        |
+| Universities & Courses | Browse department/course structure             |
+| Reading list           | Save posts for later                           |
 
-| Feature                | Description                             |
-| ---------------------- | --------------------------------------- |
-| Auth                   | Register, login, logout via Better Auth |
-| Feed                   | Browse published posts (paginated)      |
-| Post detail            | View post content, attachments, tags    |
-| Upload                 | Create a new post with file attachment  |
-| Search                 | Search posts by keyword, tag, course    |
-| Profile                | View & edit own profile                 |
-| Universities & Courses | Browse department/course structure      |
-| Reading list           | Save posts for later                    |
-| Trending(maybe not)    | View trending posts                     |
+Chat, E2E encryption, admin panel, quizzes, and real-time collaboration are **out of scope** for v1.
 
 ---
 
 ## Tech Stack
 
-| Layer            | Choice                           | Why                                                     |
-| ---------------- | -------------------------------- | ------------------------------------------------------- |
-| Framework        | **Flutter 3 / Dart**             | Single codebase for iOS + Android                       |
-| State management | **Riverpod**                     | Scales well, compile-safe, no `BuildContext` dependency |
-| HTTP client      | **Dio**                          | Interceptors for auth cookies, easy error handling      |
-| API types        | **Retrofit + openapi-generator** | Auto-generate from existing `openapi.json`              |
-| Auth session     | **flutter_secure_storage**       | Persist session cookie securely                         |
-| Local cache      | **Hive**                         | Lightweight offline cache for feed                      |
-| Navigation       | **GoRouter**                     | Declarative, supports deep links                        |
-| Image loading    | **cached_network_image**         | Cached remote images                                    |
-| File picker      | **file_picker**                  | Upload attachments                                      |
+| Layer            | Choice                   | Why                                                     |
+| ---------------- | ------------------------ | ------------------------------------------------------- |
+| Framework        | **Flutter 3 / Dart**     | Single codebase for iOS + Android                       |
+| Backend          | **Firebase**             | Auth, Firestore, Storage — full Flutter SDK support     |
+| State management | **Riverpod**             | Scales well, compile-safe, no `BuildContext` dependency |
+| Navigation       | **GoRouter**             | Declarative, supports deep links                        |
+| Image loading    | **cached_network_image** | Cached remote images                                    |
+| File picker      | **file_picker**          | Upload attachments                                      |
+| Local cache      | **Hive**                 | Lightweight offline storage                             |
+
+---
+
+## Firebase Setup
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Add Android & iOS apps, download `google-services.json` / `GoogleService-Info.plist`
+3. Enable **Authentication** (email/password + Google)
+4. Create **Firestore** database (start in test mode, add rules before launch)
+5. Enable **Firebase Storage**
+
+```bash
+# Install FlutterFire CLI
+dart pub global activate flutterfire_cli
+
+# Configure (run from apps/mobile/)
+flutterfire configure
+```
+
+---
+
+## Firestore Data Model
+
+```
+users/{userId}
+  name, email, photoUrl, universityId, departmentId, createdAt
+
+universities/{universityId}
+  name, logoUrl
+
+departments/{departmentId}
+  name, universityId
+
+courses/{courseId}
+  name, departmentId
+
+posts/{postId}
+  title, description, type, tags[], courseId, authorId,
+  fileUrl, status (PENDING/PUBLISHED/REJECTED),
+  createdAt, updatedAt
+
+readingList/{userId}/saved/{postId}
+  savedAt
+```
+
+---
+
+## Auth
+
+Firebase Auth handles email/password and Google sign-in natively.
+
+```dart
+// Email sign-in
+await FirebaseAuth.instance.signInWithEmailAndPassword(
+  email: email,
+  password: password,
+);
+
+// Google sign-in
+final googleUser = await GoogleSignIn().signIn();
+final googleAuth = await googleUser!.authentication;
+final credential = GoogleAuthProvider.credential(
+  accessToken: googleAuth.accessToken,
+  idToken: googleAuth.idToken,
+);
+await FirebaseAuth.instance.signInWithCredential(credential);
+```
+
+Use `authStateChanges()` stream to reactively update UI on login/logout.
 
 ---
 
@@ -44,13 +126,12 @@ Focus on core content consumption and account features. Chat, E2E encryption, an
 apps/mobile/
 ├── lib/
 │   ├── main.dart
-│   ├── app.dart                  # GoRouter setup, providers
+│   ├── app.dart                  # GoRouter setup, Riverpod providers
 │   ├── core/
-│   │   ├── api/                  # Dio client, interceptors
-│   │   ├── auth/                 # Session management
-│   │   └── storage/              # Secure storage helpers
+│   │   ├── firebase/             # Firebase init, config
+│   │   └── storage/              # Hive local cache helpers
 │   ├── features/
-│   │   ├── auth/                 # Login, register screens
+│   │   ├── auth/                 # Login, register screens + providers
 │   │   ├── feed/                 # Home feed
 │   │   ├── post/                 # Post detail, create post
 │   │   ├── search/               # Search screen
@@ -58,73 +139,11 @@ apps/mobile/
 │   │   └── reading_list/         # Saved posts
 │   └── shared/
 │       ├── widgets/              # Reusable UI components
-│       └── models/               # Generated API models
+│       └── models/               # Dart model classes (mirrors Firestore docs)
 ├── pubspec.yaml
-└── openapi.json                  # Symlink or copy from apps/web/openapi.json
+├── google-services.json          # Android (gitignored)
+└── GoogleService-Info.plist      # iOS (gitignored)
 ```
-
----
-
-## API Integration
-
-The backend OpenAPI spec lives at `apps/web/openapi.json`. Use it to generate a typed Dart client:
-
-```bash
-# From apps/mobile/
-openapi-generator-cli generate \
-  -i ../web/openapi.json \
-  -g dart-dio \
-  -o lib/shared/api
-```
-
-Re-run this whenever the API changes (same pattern as `pnpm api:sync` on the web side).
-
-### Auth
-
-There is no Flutter SDK for Better Auth — but it's just HTTP. Call the endpoints directly with Dio.
-
-Better Auth uses **cookie-based sessions** (`Set-Cookie` header, not a JWT body). You must persist cookies across requests:
-
-```dart
-// pubspec.yaml deps: dio, dio_cookie_manager, cookie_jar
-final dio = Dio(BaseOptions(baseUrl: 'https://your-api.com'));
-final cookieJar = PersistCookieJar();
-dio.interceptors.add(CookieManager(cookieJar));
-```
-
-**Endpoints:**
-
-| Action      | Method | Path                      | Body                        |
-| ----------- | ------ | ------------------------- | --------------------------- |
-| Sign up     | POST   | `/api/auth/sign-up/email` | `{ email, password, name }` |
-| Sign in     | POST   | `/api/auth/sign-in/email` | `{ email, password }`       |
-| Sign out    | POST   | `/api/auth/sign-out`      | —                           |
-| Get session | GET    | `/api/auth/get-session`   | —                           |
-
-After a successful sign-in the session cookie is stored automatically. All subsequent Dio requests will include it — no manual token handling needed.
-
-**Social login (Google / Microsoft):**
-
-Use `flutter_web_auth_2` — it opens a system browser sheet and catches the redirect via deep link.
-
-```dart
-// 1. Get the OAuth redirect URL from the backend
-final res = await dio.post('/api/auth/sign-in/social', data: {
-  'provider': 'google',          // or 'microsoft'
-  'callbackURL': 'myapp://auth', // your deep link scheme
-});
-final authUrl = res.data['url'];
-
-// 2. Open browser and wait for redirect
-final result = await FlutterWebAuth2.authenticate(
-  url: authUrl,
-  callbackUrlScheme: 'myapp',
-);
-
-// 3. Session cookie is set automatically after redirect — user is logged in
-```
-
-Register the deep link scheme in `AndroidManifest.xml` and `Info.plist`. No separate Google SDK needed.
 
 ---
 
@@ -133,24 +152,33 @@ Register the deep link scheme in `AndroidManifest.xml` and `Info.plist`. No sepa
 ```bash
 cd apps/mobile
 flutter pub get
+flutterfire configure   # links to your Firebase project
 flutter run
-```
-
-Set the API base URL in `lib/core/api/client.dart`:
-
-```dart
-const apiBaseUrl = 'http://localhost:3001'; // dev
-// const apiBaseUrl = 'https://your-domain.com'; // prod
 ```
 
 ---
 
-## Out of Scope (v1)
+## Key pubspec.yaml Dependencies
 
-- Real-time chat (Socket.io)
-- Push notifications
-- E2E encryption
-- Admin panel
-- Collab / quizzes
+```yaml
+dependencies:
+  firebase_core: latest
+  firebase_auth: latest
+  cloud_firestore: latest
+  firebase_storage: latest
+  google_sign_in: latest
+  flutter_riverpod: latest
+  go_router: latest
+  cached_network_image: latest
+  file_picker: latest
+  hive_flutter: latest
+```
 
-These can be added in future versions once the core is stable.
+---
+
+## Future Considerations
+
+- **FCM push notifications** — add `firebase_messaging`, store token on user doc
+- **Cloud Functions** — scheduled digests, post moderation triggers
+- **NestJS sync** — mirror Firestore data to Postgres (or vice versa) for unified platform
+- **Single source of truth** — migrate to one DB once both apps are stable
