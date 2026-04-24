@@ -12,6 +12,7 @@ import { UpdateMessageDto } from './dto/update-message.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { UpgradeEncryptionDto } from './dto/upgrade-encryption.dto'
 import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
+import { LinkPreviewResponseDto } from './dto/link-preview-response.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
 import { ChatMemberGuard } from './guards/chat-member.guard'
@@ -126,7 +127,7 @@ export class ChatController {
   @Get('link-preview')
   @UseGuards(UserThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOkResponse({ description: 'Link preview metadata' })
+  @ApiOkResponse({ type: LinkPreviewResponseDto, description: 'Link preview metadata' })
   @ResponseMessage('Link preview fetched successfully')
   getLinkPreview(@Query('url') url: string, @Session() _session: UserSession) {
     return this.chatService.getLinkPreview(url)

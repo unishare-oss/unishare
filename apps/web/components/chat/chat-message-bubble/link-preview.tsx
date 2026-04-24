@@ -3,17 +3,11 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
-export interface LinkPreviewData {
-  title?: string
-  description?: string
-  siteName?: string
-  images?: string[]
-  image?: string
-}
+import type { LinkPreviewResponseDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 interface LinkPreviewProps {
   url: string
-  preview: LinkPreviewData | null
+  preview: LinkPreviewResponseDto | null
   isLoading: boolean
   isMe?: boolean
 }
