@@ -34,6 +34,7 @@ import {
   UserPlus,
   LockKeyholeOpen,
   ScanLine,
+  KeyRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -450,163 +451,172 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         </div>
       )}
 
-      {/* No local key banner */}
-      {room && isEncrypted && !hasPrivateKey && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-xs">
-          <ScanLine className="size-3 shrink-0" />
-          <span className="flex-1">
-            Messages are encrypted but your decryption key is not on this device.
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
-            onClick={() => setImportKeysOpen(true)}
-          >
-            Import key
-          </Button>
-        </div>
-      )}
-
       {/* Body: messages + optional info pane */}
       <div className="flex flex-1 overflow-hidden">
         {/* Messages Area */}
         <div className="flex flex-col flex-1 overflow-hidden relative">
-          {effectiveMessagesLoading ? (
-            <ChatMessagesSkeleton />
-          ) : (
-            <ScrollArea
-              ref={setScrollContainer}
-              className="flex-1 min-h-0 p-4 [&>[data-radix-scroll-area-viewport]>div]:block!"
-            >
-              <div className="w-full">
-                <div ref={messagesContainerRef} className="flex flex-col gap-4 w-full my-1">
-                  {/* Load more trigger (at top for loading older messages) */}
-                  {hasNextPage && (
-                    <div ref={loadMoreRef} className="flex justify-center py-2">
-                      {isFetchingNextPage && (
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                  )}
+          {/* Scrollable messages + blur overlay share this relative wrapper */}
+          <div className="relative flex-1 overflow-hidden min-h-0 flex flex-col">
+            {(isEncrypted && !hasPrivateKey) || effectiveMessagesLoading ? (
+              <ChatMessagesSkeleton />
+            ) : (
+              <ScrollArea
+                ref={setScrollContainer}
+                className="flex-1 min-h-0 p-4 [&>[data-radix-scroll-area-viewport]>div]:block!"
+              >
+                <div className="w-full">
+                  <div ref={messagesContainerRef} className="flex flex-col gap-4 w-full my-1">
+                    {/* Load more trigger (at top for loading older messages) */}
+                    {hasNextPage && (
+                      <div ref={loadMoreRef} className="flex justify-center py-2">
+                        {isFetchingNextPage && (
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
 
-                  {/* Conversation Start Header */}
-                  {!hasNextPage && (
-                    <ChatConversationStart
-                      room={room}
-                      currentUserId={user?.id}
-                      messageCount={messages.length}
-                    />
-                  )}
+                    {/* Conversation Start Header */}
+                    {!hasNextPage && (
+                      <ChatConversationStart
+                        room={room}
+                        currentUserId={user?.id}
+                        messageCount={messages.length}
+                      />
+                    )}
 
-                  <AnimatePresence initial={false}>
-                    {messages.map((msg, i) => {
-                      const isMe = msg.userId === user?.id
-                      const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
-                      const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
-                      const isDeleting = deletingIds.has(msg.id)
-                      const isTemp = msg.id.startsWith('temp-')
+                    <AnimatePresence initial={false}>
+                      {messages.map((msg, i) => {
+                        const isMe = msg.userId === user?.id
+                        const showAvatar = i === 0 || messages[i - 1].userId !== msg.userId
+                        const showDateSeparator = shouldShowDateSeparator(msg, messages[i - 1])
+                        const isDeleting = deletingIds.has(msg.id)
+                        const isTemp = msg.id.startsWith('temp-')
 
-                      return (
-                        <motion.div
-                          key={msg.id || i}
-                          data-message-id={msg.id}
-                          initial={isTemp ? { opacity: 0, scale: 0.97, y: 8 } : false}
-                          animate={
-                            isDeleting
-                              ? {
-                                  opacity: 0,
-                                  scale: 0.7,
-                                  filter: 'blur(6px)',
-                                  y: isMe ? 10 : -10,
-                                  transition: { duration: 0.35, ease: [0.4, 0, 1, 1] },
-                                }
-                              : { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }
-                          }
-                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        >
-                          {/* Date Separator */}
-                          {showDateSeparator && (
-                            <div className="flex items-center justify-center my-4">
-                              <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[0.625rem] text-secondary-foreground font-medium">
-                                {getDateSeparatorText(new Date(msg.createdAt))}
+                        return (
+                          <motion.div
+                            key={msg.id || i}
+                            data-message-id={msg.id}
+                            initial={isTemp ? { opacity: 0, scale: 0.97, y: 8 } : false}
+                            animate={
+                              isDeleting
+                                ? {
+                                    opacity: 0,
+                                    scale: 0.7,
+                                    filter: 'blur(6px)',
+                                    y: isMe ? 10 : -10,
+                                    transition: { duration: 0.35, ease: [0.4, 0, 1, 1] },
+                                  }
+                                : { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }
+                            }
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          >
+                            {/* Date Separator */}
+                            {showDateSeparator && (
+                              <div className="flex items-center justify-center my-4">
+                                <div className="px-2.5 py-0.5 bg-secondary border border-border rounded-full text-[0.625rem] text-secondary-foreground font-medium">
+                                  {getDateSeparatorText(new Date(msg.createdAt))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Unread divider */}
-                          {firstUnreadId === msg.id && !isMe && (
-                            <div className="flex items-center gap-3 my-3">
-                              <div className="flex-1 h-px bg-primary/25" />
-                              <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
-                                ↓ new messages
-                              </span>
-                              <div className="flex-1 h-px bg-primary/25" />
-                            </div>
-                          )}
+                            {/* Unread divider */}
+                            {firstUnreadId === msg.id && !isMe && (
+                              <div className="flex items-center gap-3 my-3">
+                                <div className="flex-1 h-px bg-primary/25" />
+                                <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                  ↓ new messages
+                                </span>
+                                <div className="flex-1 h-px bg-primary/25" />
+                              </div>
+                            )}
 
-                          {/* Message Bubble */}
-                          {msg.type === 'SYSTEM' ? (
-                            <div className="flex justify-center my-1">
-                              <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
-                                {msg.content}
-                              </span>
-                            </div>
-                          ) : (
-                            <ChatMessageBubble
-                              message={msg}
-                              isMe={isMe}
-                              showAvatar={showAvatar}
-                              currentUserId={user?.id}
-                              isHighlighted={highlightedMessageId === msg.id}
-                              isGroup={room.type === 'GROUP'}
-                              participants={room.participants}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                              onReply={handleReply}
-                              onScrollToMessage={handleScrollToMessage}
-                            />
-                          )}
-                        </motion.div>
-                      )
-                    })}
-                  </AnimatePresence>
-
-                  {/* Typing indicators */}
-                  {roomTypingUsers.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      {roomTypingUsers.map((typingUser) => {
-                        const participant = room?.participants?.find(
-                          (p) => p.userId === typingUser.userId,
+                            {/* Message Bubble */}
+                            {msg.type === 'SYSTEM' ? (
+                              <div className="flex justify-center my-1">
+                                <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                  {msg.content}
+                                </span>
+                              </div>
+                            ) : (
+                              <ChatMessageBubble
+                                message={msg}
+                                isMe={isMe}
+                                showAvatar={showAvatar}
+                                currentUserId={user?.id}
+                                isHighlighted={highlightedMessageId === msg.id}
+                                isGroup={room.type === 'GROUP'}
+                                participants={room.participants}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onReply={handleReply}
+                                onScrollToMessage={handleScrollToMessage}
+                              />
+                            )}
+                          </motion.div>
                         )
-                        return <TypingIndicator key={typingUser.userId} participant={participant} />
                       })}
-                    </div>
+                    </AnimatePresence>
+
+                    {/* Typing indicators */}
+                    {roomTypingUsers.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {roomTypingUsers.map((typingUser) => {
+                          const participant = room?.participants?.find(
+                            (p) => p.userId === typingUser.userId,
+                          )
+                          return (
+                            <TypingIndicator key={typingUser.userId} participant={participant} />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* Scroll to bottom / typing indicator FAB */}
+            {!isAtBottom && (
+              <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
+                <button
+                  className={cn(
+                    'pointer-events-auto h-8 shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all',
+                    roomTypingUsers.length > 0 ? 'rounded-full px-3 gap-1' : 'w-8 rounded-full',
                   )}
+                  onClick={() => scrollToBottom()}
+                  aria-label="Scroll to bottom"
+                >
+                  {roomTypingUsers.length > 0 ? (
+                    <SidebarTypingIndicator />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Blur overlay — encrypted room, no local private key */}
+            {isEncrypted && !hasPrivateKey && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center backdrop-blur-md bg-background/60">
+                <div className="flex flex-col items-center gap-4 rounded-2xl border bg-card p-8 shadow-xl max-w-xs text-center mx-4">
+                  <div className="rounded-full bg-primary/10 p-4">
+                    <KeyRound className="size-7 text-primary" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="font-semibold text-sm">Messages are end-to-end encrypted</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your decryption key isn&apos;t on this device. Import it from a device where
+                      you&apos;ve already set up this account.
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={() => setImportKeysOpen(true)}>
+                    <ScanLine className="size-3.5 mr-1.5" />
+                    Import key
+                  </Button>
                 </div>
               </div>
-            </ScrollArea>
-          )}
-
-          {/* Scroll to bottom / typing indicator FAB */}
-          {!isAtBottom && (
-            <div className="absolute bottom-20 left-0 right-0 z-30 flex justify-center pointer-events-none">
-              <button
-                className={cn(
-                  'pointer-events-auto h-8 shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all',
-                  roomTypingUsers.length > 0 ? 'rounded-full px-3 gap-1' : 'w-8 rounded-full',
-                )}
-                onClick={() => scrollToBottom()}
-                aria-label="Scroll to bottom"
-              >
-                {roomTypingUsers.length > 0 ? (
-                  <SidebarTypingIndicator />
-                ) : (
-                  <ArrowDown className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <ChatInput
             value={content}
