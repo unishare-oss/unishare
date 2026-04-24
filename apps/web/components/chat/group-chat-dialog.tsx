@@ -155,7 +155,6 @@ export function GroupChatDialog({
         if (roomId && hasRoomKey(roomId)) {
           const results = await Promise.all(
             Array.from(selectedIds).map(async (id) => {
-              //TODO: maybe add key in selectedId?
               const member = networkUsers.find((u) => u.id === id)
               if (!member?.publicKey) return null
               const encryptedKey = await encryptRoomKeyForUser(roomId, member.publicKey)
@@ -163,10 +162,10 @@ export function GroupChatDialog({
             }),
           )
 
-          console.log(results)
-          if (results.every((r) => r !== null)) {
-            encryptedRoomKeys = results as { userId: string; encryptedKey: string }[]
-          }
+          const keyed = results.filter(
+            (r): r is { userId: string; encryptedKey: string } => r !== null,
+          )
+          if (keyed.length > 0) encryptedRoomKeys = keyed
         }
 
         await inviteMembers({
