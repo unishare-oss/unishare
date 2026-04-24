@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authClient } from '@/src/lib/auth/client'
@@ -102,6 +102,8 @@ export default function LoginPage() {
       consentAccepted: false,
     },
   })
+
+  const universityId = useWatch({ control: signUpForm.control, name: 'universityId' })
 
   const activeForm = mode === 'signin' ? signInForm : signUpForm
   const loading = activeForm.formState.isSubmitting
@@ -254,7 +256,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <Select
-                  value={signUpForm.watch('universityId') || '_none'}
+                  value={universityId || '_none'}
                   onValueChange={(v) => signUpForm.setValue('universityId', v === '_none' ? '' : v)}
                 >
                   <SelectTrigger className="w-full bg-card">

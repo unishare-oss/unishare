@@ -23,7 +23,7 @@ import { ChatImageLightbox } from '../chat-image-lightbox'
 import { DeliveryTick } from './delivery-tick'
 import { SeenByPopover } from './seen-by-popover'
 import { ReplyQuote } from './reply-quote'
-import { LinkPreview } from './link-preview'
+import { LinkPreview, type LinkPreviewData } from './link-preview'
 import { useChatControllerGetLinkPreview } from '@/src/lib/api/generated/chat/chat'
 
 interface ChatMessageBubbleProps {
@@ -69,7 +69,7 @@ export function ChatMessageBubble({
     { url: firstUrl! },
     { query: { enabled: !!firstUrl, staleTime: 1000 * 60 * 60, retry: false } },
   )
-  const preview = (previewData?.data as any) ?? null
+  const preview = (previewData?.data as LinkPreviewData) ?? null
   const previewLoaded = !!preview?.title
 
   const isEdited =
@@ -344,7 +344,6 @@ export function ChatMessageBubble({
                   preview={preview}
                   isLoading={previewLoading}
                   isMe={isMe}
-                  deliveryStatus={deliveryStatus}
                 />
               )}
             </motion.div>

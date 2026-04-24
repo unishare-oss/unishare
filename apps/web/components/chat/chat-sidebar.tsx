@@ -36,7 +36,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
-  const rooms = roomsResponse?.data || []
+  const rooms = useMemo(() => roomsResponse?.data ?? [], [roomsResponse])
 
   useEffect(() => {
     if (rooms.length === 0) return
