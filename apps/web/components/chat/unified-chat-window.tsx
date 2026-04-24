@@ -35,6 +35,7 @@ import {
   LockKeyholeOpen,
   ScanLine,
   KeyRound,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatMessagesSkeleton } from './chat-messages-skeleton'
@@ -86,6 +87,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
   const { loadRoomKey, hasRoomKey, createEncryptedRoomKeys, hasPrivateKey } = useCrypto()
   const [importKeysOpen, setImportKeysOpen] = useState(false)
+  const [keyLoadError, setKeyLoadError] = useState(false)
   const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -125,7 +127,10 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const headerPresence = otherParticipant?.userId
     ? presence.get(otherParticipant.userId)
     : undefined
-  const isEncrypted = !!room?.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
+  // undefined while room is loading — prevents false ciphertext flash via the unencrypted fast-path
+  const isEncrypted = room
+    ? !!room.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
+    : undefined
 
   // Upgrade mutation — silently upgrades unencrypted rooms when all participants have keys
   const { mutate: upgradeEncryption } = useChatControllerUpgradeEncryption({
@@ -254,16 +259,32 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, prepareForLoad, isLoadingMore])
 
-  // Load room key into CryptoContext when room data arrives and crypto is ready
+  // Load room key into CryptoContext when room data arrives and crypto is ready.
+  // Only attempt if hasPrivateKey — avoids a guaranteed throw when the user has no key at all.
   useEffect(() => {
-    if (!room || !user?.id || hasRoomKey(room.id)) return
+    if (!room || !user?.id || hasRoomKey(room.id) || !hasPrivateKey) return
     const myParticipant = room.participants?.find((p) => p.userId === user.id)
     const encryptedRoomKey = myParticipant?.encryptedRoomKey
 
     if (encryptedRoomKey) {
-      loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
+      loadRoomKey(room.id, encryptedRoomKey).catch((e) => {
+        console.error('Failed to load room key:', e)
+        setKeyLoadError(true)
+      })
     }
-  }, [room, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [room, user?.id, hasPrivateKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRetryLoadKey = () => {
+    if (!room || !user?.id) return
+    const myParticipant = room.participants?.find((p) => p.userId === user.id)
+    const encryptedRoomKey = myParticipant?.encryptedRoomKey
+    if (!encryptedRoomKey) return
+    setKeyLoadError(false)
+    loadRoomKey(room.id, encryptedRoomKey).catch((e) => {
+      console.error('Failed to load room key:', e)
+      setKeyLoadError(true)
+    })
+  }
 
   // Auto-upgrade DM to E2E encryption when both participants have public keys
   useEffect(() => {
@@ -274,12 +295,17 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       publicKeyJwk: p.user!.publicKey!,
     }))
 
-    createEncryptedRoomKeys(publicKeys)
+    createEncryptedRoomKeys(publicKeys, room.id)
       .then((encryptedRoomKeys) => {
         upgradeEncryption({ id: room.id, data: { encryptedRoomKeys } })
       })
       .catch(console.error)
   }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset key load error when navigating to a different room
+  useEffect(() => {
+    setKeyLoadError(false)
+  }, [roomId])
 
   // Reset unread divider when room changes
   useEffect(() => {
@@ -457,7 +483,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
         <div className="flex flex-col flex-1 overflow-hidden relative">
           {/* Scrollable messages + blur overlay share this relative wrapper */}
           <div className="relative flex-1 overflow-hidden min-h-0 flex flex-col">
-            {(isEncrypted && !hasPrivateKey) || effectiveMessagesLoading ? (
+            {effectiveMessagesLoading && !keyLoadError ? (
               <ChatMessagesSkeleton />
             ) : (
               <ScrollArea
@@ -592,6 +618,28 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                     <ArrowDown className="h-3.5 w-3.5" />
                   )}
                 </button>
+              </div>
+            )}
+
+            {/* Error overlay — key found but failed to decrypt (wrong device / key mismatch) */}
+            {keyLoadError && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center backdrop-blur-md bg-background/60">
+                <div className="flex flex-col items-center gap-4 rounded-2xl border bg-card p-8 shadow-xl max-w-xs text-center mx-4">
+                  <div className="rounded-full bg-destructive/10 p-4">
+                    <KeyRound className="size-7 text-destructive" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="font-semibold text-sm">Couldn&apos;t load encryption key</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your key was found but couldn&apos;t decrypt this room. It may be from a
+                      different account setup.
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleRetryLoadKey}>
+                    <RefreshCw className="size-3.5 mr-1.5" />
+                    Retry
+                  </Button>
+                </div>
               </div>
             )}
 

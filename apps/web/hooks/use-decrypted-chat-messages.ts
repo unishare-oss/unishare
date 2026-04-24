@@ -126,7 +126,7 @@ export function useDecryptedChatMessages(
         return { ...msg, content, parent }
       })
 
-      setDecryptedMessages(mapped)
+      startTransition(() => setDecryptedMessages(mapped))
     }
 
     run()
@@ -137,7 +137,10 @@ export function useDecryptedChatMessages(
     queryLoading || (hasRawData && isEncrypted !== false && decryptedMessages.length === 0)
   const isFetchingNextPageCombined =
     isFetchingNextPage ||
-    (hasRawData && isEncrypted !== false && rawMessages.length > decryptedMessages.length)
+    (hasRawData &&
+      isEncrypted !== false &&
+      hasRoomKey(roomId || '') &&
+      rawMessages.length > decryptedMessages.length)
 
   return {
     messages: decryptedMessages,

@@ -289,7 +289,14 @@ export class ChatService {
       }
     }
 
-    return this.chatRepository.upgradeEncryption(roomId, encryptedRoomKeys)
+    const result = await this.chatRepository.upgradeEncryption(roomId, encryptedRoomKeys)
+
+    this.eventEmitter.emit('chat.room_upgraded', {
+      roomId,
+      participants: room.participants,
+    })
+
+    return result
   }
 
   async markAsRead(roomId: string, userId: string) {

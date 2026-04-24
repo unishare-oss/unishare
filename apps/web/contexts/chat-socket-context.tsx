@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  createContext,
-  useEffect,
-  useRef,
-  useState,
-  ReactNode,
-  RefObject,
-} from 'react'
+import { createContext, useEffect, useRef, useState, ReactNode, RefObject } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
@@ -68,10 +61,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('receive-message', (message: any) => {
-      if (message.userId && message.userId === session.user.id) {
-        return
-      }
-
       // Update messages cache
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
@@ -99,10 +88,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('message-updated', (message: any) => {
-      if (message.userId === session.user.id) {
-        return
-      }
-
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
@@ -181,6 +166,15 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
             }
           }),
         }
+      })
+    })
+
+    socket.on('room-upgraded', (payload: { roomId: string }) => {
+      queryClient.invalidateQueries({
+        queryKey: getChatControllerGetRoomQueryKey(payload.roomId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: getChatControllerGetRoomsQueryKey(),
       })
     })
 
