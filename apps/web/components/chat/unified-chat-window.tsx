@@ -87,7 +87,8 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const { user, session } = useAuth()
   const { loadRoomKey, hasRoomKey, createEncryptedRoomKeys, hasPrivateKey } = useCrypto()
   const [importKeysOpen, setImportKeysOpen] = useState(false)
-  const [keyLoadError, setKeyLoadError] = useState(false)
+  const [keyLoadErrorRoomId, setKeyLoadErrorRoomId] = useState<string | null>(null)
+  const keyLoadError = keyLoadErrorRoomId === roomId
   const { presence, isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -269,7 +270,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     if (encryptedRoomKey) {
       loadRoomKey(room.id, encryptedRoomKey).catch((e) => {
         console.error('Failed to load room key:', e)
-        setKeyLoadError(true)
+        setKeyLoadErrorRoomId(room.id)
       })
     }
   }, [room, user?.id, hasPrivateKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -279,10 +280,10 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     const myParticipant = room.participants?.find((p) => p.userId === user.id)
     const encryptedRoomKey = myParticipant?.encryptedRoomKey
     if (!encryptedRoomKey) return
-    setKeyLoadError(false)
+    setKeyLoadErrorRoomId(null)
     loadRoomKey(room.id, encryptedRoomKey).catch((e) => {
       console.error('Failed to load room key:', e)
-      setKeyLoadError(true)
+      setKeyLoadErrorRoomId(room.id)
     })
   }
 
@@ -301,11 +302,6 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       })
       .catch(console.error)
   }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Reset key load error when navigating to a different room
-  useEffect(() => {
-    setKeyLoadError(false)
-  }, [roomId])
 
   // Reset unread divider when room changes
   useEffect(() => {

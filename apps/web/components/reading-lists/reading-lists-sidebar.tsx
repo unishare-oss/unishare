@@ -93,8 +93,13 @@ export function ReadingListsSidebar({ selectedListId, onSelect }: ReadingListsSi
   const { mutate: deleteList } = useReadingListsControllerRemove({
     mutation: {
       onSuccess: (_, { id }) => {
-        queryClient.setQueryData(getReadingListsControllerFindAllQueryKey(), (old: any) =>
-          old ? { ...old, data: (old.data ?? []).filter((l: any) => l.id !== id) } : old,
+        queryClient.setQueryData(
+          getReadingListsControllerFindAllQueryKey(),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) =>
+            old
+              ? { ...old, data: (old.data ?? []).filter((l: { id: string }) => l.id !== id) }
+              : old,
         )
         if (selectedListId === id) onSelect(null)
         toast.success('Reading list deleted')
