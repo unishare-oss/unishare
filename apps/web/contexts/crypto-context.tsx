@@ -52,6 +52,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
       if (!privateKey) throw new Error('Private key not found')
       const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
       roomKeys.current.set(roomId, roomKey)
+      setHasPrivateKey(true)
       setRoomKeyVersion((v) => v + 1)
     } finally {
       loadingRooms.current.delete(roomId)
