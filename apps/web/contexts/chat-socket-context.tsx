@@ -61,6 +61,10 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('receive-message', (message: any) => {
+      // Own messages are handled by the mutation's onSuccess (optimistic → real replacement).
+      // Adding them here too creates a duplicate render frame before onSuccess cleans up.
+      if (message.userId === session?.user?.id) return
+
       // Update messages cache
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
