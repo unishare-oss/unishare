@@ -6,7 +6,6 @@ import { ChatService } from '../chat/chat.service'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
-import { PrismaClient } from '@/generated/prisma/client'
 
 @Injectable()
 export class UsersService {
