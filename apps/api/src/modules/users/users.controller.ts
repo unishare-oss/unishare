@@ -1,6 +1,16 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Req } from '@nestjs/common'
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
 import type { Request } from 'express'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -73,5 +83,19 @@ export class UsersController {
   @ResponseMessage('Public key updated successfully')
   updatePublicKey(@Session() session: UserSession, @Body() dto: UpdatePublicKeyDto) {
     return this.usersService.updatePublicKey(session.user.id, dto.publicKey)
+  }
+
+  @Delete('me/public-key')
+  @ApiOkResponse({ description: 'Encryption keys cleared' })
+  @ResponseMessage('Encryption keys cleared successfully')
+  clearMyKeys(@Session() session: UserSession) {
+    return this.usersService.clearMyKeys(session.user.id)
+  }
+
+  @Delete('admin/public-keys')
+  @Roles(['ADMIN'])
+  @ResponseMessage('All public keys cleared successfully')
+  clearAllPublicKeys() {
+    return this.usersService.clearAllPublicKeys()
   }
 }

@@ -126,7 +126,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     : undefined
   const isEncrypted = !!room?.participants?.find((p) => p.userId === user?.id)?.encryptedRoomKey
 
-  // Upgrade mutation — silently upgrades unencrypted DMs when both users have keys
+  // Upgrade mutation — silently upgrades unencrypted rooms when all participants have keys
   const { mutate: upgradeEncryption } = useChatControllerUpgradeEncryption({
     mutation: {
       onSettled: (_data, _error, variables) => {
@@ -136,12 +136,9 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     },
   })
 
-  // True only when room is a DM and every participant has a public key
+  // True when every participant has a public key (enables auto-upgrade to E2EE for any room type)
   const allParticipantsHaveKeys = useMemo(
-    () =>
-      room?.type === 'DM' &&
-      !!room.participants?.length &&
-      room.participants.every((p) => p.user?.publicKey),
+    () => !!room?.participants?.length && room.participants.every((p) => p.user?.publicKey),
     [room],
   )
 
@@ -153,6 +150,10 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     hasNextPage,
     isFetchingNextPage,
   } = useDecryptedChatMessages(roomId, isEncrypted)
+
+  // When the room is encrypted but the private key isn't on this device, the
+  // decryption hook will never produce messages — don't show an infinite skeleton.
+  const effectiveMessagesLoading = messagesLoading && !(isEncrypted && !hasPrivateKey)
 
   // Intersection observer for loading older messages
   const { ref: loadMoreRef, inView } = useInView()
@@ -180,7 +181,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   } = useScrollManager({
     roomId,
     messages,
-    messagesLoading,
+    messagesLoading: effectiveMessagesLoading,
     isFetchingNextPage,
     roomTypingUsersCount: roomTypingUsers.length,
     messagesContainerRef,
@@ -471,7 +472,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       <div className="flex flex-1 overflow-hidden">
         {/* Messages Area */}
         <div className="flex flex-col flex-1 overflow-hidden relative">
-          {messagesLoading ? (
+          {effectiveMessagesLoading ? (
             <ChatMessagesSkeleton />
           ) : (
             <ScrollArea

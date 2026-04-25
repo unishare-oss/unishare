@@ -19,7 +19,9 @@ interface EncryptedKeyTransferPayloadV1 {
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
 }
 
 function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
@@ -111,7 +113,7 @@ export async function encryptRoomKey(
   packed.set(iv, 65)
   packed.set(new Uint8Array(ciphertext), 77)
 
-  return btoa(String.fromCharCode(...packed))
+  return bytesToBase64(packed)
 }
 
 export async function decryptRoomKey(
@@ -143,7 +145,7 @@ export async function encryptMessage(content: string, roomKey: CryptoKey): Promi
   const combined = new Uint8Array(12 + ciphertext.byteLength)
   combined.set(iv, 0)
   combined.set(new Uint8Array(ciphertext), 12)
-  return btoa(String.fromCharCode(...combined))
+  return bytesToBase64(combined)
 }
 
 export async function decryptMessage(ciphertext: string, roomKey: CryptoKey): Promise<string> {

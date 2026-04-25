@@ -179,6 +179,19 @@ export class ChatService {
     return { id }
   }
 
+  async getGroupRoomIds(userId: string) {
+    return this.chatRepository.findGroupRoomIds(userId)
+  }
+
+  async notifyKeyRemoval(roomIds: string[], userName: string) {
+    const content = `${userName} removed their encryption keys. ${userName}'s chat history has been cleared.`
+    await Promise.all(
+      roomIds.map((roomId) =>
+        this.chatRepository.createMessage({ roomId, type: ChatMessageType.SYSTEM, content }),
+      ),
+    )
+  }
+
   async leaveRoom(roomId: string, userId: string) {
     const room = await this.getRoom(roomId, userId)
     const leavingParticipant = room.participants?.find((p: any) => p.userId === userId)

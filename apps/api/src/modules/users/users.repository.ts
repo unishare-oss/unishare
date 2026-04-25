@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
+import { Prisma } from '@/generated/prisma/client'
 
 @Injectable()
 export class UsersRepository {
@@ -124,6 +125,33 @@ export class UsersRepository {
     return this.prisma.user.findUnique({
       where: { id },
       select: { id: true, publicKey: true },
+    })
+  }
+
+  deleteDmRooms(id: string, tx: Prisma.TransactionClient = this.prisma) {
+    return tx.chatRoom.deleteMany({
+      where: { type: 'DM', participants: { some: { userId: id } } },
+    })
+  }
+
+  leaveGroupRooms(id: string, tx: Prisma.TransactionClient = this.prisma) {
+    return tx.chatRoomParticipant.deleteMany({
+      where: { userId: id, room: { type: 'GROUP' } },
+    })
+  }
+
+  clearPublicKey(id: string, tx: Prisma.TransactionClient = this.prisma) {
+    return tx.user.update({
+      where: { id },
+      data: { publicKey: null },
+      select: { id: true },
+    })
+  }
+
+  clearAllPublicKeys() {
+    return this.prisma.user.updateMany({
+      where: { publicKey: { not: null } },
+      data: { publicKey: null },
     })
   }
 }

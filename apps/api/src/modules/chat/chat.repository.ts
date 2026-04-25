@@ -363,4 +363,11 @@ export class ChatRepository {
       },
     })
   }
+
+  findGroupRoomIds(userId: string) {
+    return this.prisma.chatRoom.findMany({
+      where: { type: 'GROUP', participants: { some: { userId } } },
+      select: { id: true },
+    })
+  }
 }
