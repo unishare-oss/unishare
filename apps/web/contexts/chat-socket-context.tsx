@@ -61,15 +61,23 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('receive-message', (message: any) => {
-      // Own messages are handled by the mutation's onSuccess (optimistic → real replacement).
-      // Adding them here too creates a duplicate render frame before onSuccess cleans up.
-      if (message.userId === session?.user?.id) return
-
-      // Update messages cache
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
       })
+
+      // If this tab has a pending optimistic message for this room, the mutation's
+      // onSuccess will do the temp→real replacement. Adding the real message here too
+      // creates a duplicate render frame. Skip only for this tab's own sends — a second
+      // device with the same userId has no temp entry and must not be skipped.
+      if (message.userId === session?.user?.id) {
+        const cache: any = queryClient.getQueryData(queryKey)
+        const hasPendingOptimistic = cache?.pages?.some((page: any) =>
+          page.data.items.some((item: any) => item.id.startsWith('temp-')),
+        )
+        if (hasPendingOptimistic) return
+      }
+
       queryClient.setQueryData(queryKey, (old: any) => addMessageToInfiniteCache(old, message))
 
       // Update rooms list preview
