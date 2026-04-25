@@ -81,6 +81,7 @@ export function ChatImageSendModal({
         <div className="px-4 pt-3">
           {objectUrl && (
             <div className="relative rounded-xl overflow-hidden bg-muted border border-border max-h-72 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob URL, cannot be optimized by next/image */}
               <img src={objectUrl} alt="Preview" className="max-h-72 max-w-full object-contain" />
               {uploading && (
                 <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-sm">

@@ -140,6 +140,7 @@ export function CollabProvider({
 
   useEffect(() => {
     unmountingRef.current = false
+    const pendingElements = pendingElementsRef.current
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const socket = io(`${apiUrl}/collab`, {
@@ -236,11 +237,11 @@ export function CollabProvider({
       unmountingRef.current = true
       if (emitTimerRef.current) {
         clearTimeout(emitTimerRef.current)
-        const batch = [...pendingElementsRef.current.values()]
+        const batch = [...pendingElements.values()]
         if (batch.length > 0 && socket.connected) {
           socket.emit('scene-update', batch)
         }
-        pendingElementsRef.current.clear()
+        pendingElements.clear()
         emitTimerRef.current = null
       }
       socketRef.current = null

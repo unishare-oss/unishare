@@ -40,23 +40,23 @@ export function replaceMessageInInfiniteCache(
 ): any {
   if (!oldData?.pages) return oldData
 
+  // If the socket event already added the real message before onSuccess fired,
+  // just remove the temp entry rather than replacing (avoids duplicate).
+  const realAlreadyExists = oldData.pages.some((page: any) =>
+    page.data.items.some((item: any) => item.id === realMessage.id),
+  )
+
   return {
     ...oldData,
-    pages: oldData.pages.map((page: any) => {
-      return {
-        ...page,
-        data: {
-          ...page.data,
-          items: page.data.items.map((item: any) => {
-            // Replace ONLY the optimistic message
-            if (item.id === tempId) {
-              return realMessage
-            }
-            return item
-          }),
-        },
-      }
-    }),
+    pages: oldData.pages.map((page: any) => ({
+      ...page,
+      data: {
+        ...page.data,
+        items: realAlreadyExists
+          ? page.data.items.filter((item: any) => item.id !== tempId)
+          : page.data.items.map((item: any) => (item.id === tempId ? realMessage : item)),
+      },
+    })),
   }
 }
 

@@ -3,17 +3,16 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
-import type { DeliveryStatus } from '@/hooks/use-chat-mutations'
+import type { LinkPreviewResponseDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 interface LinkPreviewProps {
   url: string
-  preview: any
+  preview: LinkPreviewResponseDto | null
   isLoading: boolean
   isMe?: boolean
-  deliveryStatus?: DeliveryStatus
 }
 
-export function LinkPreview({ url, preview, isLoading, isMe, deliveryStatus: _deliveryStatus }: LinkPreviewProps) {
+export function LinkPreview({ url, preview, isLoading, isMe }: LinkPreviewProps) {
   const [copied, setCopied] = useState(false)
 
   function copyLink(e: React.MouseEvent) {

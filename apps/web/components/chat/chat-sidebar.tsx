@@ -36,7 +36,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
-  const rooms = roomsResponse?.data || []
+  const rooms = useMemo(() => roomsResponse?.data ?? [], [roomsResponse])
 
   useEffect(() => {
     if (rooms.length === 0) return
@@ -57,13 +57,17 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         rooms.map(async (room) => {
           const lastMsg = room.messages?.[0]
           const isTextual = lastMsg?.type === 'TEXT' || lastMsg?.type === 'LINK'
-          if (!lastMsg?.content || !isTextual || !hasRoomKey(room.id))
-            return [room.id, lastMsg?.content ?? ''] as const
+          if (!lastMsg?.content || !isTextual) return [room.id, lastMsg?.content ?? ''] as const
+          if (!hasRoomKey(room.id)) {
+            const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+            const isRoomEncrypted = !!myParticipant?.encryptedRoomKey
+            return [room.id, isRoomEncrypted ? '' : lastMsg.content] as const
+          }
           try {
             const plaintext = await decrypt(room.id, lastMsg.content)
             return [room.id, plaintext] as const
           } catch {
-            return [room.id, lastMsg.content] as const
+            return [room.id, ''] as const
           }
         }),
       )

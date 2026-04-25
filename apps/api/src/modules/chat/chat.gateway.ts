@@ -137,4 +137,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const { roomId, userId, lastReadAt } = payload
     this.server.to(roomId).emit('room-read', { roomId, userId, lastReadAt })
   }
+
+  @OnEvent('chat.room_upgraded')
+  async handleRoomUpgradedEvent(payload: {
+    roomId: string
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    this.server.to(personalRooms).emit('room-upgraded', { roomId })
+  }
 }

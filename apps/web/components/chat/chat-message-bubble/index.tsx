@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import type {
   ChatMessageEntity,
   ChatRoomParticipantEntity,
+  LinkPreviewResponseDto,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import type { DeliveryStatus } from '@/hooks/use-chat-mutations'
 import { renderWithLinks } from '@/lib/render-with-links'
@@ -69,7 +70,7 @@ export function ChatMessageBubble({
     { url: firstUrl! },
     { query: { enabled: !!firstUrl, staleTime: 1000 * 60 * 60, retry: false } },
   )
-  const preview = (previewData?.data as any) ?? null
+  const preview = (previewData?.data as LinkPreviewResponseDto) ?? null
   const previewLoaded = !!preview?.title
 
   const isEdited =
@@ -344,7 +345,6 @@ export function ChatMessageBubble({
                   preview={preview}
                   isLoading={previewLoading}
                   isMe={isMe}
-                  deliveryStatus={deliveryStatus}
                 />
               )}
             </motion.div>
