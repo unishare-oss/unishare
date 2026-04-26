@@ -317,8 +317,10 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   // Reset unread divider when room changes; clear stale key-error state
   useEffect(() => {
-    setTimeout(() => setFirstUnreadId(null), 0)
-    setKeyLoadErrorRoomId(null)
+    setTimeout(() => {
+      setFirstUnreadId(null)
+      setKeyLoadErrorRoomId(null)
+    }, 0)
   }, [roomId])
 
   // Mark messages as read when at bottom — only when the last message changes

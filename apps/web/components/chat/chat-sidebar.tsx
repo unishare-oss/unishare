@@ -1,6 +1,7 @@
 'use client'
 
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
+import type { NetworkUser } from '@/hooks/use-network-users'
 import { useAuth } from '@/contexts/auth-context'
 import { useCreateDM } from '@/hooks/use-chat-mutations'
 import { useNetworkUsers } from '@/hooks/use-network-users'
@@ -82,14 +83,13 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
 
-  const handleNetworkUserClick = async (user: any) => {
+  const handleNetworkUserClick = async (user: NetworkUser) => {
     try {
       setCreatingDMForUserId(user.id)
 
       // Check if a DM room already exists with this user
       const existingRoom = rooms.find(
-        (room: any) =>
-          room.type === 'DM' && room.participants?.some((p: any) => p.userId === user.id),
+        (room) => room.type === 'DM' && room.participants?.some((p) => p.userId === user.id),
       )
 
       if (existingRoom) {
