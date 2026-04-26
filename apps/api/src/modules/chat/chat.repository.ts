@@ -370,4 +370,26 @@ export class ChatRepository {
       select: { id: true },
     })
   }
+
+  async updateRoom(roomId: string, data: { name?: string; imageUrl?: string }) {
+    return this.prisma.chatRoom.update({
+      where: { id: roomId },
+      data,
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true, image: true, publicKey: true },
+            },
+          },
+        },
+      },
+    })
+  }
+
+  async removeMember(roomId: string, userId: string) {
+    return this.prisma.chatRoomParticipant.delete({
+      where: { roomId_userId: { roomId, userId } },
+    })
+  }
 }

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
-import { ApiTags, ApiOkResponse } from '@nestjs/swagger'
+import { ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -9,6 +9,7 @@ import { CreateRoomDto } from './dto/create-room.dto'
 import { InviteMembersDto } from './dto/invite-members.dto'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
+import { UpdateChatRoomDto } from './dto/update-chat-room.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { UpgradeEncryptionDto } from './dto/upgrade-encryption.dto'
 import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
@@ -131,6 +132,32 @@ export class ChatController {
   @ResponseMessage('Link preview fetched successfully')
   getLinkPreview(@Query('url') url: string, @Session() _session: UserSession) {
     return this.chatService.getLinkPreview(url)
+  }
+
+  @Patch('rooms/:id')
+  @UseGuards(ChatMemberGuard)
+  @ApiOperation({ summary: 'Update group room name/image' })
+  @ApiOkResponse({ type: ChatRoomEntity })
+  @ResponseMessage('Room updated successfully')
+  updateRoom(
+    @Param('id') id: string,
+    @Body() dto: UpdateChatRoomDto,
+    @Session() session: UserSession,
+  ) {
+    return this.chatService.updateRoom(id, session.user.id, dto)
+  }
+
+  @Delete('rooms/:id/participants/:userId')
+  @UseGuards(ChatMemberGuard)
+  @ApiOperation({ summary: 'Remove a member from group' })
+  @ApiOkResponse({ description: 'Member removed' })
+  @ResponseMessage('Member removed successfully')
+  removeMember(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Session() session: UserSession,
+  ) {
+    return this.chatService.removeMember(id, session.user.id, userId)
   }
 
   @Post('rooms/:id/participants')

@@ -147,4 +147,29 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const personalRooms = participants.map((p) => `user-${p.userId}`)
     this.server.to(personalRooms).emit('room-upgraded', { roomId })
   }
+
+  @OnEvent('chat.room_updated')
+  async handleRoomUpdatedEvent(payload: {
+    roomId: string
+    room: any
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, room, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    this.server.to(personalRooms).emit('room-updated', { roomId, room })
+  }
+
+  @OnEvent('chat.member_removed')
+  async handleMemberRemovedEvent(payload: {
+    roomId: string
+    userId: string
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, userId, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    // Notify remaining members
+    this.server.to(personalRooms).emit('member-removed', { roomId, userId })
+    // Notify the removed user directly
+    this.server.to(`user-${userId}`).emit('member-removed', { roomId, userId })
+  }
 }
