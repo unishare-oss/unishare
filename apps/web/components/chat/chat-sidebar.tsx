@@ -27,9 +27,9 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session, user: currentUser } = useAuth()
+  const { session } = useAuth()
   const currentUserId = session?.user?.id
-  const { createEncryptedRoomKeys, loadRoomKey, hasRoomKey, decrypt } = useCrypto()
+  const { loadRoomKey, hasRoomKey, hasPrivateKey, decrypt } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
   const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
@@ -48,7 +48,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           if (hasRoomKey(room.id)) return
           const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
           const encryptedRoomKey = myParticipant?.encryptedRoomKey
-          if (encryptedRoomKey) {
+          if (encryptedRoomKey && hasPrivateKey) {
             await loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
           }
         }),
@@ -96,22 +96,12 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         // Navigate directly to existing room
         router.push(`/chat/${existingRoom.id}`)
       } else {
-        // Build encrypted room keys for both participants if public keys are available
-        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
-
-        if (currentUser?.publicKey && user.publicKey) {
-          encryptedRoomKeys = await createEncryptedRoomKeys([
-            { userId: currentUserId!, publicKeyJwk: currentUser.publicKey },
-            { userId: user.id, publicKeyJwk: user.publicKey },
-          ])
-        }
-
-        // Create new DM room
+        // Create new DM room unencrypted — the upgrade effect in UnifiedChatWindow
+        // handles E2EE setup once both participants have public keys.
         const response = await createDM({
           data: {
             type: 'DM',
             participantIds: [user.id],
-            encryptedRoomKeys,
           },
         })
         // Navigate to the created room

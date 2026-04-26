@@ -305,16 +305,20 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       publicKeyJwk: p.user!.publicKey!,
     }))
 
-    createEncryptedRoomKeys(publicKeys, room.id)
+    // Don't pass room.id — avoid caching a locally-generated key that the losing client in a
+    // double-upgrade race would then keep forever. The correct key is loaded via loadRoomKey
+    // after onSettled invalidates the room query.
+    createEncryptedRoomKeys(publicKeys)
       .then((encryptedRoomKeys) => {
         upgradeEncryption({ id: room.id, data: { encryptedRoomKeys } })
       })
       .catch(console.error)
   }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset unread divider when room changes
+  // Reset unread divider when room changes; clear stale key-error state
   useEffect(() => {
     setTimeout(() => setFirstUnreadId(null), 0)
+    setKeyLoadErrorRoomId(null)
   }, [roomId])
 
   // Mark messages as read when at bottom — only when the last message changes
