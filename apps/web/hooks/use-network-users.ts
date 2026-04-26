@@ -6,7 +6,7 @@ import {
 import type { FollowUserEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useAuth } from '@/contexts/auth-context'
 
-type NetworkUser = FollowUserEntity & { relationship: 'following' | 'follower' | 'mutual' }
+export type NetworkUser = FollowUserEntity & { relationship: 'following' | 'follower' | 'mutual' }
 
 export function useNetworkUsers({ enabled = true }: { enabled?: boolean } = {}) {
   const { session } = useAuth()

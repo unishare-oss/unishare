@@ -12,6 +12,7 @@ import { CursorPaginationOptions } from '../../common/utils/paginate-cursor'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { SendMessageDto } from './dto/send-message.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
+import { UpdateChatRoomDto } from './dto/update-chat-room.dto'
 import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 
@@ -297,6 +298,72 @@ export class ChatService {
     })
 
     return result
+  }
+
+  async updateRoom(roomId: string, requesterId: string, dto: UpdateChatRoomDto) {
+    const room = await this.getRoom(roomId, requesterId)
+    if (room.type !== 'GROUP') {
+      throw new ForbiddenException('Only group rooms can be updated')
+    }
+
+    const updated = await this.chatRepository.updateRoom(roomId, dto)
+
+    this.eventEmitter.emit('chat.room_updated', {
+      roomId,
+      room: updated,
+      participants: room.participants,
+    })
+
+    return updated
+  }
+
+  async removeMember(roomId: string, requesterId: string, targetUserId: string) {
+    const room = await this.getRoom(roomId, requesterId)
+    if (room.type !== 'GROUP') {
+      throw new ForbiddenException('Only group rooms support removing members')
+    }
+
+    const owner = room.participants.reduce((earliest: any, p: any) =>
+      new Date(p.joinedAt) < new Date(earliest.joinedAt) ? p : earliest,
+    )
+    if (owner.userId !== requesterId) {
+      throw new ForbiddenException('Only the group owner can remove members')
+    }
+
+    if (requesterId === targetUserId) {
+      throw new BadRequestException('You cannot remove yourself; use leave instead')
+    }
+
+    const targetParticipant = room.participants.find((p: any) => p.userId === targetUserId)
+    if (!targetParticipant) {
+      throw new NotFoundException('User is not a member of this room')
+    }
+
+    const targetName = targetParticipant?.user?.name ?? 'Someone'
+
+    await this.chatRepository.removeMember(roomId, targetUserId)
+
+    const systemMessage = await this.chatRepository.createMessage({
+      roomId,
+      type: ChatMessageType.SYSTEM,
+      content: `${targetName} was removed from the group`,
+    })
+
+    const remainingParticipants = room.participants.filter((p: any) => p.userId !== targetUserId)
+
+    this.eventEmitter.emit('chat.message_sent', {
+      roomId,
+      message: systemMessage,
+      participants: remainingParticipants,
+    })
+
+    this.eventEmitter.emit('chat.member_removed', {
+      roomId,
+      userId: targetUserId,
+      participants: remainingParticipants,
+    })
+
+    return { success: true }
   }
 
   async markAsRead(roomId: string, userId: string) {

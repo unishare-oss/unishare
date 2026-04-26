@@ -118,10 +118,11 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const room = roomResponse?.data
 
   //for displaying dm chat header
-  const { otherParticipant } = useMemo(() => {
+  const { otherParticipant, myParticipant } = useMemo(() => {
     const others =
       room?.participants?.filter((p: ChatRoomParticipantEntity) => p.userId !== user?.id) ?? []
-    return { otherParticipant: others[0] }
+    const mine = room?.participants?.find((p: ChatRoomParticipantEntity) => p.userId === user?.id)
+    return { otherParticipant: others[0], myParticipant: mine }
   }, [room?.participants, user?.id])
 
   const headerUser = otherParticipant?.user ?? undefined
@@ -172,6 +173,14 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       (m) => m.content && (m.content as string).toLowerCase().includes(q),
     )
   }, [decryptedMessages, searchQuery])
+
+  const unreadCount = useMemo(() => {
+    if (!myParticipant || decryptedMessages.length === 0) return 0
+    const lastReadAt = new Date(myParticipant.lastReadAt).getTime()
+    return decryptedMessages.filter(
+      (m) => m.userId !== user?.id && new Date(m.createdAt).getTime() > lastReadAt,
+    ).length
+  }, [decryptedMessages, myParticipant, user?.id])
 
   // Typing indicators
   const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
@@ -287,7 +296,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     })
   }
 
-  // Auto-upgrade DM to E2E encryption when both participants have public keys
+  // Auto-upgrade to E2E encryption when all participants have public keys
   useEffect(() => {
     if (!room || !user?.id || isEncrypted || !allParticipantsHaveKeys) return
 
@@ -296,16 +305,22 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       publicKeyJwk: p.user!.publicKey!,
     }))
 
-    createEncryptedRoomKeys(publicKeys, room.id)
+    // Don't pass room.id — avoid caching a locally-generated key that the losing client in a
+    // double-upgrade race would then keep forever. The correct key is loaded via loadRoomKey
+    // after onSettled invalidates the room query.
+    createEncryptedRoomKeys(publicKeys)
       .then((encryptedRoomKeys) => {
         upgradeEncryption({ id: room.id, data: { encryptedRoomKeys } })
       })
       .catch(console.error)
   }, [room?.id, isEncrypted, allParticipantsHaveKeys, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset unread divider when room changes
+  // Reset unread divider when room changes; clear stale key-error state
   useEffect(() => {
-    setTimeout(() => setFirstUnreadId(null), 0)
+    setTimeout(() => {
+      setFirstUnreadId(null)
+      setKeyLoadErrorRoomId(null)
+    }, 0)
   }, [roomId])
 
   // Mark messages as read when at bottom — only when the last message changes
@@ -403,6 +418,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               participants={room.participants}
               presenceMap={presence}
               isEncrypted={isEncrypted}
+              unreadCount={unreadCount}
             />
           ) : (
             <ChatHeader
@@ -410,6 +426,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               user={headerUser}
               presence={headerPresence}
               isEncrypted={isEncrypted}
+              unreadCount={unreadCount}
             />
           )}
         </div>

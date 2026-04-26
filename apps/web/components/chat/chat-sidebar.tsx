@@ -1,6 +1,7 @@
 'use client'
 
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
+import type { NetworkUser } from '@/hooks/use-network-users'
 import { useAuth } from '@/contexts/auth-context'
 import { useCreateDM } from '@/hooks/use-chat-mutations'
 import { useNetworkUsers } from '@/hooks/use-network-users'
@@ -18,6 +19,7 @@ import { useCrypto } from '@/hooks/use-crypto'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
 
 import { useChatSocket } from '@/hooks/use-chat-socket'
+import { useMutedRoomsStore } from '@/lib/store'
 import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
 interface ChatSidebarProps {
@@ -26,9 +28,9 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session, user: currentUser } = useAuth()
+  const { session } = useAuth()
   const currentUserId = session?.user?.id
-  const { createEncryptedRoomKeys, loadRoomKey, hasRoomKey, decrypt } = useCrypto()
+  const { loadRoomKey, hasRoomKey, hasPrivateKey, decrypt } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
   const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
@@ -47,7 +49,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           if (hasRoomKey(room.id)) return
           const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
           const encryptedRoomKey = myParticipant?.encryptedRoomKey
-          if (encryptedRoomKey) {
+          if (encryptedRoomKey && hasPrivateKey) {
             await loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
           }
         }),
@@ -81,36 +83,25 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
 
-  const handleNetworkUserClick = async (user: any) => {
+  const handleNetworkUserClick = async (user: NetworkUser) => {
     try {
       setCreatingDMForUserId(user.id)
 
       // Check if a DM room already exists with this user
       const existingRoom = rooms.find(
-        (room: any) =>
-          room.type === 'DM' && room.participants?.some((p: any) => p.userId === user.id),
+        (room) => room.type === 'DM' && room.participants?.some((p) => p.userId === user.id),
       )
 
       if (existingRoom) {
         // Navigate directly to existing room
         router.push(`/chat/${existingRoom.id}`)
       } else {
-        // Build encrypted room keys for both participants if public keys are available
-        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
-
-        if (currentUser?.publicKey && user.publicKey) {
-          encryptedRoomKeys = await createEncryptedRoomKeys([
-            { userId: currentUserId!, publicKeyJwk: currentUser.publicKey },
-            { userId: user.id, publicKeyJwk: user.publicKey },
-          ])
-        }
-
-        // Create new DM room
+        // Create new DM room unencrypted — the upgrade effect in UnifiedChatWindow
+        // handles E2EE setup once both participants have public keys.
         const response = await createDM({
           data: {
             type: 'DM',
             participantIds: [user.id],
-            encryptedRoomKeys,
           },
         })
         // Navigate to the created room
@@ -126,6 +117,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const { socketRef, presence } = useChatSocket()
   // eslint-disable-next-line react-hooks/refs
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
+  const { isMuted } = useMutedRoomsStore()
 
   // Filter out network users who already have a DM room with messages
   const filteredNetworkUsers = useMemo(() => {
@@ -188,6 +180,16 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
               ? presence.get(otherParticipant.userId)?.status === 1
               : false
 
+            const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+            const isUnread = !!(
+              lastMessage &&
+              lastMessage.userId !== currentUserId &&
+              myParticipant &&
+              new Date(lastMessage.createdAt).getTime() >
+                new Date(myParticipant.lastReadAt).getTime()
+            )
+            const showBadge = isUnread && !isMuted(room.id)
+
             return (
               <button
                 key={room.id}
@@ -208,17 +210,32 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                 </Avatar>
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
-                    <span className="font-medium truncate text-sm min-w-0">{displayName}</span>
-                    {lastMessage && (
-                      <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
-                        {format(new Date(lastMessage.createdAt), 'h:mm a')}
-                      </span>
-                    )}
+                    <span
+                      className={cn(
+                        'truncate text-sm min-w-0',
+                        showBadge ? 'font-semibold' : 'font-medium',
+                      )}
+                    >
+                      {displayName}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {lastMessage && (
+                        <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
+                          {format(new Date(lastMessage.createdAt), 'h:mm a')}
+                        </span>
+                      )}
+                      {showBadge && <span className="size-2 rounded-full bg-primary shrink-0" />}
+                    </div>
                   </div>
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
-                    <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
+                    <div
+                      className={cn(
+                        'text-xs mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden',
+                        showBadge ? 'text-foreground/80' : 'text-muted-foreground opacity-70',
+                      )}
+                    >
                       {lastMessage.type === 'IMAGE' ? (
                         <>
                           <ImageIcon className="size-3 shrink-0" />
