@@ -160,7 +160,7 @@ export function ChatInfoPane({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         title="Delete conversation"
-        description="This will permanently leave and delete this conversation. This cannot be undone."
+        description="This will permanently delete this conversation for you. This cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
         isPending={isLeaving}
@@ -422,18 +422,20 @@ export function ChatInfoPane({
                     <span>{roomMuted ? 'Unmute notifications' : 'Mute notifications'}</span>
                   </Button>
 
-                  {/* Block — stub, disabled */}
-                  <Button
-                    variant="ghost"
-                    disabled
-                    className="justify-start gap-3 w-full text-muted-foreground/50 cursor-not-allowed"
-                  >
-                    <BellOff className="size-4 shrink-0" strokeWidth={1.5} />
-                    <span>Block user</span>
-                    <span className="ml-auto text-[9px] font-mono uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
-                      Soon
-                    </span>
-                  </Button>
+                  {/* Block — DM only, stub */}
+                  {room?.type !== 'GROUP' && (
+                    <Button
+                      variant="ghost"
+                      disabled
+                      className="justify-start gap-3 w-full text-muted-foreground/50 cursor-not-allowed"
+                    >
+                      <BellOff className="size-4 shrink-0" strokeWidth={1.5} />
+                      <span>Block user</span>
+                      <span className="ml-auto text-[9px] font-mono uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
+                        Soon
+                      </span>
+                    </Button>
+                  )}
 
                   <div className="my-1 border-t" />
 
@@ -472,16 +474,18 @@ export function ChatInfoPane({
                     </Button>
                   )}
 
-                  {/* Delete conversation — wired to leaveRoom for DMs */}
-                  <Button
-                    variant="ghost"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    disabled={isLeaving}
-                    className="justify-start gap-3 w-full text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                  >
-                    <Trash2 className="size-4 shrink-0" strokeWidth={1.5} />
-                    <span>Delete conversation</span>
-                  </Button>
+                  {/* Delete conversation — DM only */}
+                  {room?.type !== 'GROUP' && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      disabled={isLeaving}
+                      className="justify-start gap-3 w-full text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="size-4 shrink-0" strokeWidth={1.5} />
+                      <span>Delete conversation</span>
+                    </Button>
+                  )}
                 </div>
               </DetailPane>
             )}
