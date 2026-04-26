@@ -118,10 +118,11 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const room = roomResponse?.data
 
   //for displaying dm chat header
-  const { otherParticipant } = useMemo(() => {
+  const { otherParticipant, myParticipant } = useMemo(() => {
     const others =
       room?.participants?.filter((p: ChatRoomParticipantEntity) => p.userId !== user?.id) ?? []
-    return { otherParticipant: others[0] }
+    const mine = room?.participants?.find((p: ChatRoomParticipantEntity) => p.userId === user?.id)
+    return { otherParticipant: others[0], myParticipant: mine }
   }, [room?.participants, user?.id])
 
   const headerUser = otherParticipant?.user ?? undefined
@@ -172,6 +173,14 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       (m) => m.content && (m.content as string).toLowerCase().includes(q),
     )
   }, [decryptedMessages, searchQuery])
+
+  const unreadCount = useMemo(() => {
+    if (!myParticipant || decryptedMessages.length === 0) return 0
+    const lastReadAt = new Date(myParticipant.lastReadAt).getTime()
+    return decryptedMessages.filter(
+      (m) => m.userId !== user?.id && new Date(m.createdAt).getTime() > lastReadAt,
+    ).length
+  }, [decryptedMessages, myParticipant, user?.id])
 
   // Typing indicators
   const { typingByRoom } = useGlobalTypingIndicator(socket.current, user?.id)
@@ -287,7 +296,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     })
   }
 
-  // Auto-upgrade DM to E2E encryption when both participants have public keys
+  // Auto-upgrade to E2E encryption when all participants have public keys
   useEffect(() => {
     if (!room || !user?.id || isEncrypted || !allParticipantsHaveKeys) return
 
@@ -403,6 +412,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               participants={room.participants}
               presenceMap={presence}
               isEncrypted={isEncrypted}
+              unreadCount={unreadCount}
             />
           ) : (
             <ChatHeader
@@ -410,6 +420,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               user={headerUser}
               presence={headerPresence}
               isEncrypted={isEncrypted}
+              unreadCount={unreadCount}
             />
           )}
         </div>
