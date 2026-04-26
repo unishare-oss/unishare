@@ -31,7 +31,6 @@ import {
   PresignedUploadDtoPurpose,
   PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
-  type UpdateChatRoomDto,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
