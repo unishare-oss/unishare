@@ -306,13 +306,6 @@ export class ChatService {
       throw new ForbiddenException('Only group rooms can be updated')
     }
 
-    const owner = room.participants.reduce((earliest: any, p: any) =>
-      new Date(p.joinedAt) < new Date(earliest.joinedAt) ? p : earliest,
-    )
-    if (owner.userId !== requesterId) {
-      throw new ForbiddenException('Only the group owner can update the room')
-    }
-
     const updated = await this.chatRepository.updateRoom(roomId, dto)
 
     this.eventEmitter.emit('chat.room_updated', {

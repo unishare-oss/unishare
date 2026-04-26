@@ -88,14 +88,7 @@ export function OverviewPane({
     },
   })
 
-  // Determine owner: participant with earliest joinedAt
-  const isOwner =
-    room?.type === 'GROUP' &&
-    currentUserId &&
-    room.participants?.length > 0 &&
-    room.participants.reduce((earliest, p) =>
-      new Date(p.joinedAt) < new Date(earliest.joinedAt) ? p : earliest,
-    ).userId === currentUserId
+  const isOwner = room?.type === 'GROUP' && !!currentUserId
 
   const startEditName = () => {
     setNameValue(room?.name ?? '')
