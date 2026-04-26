@@ -227,3 +227,25 @@ export const useSettingsStore = create<SettingsStore>()(
     { name: 'unishare-settings' },
   ),
 )
+
+interface MutedRoomsStore {
+  mutedRoomIds: string[]
+  toggleMute: (roomId: string) => void
+  isMuted: (roomId: string) => boolean
+}
+
+export const useMutedRoomsStore = create<MutedRoomsStore>()(
+  persist(
+    (set, get) => ({
+      mutedRoomIds: [],
+      toggleMute: (roomId) =>
+        set((s) => ({
+          mutedRoomIds: s.mutedRoomIds.includes(roomId)
+            ? s.mutedRoomIds.filter((id) => id !== roomId)
+            : [...s.mutedRoomIds, roomId],
+        })),
+      isMuted: (roomId) => get().mutedRoomIds.includes(roomId),
+    }),
+    { name: 'unishare-muted-rooms' },
+  ),
+)

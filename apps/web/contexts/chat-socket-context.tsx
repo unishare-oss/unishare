@@ -190,6 +190,35 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       })
     })
 
+    socket.on('room-updated', (payload: { roomId: string; room: any }) => {
+      const { roomId, room } = payload
+      queryClient.setQueryData(getChatControllerGetRoomQueryKey(roomId), (old: any) => {
+        if (!old?.data) return old
+        return { ...old, data: { ...old.data, ...room } }
+      })
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map((r: any) =>
+            r.id === roomId ? { ...r, name: room.name, imageUrl: room.imageUrl } : r,
+          ),
+        }
+      })
+    })
+
+    socket.on('member-removed', (payload: { roomId: string; userId: string }) => {
+      const { roomId, userId } = payload
+      if (userId === session?.user?.id) {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        // Redirect handled in the component via the invalidation + navigation
+        window.location.href = '/chat'
+      } else {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      }
+    })
+
     socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
       setPresence((prev) => {
         const next = new Map(prev)
