@@ -143,3 +143,40 @@ A Docker Compose file is included for local PostgreSQL (`docker-compose.yml`). A
 - New API modules follow the NestJS module pattern: `module.ts`, `controller.ts`, `service.ts`, `dto/`.
 - New frontend features go in `src/features/<feature>/` for hooks/logic and `src/components/` for shared UI.
 - Swagger decorators (`@ApiOperation`, `@ApiResponse`) are required on all new controller endpoints so `api:sync` picks them up correctly.
+
+## Flutter Mobile Agent Logging (`apps/mobile/`)
+
+Every session touching `apps/mobile/` must be logged in `docs/agent-log.md`. This is mandatory for all team members — no exceptions.
+
+### At the start of every mobile session
+
+Before doing any work, ask the user for their name if not already known, then immediately append this header to `docs/agent-log.md`:
+
+```
+---
+Date: YYYY-MM-DD HH:MM
+Member: [member name]
+Agent: [flutter-architect | flutter-engineer | flutter-qa-engineer | flutter-security-reviewer]
+Task: [one-line description of what this session will accomplish]
+Prompt: [the exact task or instruction the member gave]
+```
+
+### At the end of every mobile session
+
+Before closing, append the outcome block directly after the header:
+
+```
+Outcome: [what was completed]
+Decisions: [non-obvious choices made and why]
+Handoff: [what the next agent or reviewer needs to know]
+Review: [PENDING | APPROVED by <name> | CHANGES REQUESTED by <name>]
+```
+
+The Stop hook will automatically append the changed file list after this block.
+
+### Rules
+
+- Log every session, even if no files were changed (e.g., planning, review-only sessions)
+- If switching agent roles mid-session, close the current entry and open a new one
+- The agent that writes code must not be the agent listed under Review: APPROVED
+- For Plan Mode sessions, paste the full task breakdown under the Prompt field
