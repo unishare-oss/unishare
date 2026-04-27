@@ -16,14 +16,14 @@ import type { ApiPost } from '@/lib/api-types'
 const typeLabel: Record<string, string> = {
   NOTE: 'NOTE',
   OLD_QUESTION: 'PAST EXAM',
-  ASSIGNMENT: 'ASSIGNMENT',
+  EXERCISE: 'EXERCISE',
 }
 
 export function TypeBadge({ type }: { type: string }) {
   const colorClass =
     type === 'NOTE'
       ? 'border-info text-info'
-      : type === 'ASSIGNMENT'
+      : type === 'EXERCISE'
         ? 'border-green-500 text-green-500'
         : 'border-amber text-amber'
   return (

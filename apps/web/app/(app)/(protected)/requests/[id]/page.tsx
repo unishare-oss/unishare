@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils'
 const POST_TYPE_LABEL: Record<string, string> = {
   NOTE: 'Note',
   OLD_QUESTION: 'Past Q',
-  ASSIGNMENT: 'Assignment',
+  EXERCISE: 'Exercise',
 }
 
 export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {

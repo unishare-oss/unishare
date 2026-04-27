@@ -17,13 +17,13 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/compone
 
 export type { SortType }
 
-export const typeFilters: TypeFilter[] = ['ALL', PostType.NOTE, PostType.ASSIGNMENT]
+export const typeFilters: TypeFilter[] = ['ALL', PostType.NOTE, PostType.EXERCISE]
 
 const typeFilterLabel: Record<TypeFilter, string> = {
   ALL: 'ALL',
   NOTE: 'NOTES',
   OLD_QUESTION: 'PAST EXAMS',
-  ASSIGNMENT: 'ASSIGNMENTS',
+  EXERCISE: 'EXERCISES',
 }
 
 interface FilterStripProps {
