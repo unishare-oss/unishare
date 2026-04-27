@@ -13,22 +13,22 @@ interface UseChatMessageActionsParams {
   roomId: string | undefined
   isEncrypted?: boolean
   user: UserProfileEntity | null | undefined
-  scrollToBottom: (behavior?: ScrollBehavior) => void
-  messagesContainerRef: RefObject<HTMLDivElement | null>
-  scrollContainerRef: RefObject<HTMLDivElement | null>
-  hasNextPage: boolean
-  fetchNextPage: () => Promise<unknown>
+  scrollToBottom?: (behavior?: ScrollBehavior) => void
+  messagesContainerRef?: RefObject<HTMLDivElement | null>
+  scrollContainerRef?: RefObject<HTMLDivElement | null>
+  hasNextPage?: boolean
+  fetchNextPage?: () => Promise<unknown>
 }
 
 export function useChatMessageActions({
   roomId,
   isEncrypted,
   user,
-  scrollToBottom,
+  scrollToBottom = () => {},
   messagesContainerRef,
   scrollContainerRef,
-  hasNextPage,
-  fetchNextPage,
+  hasNextPage = false,
+  fetchNextPage = async () => {},
 }: UseChatMessageActionsParams) {
   const [content, setContent] = useState('')
   const [editingMessage, setEditingMessage] = useState<ChatMessageEntity | null>(null)
@@ -71,7 +71,7 @@ export function useChatMessageActions({
       const encryptedContent = await prepareContent()
       if (encryptedContent === null) return
       const trimmed = messageContent.trim()
-      const isLink = /^https?:\/\/[^\s<>"{}|\\^`[\]]+$/i.test(trimmed)
+      const isLink = /^https?:\/\/\S+$/i.test(trimmed)
       sendMessage({
         id: roomId,
         data: {
@@ -132,10 +132,10 @@ export function useChatMessageActions({
   const handleScrollToMessage = useCallback(
     async (messageId: string) => {
       const tryScroll = (scrollDelay = 500) => {
-        const el = messagesContainerRef.current?.querySelector(
+        const el = messagesContainerRef?.current?.querySelector(
           `[data-message-id="${messageId}"]`,
         ) as HTMLElement | null
-        if (!el || !scrollContainerRef.current) return false
+        if (!el || !scrollContainerRef?.current) return false
         el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         setTimeout(() => {
           setHighlightedMessageId(messageId)

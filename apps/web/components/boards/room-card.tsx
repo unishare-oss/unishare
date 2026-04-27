@@ -15,6 +15,7 @@ import {
   Trash2,
   Check,
   X,
+  Share2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Label } from '@/components/ui/label'
+import { ShareToChatDialog } from '@/components/boards/share-to-chat-popover'
 
 interface RoomCardProps {
   room: {
@@ -91,6 +93,7 @@ export function RoomCard({
   const [passwordValue, setPasswordValue] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [passwordPending, setPasswordPending] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const handleCardClick = () => {
     router.push(`/canvas/${room.slug}`)
@@ -353,6 +356,10 @@ export function RoomCard({
                   <Link2 className="size-4 mr-2" strokeWidth={1.5} />
                   Copy link
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShareOpen(true)}>
+                  <Share2 className="size-4 mr-2" strokeWidth={1.5} />
+                  Share to Chat
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleRenameOpen}>
                   <Pencil className="size-4 mr-2" strokeWidth={1.5} />
                   Rename
@@ -534,6 +541,11 @@ export function RoomCard({
           </div>
         </DialogContent>
       </Dialog>
+      <ShareToChatDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        room={{ slug: room.slug, title: room.title }}
+      />
       {/* Delete confirmation dialog */}{' '}
       <ConfirmDialog
         open={deleteOpen}
