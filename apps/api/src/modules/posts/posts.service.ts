@@ -85,8 +85,6 @@ export class PostsService {
       // void this.aiSummaryService.summarizePost(post.id)
     }
 
-    void this.aiSummaryService.screenContent(post.id)
-
     return created ?? post
   }
 
