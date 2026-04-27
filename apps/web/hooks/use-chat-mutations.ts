@@ -181,6 +181,7 @@ export function useSendMessage({ roomId, user }: UseSendMessageOptions) {
                     msg.id === context.tempId
                       ? {
                           id: realMessage.id,
+                          userId: realMessage.userId,
                           content: realMessage.content,
                           type: realMessage.type,
                           createdAt: realMessage.createdAt,
