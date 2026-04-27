@@ -29,6 +29,7 @@ export class SendMessageDto {
   @IsOptional()
   fileName?: string
 
+  // reserved for future use — no client currently sends this field
   @ApiPropertyOptional()
   @IsUrl()
   @IsOptional()
