@@ -47,6 +47,8 @@ export class PostsController {
   ) {}
 
   @Post()
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiCreatedResponse({ type: PostDetailEntity })
   @ResponseMessage('Post created successfully')
   create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
@@ -208,6 +210,8 @@ export class PostsController {
   }
 
   @Post(':id/summarize')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Summary generation started')
   summarize(@Param('id') id: string, @Session() session: UserSession) {

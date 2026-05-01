@@ -65,7 +65,8 @@ export class ChatController {
   }
 
   @Post('rooms/:id/messages')
-  @UseGuards(ChatMemberGuard)
+  @UseGuards(UserThrottlerGuard, ChatMemberGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOkResponse({ type: ChatMessageEntity })
   @ResponseMessage('Message sent successfully')
   sendMessage(
