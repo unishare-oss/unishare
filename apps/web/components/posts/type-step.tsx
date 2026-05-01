@@ -26,7 +26,7 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const [disclaimerChecked, setDisclaimerChecked] = useState(false)
 
-  function handleAssignmentClick() {
+  function handleExerciseClick() {
     setDisclaimerChecked(false)
     setShowDisclaimer(true)
   }
@@ -86,7 +86,7 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           </div>
         </button>
         <button
-          onClick={handleAssignmentClick}
+          onClick={handleExerciseClick}
           className={cn(
             'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
             postType === 'EXERCISE'
@@ -111,7 +111,7 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
             />
           </div>
           <div>
-            <p className="text-base font-medium text-foreground">Assignment</p>
+            <p className="text-base font-medium text-foreground">Exercise</p>
             <p className="text-[13px] text-text-muted mt-0.5">
               Practice worksheets and problem sets
             </p>
