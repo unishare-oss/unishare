@@ -1,6 +1,7 @@
 import { Injectable, OnApplicationBootstrap, Logger, Inject } from '@nestjs/common'
 import { Server } from 'socket.io'
 import Redis from 'ioredis'
+import { CONNECT_SCRIPT, DISCONNECT_SCRIPT } from './presence.scripts'
 
 @Injectable()
 export class PresenceService implements OnApplicationBootstrap {
@@ -22,26 +23,30 @@ export class PresenceService implements OnApplicationBootstrap {
   }
 
   async connect(userId: string): Promise<void> {
-    const key = `presence:${userId}:connections`
-    const count = await this.redis.incr(key)
+    const count = (await this.redis.eval(
+      CONNECT_SCRIPT,
+      2,
+      `presence:${userId}:connections`,
+      `presence:${userId}:lastSeen`,
+    )) as number
 
     if (count === 1) {
-      // First connection — user just came online
-      await this.redis.del(`presence:${userId}:lastSeen`)
       this.broadcast(userId, 1, null)
       this.logger.debug(`User ${userId} is now online`)
     }
   }
 
   async disconnect(userId: string): Promise<void> {
-    const key = `presence:${userId}:connections`
-    const count = await this.redis.decr(key)
+    const lastSeen = Date.now()
+    const wentOffline = (await this.redis.eval(
+      DISCONNECT_SCRIPT,
+      2,
+      `presence:${userId}:connections`,
+      `presence:${userId}:lastSeen`,
+      lastSeen.toString(),
+    )) as number
 
-    if (count <= 0) {
-      // Last connection dropped — user is offline
-      await this.redis.set(key, 0) // clamp: prevent negative drift
-      const lastSeen = Date.now()
-      await this.redis.set(`presence:${userId}:lastSeen`, lastSeen)
+    if (wentOffline) {
       this.broadcast(userId, 0, lastSeen)
       this.logger.debug(`User ${userId} is now offline`)
     }
@@ -56,6 +61,14 @@ export class PresenceService implements OnApplicationBootstrap {
       status: 0,
       lastSeen: lastSeen ? parseInt(lastSeen, 10) : undefined,
     }
+  }
+
+  async getStatuses(
+    userIds: string[],
+  ): Promise<{ userId: string; status: 0 | 1; lastSeen?: number }[]> {
+    return Promise.all(
+      userIds.map(async (userId) => ({ userId, ...(await this.getStatus(userId)) })),
+    )
   }
 
   private broadcast(userId: string, status: 0 | 1, lastSeen: number | null) {
