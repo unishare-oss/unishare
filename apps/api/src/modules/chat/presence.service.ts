@@ -1,11 +1,14 @@
 import { Injectable, OnApplicationBootstrap, Logger, Inject } from '@nestjs/common'
 import { Server } from 'socket.io'
 import Redis from 'ioredis'
+import { CONNECT_SCRIPT, DISCONNECT_SCRIPT } from './presence.scripts'
 
 @Injectable()
 export class PresenceService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PresenceService.name)
   private server: Server
+  private connectSha: string
+  private disconnectSha: string
 
   constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
@@ -19,29 +22,38 @@ export class PresenceService implements OnApplicationBootstrap {
     // are added to Redis later, replace flushdb() with a targeted SCAN+DEL on presence:* keys.
     await this.redis.flushdb()
     this.logger.log('Cleared all presence data on startup')
+
+    // Load Lua scripts once — EVALSHA sends only the SHA on every subsequent call instead of the full source.
+    this.connectSha = (await this.redis.script('LOAD', CONNECT_SCRIPT)) as string
+    this.disconnectSha = (await this.redis.script('LOAD', DISCONNECT_SCRIPT)) as string
+    this.logger.log('Loaded presence Lua scripts')
   }
 
   async connect(userId: string): Promise<void> {
-    const key = `presence:${userId}:connections`
-    const count = await this.redis.incr(key)
+    const count = (await this.redis.evalsha(
+      this.connectSha,
+      2,
+      `presence:${userId}:connections`,
+      `presence:${userId}:lastSeen`,
+    )) as number
 
     if (count === 1) {
-      // First connection — user just came online
-      await this.redis.del(`presence:${userId}:lastSeen`)
       this.broadcast(userId, 1, null)
       this.logger.debug(`User ${userId} is now online`)
     }
   }
 
   async disconnect(userId: string): Promise<void> {
-    const key = `presence:${userId}:connections`
-    const count = await this.redis.decr(key)
+    const lastSeen = Date.now()
+    const wentOffline = (await this.redis.evalsha(
+      this.disconnectSha,
+      2,
+      `presence:${userId}:connections`,
+      `presence:${userId}:lastSeen`,
+      lastSeen.toString(),
+    )) as number
 
-    if (count <= 0) {
-      // Last connection dropped — user is offline
-      await this.redis.set(key, 0) // clamp: prevent negative drift
-      const lastSeen = Date.now()
-      await this.redis.set(`presence:${userId}:lastSeen`, lastSeen)
+    if (wentOffline) {
       this.broadcast(userId, 0, lastSeen)
       this.logger.debug(`User ${userId} is now offline`)
     }
@@ -56,6 +68,14 @@ export class PresenceService implements OnApplicationBootstrap {
       status: 0,
       lastSeen: lastSeen ? parseInt(lastSeen, 10) : undefined,
     }
+  }
+
+  async getStatuses(
+    userIds: string[],
+  ): Promise<{ userId: string; status: 0 | 1; lastSeen?: number }[]> {
+    return Promise.all(
+      userIds.map(async (userId) => ({ userId, ...(await this.getStatus(userId)) })),
+    )
   }
 
   private broadcast(userId: string, status: 0 | 1, lastSeen: number | null) {
