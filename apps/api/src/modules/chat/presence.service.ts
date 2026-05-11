@@ -7,6 +7,8 @@ import { CONNECT_SCRIPT, DISCONNECT_SCRIPT } from './presence.scripts'
 export class PresenceService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PresenceService.name)
   private server: Server
+  private connectSha: string
+  private disconnectSha: string
 
   constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
@@ -20,11 +22,16 @@ export class PresenceService implements OnApplicationBootstrap {
     // are added to Redis later, replace flushdb() with a targeted SCAN+DEL on presence:* keys.
     await this.redis.flushdb()
     this.logger.log('Cleared all presence data on startup')
+
+    // Load Lua scripts once — EVALSHA sends only the SHA on every subsequent call instead of the full source.
+    this.connectSha = (await this.redis.script('LOAD', CONNECT_SCRIPT)) as string
+    this.disconnectSha = (await this.redis.script('LOAD', DISCONNECT_SCRIPT)) as string
+    this.logger.log('Loaded presence Lua scripts')
   }
 
   async connect(userId: string): Promise<void> {
-    const count = (await this.redis.eval(
-      CONNECT_SCRIPT,
+    const count = (await this.redis.evalsha(
+      this.connectSha,
       2,
       `presence:${userId}:connections`,
       `presence:${userId}:lastSeen`,
@@ -38,8 +45,8 @@ export class PresenceService implements OnApplicationBootstrap {
 
   async disconnect(userId: string): Promise<void> {
     const lastSeen = Date.now()
-    const wentOffline = (await this.redis.eval(
-      DISCONNECT_SCRIPT,
+    const wentOffline = (await this.redis.evalsha(
+      this.disconnectSha,
       2,
       `presence:${userId}:connections`,
       `presence:${userId}:lastSeen`,
