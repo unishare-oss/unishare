@@ -13,6 +13,7 @@ import { PostFeed } from '@/components/feed/post-feed'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { ShareDialog } from '@/components/reading-lists/share-dialog'
+import { EmptyState } from '@/components/shared/empty-state'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function ListPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,14 +22,20 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [shareOpen, setShareOpen] = useState(false)
   const { session } = useAuth()
 
-  const { data: list, refetch: refetchList } = useReadingListsControllerFindOne(id, {
+  const {
+    data: list,
+    refetch: refetchList,
+    error: listError,
+  } = useReadingListsControllerFindOne(id, {
     query: { select: (r) => r.data },
   })
+
+  const isPrivate = (listError as any)?.response?.status === 403
 
   const { data: postsRaw, isLoading } = useReadingListsControllerGetListPosts(
     id,
     { page, limit: 20 },
-    { query: { placeholderData: keepPreviousData } },
+    { query: { placeholderData: keepPreviousData, enabled: !isPrivate } },
   )
   const postsData = postsRaw?.data as PaginatedPostEntity | undefined
 
@@ -66,14 +73,21 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         }
       />
       <div className="flex-1 bg-card">
-        <PostFeed
-          posts={postsData?.items ?? []}
-          loading={isLoading}
-          page={postsData?.page ?? 1}
-          totalPages={postsData?.totalPages ?? 1}
-          onPageChange={setPage}
-          emptyMessage="No posts in this list yet."
-        />
+        {isPrivate ? (
+          <EmptyState
+            message="This reading list is private."
+            description="Only the owner can view its contents."
+          />
+        ) : (
+          <PostFeed
+            posts={postsData?.items ?? []}
+            loading={isLoading}
+            page={postsData?.page ?? 1}
+            totalPages={postsData?.totalPages ?? 1}
+            onPageChange={setPage}
+            emptyMessage="No posts in this list yet."
+          />
+        )}
       </div>
 
       {list && (
