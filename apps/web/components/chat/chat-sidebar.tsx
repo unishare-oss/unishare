@@ -131,7 +131,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const presence = useMemo(() => {
     const map = new Map<string, { status: 0 | 1; lastSeen?: number }>()
-    presenceResponse?.data?.forEach((e: any) => map.set(e.userId, e))
+    presenceResponse?.data?.forEach((e) => map.set(e.userId, e))
     return map
   }, [presenceResponse])
 

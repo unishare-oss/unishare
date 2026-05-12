@@ -14,6 +14,7 @@ import { UpdateChatRoomDto } from './dto/update-chat-room.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { UpgradeEncryptionDto } from './dto/upgrade-encryption.dto'
 import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
+import { PresenceStatusDto } from './dto/presence-status.dto'
 import { LinkPreviewResponseDto } from './dto/link-preview-response.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
@@ -29,7 +30,7 @@ export class ChatController {
 
   @Get('presence')
   @ApiOperation({ summary: 'Get presence status for a list of users' })
-  @ApiOkResponse({ description: 'Presence statuses' })
+  @ApiOkResponse({ type: [PresenceStatusDto] })
   @ResponseMessage('Presence fetched successfully')
   getPresence(@Query('userIds') userIds: string, @Session() _session: UserSession) {
     return this.presenceService.getStatuses(userIds ? userIds.split(',') : [])
