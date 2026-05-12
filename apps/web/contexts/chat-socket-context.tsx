@@ -9,6 +9,7 @@ import {
   getChatControllerGetRoomsQueryKey,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomQueryKey,
+  getChatControllerGetPresenceQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import {
   addMessageToInfiniteCache,
@@ -18,16 +19,10 @@ import {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-export interface PresenceEntry {
-  status: 0 | 1
-  lastSeen?: number
-}
-
 export interface ChatSocketContextValue {
   socketRef: RefObject<Socket | null>
   isConnected: boolean
   joinRoom: (roomId: string) => void
-  presence: Map<string, PresenceEntry>
 }
 
 export const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
@@ -37,7 +32,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [presence, setPresence] = useState<Map<string, PresenceEntry>>(new Map())
 
   useEffect(() => {
     if (!session) return
@@ -220,11 +214,20 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
-      setPresence((prev) => {
-        const next = new Map(prev)
-        next.set(payload.userId, { status: payload.status, lastSeen: payload.lastSeen })
-        return next
-      })
+      queryClient.setQueriesData(
+        { queryKey: getChatControllerGetPresenceQueryKey() },
+        (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((entry: any) =>
+              entry.userId === payload.userId
+                ? { ...entry, status: payload.status, lastSeen: payload.lastSeen }
+                : entry,
+            ),
+          }
+        },
+      )
     })
 
     socket.on('error', (error: any) => {
@@ -248,7 +251,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     socketRef,
     isConnected,
     joinRoom,
-    presence,
   }
 
   return <ChatSocketContext.Provider value={value}>{children}</ChatSocketContext.Provider>

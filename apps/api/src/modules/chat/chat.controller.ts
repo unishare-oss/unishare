@@ -5,6 +5,7 @@ import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ChatService } from './chat.service'
+import { PresenceService } from './presence.service'
 import { CreateRoomDto } from './dto/create-room.dto'
 import { InviteMembersDto } from './dto/invite-members.dto'
 import { SendMessageDto } from './dto/send-message.dto'
@@ -13,6 +14,7 @@ import { UpdateChatRoomDto } from './dto/update-chat-room.dto'
 import { ListMessagesQueryDto } from './dto/list-messages-query.dto'
 import { UpgradeEncryptionDto } from './dto/upgrade-encryption.dto'
 import { DeleteMessageResponseDto } from './dto/delete-message-response.dto'
+import { PresenceStatusDto } from './dto/presence-status.dto'
 import { LinkPreviewResponseDto } from './dto/link-preview-response.dto'
 import { ChatRoomEntity } from './entities/chat-room.entity'
 import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-message.entity'
@@ -21,7 +23,18 @@ import { ChatMemberGuard } from './guards/chat-member.guard'
 @ApiTags('chat')
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly presenceService: PresenceService,
+  ) {}
+
+  @Get('presence')
+  @ApiOperation({ summary: 'Get presence status for a list of users' })
+  @ApiOkResponse({ type: [PresenceStatusDto] })
+  @ResponseMessage('Presence fetched successfully')
+  getPresence(@Query('userIds') userIds: string, @Session() _session: UserSession) {
+    return this.presenceService.getStatuses(userIds ? userIds.split(',') : [])
+  }
 
   @Get('rooms')
   @ApiOkResponse({ type: [ChatRoomEntity] })

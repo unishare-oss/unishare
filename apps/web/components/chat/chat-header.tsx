@@ -5,8 +5,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
-import type { PresenceEntry } from '@/contexts/chat-socket-context'
 import type { ChatRoomParticipantEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+
+interface PresenceEntry {
+  status: 0 | 1
+  lastSeen?: number
+}
 
 interface DMHeaderProps {
   mode: 'dm'

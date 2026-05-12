@@ -73,9 +73,30 @@ export class PresenceService implements OnApplicationBootstrap {
   async getStatuses(
     userIds: string[],
   ): Promise<{ userId: string; status: 0 | 1; lastSeen?: number }[]> {
-    return Promise.all(
-      userIds.map(async (userId) => ({ userId, ...(await this.getStatus(userId)) })),
-    )
+    if (userIds.length === 0) return []
+
+    const pipeline = this.redis.pipeline()
+    for (const userId of userIds) {
+      pipeline.get(`presence:${userId}:connections`)
+      pipeline.get(`presence:${userId}:lastSeen`)
+    }
+    const results = await pipeline.exec()
+    if (!results) return userIds.map((userId) => ({ userId, status: 0 as const }))
+
+    return userIds.map((userId, i) => {
+      const [connErr, connVal] = results[i * 2]
+      const [, lastSeenVal] = results[i * 2 + 1]
+
+      const count = connErr ? 0 : parseInt((connVal as string | null) ?? '0', 10)
+      if (count > 0) return { userId, status: 1 as const }
+
+      const lastSeen = lastSeenVal as string | null
+      return {
+        userId,
+        status: 0 as const,
+        ...(lastSeen ? { lastSeen: parseInt(lastSeen, 10) } : {}),
+      }
+    })
   }
 
   private broadcast(userId: string, status: 0 | 1, lastSeen: number | null) {

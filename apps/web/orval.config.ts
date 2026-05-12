@@ -28,6 +28,9 @@ export default defineConfig({
           ChatController_getLinkPreview: {
             query: { useInfinite: false },
           },
+          ChatController_getPresence: {
+            query: { useInfinite: false },
+          },
           TagsController_autocomplete: {
             query: { useInfinite: false },
           },

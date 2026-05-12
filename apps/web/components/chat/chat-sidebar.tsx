@@ -1,6 +1,9 @@
 'use client'
 
-import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
+import {
+  useChatControllerGetRooms,
+  useChatControllerGetPresence,
+} from '@/src/lib/api/generated/chat/chat'
 import type { NetworkUser } from '@/hooks/use-network-users'
 import { useAuth } from '@/contexts/auth-context'
 import { useCreateDM } from '@/hooks/use-chat-mutations'
@@ -114,10 +117,23 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
   }
 
-  const { socketRef, presence } = useChatSocket()
+  const { socketRef } = useChatSocket()
   // eslint-disable-next-line react-hooks/refs
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
   const { isMuted } = useMutedRoomsStore()
+
+  const networkUserIds = useMemo(() => networkUsers.map((u) => u.id).sort(), [networkUsers])
+
+  const { data: presenceResponse } = useChatControllerGetPresence(
+    { userIds: networkUserIds.join(',') },
+    { query: { enabled: networkUserIds.length > 0 } },
+  )
+
+  const presence = useMemo(() => {
+    const map = new Map<string, { status: 0 | 1; lastSeen?: number }>()
+    presenceResponse?.data?.forEach((e) => map.set(e.userId, e))
+    return map
+  }, [presenceResponse])
 
   // Filter out network users who already have a DM room with messages
   const filteredNetworkUsers = useMemo(() => {
