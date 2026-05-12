@@ -81,12 +81,16 @@ export class PresenceService implements OnApplicationBootstrap {
       pipeline.get(`presence:${userId}:lastSeen`)
     }
     const results = await pipeline.exec()
+    if (!results) return userIds.map((userId) => ({ userId, status: 0 as const }))
 
     return userIds.map((userId, i) => {
-      const count = parseInt((results![i * 2][1] as string | null) ?? '0', 10)
+      const [connErr, connVal] = results[i * 2]
+      const [, lastSeenVal] = results[i * 2 + 1]
+
+      const count = connErr ? 0 : parseInt((connVal as string | null) ?? '0', 10)
       if (count > 0) return { userId, status: 1 as const }
 
-      const lastSeen = results![i * 2 + 1][1] as string | null
+      const lastSeen = lastSeenVal as string | null
       return {
         userId,
         status: 0 as const,

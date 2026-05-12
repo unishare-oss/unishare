@@ -127,7 +127,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   }, [room?.participants, user?.id])
 
   const participantIds = useMemo(
-    () => room?.participants?.map((p: ChatRoomParticipantEntity) => p.userId) ?? [],
+    () => room?.participants?.map((p: ChatRoomParticipantEntity) => p.userId).sort() ?? [],
     [room?.participants],
   )
 

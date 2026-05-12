@@ -122,7 +122,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
   const { isMuted } = useMutedRoomsStore()
 
-  const networkUserIds = useMemo(() => networkUsers.map((u) => u.id), [networkUsers])
+  const networkUserIds = useMemo(() => networkUsers.map((u) => u.id).sort(), [networkUsers])
 
   const { data: presenceResponse } = useChatControllerGetPresence(
     { userIds: networkUserIds.join(',') },
