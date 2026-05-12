@@ -8,6 +8,7 @@ import {
   useChatControllerGetRoom,
   useChatControllerMarkAsRead,
   useChatControllerUpgradeEncryption,
+  useChatControllerGetPresence,
   getChatControllerGetRoomQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import type {
@@ -89,7 +90,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const [importKeysOpen, setImportKeysOpen] = useState(false)
   const [keyLoadErrorRoomId, setKeyLoadErrorRoomId] = useState<string | null>(null)
   const keyLoadError = keyLoadErrorRoomId === roomId
-  const { presence, isConnected, socketRef: socket } = useChatSocket()
+  const { isConnected, socketRef: socket } = useChatSocket()
   const router = useRouter()
   const queryClient = useQueryClient()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -125,9 +126,25 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     return { otherParticipant: others[0], myParticipant: mine }
   }, [room?.participants, user?.id])
 
+  const participantIds = useMemo(
+    () => room?.participants?.map((p: ChatRoomParticipantEntity) => p.userId) ?? [],
+    [room?.participants],
+  )
+
+  const { data: presenceResponse } = useChatControllerGetPresence(
+    { userIds: participantIds.join(',') },
+    { query: { enabled: participantIds.length > 0 } },
+  )
+
+  const presenceMap = useMemo(() => {
+    const map = new Map<string, { status: 0 | 1; lastSeen?: number }>()
+    presenceResponse?.data?.forEach((e: any) => map.set(e.userId, e))
+    return map
+  }, [presenceResponse])
+
   const headerUser = otherParticipant?.user ?? undefined
   const headerPresence = otherParticipant?.userId
-    ? presence.get(otherParticipant.userId)
+    ? presenceMap.get(otherParticipant.userId)
     : undefined
   // undefined while room is loading — prevents false ciphertext flash via the unencrypted fast-path
   const isEncrypted = room
@@ -416,7 +433,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               groupName={room.name}
               groupImage={room.imageUrl}
               participants={room.participants}
-              presenceMap={presence}
+              presenceMap={presenceMap}
               isEncrypted={isEncrypted}
               unreadCount={unreadCount}
             />
