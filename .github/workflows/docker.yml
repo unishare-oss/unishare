@@ -81,6 +81,7 @@ jobs:
           file: Dockerfile.api
           push: true
           no-cache: ${{ inputs.no_cache == true }}
+          platforms: linux/amd64,linux/arm64
           tags: ghcr.io/${{ env.OWNER }}/unishare-api:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
@@ -119,6 +120,7 @@ jobs:
           file: Dockerfile.web
           push: true
           no-cache: ${{ inputs.no_cache == true }}
+          platforms: linux/amd64,linux/arm64
           tags: ghcr.io/${{ env.OWNER }}/unishare-web:latest
           build-args: |
             API_URL=${{ secrets.API_URL }}
