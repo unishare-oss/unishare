@@ -12,6 +12,7 @@ import {
 } from '@/src/lib/api/generated/notifications/notifications'
 import type { NotificationEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { PageHeader } from '@/components/shared/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 const NOTIFICATION_META: Record<string, { label: string; color: string }> = {
@@ -28,7 +29,7 @@ export default function NotificationsPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  const { data } = useNotificationsControllerFindAll({
+  const { data, isLoading } = useNotificationsControllerFindAll({
     query: { select: (r) => r.data },
   })
 
@@ -76,7 +77,7 @@ export default function NotificationsPage() {
         <div className="max-w-2xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+              {isLoading ? 'Loading…' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </h2>
             {unreadCount > 0 && (
               <button
@@ -90,7 +91,26 @@ export default function NotificationsPage() {
             )}
           </div>
 
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col border border-border rounded-[6px] overflow-hidden">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'flex items-start gap-3 px-5 py-4',
+                    i < 4 && 'border-b border-border',
+                  )}
+                >
+                  <Skeleton className="mt-1.5 size-1.5 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-3 w-14 shrink-0 mt-0.5" />
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <Bell className="size-10 text-text-muted mb-4" strokeWidth={1} />
               <p className="text-sm text-text-muted">No notifications yet.</p>
