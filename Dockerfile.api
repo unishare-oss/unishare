@@ -1,4 +1,4 @@
-FROM node:26-alpine AS base
+FROM --platform=$BUILDPLATFORM node:26-alpine AS base
 RUN npm install -g pnpm@10.29.2
 
 # build
