@@ -56,7 +56,7 @@ jobs:
     name: Build API image
     needs: changes
     if: (github.event_name == 'push' && needs.changes.outputs.api == 'true') || inputs.force_api
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -81,21 +81,16 @@ jobs:
           file: Dockerfile.api
           push: true
           no-cache: ${{ inputs.no_cache == true }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           tags: ghcr.io/${{ env.OWNER }}/unishare-api:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
-
-      - name: Trigger Coolify deploy (API)
-        run: |
-          curl --fail -X GET "${{ secrets.COOLIFY_WEBHOOK_API }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
 
   build-web:
     name: Build Web image
     needs: changes
     if: (github.event_name == 'push' && needs.changes.outputs.web == 'true') || inputs.force_web
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -120,15 +115,10 @@ jobs:
           file: Dockerfile.web
           push: true
           no-cache: ${{ inputs.no_cache == true }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           tags: ghcr.io/${{ env.OWNER }}/unishare-web:latest
           build-args: |
             API_URL=${{ secrets.API_URL }}
             APP_URL=${{ secrets.APP_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
-
-      - name: Trigger Coolify deploy (Web)
-        run: |
-          curl --fail -X GET "${{ secrets.COOLIFY_WEBHOOK_WEB }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"

@@ -1,13 +1,22 @@
 FROM --platform=$BUILDPLATFORM node:26-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN npm install -g corepack && corepack enable && corepack prepare pnpm@10.29.2 --activate
+RUN npm install -g corepack && corepack enable && corepack prepare pnpm@10.29.2 --activate && \
+    pnpm config set store-dir /pnpm/store
 
-# build
 FROM base AS builder
 WORKDIR /app
-COPY . .
-RUN pnpm install --frozen-lockfile
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/types/package.json ./packages/types/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY apps/web ./apps/web
+COPY packages ./packages
 
 ARG API_URL
 ENV API_URL=$API_URL
@@ -20,7 +29,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter web api:generate
 RUN pnpm --filter web build
 
-# prod
 FROM node:26-alpine AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

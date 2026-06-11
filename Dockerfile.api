@@ -1,5 +1,5 @@
 FROM --platform=$BUILDPLATFORM node:26-alpine AS base
-RUN npm install -g pnpm@10.29.2
+RUN npm install -g pnpm@10.29.2 && pnpm config set store-dir /pnpm/store
 
 # build
 FROM base AS builder
@@ -11,7 +11,8 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/types/package.json ./packages/types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY apps/api ./apps/api
 COPY packages ./packages
@@ -38,7 +39,8 @@ COPY apps/api/prisma ./apps/api/prisma
 
 ENV NODE_ENV=production
 ENV npm_config_ignore_scripts=true
-RUN pnpm install --prod --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
