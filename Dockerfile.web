@@ -1,4 +1,4 @@
-FROM node:26-alpine AS base
+FROM --platform=$BUILDPLATFORM node:26-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN npm install -g corepack && corepack enable && corepack prepare pnpm@10.29.2 --activate
