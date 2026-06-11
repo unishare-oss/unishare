@@ -126,7 +126,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { data: presenceResponse } = useChatControllerGetPresence(
     { userIds: networkUserIds.join(',') },
-    { query: { enabled: networkUserIds.length > 0 } },
+    // refetchInterval: offline-by-TTL (api pod crash) emits no broadcast, so the cache needs periodic self-heal
+    { query: { enabled: networkUserIds.length > 0, refetchInterval: 60_000 } },
   )
 
   const presence = useMemo(() => {

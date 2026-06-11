@@ -133,7 +133,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   const { data: presenceResponse } = useChatControllerGetPresence(
     { userIds: participantIds.join(',') },
-    { query: { enabled: participantIds.length > 0 } },
+    { query: { enabled: participantIds.length > 0, refetchInterval: 60_000 } },
   )
 
   const presenceMap = useMemo(() => {

@@ -27,23 +27,38 @@ export interface ChatSocketContextValue {
 
 export const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
 
+const HEARTBEAT_INTERVAL_MS = 30_000
+
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
+  const joinedRoomsRef = useRef<Set<string>>(new Set())
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
     if (!session) return
 
+    // websocket-only: the HTTP long-polling fallback breaks behind a
+    // round-robin load balancer without sticky sessions.
     const socket = io(`${SOCKET_URL}/chat`, {
       withCredentials: true,
+      transports: ['websocket'],
     })
 
     socketRef.current = socket
 
+    // Refreshes the presence TTL server-side so a crashed api pod can't
+    // leave this user stuck online, and keeps last-seen accurate.
+    const heartbeat = setInterval(() => {
+      if (socket.connected) socket.emit('heartbeat')
+    }, HEARTBEAT_INTERVAL_MS)
+
     socket.on('connect', () => {
       setIsConnected(true)
+      // Server-side socket rooms are lost on reconnect — re-join any rooms
+      // this tab had explicitly opened.
+      joinedRoomsRef.current.forEach((roomId) => socket.emit('join-room', roomId))
     })
 
     socket.on('disconnect', () => {
@@ -237,11 +252,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     return () => {
+      clearInterval(heartbeat)
       socket.disconnect()
     }
   }, [session, queryClient])
 
   const joinRoom = (roomId: string) => {
+    joinedRoomsRef.current.add(roomId)
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }

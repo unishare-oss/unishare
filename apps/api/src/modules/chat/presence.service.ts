@@ -1,41 +1,55 @@
 import { Injectable, OnApplicationBootstrap, Logger, Inject } from '@nestjs/common'
 import { Server } from 'socket.io'
 import Redis from 'ioredis'
-import { CONNECT_SCRIPT, DISCONNECT_SCRIPT } from './presence.scripts'
+import { CONNECT_SCRIPT, DISCONNECT_SCRIPT, HEARTBEAT_SCRIPT } from './presence.scripts'
+
+// Counter TTL: three missed 30s heartbeats before a user is considered gone.
+export const PRESENCE_TTL_MS = 90_000
+
+// ioredis custom commands defined in onApplicationBootstrap
+interface PresenceCommands extends Redis {
+  presenceConnect(connKey: string, lastSeenKey: string, ttlMs: string): Promise<number>
+  presenceDisconnect(connKey: string, lastSeenKey: string, lastSeen: string): Promise<number>
+  presenceHeartbeat(
+    connKey: string,
+    lastSeenKey: string,
+    ttlMs: string,
+    now: string,
+  ): Promise<number>
+}
 
 @Injectable()
 export class PresenceService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PresenceService.name)
   private server: Server
-  private connectSha: string
-  private disconnectSha: string
 
   constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
+
+  private get commands(): PresenceCommands {
+    return this.redis as PresenceCommands
+  }
 
   setServer(server: Server) {
     this.server = server
   }
 
-  async onApplicationBootstrap() {
-    // Wipe all presence data on startup to clear stale counters from a previous crash/restart.
-    // NOTE: assumes Redis is only used for presence. If other features (queues, sessions, cache)
-    // are added to Redis later, replace flushdb() with a targeted SCAN+DEL on presence:* keys.
-    await this.redis.flushdb()
-    this.logger.log('Cleared all presence data on startup')
-
-    // Load Lua scripts once — EVALSHA sends only the SHA on every subsequent call instead of the full source.
-    this.connectSha = (await this.redis.script('LOAD', CONNECT_SCRIPT)) as string
-    this.disconnectSha = (await this.redis.script('LOAD', DISCONNECT_SCRIPT)) as string
-    this.logger.log('Loaded presence Lua scripts')
+  onApplicationBootstrap() {
+    // defineCommand caches scripts and transparently recovers from NOSCRIPT
+    // (e.g. after a Redis restart), unlike raw EVALSHA.
+    // No startup flush: keys are TTL-bound, and Redis is shared with other
+    // features (throttling, socket.io adapter) that must not be wiped.
+    this.redis.defineCommand('presenceConnect', { numberOfKeys: 2, lua: CONNECT_SCRIPT })
+    this.redis.defineCommand('presenceDisconnect', { numberOfKeys: 2, lua: DISCONNECT_SCRIPT })
+    this.redis.defineCommand('presenceHeartbeat', { numberOfKeys: 2, lua: HEARTBEAT_SCRIPT })
+    this.logger.log('Registered presence Lua commands')
   }
 
   async connect(userId: string): Promise<void> {
-    const count = (await this.redis.evalsha(
-      this.connectSha,
-      2,
+    const count = await this.commands.presenceConnect(
       `presence:${userId}:connections`,
       `presence:${userId}:lastSeen`,
-    )) as number
+      String(PRESENCE_TTL_MS),
+    )
 
     if (count === 1) {
       this.broadcast(userId, 1, null)
@@ -45,17 +59,30 @@ export class PresenceService implements OnApplicationBootstrap {
 
   async disconnect(userId: string): Promise<void> {
     const lastSeen = Date.now()
-    const wentOffline = (await this.redis.evalsha(
-      this.disconnectSha,
-      2,
+    const wentOffline = await this.commands.presenceDisconnect(
       `presence:${userId}:connections`,
       `presence:${userId}:lastSeen`,
       lastSeen.toString(),
-    )) as number
+    )
 
     if (wentOffline) {
       this.broadcast(userId, 0, lastSeen)
       this.logger.debug(`User ${userId} is now offline`)
+    }
+  }
+
+  async heartbeat(userId: string): Promise<void> {
+    const revived = await this.commands.presenceHeartbeat(
+      `presence:${userId}:connections`,
+      `presence:${userId}:lastSeen`,
+      String(PRESENCE_TTL_MS),
+      Date.now().toString(),
+    )
+
+    // Counter had expired while the socket was still alive — re-announce online.
+    if (revived === 1) {
+      this.broadcast(userId, 1, null)
+      this.logger.debug(`User ${userId} presence revived by heartbeat`)
     }
   }
 
