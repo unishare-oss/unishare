@@ -209,31 +209,33 @@
   }
 }
 
-@layer components {
-  /* Tactile "chunky" card — hard offset shadow on light themes,
-     degrades to a strong border on dark themes (shadow-color: transparent). */
-  .card-pop {
-    border: 2px solid var(--border-strong);
-    box-shadow: 4px 4px 0 0 var(--shadow-color);
-  }
+/* Tactile "chunky" card — hard offset shadow on light themes, degrades to a
+   strong border on dark themes (shadow-color: transparent). Registered as
+   utilities (not @layer components) so they win over the border/shadow
+   utilities already present on <Card>. */
+@utility card-pop {
+  border: 2px solid var(--border-strong);
+  box-shadow: 4px 4px 0 0 var(--shadow-color);
+}
 
-  /* Interactive variant: lifts toward the cursor on hover. */
-  .card-pop-hover {
-    transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      background-color 0.15s ease,
-      border-color 0.15s ease;
-  }
-  .card-pop-hover:hover {
+/* Interactive variant: lifts toward the cursor on hover. */
+@utility card-pop-hover {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  &:hover {
     transform: translate(-1px, -1px);
     box-shadow: 5px 5px 0 0 var(--shadow-color);
   }
-  .card-pop-hover:active {
+  &:active {
     transform: translate(2px, 2px);
     box-shadow: 1px 1px 0 0 var(--shadow-color);
   }
+}
 
+@layer components {
   /* Playful hand-drawn-style highlighter underline (pure CSS, no images). */
   .hand-underline {
     position: relative;
