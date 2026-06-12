@@ -296,7 +296,8 @@ export function AppearanceCard() {
 
       {/* Feed Style Selection */}
       <div className="mb-8">
-        <h3 className="text-sm font-medium text-foreground mb-3">Feed style</h3>
+        <h3 className="text-sm font-medium text-foreground mb-1">Feed style</h3>
+        <p className="text-xs text-text-muted mb-3">Applies to the feed and post pages alike.</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {FEED_STYLES.map((s) => {
             const isActive = feedStyle === s.id

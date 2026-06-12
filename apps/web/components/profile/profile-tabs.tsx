@@ -1,9 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { PostCard } from '@/components/post-card'
-import { PostCardSkeletonList } from '@/components/feed/post-card-skeleton'
-import { EmptyState } from '@/components/shared/empty-state'
+import { PostFeed } from '@/components/feed/post-feed'
 import type { ApiPost } from '@/lib/api-types'
 
 export const tabs = ['MY POSTS', 'SAVED POSTS'] as const
@@ -36,18 +34,17 @@ export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: 
         ))}
       </div>
 
-      <div>
-        {loading && posts.length === 0 ? (
-          <PostCardSkeletonList count={3} />
-        ) : posts.length === 0 ? (
-          <EmptyState
-            message={
-              activeTab === 'MY POSTS' ? "You haven't posted anything yet." : 'No saved posts yet.'
-            }
-          />
-        ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
-        )}
+      <div className="flex flex-col">
+        <PostFeed
+          posts={posts}
+          page={1}
+          totalPages={1}
+          onPageChange={() => {}}
+          loading={loading}
+          emptyMessage={
+            activeTab === 'MY POSTS' ? "You haven't posted anything yet." : 'No saved posts yet.'
+          }
+        />
       </div>
     </>
   )

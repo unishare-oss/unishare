@@ -367,6 +367,36 @@
   box-shadow: 0 2px 3px color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
+/* ─── Post detail: surfaces follow the selected feed style ──────────────
+   The detail page sets data-detail-style from the feed style store.
+   .detail-surface wraps flat sections (invisible in classic); .detail-box
+   restyles components that already draw their own bordered box. */
+@layer components {
+  [data-detail-style='arcade'] .detail-surface {
+    border: 3px solid var(--border-strong);
+    border-radius: 1rem;
+    background: var(--card);
+    box-shadow: 6px 6px 0 0 var(--shadow-color);
+    padding: 1.25rem;
+  }
+  [data-detail-style='arcade'] .detail-box {
+    border-width: 2px;
+    border-color: var(--border-strong);
+    border-radius: 1rem;
+    box-shadow: 4px 4px 0 0 var(--shadow-color);
+  }
+  [data-detail-style='desk'] .detail-surface {
+    border: 1px solid color-mix(in srgb, var(--border-strong) 50%, transparent);
+    background: var(--card);
+    box-shadow: 0 14px 24px -12px color-mix(in srgb, var(--foreground) 35%, transparent);
+    padding: 1.25rem;
+  }
+  [data-detail-style='desk'] .detail-box {
+    border-color: color-mix(in srgb, var(--border-strong) 50%, transparent);
+    box-shadow: 0 8px 16px -10px color-mix(in srgb, var(--foreground) 30%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arcade-card,
   .desk-paper,
