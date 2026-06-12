@@ -41,6 +41,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter())
   app.useGlobalInterceptors(new ResponseInterceptor(reflector))
 
+  // Finish in-flight requests on SIGTERM so rolling deploys don't drop traffic
+  app.enableShutdownHooks()
+
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Unishare API')

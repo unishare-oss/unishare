@@ -35,6 +35,7 @@ COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY packages ./packages
 
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/
 
 ENV NODE_ENV=production
 ENV npm_config_ignore_scripts=true
