@@ -24,6 +24,7 @@ import {
   Flag,
   Users,
   Plus,
+  Palette,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -59,6 +60,7 @@ const moreAuthItems = [
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/quizzes', label: 'Quizzes', icon: Puzzle },
   { href: '/profile', label: 'Settings', icon: Settings },
+  { href: '/appearance', label: 'Appearance', icon: Palette },
 ]
 
 /* Dock tile — spring-feel transition, solid filled active state. */

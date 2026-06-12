@@ -16,7 +16,6 @@ import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
 import { ChangePasswordForm } from '@/components/profile/change-password-form'
 import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
-import { AppearanceCard } from '@/components/profile/appearance-card'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -43,7 +42,6 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
       <EditProfileForm user={user} />
       <ChangePasswordForm />
       <ConnectedAccountsCard />
-      <AppearanceCard />
       <DangerZoneCard />
       <ProfileTabs
         activeTab={activeTab}

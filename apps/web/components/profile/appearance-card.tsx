@@ -253,10 +253,6 @@ export function AppearanceCard() {
 
   return (
     <section className="mb-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-4">
-        Appearance
-      </h2>
-
       {/* Theme Selection */}
       <div className="mb-8">
         <h3 className="text-sm font-medium text-foreground mb-3">Theme</h3>

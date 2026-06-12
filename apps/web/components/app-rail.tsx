@@ -307,7 +307,7 @@ export function AppRail() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className={menuItemClass}>
-                    <Link href="/profile#appearance">
+                    <Link href="/appearance">
                       <Palette className="size-4" strokeWidth={1.5} />
                       Theme &amp; appearance
                     </Link>
