@@ -27,6 +27,8 @@ model User {
   consentGivenAt          DateTime?
   universityId            String?
   publicKey               String?
+  /// Passphrase-encrypted private key backup (PBKDF2 + AES-GCM blob, opaque to the server)
+  keyBackup               String?
   accounts                Account[]
   adminActions            AdminAction[]            @relation("AdminActions")
   chatMessages            ChatMessage[]

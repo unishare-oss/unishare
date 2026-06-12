@@ -143,7 +143,7 @@ export class UsersRepository {
   clearPublicKey(id: string, tx: Prisma.TransactionClient = this.prisma) {
     return tx.user.update({
       where: { id },
-      data: { publicKey: null },
+      data: { publicKey: null, keyBackup: null },
       select: { id: true },
     })
   }
@@ -151,7 +151,30 @@ export class UsersRepository {
   clearAllPublicKeys() {
     return this.prisma.user.updateMany({
       where: { publicKey: { not: null } },
-      data: { publicKey: null },
+      data: { publicKey: null, keyBackup: null },
+    })
+  }
+
+  updateKeyBackup(id: string, keyBackup: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { keyBackup },
+      select: { id: true },
+    })
+  }
+
+  findKeyBackup(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { keyBackup: true },
+    })
+  }
+
+  clearKeyBackup(id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { keyBackup: null },
+      select: { id: true },
     })
   }
 }

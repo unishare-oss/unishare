@@ -21,6 +21,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 import { SetPasswordDto } from './dto/set-password.dto'
 import { UpdatePublicKeyDto } from './dto/update-public-key.dto'
+import { UpdateKeyBackupDto } from './dto/update-key-backup.dto'
 import { UserProfileEntity } from './entities/user-profile.entity'
 
 @ApiTags('users')
@@ -90,6 +91,24 @@ export class UsersController {
   @ResponseMessage('Encryption keys cleared successfully')
   clearMyKeys(@Session() session: UserSession) {
     return this.usersService.clearMyKeys(session.user.id)
+  }
+
+  @Patch('me/key-backup')
+  @ResponseMessage('Key backup stored successfully')
+  updateKeyBackup(@Session() session: UserSession, @Body() dto: UpdateKeyBackupDto) {
+    return this.usersService.updateKeyBackup(session.user.id, dto.keyBackup)
+  }
+
+  @Get('me/key-backup')
+  @ResponseMessage('Key backup fetched successfully')
+  getKeyBackup(@Session() session: UserSession) {
+    return this.usersService.getKeyBackup(session.user.id)
+  }
+
+  @Delete('me/key-backup')
+  @ResponseMessage('Key backup deleted successfully')
+  clearKeyBackup(@Session() session: UserSession) {
+    return this.usersService.clearKeyBackup(session.user.id)
   }
 
   @Delete('admin/public-keys')

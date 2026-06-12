@@ -71,6 +71,20 @@ export class UsersService {
     return user
   }
 
+  async updateKeyBackup(id: string, keyBackup: string) {
+    return this.usersRepository.updateKeyBackup(id, keyBackup)
+  }
+
+  async getKeyBackup(id: string) {
+    const user = await this.usersRepository.findKeyBackup(id)
+    if (!user) throw new NotFoundException('User not found')
+    return { keyBackup: user.keyBackup }
+  }
+
+  async clearKeyBackup(id: string) {
+    return this.usersRepository.clearKeyBackup(id)
+  }
+
   async updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
     if (
       dto.departmentId === undefined &&

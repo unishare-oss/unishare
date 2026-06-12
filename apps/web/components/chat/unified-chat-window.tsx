@@ -35,7 +35,6 @@ import {
   UsersRound,
   UserPlus,
   LockKeyholeOpen,
-  ScanLine,
   KeyRound,
   RefreshCw,
 } from 'lucide-react'
@@ -707,13 +706,13 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                   <div className="space-y-1.5">
                     <p className="font-semibold text-sm">Messages are end-to-end encrypted</p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Your decryption key isn&apos;t on this device. Import it from a device where
-                      you&apos;ve already set up this account.
+                      Your decryption key isn&apos;t on this device. Restore it with your transfer
+                      passphrase, or scan the QR code from a device that has it.
                     </p>
                   </div>
                   <Button size="sm" onClick={() => setImportKeysOpen(true)}>
-                    <ScanLine className="size-3.5 mr-1.5" />
-                    Import key
+                    <KeyRound className="size-3.5 mr-1.5" />
+                    Restore key
                   </Button>
                 </div>
               </div>

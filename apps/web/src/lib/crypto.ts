@@ -5,7 +5,7 @@ const ECDH_PARAMS = {
 
 const AES_PARAMS = { name: 'AES-GCM', length: 256 } as const
 const KEY_TRANSFER_VERSION = 1 as const
-const KEY_TRANSFER_ITERATIONS = 250_000
+const KEY_TRANSFER_ITERATIONS = 600_000
 const MIN_KEY_TRANSFER_ITERATIONS = 100_000
 export const MIN_KEY_TRANSFER_PASSPHRASE_LENGTH = 8
 
@@ -120,7 +120,7 @@ export async function decryptRoomKey(
   encryptedKey: string,
   privateKey: CryptoKey,
 ): Promise<CryptoKey> {
-  const packed = Uint8Array.from(atob(encryptedKey), (c) => c.charCodeAt(0))
+  const packed = base64ToBytes(encryptedKey)
 
   const epk = await crypto.subtle.importKey('raw', packed.slice(0, 65), ECDH_PARAMS, false, [])
   const iv = packed.slice(65, 77)
@@ -149,7 +149,7 @@ export async function encryptMessage(content: string, roomKey: CryptoKey): Promi
 }
 
 export async function decryptMessage(ciphertext: string, roomKey: CryptoKey): Promise<string> {
-  const combined = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0))
+  const combined = base64ToBytes(ciphertext)
   const iv = combined.slice(0, 12)
   const data = combined.slice(12)
   const decoded = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, roomKey, data)
