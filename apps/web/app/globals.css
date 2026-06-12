@@ -29,7 +29,7 @@
   --chart-3: #16a34a;
   --chart-4: #dc2626;
   --chart-5: #78716c;
-  --radius: 6px;
+  --radius: 14px;
   --sidebar: #f7f3ee;
   --sidebar-foreground: #1c1917;
   --sidebar-primary: #d97706;
@@ -48,6 +48,15 @@
   --info: #0369a1;
   --surface-dark: #1c1917;
   --card-dark: #f0ebe4;
+
+  /* Bold & playful: tactile shadows + strong borders */
+  --shadow-color: rgba(28, 25, 23, 0.9);
+  --border-strong: #1c1917;
+
+  /* Content-type color coding */
+  --type-note: #d97706;
+  --type-exam: #7c3aed;
+  --type-exercise: #0d9488;
 }
 
 @theme inline {
@@ -77,8 +86,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
@@ -98,6 +107,11 @@
   --color-surface-dark: var(--surface-dark);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
+
+  --color-border-strong: var(--border-strong);
+  --color-type-note: var(--type-note);
+  --color-type-exam: var(--type-exam);
+  --color-type-exercise: var(--type-exercise);
 }
 
 @layer base {
@@ -196,6 +210,50 @@
 }
 
 @layer components {
+  /* Tactile "chunky" card — hard offset shadow on light themes,
+     degrades to a strong border on dark themes (shadow-color: transparent). */
+  .card-pop {
+    border: 2px solid var(--border-strong);
+    box-shadow: 4px 4px 0 0 var(--shadow-color);
+  }
+
+  /* Interactive variant: lifts toward the cursor on hover. */
+  .card-pop-hover {
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .card-pop-hover:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 0 var(--shadow-color);
+  }
+  .card-pop-hover:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 0 var(--shadow-color);
+  }
+
+  /* Playful hand-drawn-style highlighter underline (pure CSS, no images). */
+  .hand-underline {
+    position: relative;
+    display: inline-block;
+    z-index: 0;
+  }
+  .hand-underline::after {
+    content: '';
+    position: absolute;
+    left: -0.08em;
+    right: -0.12em;
+    bottom: 0.02em;
+    height: 0.32em;
+    background: var(--amber);
+    opacity: 0.55;
+    border-radius: 58% 42% 56% 44% / 52% 48% 62% 38%;
+    transform: rotate(-1.4deg) skewX(-8deg);
+    z-index: -1;
+  }
+
   .note-sheet {
     position: absolute;
     overflow: hidden;
