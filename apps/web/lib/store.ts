@@ -228,6 +228,28 @@ export const useSettingsStore = create<SettingsStore>()(
   ),
 )
 
+export type FeedStyle = 'arcade' | 'desk' | 'classic'
+
+interface FeedStyleStore {
+  feedStyle: FeedStyle
+  setFeedStyle: (feedStyle: FeedStyle) => void
+}
+
+/**
+ * Persisted feed style preference. Uses skipHydration (same pattern as
+ * useUIStore) so SSR markup and the first client render both use the
+ * default, then Providers rehydrates from localStorage after mount.
+ */
+export const useFeedStyleStore = create<FeedStyleStore>()(
+  persist(
+    (set) => ({
+      feedStyle: 'arcade',
+      setFeedStyle: (feedStyle) => set({ feedStyle }),
+    }),
+    { name: 'unishare-feed-style', skipHydration: true },
+  ),
+)
+
 interface MutedRoomsStore {
   mutedRoomIds: string[]
   toggleMute: (roomId: string) => void

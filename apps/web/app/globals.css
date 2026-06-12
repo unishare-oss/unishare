@@ -235,6 +235,153 @@
   }
 }
 
+/* ─── Feed style: Arcade ─────────────────────────────────────────────── */
+
+@keyframes arcade-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+}
+
+@keyframes arcade-wiggle {
+  0%,
+  100% {
+    transform: rotate(3deg);
+  }
+  50% {
+    transform: rotate(-2deg);
+  }
+}
+
+/* Chunky arcade card: thick border, big hard shadow, lifts on hover and
+   presses down on click. Staggered entrance via --stagger (set inline). */
+@utility arcade-card {
+  border: 3px solid var(--border-strong);
+  box-shadow: 6px 6px 0 0 var(--shadow-color);
+  transition:
+    transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.14s ease;
+  animation: arcade-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(var(--stagger, 0) * 70ms);
+  &:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 9px 9px 0 0 var(--shadow-color);
+  }
+  &:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 0 var(--shadow-color);
+  }
+}
+
+/* Small stat chip with a soft hard-shadow. */
+@utility arcade-stat {
+  border: 2px solid var(--border-strong);
+  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--shadow-color) 30%, transparent);
+}
+
+@utility arcade-trending {
+  animation: arcade-wiggle 2.2s ease-in-out infinite;
+}
+
+/* ─── Feed style: Desk ───────────────────────────────────────────────── */
+
+@keyframes desk-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) rotate(calc(var(--tilt, 0deg) * 3));
+  }
+}
+
+/* Paper sheet: per-card tilt via --tilt (set inline), straightens + lifts
+   on hover. Soft shadow derived from foreground so dark themes still read. */
+@utility desk-paper {
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: 0 14px 24px -12px color-mix(in srgb, var(--foreground) 35%, transparent);
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease;
+  animation: desk-drop 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--stagger, 0) * 60ms);
+  &:hover {
+    transform: rotate(0deg) translateY(-6px) scale(1.015);
+    box-shadow: 0 26px 36px -14px color-mix(in srgb, var(--foreground) 40%, transparent);
+    z-index: 3;
+  }
+}
+
+/* Washi-tape strip pinned to the top edge; tint set inline per type. */
+@utility desk-tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 96px;
+  height: 26px;
+  transform: translateX(-50%) rotate(var(--tape-tilt, -2deg));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 18%, transparent);
+  -webkit-mask: linear-gradient(
+    90deg,
+    transparent 0 3px,
+    #000 3px calc(100% - 3px),
+    transparent calc(100% - 3px)
+  );
+  mask: linear-gradient(
+    90deg,
+    transparent 0 3px,
+    #000 3px calc(100% - 3px),
+    transparent calc(100% - 3px)
+  );
+}
+
+/* Ruled-line paper for notes; low-alpha type color works on dark themes. */
+@utility desk-ruled {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 26px,
+    color-mix(in srgb, var(--type-note) 14%, transparent) 26px 27px
+  );
+}
+
+/* Grid paper for exercises. */
+@utility desk-grid {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 17px,
+      color-mix(in srgb, var(--type-exercise) 10%, transparent) 17px 18px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 17px,
+      color-mix(in srgb, var(--type-exercise) 10%, transparent) 17px 18px
+    );
+}
+
+/* Trending pushpin: pure-CSS gradient dot using the destructive token. */
+@utility desk-pin {
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--destructive) 55%, white),
+    var(--destructive)
+  );
+  box-shadow: 0 2px 3px color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-card,
+  .desk-paper,
+  .arcade-trending {
+    animation: none;
+  }
+  .arcade-card,
+  .desk-paper {
+    transition: none;
+  }
+  .desk-paper:hover {
+    transform: rotate(var(--tilt, 0deg));
+  }
+}
+
 @layer components {
   /* Playful hand-drawn-style highlighter underline (pure CSS, no images). */
   .hand-underline {
