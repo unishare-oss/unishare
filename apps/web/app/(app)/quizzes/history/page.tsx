@@ -227,7 +227,7 @@ export default function QuizHistoryPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <p className="font-medium text-sm truncate">{session.quiz.title}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Target className="w-3 h-3" />
                         {isIncomplete ? 'Incomplete' : `${session.score}/${session.totalPoints}`}
