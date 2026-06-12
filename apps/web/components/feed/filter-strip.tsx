@@ -26,6 +26,13 @@ const typeFilterLabel: Record<TypeFilter, string> = {
   EXERCISE: 'EXERCISES',
 }
 
+const typeFilterActiveClass: Record<TypeFilter, string> = {
+  ALL: 'border-amber text-amber',
+  NOTE: 'border-type-note text-type-note',
+  OLD_QUESTION: 'border-type-exam text-type-exam',
+  EXERCISE: 'border-type-exercise text-type-exercise',
+}
+
 interface FilterStripProps {
   activeFilter: TypeFilter
   onFilterChange: (filter: TypeFilter) => void
@@ -142,7 +149,7 @@ export function FilterStrip({
               className={cn(
                 'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
                 activeFilter === filter
-                  ? 'border-amber text-amber font-medium'
+                  ? cn('font-bold', typeFilterActiveClass[filter])
                   : 'border-transparent text-text-muted hover:text-foreground',
               )}
             >
@@ -185,7 +192,7 @@ export function FilterStrip({
               className={cn(
                 'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
                 activeFilter === filter
-                  ? 'border-amber text-amber font-medium'
+                  ? cn('font-bold', typeFilterActiveClass[filter])
                   : 'border-transparent text-text-muted hover:text-foreground',
               )}
             >

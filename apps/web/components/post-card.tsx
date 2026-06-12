@@ -22,14 +22,14 @@ const typeLabel: Record<string, string> = {
 export function TypeBadge({ type }: { type: string }) {
   const colorClass =
     type === 'NOTE'
-      ? 'border-info text-info'
+      ? 'bg-type-note/15 text-type-note border-type-note/40'
       : type === 'EXERCISE'
-        ? 'border-green-500 text-green-500'
-        : 'border-amber text-amber'
+        ? 'bg-type-exercise/15 text-type-exercise border-type-exercise/40'
+        : 'bg-type-exam/15 text-type-exam border-type-exam/40'
   return (
     <span
       className={cn(
-        'font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 border rounded-[4px]',
+        'font-mono text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 border-2 rounded-md',
         colorClass,
       )}
     >
