@@ -55,7 +55,7 @@ export function DeskPostCard({ post, index = 0, trending = false }: DeskPostCard
 
   return (
     <div
-      className="relative h-full"
+      className="relative isolate h-full hover:z-[3]"
       style={{ '--stagger': index, '--tilt': `${tilt}deg` } as CSSProperties}
     >
       <Link href={`/posts/${post.id}`} className="block h-full" onClick={() => markRead(post.id)}>
@@ -218,7 +218,7 @@ export function DeskPostCard({ post, index = 0, trending = false }: DeskPostCard
       </Link>
 
       {/* Action buttons sit outside the Link so clicks never trigger navigation */}
-      <div className="absolute top-2.5 right-2.5 flex flex-col items-center gap-1">
+      <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-center gap-1">
         {isAuthenticated && !post.isOwner && <ReportDialog postId={post.id} />}
         <CollectionPicker post={post} />
       </div>
