@@ -153,7 +153,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
 export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderProps) {
   return (
     <header className="sticky top-0 z-20 bg-card px-6 py-4 flex items-center justify-between gap-4">
-      <h1 className="text-lg font-semibold text-foreground shrink-0">Feed</h1>
+      <h1 className="text-lg font-extrabold tracking-tight text-foreground shrink-0">Feed</h1>
       <div className="flex items-center gap-3 flex-1 justify-end">
         <div className="flex flex-1 max-w-xs sm:max-w-[280px]">
           <SearchInput
@@ -164,7 +164,7 @@ export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHea
         </div>
         <Link
           href="/posts/new"
-          className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-amber-hover transition-colors duration-150 shrink-0"
+          className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border-strong shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-amber-hover active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 shrink-0"
         >
           <Plus className="size-4" strokeWidth={1.5} />
           <span className="hidden sm:inline">New Post</span>

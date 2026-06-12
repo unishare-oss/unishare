@@ -131,8 +131,8 @@ export function SearchSelect({
 
       <div
         className={cn(
-          'flex items-center h-[42px] px-3 bg-card border border-border rounded-[6px] text-sm cursor-text',
-          open && 'ring-2 ring-amber',
+          'flex items-center h-[42px] px-3 bg-card border-2 border-input rounded-md text-sm cursor-text',
+          open && 'ring-[3px] ring-primary border-ring',
           disabled && 'opacity-50 cursor-not-allowed',
         )}
         onClick={() => {

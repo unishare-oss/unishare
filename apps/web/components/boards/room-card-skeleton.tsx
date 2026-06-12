@@ -5,7 +5,7 @@ export function RoomCardSkeleton() {
   return (
     <article
       aria-hidden
-      className="rounded-[6px] border border-border bg-card flex flex-col overflow-hidden"
+      className="rounded-xl border-2 border-border bg-card flex flex-col overflow-hidden"
     >
       <Skeleton className="h-24 w-full rounded-none bg-muted" />
       <div className="p-4 flex flex-col gap-2.5">

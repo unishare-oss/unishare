@@ -105,25 +105,18 @@ function NavItem({
     <Link
       href={href}
       className={cn(
-        'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-[6px] transition-all duration-200',
+        'group relative flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-200',
         collapsed && 'justify-center px-2',
         isActive
-          ? 'bg-linear-to-r from-amber/12 to-transparent text-amber font-medium'
+          ? 'bg-accent text-accent-foreground font-bold'
           : 'text-text-muted hover:text-foreground hover:bg-muted',
       )}
     >
-      <span
-        className={cn(
-          'absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-linear-to-b from-amber/0 via-amber to-amber/0 transition-opacity duration-200',
-          collapsed && 'hidden',
-          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-25',
-        )}
-      />
       <span className="relative shrink-0">
         <Icon
           className={cn(
             'size-4 transition-colors duration-200',
-            isActive ? 'text-amber' : 'text-text-muted group-hover:text-foreground',
+            isActive ? 'text-accent-foreground' : 'text-text-muted group-hover:text-foreground',
           )}
           strokeWidth={1.5}
         />

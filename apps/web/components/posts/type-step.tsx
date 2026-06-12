@@ -38,28 +38,32 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
 
   return (
     <div>
-      <h2 className="text-[22px] font-semibold text-foreground mb-6">What are you sharing?</h2>
+      <h2 className="text-[22px] font-extrabold tracking-tight text-foreground mb-6">
+        What are you sharing?
+      </h2>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onSelect('NOTE')}
           className={cn(
             'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
-            postType === 'NOTE' ? 'border-amber bg-amber-subtle' : 'border-border hover:bg-muted',
+            postType === 'NOTE'
+              ? 'border-type-note bg-type-note/10'
+              : 'border-border hover:bg-muted',
           )}
         >
           {postType === 'NOTE' && (
-            <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber flex items-center justify-center">
-              <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+            <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-type-note flex items-center justify-center">
+              <Check className="size-3 text-background" strokeWidth={2.5} />
             </span>
           )}
           <div
             className={cn(
-              'w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0',
-              postType === 'NOTE' ? 'bg-amber/20' : 'bg-muted',
+              'w-10 h-10 rounded-md flex items-center justify-center shrink-0',
+              postType === 'NOTE' ? 'bg-type-note/20' : 'bg-muted',
             )}
           >
             <FileText
-              className={cn('size-5', postType === 'NOTE' ? 'text-amber' : 'text-text-muted')}
+              className={cn('size-5', postType === 'NOTE' ? 'text-type-note' : 'text-text-muted')}
               strokeWidth={1.5}
             />
           </div>
@@ -77,8 +81,8 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           <span className="absolute top-3 right-3 text-[10px] font-medium text-text-muted bg-muted px-1.5 py-0.5 rounded">
             Unavailable
           </span>
-          <div className="w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0 bg-muted">
-            <GraduationCap className="size-5 text-text-muted" strokeWidth={1.5} />
+          <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0 bg-type-exam/10">
+            <GraduationCap className="size-5 text-type-exam/60" strokeWidth={1.5} />
           </div>
           <div>
             <p className="text-base font-medium text-foreground">Past Exam</p>
@@ -90,23 +94,26 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
           className={cn(
             'relative flex items-center gap-4 w-full border-2 rounded-[6px] p-5 text-left transition-all duration-150',
             postType === 'EXERCISE'
-              ? 'border-amber bg-amber-subtle'
+              ? 'border-type-exercise bg-type-exercise/10'
               : 'border-border hover:bg-muted',
           )}
         >
           {postType === 'EXERCISE' && (
-            <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber flex items-center justify-center">
-              <Check className="size-3 text-primary-foreground" strokeWidth={2.5} />
+            <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-type-exercise flex items-center justify-center">
+              <Check className="size-3 text-background" strokeWidth={2.5} />
             </span>
           )}
           <div
             className={cn(
-              'w-10 h-10 rounded-[6px] flex items-center justify-center shrink-0',
-              postType === 'EXERCISE' ? 'bg-amber/20' : 'bg-muted',
+              'w-10 h-10 rounded-md flex items-center justify-center shrink-0',
+              postType === 'EXERCISE' ? 'bg-type-exercise/20' : 'bg-muted',
             )}
           >
             <ClipboardList
-              className={cn('size-5', postType === 'EXERCISE' ? 'text-amber' : 'text-text-muted')}
+              className={cn(
+                'size-5',
+                postType === 'EXERCISE' ? 'text-type-exercise' : 'text-text-muted',
+              )}
               strokeWidth={1.5}
             />
           </div>

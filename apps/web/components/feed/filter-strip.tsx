@@ -17,13 +17,25 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/compone
 
 export type { SortType }
 
-export const typeFilters: TypeFilter[] = ['ALL', PostType.NOTE, PostType.EXERCISE]
+export const typeFilters: TypeFilter[] = [
+  'ALL',
+  PostType.NOTE,
+  PostType.OLD_QUESTION,
+  PostType.EXERCISE,
+]
 
 const typeFilterLabel: Record<TypeFilter, string> = {
   ALL: 'ALL',
   NOTE: 'NOTES',
   OLD_QUESTION: 'PAST EXAMS',
   EXERCISE: 'EXERCISES',
+}
+
+const typeFilterActiveClass: Record<TypeFilter, string> = {
+  ALL: 'border-amber text-amber',
+  NOTE: 'border-type-note text-type-note',
+  OLD_QUESTION: 'border-type-exam text-type-exam',
+  EXERCISE: 'border-type-exercise text-type-exercise',
 }
 
 interface FilterStripProps {
@@ -142,7 +154,7 @@ export function FilterStrip({
               className={cn(
                 'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
                 activeFilter === filter
-                  ? 'border-amber text-amber font-medium'
+                  ? cn('font-bold', typeFilterActiveClass[filter])
                   : 'border-transparent text-text-muted hover:text-foreground',
               )}
             >
@@ -185,7 +197,7 @@ export function FilterStrip({
               className={cn(
                 'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
                 activeFilter === filter
-                  ? 'border-amber text-amber font-medium'
+                  ? cn('font-bold', typeFilterActiveClass[filter])
                   : 'border-transparent text-text-muted hover:text-foreground',
               )}
             >

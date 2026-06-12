@@ -233,7 +233,7 @@ export function RoomCard({
   return (
     <>
       <article
-        className="group relative rounded-[6px] border border-border bg-card hover:bg-card-dark flex flex-col cursor-pointer transition-colors overflow-hidden"
+        className="card-pop card-pop-hover group relative rounded-xl bg-card hover:bg-card-dark flex flex-col cursor-pointer overflow-hidden"
         onClick={handleCardClick}
       >
         {/* Canvas preview header */}
