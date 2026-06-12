@@ -19,11 +19,19 @@ export function ChatLayoutShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const selectedRoomId = isRoom ? (pathname.split('/')[2] ?? undefined) : undefined
+
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
       {/* Mobile: ChatSidebar always in background */}
       <div className="md:hidden absolute inset-0 flex flex-col">
         <ChatSidebar />
+      </div>
+
+      {/* Desktop: room list panel next to the icon rail (previously rendered inside
+          the old wide sidebar, which the slim rail replaced). */}
+      <div className="hidden md:flex w-80 shrink-0 flex-col h-full overflow-hidden border-r-2 border-border-strong bg-background">
+        <ChatSidebar selectedRoomId={selectedRoomId} />
       </div>
 
       <AnimatePresence mode="wait" initial={false}>

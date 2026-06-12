@@ -26,7 +26,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const markRead = useUIStore((s) => s.markRead)
-  const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const { mutateAsync: removeFile } = useFilesControllerRemove()
@@ -61,12 +60,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col min-h-screen">
         <PageHeader title="Post" />
         <div className="flex-1 bg-card">
-          <div
-            className={cn(
-              'mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4 transition-[max-width] duration-300',
-              collapsed ? 'max-w-360' : 'max-w-240',
-            )}
-          >
+          <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4', 'max-w-300')}>
             <Skeleton className="h-3 w-48" />
             <div className="space-y-3 pt-2">
               <Skeleton className="h-4 w-24" />
@@ -94,12 +88,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       <PageHeader title={post.title ?? 'Post'} />
 
       <div className="flex-1 bg-card">
-        <div
-          className={cn(
-            'mx-auto px-4 py-4 md:px-6 md:py-6 transition-[max-width] duration-300',
-            collapsed ? 'max-w-360' : 'max-w-240',
-          )}
-        >
+        <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6', 'max-w-300')}>
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}

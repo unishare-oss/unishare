@@ -168,7 +168,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   if (roomsLoading || networkLoading) {
     return (
-      <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
+      <Card className="flex flex-col h-full border-none gap-0 rounded-none bg-background py-2 shadow-none">
         <div className="flex flex-col gap-2 p-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-16 w-full rounded-lg bg-muted" />
@@ -179,9 +179,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
+    <Card className="flex flex-col h-full border-none gap-0 rounded-none bg-background py-2 shadow-none">
       <ScrollArea className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]>div]:block! [&>[data-radix-scroll-area-viewport]>div]:w-full!">
-        <div className="flex flex-col pb-20">
+        <div className="flex flex-col pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-4">
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
             <div className="px-4 py-2 mt-2">
