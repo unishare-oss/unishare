@@ -86,7 +86,7 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <Card>
+    <Card className="card-pop">
       <CardContent className="pt-6 pb-5 text-center space-y-2">
         <div className="flex justify-center text-primary">{icon}</div>
         <p className="text-2xl font-bold">{value}</p>
@@ -172,7 +172,7 @@ export default function QuizHistoryPage() {
       </div>
 
       {/* Session list */}
-      <Card>
+      <Card className="card-pop">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Attempts</CardTitle>
         </CardHeader>

@@ -200,7 +200,7 @@ export function MobileNav() {
                         className={cn(
                           'flex flex-col items-center gap-2 px-3 py-4 rounded-xl transition-colors duration-200',
                           isActive
-                            ? 'bg-amber/10 text-amber'
+                            ? 'bg-accent text-accent-foreground font-bold'
                             : 'text-text-muted hover:bg-muted hover:text-foreground',
                         )}
                       >
@@ -238,7 +238,7 @@ export function MobileNav() {
                           className={cn(
                             'flex flex-col items-center gap-2 px-3 py-4 rounded-xl transition-colors duration-200',
                             pathname.startsWith(item.href)
-                              ? 'bg-amber/10 text-amber'
+                              ? 'bg-accent text-accent-foreground font-bold'
                               : 'text-text-muted hover:bg-muted hover:text-foreground',
                           )}
                         >

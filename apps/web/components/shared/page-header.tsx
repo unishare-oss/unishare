@@ -15,8 +15,8 @@ export function PageHeader({ title, subtitle, large, action }: PageHeaderProps) 
           <h1
             className={
               large
-                ? 'text-[22px] font-semibold text-foreground'
-                : 'text-lg font-semibold text-foreground'
+                ? 'text-[22px] font-extrabold tracking-tight text-foreground'
+                : 'text-lg font-extrabold tracking-tight text-foreground'
             }
           >
             {title}

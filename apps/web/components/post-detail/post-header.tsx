@@ -111,7 +111,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
           <TypeBadge type={post.type} />
           <span className="font-mono text-[13px] text-amber font-medium">{post.course.code}</span>
         </div>
-        <h1 className="text-[28px] font-semibold text-foreground tracking-tight leading-tight mt-2 text-balance">
+        <h1 className="text-[28px] font-extrabold text-foreground tracking-tight leading-tight mt-2 text-balance">
           {post.title}
         </h1>
         <div className="flex items-center gap-1.5 mt-3 font-mono text-xs text-text-muted flex-wrap">

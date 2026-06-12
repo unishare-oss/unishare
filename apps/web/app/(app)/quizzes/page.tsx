@@ -125,7 +125,7 @@ export default function QuizzesPage() {
             }}
           />
 
-          <Card>
+          <Card className="card-pop">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold flex items-center justify-between">
                 Available Quizzes
@@ -169,7 +169,7 @@ export default function QuizzesPage() {
         {/* History tab */}
         {isAuthenticated && (
           <TabsContent value="history" className="mt-4">
-            <Card>
+            <Card className="card-pop">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Past Attempts</CardTitle>
               </CardHeader>

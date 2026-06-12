@@ -38,7 +38,9 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
 
   return (
     <div>
-      <h2 className="text-[22px] font-semibold text-foreground mb-6">What are you sharing?</h2>
+      <h2 className="text-[22px] font-extrabold tracking-tight text-foreground mb-6">
+        What are you sharing?
+      </h2>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onSelect('NOTE')}

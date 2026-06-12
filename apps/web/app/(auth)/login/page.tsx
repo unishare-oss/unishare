@@ -151,9 +151,11 @@ export default function LoginPage() {
           <span className="font-mono text-lg font-bold text-[#F7F3EE]">Unishare</span>
         </div>
 
-        <blockquote className="max-w-lg">
-          <p className="text-[30px] font-light leading-snug text-[#F7F3EE] tracking-tight text-balance">
-            {'Every lecture note and study guide \u2014 shared by students who\u2019ve been there.'}
+        <blockquote className="max-w-xl">
+          <p className="text-4xl xl:text-5xl font-extrabold leading-[1.15] text-[#F7F3EE] tracking-tight text-balance">
+            Every lecture note and study guide {'\u2014'}{' '}
+            <span className="hand-underline text-[#fbbf24]">shared</span>{' '}
+            {'by students who\u2019ve been there.'}
           </p>
         </blockquote>
 
