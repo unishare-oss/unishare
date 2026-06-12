@@ -192,6 +192,8 @@ interface SettingsStore {
   ) => void
   increaseFontSize: () => void
   decreaseFontSize: () => void
+  chatSoundEnabled: boolean
+  setChatSoundEnabled: (enabled: boolean) => void
 }
 
 const fontSizeOrder: (
@@ -209,6 +211,8 @@ export const useSettingsStore = create<SettingsStore>()(
     (set, get) => ({
       fontSize: 'mediumlarge',
       setFontSize: (fontSize) => set({ fontSize }),
+      chatSoundEnabled: true,
+      setChatSoundEnabled: (chatSoundEnabled) => set({ chatSoundEnabled }),
       increaseFontSize: () => {
         const current = get().fontSize
         const currentIndex = fontSizeOrder.indexOf(current)

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { io, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
-import { useMutedRoomsStore } from '@/lib/store'
+import { useMutedRoomsStore, useSettingsStore } from '@/lib/store'
+import { playMessageSound } from '@/lib/chat-sound'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getChatControllerGetRoomsQueryKey,
@@ -72,15 +73,15 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       setIsConnected(false)
     })
 
-    // Fires a native notification for messages received while the tab is hidden.
-    // Permission is requested lazily when the user first opens the chat page
-    // (see ChatLayoutShell) — never on app load.
-    const showBrowserNotification = (message: any) => {
-      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-      if (!document.hidden) return
+    // Notifies about an incoming message: native notification when the tab is
+    // hidden (permission requested lazily in ChatLayoutShell), in-app toast
+    // when the tab is visible but the user is in another room/page, plus an
+    // optional sound. Silent while viewing the room the message belongs to.
+    const notifyIncomingMessage = (message: any) => {
       if (message.userId === session?.user?.id) return
       if (message.type === 'SYSTEM') return
       if (useMutedRoomsStore.getState().isMuted(message.roomId)) return
+      if (!document.hidden && window.location.pathname === `/chat/${message.roomId}`) return
 
       // Encrypted rooms carry ciphertext in `content` (same check the message
       // bubble uses: my participant entry has an encryptedRoomKey). If the room
@@ -97,24 +98,41 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
         body = message.content.length > 120 ? `${message.content.slice(0, 120)}…` : message.content
       }
 
-      try {
-        const notification = new Notification(message.user?.name ?? 'New message', {
-          body,
-          tag: `chat-${message.roomId}`, // coalesce multiple messages per room
-          icon: '/android-chrome-192x192.png',
-        })
-        notification.onclick = () => {
-          window.focus()
-          router.push(`/chat/${message.roomId}`)
-          notification.close()
+      const senderName = message.user?.name ?? 'New message'
+
+      if (document.hidden) {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            const notification = new Notification(senderName, {
+              body,
+              tag: `chat-${message.roomId}`, // coalesce multiple messages per room
+              icon: '/android-chrome-192x192.png',
+            })
+            notification.onclick = () => {
+              window.focus()
+              router.push(`/chat/${message.roomId}`)
+              notification.close()
+            }
+          } catch {
+            // Notification constructor throws on some mobile browsers — ignore.
+          }
         }
-      } catch {
-        // Notification constructor throws on some mobile browsers — ignore.
+      } else {
+        toast(senderName, {
+          id: `chat-${message.roomId}`, // coalesce multiple messages per room
+          description: body,
+          action: {
+            label: 'Open',
+            onClick: () => router.push(`/chat/${message.roomId}`),
+          },
+        })
       }
+
+      if (useSettingsStore.getState().chatSoundEnabled) playMessageSound()
     }
 
     socket.on('receive-message', (message: any) => {
-      showBrowserNotification(message)
+      notifyIncomingMessage(message)
 
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,

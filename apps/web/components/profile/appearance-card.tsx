@@ -3,6 +3,8 @@
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { useFeedStyleStore, useSettingsStore, type FeedStyle } from '@/lib/store'
+import { playMessageSound } from '@/lib/chat-sound'
+import { Switch } from '@/components/ui/switch'
 
 interface ThemeOption {
   id: string
@@ -248,6 +250,8 @@ function FeedStylePreview({ id }: { id: FeedStyle }) {
 export function AppearanceCard() {
   const { theme, setTheme } = useTheme()
   const fontSize = useSettingsStore((s) => s.fontSize)
+  const chatSoundEnabled = useSettingsStore((s) => s.chatSoundEnabled)
+  const setChatSoundEnabled = useSettingsStore((s) => s.setChatSoundEnabled)
   const feedStyle = useFeedStyleStore((s) => s.feedStyle)
   const setFeedStyle = useFeedStyleStore((s) => s.setFeedStyle)
 
@@ -334,6 +338,26 @@ export function AppearanceCard() {
               </button>
             )
           })}
+        </div>
+      </div>
+
+      {/* Chat sound */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-medium text-foreground mb-1">Message sound</h3>
+            <p className="text-xs text-text-muted">
+              Play a subtle chime when a chat message arrives.
+            </p>
+          </div>
+          <Switch
+            checked={chatSoundEnabled}
+            onCheckedChange={(checked) => {
+              setChatSoundEnabled(checked)
+              if (checked) playMessageSound()
+            }}
+            aria-label="Toggle chat message sound"
+          />
         </div>
       </div>
 
