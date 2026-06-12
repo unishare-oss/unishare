@@ -62,10 +62,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.logger.log(`Connection established! Socket ID: ${client.id}`)
 
     const userId = client.data.user.id
-    client.join(`user-${userId}`)
+    await client.join(`user-${userId}`)
     this.logger.log(`User ${userId} joined personal room: user-${userId}`)
 
-    this.presenceService.connect(userId)
+    await this.presenceService.connect(userId)
 
     // Auto-join all room memberships so room-scoped events (typing, reads)
     // reach participants everywhere in the app, not just the open room view.
@@ -184,5 +184,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.server.to(personalRooms).emit('member-removed', { roomId, userId })
     // Notify the removed user directly
     this.server.to(`user-${userId}`).emit('member-removed', { roomId, userId })
+    // Evict the removed user's live sockets from the room — they auto-joined
+    // on connect and would otherwise keep receiving room-scoped broadcasts
+    // until their next reconnect. Works cluster-wide via the redis adapter.
+    await this.server.in(`user-${userId}`).socketsLeave(roomId)
   }
 }
