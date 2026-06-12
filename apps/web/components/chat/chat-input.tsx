@@ -107,6 +107,7 @@ export function ChatInput({
               size="icon"
               className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
               title="Send image"
+              aria-label="Send image"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
             >
@@ -119,6 +120,7 @@ export function ChatInput({
             size="icon"
             className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
             title="Attach file"
+            aria-label="Attach file"
             onClick={() => attachInputRef.current?.click()}
             disabled={disabled}
           >
@@ -142,7 +144,13 @@ export function ChatInput({
             }}
             className="flex-1 min-h-10 max-h-32 resize-none py-2"
           />
-          <Button size="icon" onClick={onSend} disabled={disabled} className="h-10 w-10 shrink-0">
+          <Button
+            size="icon"
+            onClick={onSend}
+            disabled={disabled}
+            aria-label="Send message"
+            className="h-10 w-10 shrink-0"
+          >
             {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

@@ -12,6 +12,7 @@ import { Logger, UseGuards, UseFilters } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
 import { PresenceService } from './presence.service'
+import { ChatRepository } from './chat.repository'
 import { ChatRoomGuard } from './guards/chat-room.guard'
 import { ChatWsExceptionFilter } from './filters/ws-exception.filter'
 import { OnEvent } from '@nestjs/event-emitter'
@@ -32,7 +33,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @WebSocketServer() server: Server
   private readonly logger = new Logger(ChatGateway.name)
 
-  constructor(private readonly presenceService: PresenceService) {}
+  constructor(
+    private readonly presenceService: PresenceService,
+    private readonly chatRepository: ChatRepository,
+  ) {}
 
   afterInit(server: Server) {
     this.presenceService.setServer(server)
@@ -54,14 +58,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     })
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`Connection established! Socket ID: ${client.id}`)
 
     const userId = client.data.user.id
-    client.join(`user-${userId}`)
+    await client.join(`user-${userId}`)
     this.logger.log(`User ${userId} joined personal room: user-${userId}`)
 
-    this.presenceService.connect(userId)
+    await this.presenceService.connect(userId)
+
+    // Auto-join all room memberships so room-scoped events (typing, reads)
+    // reach participants everywhere in the app, not just the open room view.
+    const roomIds = await this.chatRepository.findRoomIdsByUserId(userId)
+    if (roomIds.length > 0) await client.join(roomIds)
   }
 
   handleDisconnect(client: Socket) {
@@ -90,14 +99,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const { roomId, isTyping } = data
     const userId = client.data.user.id
 
-    // Emit globally to all connected clients
-    this.server.emit('user-typing', {
+    // Room-scoped: only participants receive it (sockets auto-join their rooms
+    // on connect), and the sender is excluded.
+    client.to(roomId).emit('user-typing', {
       roomId,
       userId,
       isTyping,
     })
+  }
 
-    // this.logger.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`)
+  @SubscribeMessage('heartbeat')
+  async handleHeartbeat(@ConnectedSocket() client: Socket) {
+    await this.presenceService.heartbeat(client.data.user.id)
   }
 
   @OnEvent('chat.message_sent')
@@ -171,5 +184,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.server.to(personalRooms).emit('member-removed', { roomId, userId })
     // Notify the removed user directly
     this.server.to(`user-${userId}`).emit('member-removed', { roomId, userId })
+    // Evict the removed user's live sockets from the room — they auto-joined
+    // on connect and would otherwise keep receiving room-scoped broadcasts
+    // until their next reconnect. Works cluster-wide via the redis adapter.
+    await this.server.in(`user-${userId}`).socketsLeave(roomId)
   }
 }

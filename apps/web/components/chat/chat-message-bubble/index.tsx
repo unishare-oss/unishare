@@ -396,6 +396,7 @@ export function ChatMessageBubble({
             size="icon"
             className="h-6 w-6 rounded-full hover:bg-accent hover:text-accent-foreground"
             title="Reply"
+            aria-label="Reply to message"
             onClick={() => onReply?.(message)}
           >
             <Reply className="h-3 w-3" />
@@ -409,6 +410,7 @@ export function ChatMessageBubble({
                 size="icon"
                 className="h-6 w-6 rounded-full hover:bg-accent hover:text-accent-foreground"
                 title="Edit"
+                aria-label="Edit message"
                 onClick={() => onEdit?.(message)}
               >
                 <Pencil className="h-3 w-3" />
@@ -418,6 +420,7 @@ export function ChatMessageBubble({
                 size="icon"
                 className="h-6 w-6 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                 title="Delete"
+                aria-label="Delete message"
                 onClick={() => onDelete?.(message.id)}
               >
                 <Trash2 className="h-3 w-3" />

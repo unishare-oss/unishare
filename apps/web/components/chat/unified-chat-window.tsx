@@ -31,6 +31,7 @@ import {
   WifiOff,
   ArrowDown,
   ImageIcon,
+  MessageSquare,
   UsersRound,
   UserPlus,
   LockKeyholeOpen,
@@ -133,7 +134,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
   const { data: presenceResponse } = useChatControllerGetPresence(
     { userIds: participantIds.join(',') },
-    { query: { enabled: participantIds.length > 0 } },
+    { query: { enabled: participantIds.length > 0, refetchInterval: 60_000 } },
   )
 
   const presenceMap = useMemo(() => {
@@ -358,10 +359,24 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     )
   }
 
+  // Room finished loading but came back empty — deleted room or revoked access.
+  // An empty state beats the previous infinite spinner.
   if (!room) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-background p-8 text-center">
+        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+          <MessageSquare className="size-5 text-muted-foreground" strokeWidth={1.5} />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Conversation not found</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+            It may have been deleted, or you may no longer be a member.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => router.push('/chat')}>
+          <ArrowLeft className="size-3.5 mr-1.5" />
+          Back to chats
+        </Button>
       </div>
     )
   }
@@ -637,13 +652,22 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                 <button
                   className={cn(
                     'pointer-events-auto h-8 shadow-md bg-background/95 border border-border hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all',
-                    roomTypingUsers.length > 0 ? 'rounded-full px-3 gap-1' : 'w-8 rounded-full',
+                    roomTypingUsers.length > 0 || unreadCount > 0
+                      ? 'rounded-full px-3 gap-1.5'
+                      : 'w-8 rounded-full',
                   )}
                   onClick={() => scrollToBottom()}
                   aria-label="Scroll to bottom"
                 >
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
+                  ) : unreadCount > 0 ? (
+                    <>
+                      <span className="text-xs font-medium">
+                        {unreadCount} new {unreadCount === 1 ? 'message' : 'messages'}
+                      </span>
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </>
                   ) : (
                     <ArrowDown className="h-3.5 w-3.5" />
                   )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
@@ -9,6 +9,15 @@ import { cn } from '@/lib/utils'
 export function ChatLayoutShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const isRoom = pathname !== '/chat'
+
+  // Lazily request notification permission the first time the user opens chat
+  // (never on app load). Fired notifications live in ChatSocketProvider.
+  useEffect(() => {
+    if (typeof Notification === 'undefined') return
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">

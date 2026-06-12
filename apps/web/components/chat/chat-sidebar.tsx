@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
+import { format, isToday, isYesterday } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
@@ -27,6 +27,14 @@ import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
 interface ChatSidebarProps {
   selectedRoomId?: string
+}
+
+// Time for today's messages (matches the bubble's HH:mm), day labels otherwise —
+// a bare clock time is misleading for messages from previous days.
+function formatLastMessageTime(date: Date): string {
+  if (isToday(date)) return format(date, 'HH:mm')
+  if (isYesterday(date)) return 'Yesterday'
+  return format(date, 'MMM d')
 }
 
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
@@ -126,7 +134,8 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { data: presenceResponse } = useChatControllerGetPresence(
     { userIds: networkUserIds.join(',') },
-    { query: { enabled: networkUserIds.length > 0 } },
+    // refetchInterval: offline-by-TTL (api pod crash) emits no broadcast, so the cache needs periodic self-heal
+    { query: { enabled: networkUserIds.length > 0, refetchInterval: 60_000 } },
   )
 
   const presence = useMemo(() => {
@@ -237,7 +246,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {lastMessage && (
                         <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
-                          {format(new Date(lastMessage.createdAt), 'h:mm a')}
+                          {formatLastMessageTime(new Date(lastMessage.createdAt))}
                         </span>
                       )}
                       {showBadge && <span className="size-2 rounded-full bg-primary shrink-0" />}

@@ -44,6 +44,7 @@ export function ChatImageLightbox({ src, caption, open, onClose }: ChatImageLigh
           size="icon"
           className="text-white/70 hover:text-white hover:bg-white/10 rounded-full"
           onClick={onClose}
+          aria-label="Close image"
         >
           <X className="size-5" />
         </Button>

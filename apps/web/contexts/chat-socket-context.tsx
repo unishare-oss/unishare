@@ -1,9 +1,11 @@
 'use client'
 
 import { createContext, useEffect, useRef, useState, ReactNode, RefObject } from 'react'
+import { useRouter } from 'next/navigation'
 import { io, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutedRoomsStore } from '@/lib/store'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getChatControllerGetRoomsQueryKey,
@@ -27,23 +29,39 @@ export interface ChatSocketContextValue {
 
 export const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
 
+const HEARTBEAT_INTERVAL_MS = 30_000
+
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
+  const joinedRoomsRef = useRef<Set<string>>(new Set())
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
     if (!session) return
 
+    // websocket-only: the HTTP long-polling fallback breaks behind a
+    // round-robin load balancer without sticky sessions.
     const socket = io(`${SOCKET_URL}/chat`, {
       withCredentials: true,
+      transports: ['websocket'],
     })
 
     socketRef.current = socket
 
+    // Refreshes the presence TTL server-side so a crashed api pod can't
+    // leave this user stuck online, and keeps last-seen accurate.
+    const heartbeat = setInterval(() => {
+      if (socket.connected) socket.emit('heartbeat')
+    }, HEARTBEAT_INTERVAL_MS)
+
     socket.on('connect', () => {
       setIsConnected(true)
+      // Server-side socket rooms are lost on reconnect — re-join any rooms
+      // this tab had explicitly opened.
+      joinedRoomsRef.current.forEach((roomId) => socket.emit('join-room', roomId))
     })
 
     socket.on('disconnect', () => {
@@ -54,7 +72,50 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       setIsConnected(false)
     })
 
+    // Fires a native notification for messages received while the tab is hidden.
+    // Permission is requested lazily when the user first opens the chat page
+    // (see ChatLayoutShell) — never on app load.
+    const showBrowserNotification = (message: any) => {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+      if (!document.hidden) return
+      if (message.userId === session?.user?.id) return
+      if (message.type === 'SYSTEM') return
+      if (useMutedRoomsStore.getState().isMuted(message.roomId)) return
+
+      // Encrypted rooms carry ciphertext in `content` (same check the message
+      // bubble uses: my participant entry has an encryptedRoomKey). If the room
+      // isn't in the cache we can't tell, so treat it as encrypted to be safe.
+      const roomsCache: any = queryClient.getQueryData(getChatControllerGetRoomsQueryKey())
+      const room = roomsCache?.data?.find((r: any) => r.id === message.roomId)
+      const myParticipant = room?.participants?.find((p: any) => p.userId === session?.user?.id)
+      const isEncrypted = !room || !!myParticipant?.encryptedRoomKey
+
+      let body = 'New message'
+      if (message.type === 'IMAGE' || message.type === 'FILE') {
+        body = 'Sent an attachment'
+      } else if (!isEncrypted && typeof message.content === 'string' && message.content) {
+        body = message.content.length > 120 ? `${message.content.slice(0, 120)}…` : message.content
+      }
+
+      try {
+        const notification = new Notification(message.user?.name ?? 'New message', {
+          body,
+          tag: `chat-${message.roomId}`, // coalesce multiple messages per room
+          icon: '/android-chrome-192x192.png',
+        })
+        notification.onclick = () => {
+          window.focus()
+          router.push(`/chat/${message.roomId}`)
+          notification.close()
+        }
+      } catch {
+        // Notification constructor throws on some mobile browsers — ignore.
+      }
+    }
+
     socket.on('receive-message', (message: any) => {
+      showBrowserNotification(message)
+
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
@@ -237,11 +298,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     return () => {
+      clearInterval(heartbeat)
       socket.disconnect()
     }
-  }, [session, queryClient])
+  }, [session, queryClient, router])
 
   const joinRoom = (roomId: string) => {
+    joinedRoomsRef.current.add(roomId)
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }
