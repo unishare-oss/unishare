@@ -2,13 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { AppSidebar } from '@/components/app-sidebar'
+import { AppRail } from '@/components/app-rail'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
 import { BackgroundUploadManager } from '@/components/shared/background-upload-manager'
 import { useAuth } from '@/contexts/auth-context'
-import { useUIStore } from '@/lib/store'
 import { useNotificationStream } from '@/hooks/use-notifications'
 import { cn } from '@/lib/utils'
 
@@ -17,8 +16,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const isChat = pathname.startsWith('/chat')
   const isChatRoom = /^\/chat\/.+/.test(pathname)
-
-  const collapsed = useUIStore((s) => s.sidebarCollapsed)
 
   useNotificationStream(isAuthenticated)
   const [minimumLoaderElapsed, setMinimumLoaderElapsed] = useState(false)
@@ -39,15 +36,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        <AppSidebar />
+        <AppRail />
       </div>
       <main
         className={cn(
           showLoader ? 'invisible pointer-events-none' : '',
-          'transition-[margin] duration-300',
+          'md:ml-[72px]',
           isChat
-            ? cn('h-screen overflow-hidden', collapsed ? 'md:ml-[64px]' : 'md:ml-[288px]')
-            : cn('min-h-screen pb-16 md:pb-0', collapsed ? 'md:ml-[64px]' : 'md:ml-[288px]'),
+            ? 'h-screen overflow-hidden'
+            : // Bottom padding clears the floating mobile dock (h-16 + 12px inset + breathing room).
+              'min-h-screen pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0',
         )}
         aria-hidden={showLoader}
       >
