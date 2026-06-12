@@ -12,7 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { format, isToday, isYesterday } from 'date-fns'
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useNowTick } from '@/hooks/use-now-tick'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
@@ -144,6 +146,15 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     return map
   }, [presenceResponse])
 
+  useNowTick() // keeps relative last-seen tooltips fresh
+
+  const presenceLabel = (entry?: { status: 0 | 1; lastSeen?: number }) => {
+    if (entry?.status === 1) return 'Active now'
+    if (entry?.lastSeen)
+      return `Last seen ${formatDistanceToNow(entry.lastSeen, { addSuffix: true })}`
+    return 'Offline'
+  }
+
   // Filter out network users who already have a DM room with messages
   const filteredNetworkUsers = useMemo(() => {
     return networkUsers.filter((user) => {
@@ -225,14 +236,28 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
               >
-                <Avatar
-                  className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
-                >
-                  <AvatarImage src={displayImage} alt={displayName} />
-                  <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
-                    {displayName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Avatar
+                        className={cn(
+                          'h-10 w-10 rounded-[6px]',
+                          isOnline && 'ring-2 ring-green-500',
+                        )}
+                      >
+                        <AvatarImage src={displayImage} alt={displayName} />
+                        <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
+                          {displayName.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    {otherParticipant && (
+                      <TooltipContent side="right">
+                        {presenceLabel(presence.get(otherParticipant.userId))}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
                     <span
@@ -350,14 +375,26 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                         'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                     )}
                   >
-                    <Avatar
-                      className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
-                    >
-                      <AvatarImage src={user.image || ''} alt={user.name} />
-                      <AvatarFallback className="text-xs rounded-none bg-border text-foreground font-mono font-medium">
-                        {user.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar
+                            className={cn(
+                              'h-10 w-10 rounded-[6px]',
+                              isOnline && 'ring-2 ring-green-500',
+                            )}
+                          >
+                            <AvatarImage src={user.image || ''} alt={user.name} />
+                            <AvatarFallback className="text-xs rounded-none bg-border text-foreground font-mono font-medium">
+                              {user.name.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {presenceLabel(presence.get(user.id))}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <div className="flex-1 overflow-hidden">
                       <span className="font-medium truncate text-sm block">{user.name}</span>
                       {roomTypingUsers.length > 0 ? (

@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
+import { useNowTick } from '@/hooks/use-now-tick'
 import {
   Bell,
   BellOff,
@@ -43,6 +45,7 @@ interface ChatInfoPaneProps {
   room?: ChatRoomEntity
   messages: ChatMessageEntity[]
   currentUserId?: string
+  presenceMap?: Map<string, { status: 0 | 1; lastSeen?: number }>
   isOpen: boolean
   searchQuery: string
   onSearchChange: (q: string) => void
@@ -53,11 +56,21 @@ export function ChatInfoPane({
   room,
   messages,
   currentUserId,
+  presenceMap,
   isOpen,
   searchQuery,
   onSearchChange,
   onClose,
 }: ChatInfoPaneProps) {
+  useNowTick() // keeps relative last-seen text fresh
+
+  const memberPresenceLabel = (entry?: { status: 0 | 1; lastSeen?: number }) => {
+    if (entry?.status === 1) return 'Active now'
+    if (entry?.lastSeen)
+      return `Last seen ${formatDistanceToNow(entry.lastSeen, { addSuffix: true })}`
+    return 'Offline'
+  }
+
   const [view, setView] = useState<PaneView>('overview')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
@@ -251,15 +264,25 @@ export function ChatInfoPane({
                             href={`/users/${p.userId}`}
                             className="flex items-center gap-2.5 flex-1 min-w-0"
                           >
-                            <Avatar className="h-8 w-8 rounded-[4px] shrink-0">
+                            <Avatar
+                              className={cn(
+                                'h-8 w-8 rounded-[4px] shrink-0',
+                                presenceMap?.get(p.userId)?.status === 1 && 'ring-2 ring-green-500',
+                              )}
+                            >
                               <AvatarImage src={p.user?.image || ''} />
                               <AvatarFallback className="text-[9px] rounded-none bg-border text-foreground font-mono font-medium">
                                 {p.user?.name?.[0]?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <p className="text-xs font-medium truncate flex-1 group-hover:text-primary transition-colors">
-                              {p.user?.name}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">
+                                {p.user?.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {memberPresenceLabel(presenceMap?.get(p.userId))}
+                              </p>
+                            </div>
                           </Link>
                           {p.userId === currentUserId ? (
                             <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">

@@ -751,6 +751,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
             room={room}
             messages={messages}
             currentUserId={session?.user?.id}
+            presenceMap={presenceMap}
             isOpen={infoPaneOpen}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

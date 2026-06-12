@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useNowTick } from '@/hooks/use-now-tick'
 import { cn } from '@/lib/utils'
 import type { ChatRoomParticipantEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -44,6 +45,7 @@ export function ChatHeader(props: ChatHeaderProps) {
 
 function DMHeader({ user, presence, isEncrypted, unreadCount }: Omit<DMHeaderProps, 'mode'>) {
   const isOnline = presence?.status === 1
+  useNowTick() // keeps the relative last-seen text fresh while the header stays mounted
 
   const getStatus = () => {
     if (isOnline) return 'Active'
