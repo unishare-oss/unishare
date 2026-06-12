@@ -29,7 +29,7 @@ export function QuizBrowseCard({ quiz }: { quiz: QuizListItem }) {
         {quiz.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">{quiz.description}</p>
         )}
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
           {quiz.course?.code && (
             <Badge variant="outline" className="text-xs font-mono font-normal">
               {quiz.course.code}
