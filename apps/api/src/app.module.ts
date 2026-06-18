@@ -33,6 +33,7 @@ import { QuizzesModule } from './modules/quizzes/quizzes.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
+import { PrometheusModule } from '@willsoto/nestjs-prometheus'
 
 @Module({
   imports: [
@@ -51,6 +52,10 @@ import { RedisThrottlerStorageService } from './common/redis-throttler-storage.s
       useFactory: (config: ConfigService) => ({
         stores: [new KeyvRedis(config.get<string>('REDIS_URL', 'redis://localhost:6379'))],
       }),
+    }),
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: { enabled: true },
     }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
