@@ -34,7 +34,8 @@ import { UniversitiesModule } from './modules/universities/universities.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
 import { PrometheusModule } from '@willsoto/nestjs-prometheus'
-import { MetricsController } from './metrics.controller'
+import { MetricsController } from './metrics/metrics.controller'
+import { MetricsModule } from './metrics/metrics.module'
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { MetricsController } from './metrics.controller'
       controller: MetricsController,
       defaultMetrics: { enabled: true },
     }),
+    MetricsModule,
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     PrismaModule,
