@@ -6,7 +6,6 @@ import { useInView } from 'react-intersection-observer'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useChatControllerGetRoom,
-  useChatControllerMarkAsRead,
   useChatControllerUpgradeEncryption,
   useChatControllerGetPresence,
   getChatControllerGetRoomQueryKey,
@@ -20,6 +19,7 @@ import { useCrypto } from '@/hooks/use-crypto'
 import { useDecryptedChatMessages } from '@/hooks/use-decrypted-chat-messages'
 import { useScrollManager } from '@/hooks/use-scroll-manager'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
+import { useMarkRead } from '@/hooks/use-chat-mutations'
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload'
 import { useGlobalTypingIndicator, useEmitTyping } from '@/hooks/use-typing-indicator'
 import { useChatSocket } from '@/hooks/use-chat-socket'
@@ -102,7 +102,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
   const [showDisconnected, setShowDisconnected] = useState(false)
 
   const { setLastSeen, getLastSeen } = useChatLastSeenStore()
-  const { mutate: markRoomAsRead } = useChatControllerMarkAsRead()
+  const { mutate: markRoomAsRead } = useMarkRead()
 
   // Only show disconnected banner after 5s to avoid flashing on brief drops
   useEffect(() => {
@@ -346,7 +346,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
     const lastMsg = messages[messages.length - 1]
     if (lastMsg && !lastMsg.id.startsWith('temp-') && lastMsg.id !== getLastSeen(roomId)) {
       setLastSeen(roomId, lastMsg.id)
-      markRoomAsRead({ id: roomId })
+      markRoomAsRead({ roomId })
     }
   }, [isAtBottom, messages, roomId]) // eslint-disable-line react-hooks/exhaustive-deps
 
