@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets'
-import { Logger, UseGuards, UseFilters } from '@nestjs/common'
+import { Logger, UseGuards, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
 import { PresenceService } from './presence.service'
@@ -18,12 +18,19 @@ import { ChatWsExceptionFilter } from './filters/ws-exception.filter'
 import { OnEvent } from '@nestjs/event-emitter'
 import { ChatMessageEntity } from './entities/chat-message.entity'
 import { ChatRoomParticipantEntity } from './entities/chat-room.entity'
+import { ChatService } from './chat.service'
+import { WsAck } from './types/ws-ack.type'
+import { WsSendMessageDto } from './dto/ws/ws-send-message.dto'
+import { WsEditMessageDto } from './dto/ws/ws-edit-message.dto'
+import { WsDeleteMessageDto } from './dto/ws/ws-delete-message.dto'
+import { WsMarkReadDto } from './dto/ws/ws-mark-read.dto'
 
 const allowedOrigins = [
   'http://localhost:3000',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
+@UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 @WebSocketGateway({
   namespace: '/chat',
   cors: { origin: allowedOrigins, credentials: true },
@@ -36,6 +43,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly presenceService: PresenceService,
     private readonly chatRepository: ChatRepository,
+    private readonly chatService: ChatService,
   ) {}
 
   afterInit(server: Server) {
@@ -111,6 +119,60 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('heartbeat')
   async handleHeartbeat(@ConnectedSocket() client: Socket) {
     await this.presenceService.heartbeat(client.data.user.id)
+  }
+
+  @SubscribeMessage('send-message')
+  async handleSendMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsSendMessageDto,
+  ): Promise<WsAck<any>> {
+    try {
+      const { roomId, ...messageData } = data
+      const message = await this.chatService.sendMessage(roomId, client.data.user.id, messageData)
+      return { data: message }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('edit-message')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsEditMessageDto,
+  ): Promise<WsAck<any>> {
+    try {
+      const { messageId, ...updateData } = data
+      const message = await this.chatService.editMessage(messageId, client.data.user.id, updateData)
+      return { data: message }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('delete-message')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsDeleteMessageDto,
+  ): Promise<WsAck<{ id: string }>> {
+    try {
+      const result = await this.chatService.deleteMessage(data.messageId, client.data.user.id)
+      return { data: result }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('mark-read')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsMarkReadDto,
+  ): Promise<WsAck<void>> {
+    try {
+      await this.chatService.markAsRead(data.roomId, client.data.user.id)
+      return { data: undefined }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
   }
 
   @OnEvent('chat.message_sent')
