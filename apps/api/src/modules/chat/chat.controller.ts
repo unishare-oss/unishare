@@ -77,6 +77,7 @@ export class ChatController {
     )
   }
 
+  // HTTP fallback for WS `send-message` in ChatGateway
   @Post('rooms/:id/messages')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatMessageEntity })
@@ -89,6 +90,7 @@ export class ChatController {
     return this.chatService.sendMessage(id, session.user.id, dto)
   }
 
+  // HTTP fallback for WS `edit-message` in ChatGateway
   @Patch('messages/:id')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatMessageEntity })
@@ -101,6 +103,7 @@ export class ChatController {
     return this.chatService.editMessage(id, session.user.id, dto)
   }
 
+  // HTTP fallback for WS `delete-message` in ChatGateway
   @Delete('messages/:id')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: DeleteMessageResponseDto })
@@ -109,6 +112,7 @@ export class ChatController {
     return this.chatService.deleteMessage(id, session.user.id)
   }
 
+  // HTTP fallback for WS `mark-read` in ChatGateway
   @Post('rooms/:id/read')
   @UseGuards(ChatMemberGuard)
   @ResponseMessage('Room marked as read successfully')
