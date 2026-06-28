@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
+import { useNowTick } from '@/hooks/use-now-tick'
 import {
   Bell,
   BellOff,
@@ -19,12 +21,18 @@ import {
   UserPlus,
   QrCode,
   ScanLine,
+  UserMinus,
 } from 'lucide-react'
 import type { ChatRoomEntity, ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { useChatControllerLeaveRoom } from '@/src/lib/api/generated/chat/chat'
-import { getChatControllerGetRoomsQueryKey } from '@/src/lib/api/generated/chat/chat'
+import {
+  useChatControllerLeaveRoom,
+  useChatControllerRemoveMember,
+  getChatControllerGetRoomsQueryKey,
+  getChatControllerGetRoomQueryKey,
+} from '@/src/lib/api/generated/chat/chat'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutedRoomsStore } from '@/lib/store'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { GroupChatDialog } from '@/components/chat/group-chat-dialog'
 import { OverviewPane } from './overview-pane'
@@ -37,6 +45,7 @@ interface ChatInfoPaneProps {
   room?: ChatRoomEntity
   messages: ChatMessageEntity[]
   currentUserId?: string
+  presenceMap?: Map<string, { status: 0 | 1; lastSeen?: number }>
   isOpen: boolean
   searchQuery: string
   onSearchChange: (q: string) => void
@@ -47,28 +56,55 @@ export function ChatInfoPane({
   room,
   messages,
   currentUserId,
+  presenceMap,
   isOpen,
   searchQuery,
   onSearchChange,
   onClose,
 }: ChatInfoPaneProps) {
+  useNowTick() // keeps relative last-seen text fresh
+
+  const memberPresenceLabel = (entry?: { status: 0 | 1; lastSeen?: number }) => {
+    if (entry?.status === 1) return 'Active now'
+    if (entry?.lastSeen)
+      return `Last seen ${formatDistanceToNow(entry.lastSeen, { addSuffix: true })}`
+    return 'Offline'
+  }
+
   const [view, setView] = useState<PaneView>('overview')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [exportKeysOpen, setExportKeysOpen] = useState(false)
   const [importKeysOpen, setImportKeysOpen] = useState(false)
+  const [kickTargetId, setKickTargetId] = useState<string | null>(null)
 
   const { user: currentUser } = useAuth()
+  const { toggleMute, isMuted } = useMutedRoomsStore()
+  const roomMuted = room ? isMuted(room.id) : false
 
   const router = useRouter()
   const queryClient = useQueryClient()
+
   const { mutate: leaveRoom, isPending: isLeaving } = useChatControllerLeaveRoom({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
         router.push('/chat')
+      },
+    },
+  })
+
+  const { mutate: removeMember, isPending: isKicking } = useChatControllerRemoveMember({
+    mutation: {
+      onSuccess: () => {
+        if (room) {
+          queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(room.id) })
+          queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        }
+        setKickTargetId(null)
       },
     },
   })
@@ -108,6 +144,19 @@ export function ChatInfoPane({
 
   const isLoading = !room
 
+  // Determine owner: participant with earliest joinedAt
+  const isOwner =
+    room?.type === 'GROUP' &&
+    currentUserId &&
+    room.participants?.length > 0 &&
+    room.participants.reduce((earliest, p) =>
+      new Date(p.joinedAt) < new Date(earliest.joinedAt) ? p : earliest,
+    ).userId === currentUserId
+
+  const kickTargetName = kickTargetId
+    ? room?.participants?.find((p) => p.userId === kickTargetId)?.user?.name
+    : null
+
   return (
     <>
       <ConfirmDialog
@@ -119,6 +168,30 @@ export function ChatInfoPane({
         cancelLabel="Cancel"
         isPending={isLeaving}
         onConfirm={() => room && leaveRoom({ id: room.id })}
+      />
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete conversation"
+        description="This will permanently delete this conversation for you. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isPending={isLeaving}
+        onConfirm={() => room && leaveRoom({ id: room.id })}
+      />
+      <ConfirmDialog
+        open={!!kickTargetId}
+        onOpenChange={(open) => {
+          if (!open) setKickTargetId(null)
+        }}
+        title="Remove member"
+        description={`Remove ${kickTargetName ?? 'this member'} from the group?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        isPending={isKicking}
+        onConfirm={() => {
+          if (room && kickTargetId) removeMember({ id: room.id, userId: kickTargetId })
+        }}
       />
       {room?.type === 'GROUP' && (
         <GroupChatDialog
@@ -168,6 +241,7 @@ export function ChatInfoPane({
                 photosPreviews={sharedPhotos.slice(0, 3).map((m) => m.imageUrl as string)}
                 onNavigate={navigate}
                 onClose={onClose}
+                currentUserId={currentUserId}
               />
             )}
 
@@ -182,26 +256,49 @@ export function ChatInfoPane({
                         </div>
                       ))
                     : room.participants?.map((p) => (
-                        <Link
+                        <div
                           key={p.id}
-                          href={`/users/${p.userId}`}
                           className="flex items-center gap-2.5 rounded-[6px] hover:bg-muted px-2 py-1.5 transition-colors group"
                         >
-                          <Avatar className="h-8 w-8 rounded-[4px] shrink-0">
-                            <AvatarImage src={p.user?.image || ''} />
-                            <AvatarFallback className="text-[9px] rounded-none bg-border text-foreground font-mono font-medium">
-                              {p.user?.name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p className="text-xs font-medium truncate flex-1 group-hover:text-primary transition-colors">
-                            {p.user?.name}
-                          </p>
-                          {p.userId === currentUserId && (
-                            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">
+                          <Link
+                            href={`/users/${p.userId}`}
+                            className="flex items-center gap-2.5 flex-1 min-w-0"
+                          >
+                            <Avatar
+                              className={cn(
+                                'h-8 w-8 rounded-[4px] shrink-0',
+                                presenceMap?.get(p.userId)?.status === 1 && 'ring-2 ring-green-500',
+                              )}
+                            >
+                              <AvatarImage src={p.user?.image || ''} />
+                              <AvatarFallback className="text-[9px] rounded-none bg-border text-foreground font-mono font-medium">
+                                {p.user?.name?.[0]?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">
+                                {p.user?.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {memberPresenceLabel(presenceMap?.get(p.userId))}
+                              </p>
+                            </div>
+                          </Link>
+                          {p.userId === currentUserId ? (
+                            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">
                               You
                             </span>
-                          )}
-                        </Link>
+                          ) : isOwner ? (
+                            <Button
+                              size="icon-xs"
+                              variant="ghost"
+                              className="shrink-0 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                              onClick={() => setKickTargetId(p.userId)}
+                            >
+                              <UserMinus className="size-3.5" strokeWidth={1.5} />
+                            </Button>
+                          ) : null}
+                        </div>
                       ))}
                   {room?.type === 'GROUP' && (
                     <>
@@ -334,24 +431,37 @@ export function ChatInfoPane({
             {view === 'settings' && (
               <DetailPane title="Settings" onBack={goBack} onClose={onClose}>
                 <div className="flex flex-col gap-1 px-3 py-3">
-                  {[
-                    { icon: Bell, label: 'Mute notifications' },
-                    { icon: BellOff, label: 'Block user' },
-                  ].map(({ icon: Icon, label }) => (
+                  {/* Mute notifications — local only */}
+                  <Button
+                    variant="ghost"
+                    onClick={() => room && toggleMute(room.id)}
+                    className="justify-start gap-3 w-full"
+                  >
+                    {roomMuted ? (
+                      <BellOff className="size-4 shrink-0" strokeWidth={1.5} />
+                    ) : (
+                      <Bell className="size-4 shrink-0" strokeWidth={1.5} />
+                    )}
+                    <span>{roomMuted ? 'Unmute notifications' : 'Mute notifications'}</span>
+                  </Button>
+
+                  {/* Block — DM only, stub */}
+                  {room?.type !== 'GROUP' && (
                     <Button
-                      key={label}
                       variant="ghost"
                       disabled
                       className="justify-start gap-3 w-full text-muted-foreground/50 cursor-not-allowed"
                     >
-                      <Icon className="size-4 shrink-0" strokeWidth={1.5} />
-                      <span>{label}</span>
+                      <BellOff className="size-4 shrink-0" strokeWidth={1.5} />
+                      <span>Block user</span>
                       <span className="ml-auto text-[9px] font-mono uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
                         Soon
                       </span>
                     </Button>
-                  ))}
+                  )}
+
                   <div className="my-1 border-t" />
+
                   <Button
                     variant="ghost"
                     onClick={() => setExportKeysOpen(true)}
@@ -368,7 +478,9 @@ export function ChatInfoPane({
                     <ScanLine className="size-4 shrink-0" strokeWidth={1.5} />
                     <span className="truncate">Import keys from another device</span>
                   </Button>
+
                   <div className="my-1 border-t" />
+
                   {room?.type === 'GROUP' && (
                     <Button
                       variant="ghost"
@@ -384,20 +496,19 @@ export function ChatInfoPane({
                       <span>Leave group</span>
                     </Button>
                   )}
-                  {[{ icon: Trash2, label: 'Delete conversation' }].map(({ icon: Icon, label }) => (
+
+                  {/* Delete conversation — DM only */}
+                  {room?.type !== 'GROUP' && (
                     <Button
-                      key={label}
                       variant="ghost"
-                      disabled
-                      className="justify-start gap-3 w-full text-red-400/50 cursor-not-allowed"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      disabled={isLeaving}
+                      className="justify-start gap-3 w-full text-red-400 hover:text-red-500 hover:bg-red-500/10"
                     >
-                      <Icon className="size-4 shrink-0" strokeWidth={1.5} />
-                      <span>{label}</span>
-                      <span className="ml-auto text-[9px] font-mono uppercase tracking-wider bg-muted px-1.5 py-0.5 rounded">
-                        Soon
-                      </span>
+                      <Trash2 className="size-4 shrink-0" strokeWidth={1.5} />
+                      <span>Delete conversation</span>
                     </Button>
-                  ))}
+                  )}
                 </div>
               </DetailPane>
             )}

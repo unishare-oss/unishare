@@ -16,9 +16,9 @@ import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
 import { ChangePasswordForm } from '@/components/profile/change-password-form'
 import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
-import { AppearanceCard } from '@/components/profile/appearance-card'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 
 function ProfileContent({ user }: { user: UserProfileEntity }) {
@@ -42,7 +42,6 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
       <EditProfileForm user={user} />
       <ChangePasswordForm />
       <ConnectedAccountsCard />
-      <AppearanceCard />
       <DangerZoneCard />
       <ProfileTabs
         activeTab={activeTab}
@@ -74,8 +73,28 @@ function SignOutButton() {
   )
 }
 
+function ProfileSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="border border-border rounded-[6px] p-6 bg-card">
+        <div className="flex items-start gap-5">
+          <Skeleton className="size-16 rounded-full shrink-0" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-64" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+      </div>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Skeleton key={i} className="h-32 w-full rounded-[6px]" />
+      ))}
+    </div>
+  )
+}
+
 export default function ProfilePage() {
-  const { data: user } = useUsersControllerGetMe({
+  const { data: user, isLoading } = useUsersControllerGetMe({
     query: { select: (res) => res.data },
   })
 
@@ -84,7 +103,7 @@ export default function ProfilePage() {
       <PageHeader title="Profile" action={<SignOutButton />} />
       <div className="flex-1 bg-card">
         <div className="max-w-[700px] mx-auto px-6 py-8">
-          {user && <ProfileContent user={user} />}
+          {isLoading ? <ProfileSkeleton /> : user && <ProfileContent user={user} />}
         </div>
       </div>
     </div>

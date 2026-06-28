@@ -9,20 +9,23 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        default:
+          'border-2 border-border-strong bg-primary font-bold text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-primary/90 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
         destructive:
-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40',
+          'border-2 border-border-strong bg-destructive font-bold text-white shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-destructive/90 focus-visible:ring-destructive/20 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none dark:bg-destructive/60 dark:focus-visible:ring-destructive/40',
         outline:
-          'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
+          'border-2 bg-background shadow-[2px_2px_0_0_var(--shadow-color)] hover:bg-accent hover:text-accent-foreground active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+        secondary:
+          'border-2 border-border bg-secondary font-bold text-secondary-foreground shadow-[2px_2px_0_0_var(--shadow-color)] hover:bg-secondary/80 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none',
+        ghost:
+          'hover:bg-accent hover:text-accent-foreground active:translate-y-[1px] dark:hover:bg-accent/50',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-9 px-4 py-2 has-[>svg]:px-3',
+        default: 'h-9 px-5 py-2 has-[>svg]:px-3.5',
         xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: 'h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5',
-        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+        sm: 'h-8 gap-1.5 rounded-md px-3.5 has-[>svg]:px-2.5',
+        lg: 'h-10 rounded-md px-7 has-[>svg]:px-4.5',
         icon: 'size-9',
         'icon-xs': "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
         'icon-sm': 'size-8',

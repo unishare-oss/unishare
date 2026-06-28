@@ -54,7 +54,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="rounded-lg border border-border bg-muted/40 overflow-hidden">
+      <div className="detail-box rounded-lg border border-border bg-muted/40 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <CollapsibleTrigger className="flex items-center gap-1.5 group cursor-pointer flex-1 text-left">
             <Bot className="size-3.5 text-blue" strokeWidth={1.5} />

@@ -1,21 +1,18 @@
 'use client'
 
-import {
-  createContext,
-  useEffect,
-  useRef,
-  useState,
-  ReactNode,
-  RefObject,
-} from 'react'
+import { createContext, useEffect, useRef, useState, ReactNode, RefObject } from 'react'
+import { useRouter } from 'next/navigation'
 import { io, Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutedRoomsStore, useSettingsStore } from '@/lib/store'
+import { playMessageSound } from '@/lib/chat-sound'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getChatControllerGetRoomsQueryKey,
   getChatControllerGetMessagesInfiniteQueryKey,
   getChatControllerGetRoomQueryKey,
+  getChatControllerGetPresenceQueryKey,
 } from '@/src/lib/api/generated/chat/chat'
 import {
   addMessageToInfiniteCache,
@@ -25,38 +22,47 @@ import {
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-export interface PresenceEntry {
-  status: 0 | 1
-  lastSeen?: number
-}
-
 export interface ChatSocketContextValue {
   socketRef: RefObject<Socket | null>
   isConnected: boolean
   joinRoom: (roomId: string) => void
-  presence: Map<string, PresenceEntry>
 }
 
 export const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
 
+const HEARTBEAT_INTERVAL_MS = 30_000
+
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
+  const joinedRoomsRef = useRef<Set<string>>(new Set())
   const [isConnected, setIsConnected] = useState(false)
-  const [presence, setPresence] = useState<Map<string, PresenceEntry>>(new Map())
 
   useEffect(() => {
     if (!session) return
 
+    // websocket-only: the HTTP long-polling fallback breaks behind a
+    // round-robin load balancer without sticky sessions.
     const socket = io(`${SOCKET_URL}/chat`, {
       withCredentials: true,
+      transports: ['websocket'],
     })
 
     socketRef.current = socket
 
+    // Refreshes the presence TTL server-side so a crashed api pod can't
+    // leave this user stuck online, and keeps last-seen accurate.
+    const heartbeat = setInterval(() => {
+      if (socket.connected) socket.emit('heartbeat')
+    }, HEARTBEAT_INTERVAL_MS)
+
     socket.on('connect', () => {
       setIsConnected(true)
+      // Server-side socket rooms are lost on reconnect — re-join any rooms
+      // this tab had explicitly opened.
+      joinedRoomsRef.current.forEach((roomId) => socket.emit('join-room', roomId))
     })
 
     socket.on('disconnect', () => {
@@ -67,16 +73,84 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       setIsConnected(false)
     })
 
-    socket.on('receive-message', (message: any) => {
-      if (message.userId && message.userId === session.user.id) {
-        return
+    // Notifies about an incoming message: native notification when the tab is
+    // hidden (permission requested lazily in ChatLayoutShell), in-app toast
+    // when the tab is visible but the user is in another room/page, plus an
+    // optional sound. Silent while viewing the room the message belongs to.
+    const notifyIncomingMessage = (message: any) => {
+      if (message.userId === session?.user?.id) return
+      if (message.type === 'SYSTEM') return
+      if (useMutedRoomsStore.getState().isMuted(message.roomId)) return
+      if (!document.hidden && window.location.pathname === `/chat/${message.roomId}`) return
+
+      // Encrypted rooms carry ciphertext in `content` (same check the message
+      // bubble uses: my participant entry has an encryptedRoomKey). If the room
+      // isn't in the cache we can't tell, so treat it as encrypted to be safe.
+      const roomsCache: any = queryClient.getQueryData(getChatControllerGetRoomsQueryKey())
+      const room = roomsCache?.data?.find((r: any) => r.id === message.roomId)
+      const myParticipant = room?.participants?.find((p: any) => p.userId === session?.user?.id)
+      const isEncrypted = !room || !!myParticipant?.encryptedRoomKey
+
+      let body = 'New message'
+      if (message.type === 'IMAGE' || message.type === 'FILE') {
+        body = 'Sent an attachment'
+      } else if (!isEncrypted && typeof message.content === 'string' && message.content) {
+        body = message.content.length > 120 ? `${message.content.slice(0, 120)}…` : message.content
       }
 
-      // Update messages cache
+      const senderName = message.user?.name ?? 'New message'
+
+      if (document.hidden) {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            const notification = new Notification(senderName, {
+              body,
+              tag: `chat-${message.roomId}`, // coalesce multiple messages per room
+              icon: '/android-chrome-192x192.png',
+            })
+            notification.onclick = () => {
+              window.focus()
+              router.push(`/chat/${message.roomId}`)
+              notification.close()
+            }
+          } catch {
+            // Notification constructor throws on some mobile browsers — ignore.
+          }
+        }
+      } else {
+        toast(senderName, {
+          id: `chat-${message.roomId}`, // coalesce multiple messages per room
+          description: body,
+          action: {
+            label: 'Open',
+            onClick: () => router.push(`/chat/${message.roomId}`),
+          },
+        })
+      }
+
+      if (useSettingsStore.getState().chatSoundEnabled) playMessageSound()
+    }
+
+    socket.on('receive-message', (message: any) => {
+      notifyIncomingMessage(message)
+
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
       })
+
+      // If this tab has a pending optimistic message for this room, the mutation's
+      // onSuccess will do the temp→real replacement. Adding the real message here too
+      // creates a duplicate render frame. Skip only for this tab's own sends — a second
+      // device with the same userId has no temp entry and must not be skipped.
+      if (message.userId === session?.user?.id) {
+        const cache: any = queryClient.getQueryData(queryKey)
+        const hasPendingOptimistic = cache?.pages?.some((page: any) =>
+          page.data.items.some((item: any) => item.id.startsWith('temp-')),
+        )
+        if (hasPendingOptimistic) return
+      }
+
       queryClient.setQueryData(queryKey, (old: any) => addMessageToInfiniteCache(old, message))
 
       // Update rooms list preview
@@ -99,10 +173,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     socket.on('message-updated', (message: any) => {
-      if (message.userId === session.user.id) {
-        return
-      }
-
       const queryKey = getChatControllerGetMessagesInfiniteQueryKey(message.roomId, {
         limit: 50,
         direction: 'desc',
@@ -184,12 +254,59 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       })
     })
 
-    socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
-      setPresence((prev) => {
-        const next = new Map(prev)
-        next.set(payload.userId, { status: payload.status, lastSeen: payload.lastSeen })
-        return next
+    socket.on('room-upgraded', (payload: { roomId: string }) => {
+      queryClient.invalidateQueries({
+        queryKey: getChatControllerGetRoomQueryKey(payload.roomId),
       })
+      queryClient.invalidateQueries({
+        queryKey: getChatControllerGetRoomsQueryKey(),
+      })
+    })
+
+    socket.on('room-updated', (payload: { roomId: string; room: any }) => {
+      const { roomId, room } = payload
+      queryClient.setQueryData(getChatControllerGetRoomQueryKey(roomId), (old: any) => {
+        if (!old?.data) return old
+        return { ...old, data: { ...old.data, ...room } }
+      })
+      queryClient.setQueryData(getChatControllerGetRoomsQueryKey(), (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map((r: any) =>
+            r.id === roomId ? { ...r, name: room.name, imageUrl: room.imageUrl } : r,
+          ),
+        }
+      })
+    })
+
+    socket.on('member-removed', (payload: { roomId: string; userId: string }) => {
+      const { roomId, userId } = payload
+      if (userId === session?.user?.id) {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        // Redirect handled in the component via the invalidation + navigation
+        window.location.href = '/chat'
+      } else {
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
+        queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+      }
+    })
+
+    socket.on('user-presence', (payload: { userId: string; status: 0 | 1; lastSeen?: number }) => {
+      queryClient.setQueriesData(
+        { queryKey: getChatControllerGetPresenceQueryKey() },
+        (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((entry: any) =>
+              entry.userId === payload.userId
+                ? { ...entry, status: payload.status, lastSeen: payload.lastSeen }
+                : entry,
+            ),
+          }
+        },
+      )
     })
 
     socket.on('error', (error: any) => {
@@ -199,11 +316,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     })
 
     return () => {
+      clearInterval(heartbeat)
       socket.disconnect()
     }
-  }, [session, queryClient])
+  }, [session, queryClient, router])
 
   const joinRoom = (roomId: string) => {
+    joinedRoomsRef.current.add(roomId)
     if (socketRef.current) {
       socketRef.current.emit('join-room', roomId)
     }
@@ -213,7 +332,6 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     socketRef,
     isConnected,
     joinRoom,
-    presence,
   }
 
   return <ChatSocketContext.Provider value={value}>{children}</ChatSocketContext.Provider>

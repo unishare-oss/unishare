@@ -33,6 +33,9 @@ import { QuizzesModule } from './modules/quizzes/quizzes.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
+import { PrometheusModule } from '@willsoto/nestjs-prometheus'
+import { MetricsController } from './metrics/metrics.controller'
+import { MetricsModule } from './metrics/metrics.module'
 
 @Module({
   imports: [
@@ -52,6 +55,12 @@ import { RedisThrottlerStorageService } from './common/redis-throttler-storage.s
         stores: [new KeyvRedis(config.get<string>('REDIS_URL', 'redis://localhost:6379'))],
       }),
     }),
+    PrometheusModule.register({
+      path: '/metrics',
+      controller: MetricsController,
+      defaultMetrics: { enabled: true },
+    }),
+    MetricsModule,
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     PrismaModule,

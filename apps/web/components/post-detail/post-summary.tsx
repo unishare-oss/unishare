@@ -24,7 +24,7 @@ export function PostSummary({ post }: PostSummaryProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="rounded-lg border border-border bg-muted/40 mt-4 overflow-hidden">
+      <div className="detail-box rounded-lg border border-border bg-muted/40 mt-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <CollapsibleTrigger className="flex items-center gap-1.5 group cursor-pointer flex-1 text-left">
             <Sparkles className="size-3.5 text-amber" strokeWidth={1.5} />

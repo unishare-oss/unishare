@@ -3,8 +3,8 @@ import helmet from 'helmet'
 import { NestFactory, Reflector } from '@nestjs/core'
 import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { IoAdapter } from '@nestjs/platform-socket.io'
 import { AppModule } from './app.module'
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggerMiddleware } from './common/middleware'
@@ -33,6 +33,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: [
       { path: 'health', method: RequestMethod.GET },
+      { path: 'metrics', method: RequestMethod.GET },
       { path: 'api/(.*)', method: RequestMethod.ALL },
     ],
   })
@@ -40,6 +41,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
   app.useGlobalFilters(new HttpExceptionFilter())
   app.useGlobalInterceptors(new ResponseInterceptor(reflector))
+
+  // Finish in-flight requests on SIGTERM so rolling deploys don't drop traffic
+  app.enableShutdownHooks()
 
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
@@ -53,7 +57,9 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document)
   }
 
-  app.useWebSocketAdapter(new IoAdapter(app))
+  const redisIoAdapter = new RedisIoAdapter(app)
+  await redisIoAdapter.connectToRedis(process.env.REDIS_URL ?? 'redis://localhost:6379')
+  app.useWebSocketAdapter(redisIoAdapter)
 
   const port = process.env.PORT ?? 3001
   await app.listen(port)

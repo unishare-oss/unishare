@@ -41,6 +41,11 @@
   --info: #0369a1;
   --surface-dark: #1c1917;
   --card-dark: #f0ebe4;
+  --shadow-color: rgba(28, 25, 23, 0.9);
+  --border-strong: #1c1917;
+  --type-note: #d97706;
+  --type-exam: #7c3aed;
+  --type-exercise: #0d9488;
 }
 
 /* ─── Catppuccin Mocha (dark) ────────────────────────────────────────────── */
@@ -86,6 +91,11 @@
   --info: #89b4fa;
   --surface-dark: #11111b;
   --card-dark: #11111b;
+  --shadow-color: #585b70;
+  --border-strong: #585b70;
+  --type-note: #f9e2af;
+  --type-exam: #cba6f7;
+  --type-exercise: #94e2d5;
 }
 
 /* ─── Catppuccin Latte (light) ───────────────────────────────────────────── */
@@ -131,6 +141,11 @@
   --info: #1e66f5;
   --surface-dark: #bcc0cc;
   --card-dark: #dce0e8;
+  --shadow-color: rgba(76, 79, 105, 0.9);
+  --border-strong: #4c4f69;
+  --type-note: #df8e1d;
+  --type-exam: #8839ef;
+  --type-exercise: #179299;
 }
 
 /* ─── Nord (dark) ────────────────────────────────────────────────────────── */
@@ -176,6 +191,11 @@
   --info: #81a1c1;
   --surface-dark: #242932;
   --card-dark: #242932;
+  --shadow-color: #616e88;
+  --border-strong: #616e88;
+  --type-note: #ebcb8b;
+  --type-exam: #b48ead;
+  --type-exercise: #8fbcbb;
 }
 
 /* ─── Arctic (Nord Light) ────────────────────────────────────────────────── */
@@ -221,6 +241,11 @@
   --info: #81a1c1;
   --surface-dark: #2e3440;
   --card-dark: #d8dee9;
+  --shadow-color: rgba(46, 52, 64, 0.9);
+  --border-strong: #2e3440;
+  --type-note: #b45309;
+  --type-exam: #6d28d9;
+  --type-exercise: #0f766e;
 }
 
 /* ─── Tokyo Night ────────────────────────────────────────────────────────── */
@@ -266,6 +291,11 @@
   --info: #7dcfff;
   --surface-dark: #13131a;
   --card-dark: #13131a;
+  --shadow-color: #3b4261;
+  --border-strong: #3b4261;
+  --type-note: #e0af68;
+  --type-exam: #bb9af7;
+  --type-exercise: #73daca;
 }
 
 /* ─── Dracula ─────────────────────────────────────────────────────────────── */
@@ -311,6 +341,11 @@
   --info: #8be9fd;
   --surface-dark: #191a21;
   --card-dark: #191a21;
+  --shadow-color: #6272a4;
+  --border-strong: #6272a4;
+  --type-note: #ffb86c;
+  --type-exam: #bd93f9;
+  --type-exercise: #8be9fd;
 }
 
 /* ─── Gruvbox Dark ───────────────────────────────────────────────────────── */
@@ -356,6 +391,11 @@
   --info: #458588;
   --surface-dark: #181818;
   --card-dark: #181818;
+  --shadow-color: #665c54;
+  --border-strong: #665c54;
+  --type-note: #fabd2f;
+  --type-exam: #d3869b;
+  --type-exercise: #8ec07c;
 }
 
 /* ─── Midnight Library (dark, navy + warm gold) ──────────────────────────── */
@@ -401,6 +441,11 @@
   --info: #4d9de0;
   --surface-dark: #070a10;
   --card-dark: #0d1320;
+  --shadow-color: #3a4768;
+  --border-strong: #3a4768;
+  --type-note: #e6a817;
+  --type-exam: #a78bfa;
+  --type-exercise: #2dd4bf;
 }
 
 /* ─── Parchment (light, warm cream + ink brown) ──────────────────────────── */
@@ -446,6 +491,11 @@
   --info: #1e4d8c;
   --surface-dark: #2c1f0f;
   --card-dark: #e8dfc8;
+  --shadow-color: rgba(44, 31, 15, 0.9);
+  --border-strong: #2c1f0f;
+  --type-note: #b45309;
+  --type-exam: #6d28d9;
+  --type-exercise: #0f766e;
 }
 
 /* ─── Ocean Depth (dark, deep blue + cyan) ───────────────────────────────── */
@@ -491,6 +541,11 @@
   --info: #818cf8;
   --surface-dark: #020b15;
   --card-dark: #081830;
+  --shadow-color: #28507a;
+  --border-strong: #28507a;
+  --type-note: #fbbf24;
+  --type-exam: #a78bfa;
+  --type-exercise: #2dd4bf;
 }
 
 /* ─── Sakura (light, soft pink + deep rose) ──────────────────────────────── */
@@ -536,4 +591,9 @@
   --info: #7c3aed;
   --surface-dark: #2d0f1a;
   --card-dark: #fce7f0;
+  --shadow-color: rgba(45, 15, 26, 0.85);
+  --border-strong: #2d0f1a;
+  --type-note: #d97706;
+  --type-exam: #7c3aed;
+  --type-exercise: #0d9488;
 }

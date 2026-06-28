@@ -192,6 +192,8 @@ interface SettingsStore {
   ) => void
   increaseFontSize: () => void
   decreaseFontSize: () => void
+  chatSoundEnabled: boolean
+  setChatSoundEnabled: (enabled: boolean) => void
 }
 
 const fontSizeOrder: (
@@ -209,6 +211,8 @@ export const useSettingsStore = create<SettingsStore>()(
     (set, get) => ({
       fontSize: 'mediumlarge',
       setFontSize: (fontSize) => set({ fontSize }),
+      chatSoundEnabled: true,
+      setChatSoundEnabled: (chatSoundEnabled) => set({ chatSoundEnabled }),
       increaseFontSize: () => {
         const current = get().fontSize
         const currentIndex = fontSizeOrder.indexOf(current)
@@ -225,5 +229,49 @@ export const useSettingsStore = create<SettingsStore>()(
       },
     }),
     { name: 'unishare-settings' },
+  ),
+)
+
+export type FeedStyle = 'arcade' | 'desk' | 'classic'
+
+interface FeedStyleStore {
+  feedStyle: FeedStyle
+  setFeedStyle: (feedStyle: FeedStyle) => void
+}
+
+/**
+ * Persisted feed style preference. Uses skipHydration (same pattern as
+ * useUIStore) so SSR markup and the first client render both use the
+ * default, then Providers rehydrates from localStorage after mount.
+ */
+export const useFeedStyleStore = create<FeedStyleStore>()(
+  persist(
+    (set) => ({
+      feedStyle: 'arcade',
+      setFeedStyle: (feedStyle) => set({ feedStyle }),
+    }),
+    { name: 'unishare-feed-style', skipHydration: true },
+  ),
+)
+
+interface MutedRoomsStore {
+  mutedRoomIds: string[]
+  toggleMute: (roomId: string) => void
+  isMuted: (roomId: string) => boolean
+}
+
+export const useMutedRoomsStore = create<MutedRoomsStore>()(
+  persist(
+    (set, get) => ({
+      mutedRoomIds: [],
+      toggleMute: (roomId) =>
+        set((s) => ({
+          mutedRoomIds: s.mutedRoomIds.includes(roomId)
+            ? s.mutedRoomIds.filter((id) => id !== roomId)
+            : [...s.mutedRoomIds, roomId],
+        })),
+      isMuted: (roomId) => get().mutedRoomIds.includes(roomId),
+    }),
+    { name: 'unishare-muted-rooms' },
   ),
 )

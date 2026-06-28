@@ -19,7 +19,7 @@ export function QuizBrowseCard({ quiz }: { quiz: QuizListItem }) {
   return (
     <Link
       href={`/quizzes/${quiz.id}`}
-      className="flex items-start gap-4 p-4 rounded-xl border transition-colors group hover:bg-accent hover:border-primary/20"
+      className="card-pop card-pop-hover flex items-start gap-4 p-4 rounded-xl bg-card group hover:bg-accent"
     >
       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
         <HelpCircle className="w-5 h-5 text-primary" />
@@ -29,7 +29,7 @@ export function QuizBrowseCard({ quiz }: { quiz: QuizListItem }) {
         {quiz.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">{quiz.description}</p>
         )}
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
           {quiz.course?.code && (
             <Badge variant="outline" className="text-xs font-mono font-normal">
               {quiz.course.code}

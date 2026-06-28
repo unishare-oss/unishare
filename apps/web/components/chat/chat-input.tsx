@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Send, Loader2, Paperclip, ImageIcon } from 'lucide-react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -36,7 +37,7 @@ export function ChatInput({
   onCancelEdit,
   onCancelReply,
 }: ChatInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const attachInputRef = useRef<HTMLInputElement>(null)
 
@@ -75,7 +76,7 @@ export function ChatInput({
 
       {/* Original Input Area */}
       <div className="p-3.5 border-t">
-        <div className="flex items-center gap-2 max-w-4xl mx-auto">
+        <div className="flex items-end gap-2 max-w-4xl mx-auto">
           {/* Hidden image input */}
           <Input
             ref={fileInputRef}
@@ -106,6 +107,7 @@ export function ChatInput({
               size="icon"
               className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
               title="Send image"
+              aria-label="Send image"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
             >
@@ -118,26 +120,37 @@ export function ChatInput({
             size="icon"
             className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
             title="Attach file"
+            aria-label="Attach file"
             onClick={() => attachInputRef.current?.click()}
             disabled={disabled}
           >
             <Paperclip className="h-4 w-4" />
           </Button>
-          <Input
+          <Textarea
             ref={inputRef}
             placeholder={getPlaceholder()}
             value={value}
+            rows={1}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !disabled) onSend()
+              if (e.key === 'Enter' && !e.shiftKey && !disabled) {
+                e.preventDefault()
+                onSend()
+              }
               if (e.key === 'Escape') {
                 if (editingMessage) onCancelEdit?.()
                 else if (replyingToMessage) onCancelReply?.()
               }
             }}
-            className="flex-1"
+            className="flex-1 min-h-10 max-h-32 resize-none py-2"
           />
-          <Button size="icon" onClick={onSend} disabled={disabled} className="h-10 w-10 shrink-0">
+          <Button
+            size="icon"
+            onClick={onSend}
+            disabled={disabled}
+            aria-label="Send message"
+            className="h-10 w-10 shrink-0"
+          >
             {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

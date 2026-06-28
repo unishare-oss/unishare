@@ -8,21 +8,29 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets'
-import { Logger, UseGuards, UseFilters } from '@nestjs/common'
+import { Logger, UseGuards, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { auth } from '@/auth/auth.config'
 import { PresenceService } from './presence.service'
+import { ChatRepository } from './chat.repository'
 import { ChatRoomGuard } from './guards/chat-room.guard'
 import { ChatWsExceptionFilter } from './filters/ws-exception.filter'
 import { OnEvent } from '@nestjs/event-emitter'
 import { ChatMessageEntity } from './entities/chat-message.entity'
 import { ChatRoomParticipantEntity } from './entities/chat-room.entity'
+import { ChatService } from './chat.service'
+import { WsAck } from './types/ws-ack.type'
+import { WsSendMessageDto } from './dto/ws/ws-send-message.dto'
+import { WsEditMessageDto } from './dto/ws/ws-edit-message.dto'
+import { WsDeleteMessageDto } from './dto/ws/ws-delete-message.dto'
+import { WsMarkReadDto } from './dto/ws/ws-mark-read.dto'
 
 const allowedOrigins = [
   'http://localhost:3000',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
+@UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 @WebSocketGateway({
   namespace: '/chat',
   cors: { origin: allowedOrigins, credentials: true },
@@ -32,7 +40,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @WebSocketServer() server: Server
   private readonly logger = new Logger(ChatGateway.name)
 
-  constructor(private readonly presenceService: PresenceService) {}
+  constructor(
+    private readonly presenceService: PresenceService,
+    private readonly chatRepository: ChatRepository,
+    private readonly chatService: ChatService,
+  ) {}
 
   afterInit(server: Server) {
     this.presenceService.setServer(server)
@@ -54,14 +66,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     })
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`Connection established! Socket ID: ${client.id}`)
 
     const userId = client.data.user.id
-    client.join(`user-${userId}`)
+    await client.join(`user-${userId}`)
     this.logger.log(`User ${userId} joined personal room: user-${userId}`)
 
-    this.presenceService.connect(userId)
+    await this.presenceService.connect(userId)
+
+    // Auto-join all room memberships so room-scoped events (typing, reads)
+    // reach participants everywhere in the app, not just the open room view.
+    const roomIds = await this.chatRepository.findRoomIdsByUserId(userId)
+    if (roomIds.length > 0) await client.join(roomIds)
   }
 
   handleDisconnect(client: Socket) {
@@ -90,14 +107,72 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const { roomId, isTyping } = data
     const userId = client.data.user.id
 
-    // Emit globally to all connected clients
-    this.server.emit('user-typing', {
+    // Room-scoped: only participants receive it (sockets auto-join their rooms
+    // on connect), and the sender is excluded.
+    client.to(roomId).emit('user-typing', {
       roomId,
       userId,
       isTyping,
     })
+  }
 
-    // this.logger.log(`User ${userId} ${isTyping ? 'started' : 'stopped'} typing in room ${roomId}`)
+  @SubscribeMessage('heartbeat')
+  async handleHeartbeat(@ConnectedSocket() client: Socket) {
+    await this.presenceService.heartbeat(client.data.user.id)
+  }
+
+  @SubscribeMessage('send-message')
+  async handleSendMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsSendMessageDto,
+  ): Promise<WsAck<any>> {
+    try {
+      const { roomId, ...messageData } = data
+      const message = await this.chatService.sendMessage(roomId, client.data.user.id, messageData)
+      return { data: message }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('edit-message')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsEditMessageDto,
+  ): Promise<WsAck<any>> {
+    try {
+      const { messageId, ...updateData } = data
+      const message = await this.chatService.editMessage(messageId, client.data.user.id, updateData)
+      return { data: message }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('delete-message')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsDeleteMessageDto,
+  ): Promise<WsAck<{ id: string }>> {
+    try {
+      const result = await this.chatService.deleteMessage(data.messageId, client.data.user.id)
+      return { data: result }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  @SubscribeMessage('mark-read')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: WsMarkReadDto,
+  ): Promise<WsAck<void>> {
+    try {
+      await this.chatService.markAsRead(data.roomId, client.data.user.id)
+      return { data: undefined }
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
   }
 
   @OnEvent('chat.message_sent')
@@ -136,5 +211,44 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleRoomReadEvent(payload: { roomId: string; userId: string; lastReadAt: Date }) {
     const { roomId, userId, lastReadAt } = payload
     this.server.to(roomId).emit('room-read', { roomId, userId, lastReadAt })
+  }
+
+  @OnEvent('chat.room_upgraded')
+  async handleRoomUpgradedEvent(payload: {
+    roomId: string
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    this.server.to(personalRooms).emit('room-upgraded', { roomId })
+  }
+
+  @OnEvent('chat.room_updated')
+  async handleRoomUpdatedEvent(payload: {
+    roomId: string
+    room: any
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, room, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    this.server.to(personalRooms).emit('room-updated', { roomId, room })
+  }
+
+  @OnEvent('chat.member_removed')
+  async handleMemberRemovedEvent(payload: {
+    roomId: string
+    userId: string
+    participants: ChatRoomParticipantEntity[]
+  }) {
+    const { roomId, userId, participants } = payload
+    const personalRooms = participants.map((p) => `user-${p.userId}`)
+    // Notify remaining members
+    this.server.to(personalRooms).emit('member-removed', { roomId, userId })
+    // Notify the removed user directly
+    this.server.to(`user-${userId}`).emit('member-removed', { roomId, userId })
+    // Evict the removed user's live sockets from the room — they auto-joined
+    // on connect and would otherwise keep receiving room-scoped broadcasts
+    // until their next reconnect. Works cluster-wide via the redis adapter.
+    await this.server.in(`user-${userId}`).socketsLeave(roomId)
   }
 }

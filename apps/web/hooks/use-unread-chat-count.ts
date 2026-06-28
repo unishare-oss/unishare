@@ -1,9 +1,11 @@
 import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutedRoomsStore } from '@/lib/store'
 
 export function useUnreadChatCount() {
   const { session, isAuthenticated } = useAuth()
   const currentUserId = session?.user?.id
+  const { isMuted } = useMutedRoomsStore()
 
   const { data: roomsResponse } = useChatControllerGetRooms({
     query: { enabled: isAuthenticated },
@@ -12,6 +14,8 @@ export function useUnreadChatCount() {
   const rooms = roomsResponse?.data ?? []
 
   const unreadCount = rooms.reduce((count, room) => {
+    if (isMuted(room.id)) return count
+
     const lastMessage = room.messages?.[0]
     if (!lastMessage) return count
 

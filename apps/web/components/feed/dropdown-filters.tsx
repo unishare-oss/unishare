@@ -37,7 +37,7 @@ export function DropdownFilters({
   selectedModuleNumber,
   // departments,
   filteredCourses,
-  selectedDeptLabel,
+  // selectedDeptLabel,
   selectedYearLabel,
   selectedCourseLabel,
   // onDeptChange,

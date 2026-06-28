@@ -7,6 +7,15 @@ import { ChatMessageType, ChatRoomType } from '@/generated/prisma/enums'
 export class ChatRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Lean lookup for socket room auto-join on connection — ids only, no includes.
+  async findRoomIdsByUserId(userId: string): Promise<string[]> {
+    const rows = await this.prisma.chatRoomParticipant.findMany({
+      where: { userId },
+      select: { roomId: true },
+    })
+    return rows.map((r) => r.roomId)
+  }
+
   async findRoomsByUserId(userId: string) {
     return this.prisma.chatRoom.findMany({
       where: {
@@ -361,6 +370,35 @@ export class ChatRepository {
       data: {
         lastReadAt: new Date(),
       },
+    })
+  }
+
+  findGroupRoomIds(userId: string) {
+    return this.prisma.chatRoom.findMany({
+      where: { type: 'GROUP', participants: { some: { userId } } },
+      select: { id: true },
+    })
+  }
+
+  async updateRoom(roomId: string, data: { name?: string; imageUrl?: string }) {
+    return this.prisma.chatRoom.update({
+      where: { id: roomId },
+      data,
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true, image: true, publicKey: true },
+            },
+          },
+        },
+      },
+    })
+  }
+
+  async removeMember(roomId: string, userId: string) {
+    return this.prisma.chatRoomParticipant.delete({
+      where: { roomId_userId: { roomId, userId } },
     })
   }
 }

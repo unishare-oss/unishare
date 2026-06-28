@@ -1,6 +1,16 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Req } from '@nestjs/common'
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
 import type { Request } from 'express'
 import { fromNodeHeaders } from 'better-auth/node'
@@ -11,6 +21,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 import { SetPasswordDto } from './dto/set-password.dto'
 import { UpdatePublicKeyDto } from './dto/update-public-key.dto'
+import { UpdateKeyBackupDto } from './dto/update-key-backup.dto'
 import { UserProfileEntity } from './entities/user-profile.entity'
 
 @ApiTags('users')
@@ -73,5 +84,37 @@ export class UsersController {
   @ResponseMessage('Public key updated successfully')
   updatePublicKey(@Session() session: UserSession, @Body() dto: UpdatePublicKeyDto) {
     return this.usersService.updatePublicKey(session.user.id, dto.publicKey)
+  }
+
+  @Delete('me/public-key')
+  @ApiOkResponse({ description: 'Encryption keys cleared' })
+  @ResponseMessage('Encryption keys cleared successfully')
+  clearMyKeys(@Session() session: UserSession) {
+    return this.usersService.clearMyKeys(session.user.id)
+  }
+
+  @Patch('me/key-backup')
+  @ResponseMessage('Key backup stored successfully')
+  updateKeyBackup(@Session() session: UserSession, @Body() dto: UpdateKeyBackupDto) {
+    return this.usersService.updateKeyBackup(session.user.id, dto.keyBackup)
+  }
+
+  @Get('me/key-backup')
+  @ResponseMessage('Key backup fetched successfully')
+  getKeyBackup(@Session() session: UserSession) {
+    return this.usersService.getKeyBackup(session.user.id)
+  }
+
+  @Delete('me/key-backup')
+  @ResponseMessage('Key backup deleted successfully')
+  clearKeyBackup(@Session() session: UserSession) {
+    return this.usersService.clearKeyBackup(session.user.id)
+  }
+
+  @Delete('admin/public-keys')
+  @Roles(['ADMIN'])
+  @ResponseMessage('All public keys cleared successfully')
+  clearAllPublicKeys() {
+    return this.usersService.clearAllPublicKeys()
   }
 }

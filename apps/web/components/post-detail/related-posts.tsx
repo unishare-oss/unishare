@@ -24,7 +24,7 @@ export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
       <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
         More from this course
       </h3>
-      <div className="flex flex-col border border-border rounded-[6px] overflow-hidden bg-card">
+      <div className="detail-box flex flex-col border border-border rounded-[6px] overflow-hidden bg-card">
         {related.map((post, i) => (
           <Link
             key={post.id}

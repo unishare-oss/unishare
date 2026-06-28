@@ -10,8 +10,6 @@ import { useUIStore } from '@/lib/store'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
-import { PostCard } from '@/components/post-card'
-import { EmptyState } from '@/components/shared/empty-state'
 import { ReadingListsSidebar } from '@/components/reading-lists/reading-lists-sidebar'
 
 export default function SavedPage() {
@@ -82,10 +80,14 @@ export default function SavedPage() {
               onPageChange={setPage}
               emptyMessage="No posts in this list yet."
             />
-          ) : guestSavedPosts.length === 0 ? (
-            <EmptyState message="No saved posts yet." />
           ) : (
-            guestSavedPosts.map((post) => <PostCard key={post.id} post={post} />)
+            <PostFeed
+              posts={guestSavedPosts}
+              page={1}
+              totalPages={1}
+              onPageChange={() => {}}
+              emptyMessage="No saved posts yet."
+            />
           )}
         </div>
       </div>

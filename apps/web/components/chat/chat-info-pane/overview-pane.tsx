@@ -1,13 +1,39 @@
 'use client'
 
+import { useState, useRef } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Users, ImageIcon, FileIcon, Link2, Info, X, Search } from 'lucide-react'
+import {
+  Users,
+  ImageIcon,
+  FileIcon,
+  Link2,
+  Info,
+  X,
+  Search,
+  Pencil,
+  Camera,
+  Check,
+  Loader2,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatRoomEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import {
+  useChatControllerUpdateRoom,
+  getChatControllerGetRoomQueryKey,
+  getChatControllerGetRoomsQueryKey,
+} from '@/src/lib/api/generated/chat/chat'
+import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import {
+  PresignedUploadDtoPurpose,
+  PresignedUploadDtoUploadType,
+  type PresignedUploadEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { SectionRow } from './section-row'
 import type { PaneView } from './types'
 
@@ -25,6 +51,7 @@ interface OverviewPaneProps {
   photosPreviews: string[]
   onNavigate: (view: PaneView) => void
   onClose?: () => void
+  currentUserId?: string
 }
 
 export function OverviewPane({
@@ -41,7 +68,64 @@ export function OverviewPane({
   photosPreviews,
   onNavigate,
   onClose,
+  currentUserId,
 }: OverviewPaneProps) {
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const queryClient = useQueryClient()
+  const { mutate: updateRoom, isPending: isUpdatingRoom } = useChatControllerUpdateRoom({
+    mutation: {
+      onSuccess: () => {
+        if (room) {
+          queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(room.id) })
+          queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
+        }
+      },
+      onError: () => toast.error('Failed to update room'),
+    },
+  })
+
+  const isOwner = room?.type === 'GROUP' && !!currentUserId
+
+  const startEditName = () => {
+    setNameValue(room?.name ?? '')
+    setEditingName(true)
+  }
+
+  const saveName = () => {
+    if (!room || !nameValue.trim()) return
+    updateRoom({ id: room.id, data: { name: nameValue.trim() } })
+    setEditingName(false)
+  }
+
+  const cancelEdit = () => setEditingName(false)
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !room) return
+    setIsUploadingImage(true)
+    try {
+      const res = await storageControllerGetPresignedUploadUrl({
+        mimeType: file.type,
+        uploadType: PresignedUploadDtoUploadType.image,
+        purpose: PresignedUploadDtoPurpose['group-picture'],
+      })
+      const { url, publicUrl } = res.data as PresignedUploadEntity
+      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      updateRoom({ id: room.id, data: { imageUrl: publicUrl } })
+    } catch {
+      toast.error('Failed to upload image')
+    } finally {
+      setIsUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
+  const isBusy = isUploadingImage || isUpdatingRoom
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 min-h-0">
@@ -84,14 +168,80 @@ export function OverviewPane({
               </>
             ) : (
               <>
-                <Avatar className="h-14 w-14 rounded-xl">
-                  <AvatarImage src={displayImage} />
-                  <AvatarFallback className="rounded-xl bg-border text-foreground font-mono font-semibold text-lg">
-                    {displayName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-center">
-                  <p className="font-semibold text-sm">{displayName}</p>
+                {/* Avatar with camera overlay for group owners */}
+                <div className="relative">
+                  <Avatar className="h-14 w-14 rounded-xl">
+                    <AvatarImage src={displayImage} />
+                    <AvatarFallback className="rounded-xl bg-border text-foreground font-mono font-semibold text-lg">
+                      {displayName.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isOwner && (
+                    <>
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                      <button
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={isBusy}
+                        className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                      >
+                        {isBusy ? (
+                          <Loader2 className="size-5 text-white animate-spin" />
+                        ) : (
+                          <Camera className="size-5 text-white" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Name with inline edit for group owners */}
+                <div className="text-center w-full px-2">
+                  {editingName ? (
+                    <div className="flex items-center gap-1 justify-center">
+                      <Input
+                        autoFocus
+                        value={nameValue}
+                        onChange={(e) => setNameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveName()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                        className="h-7 text-sm text-center font-semibold max-w-[140px]"
+                        maxLength={50}
+                      />
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={saveName}
+                        disabled={isUpdatingRoom}
+                      >
+                        <Check className="size-3.5 text-green-500" />
+                      </Button>
+                      <Button size="icon-xs" variant="ghost" onClick={cancelEdit}>
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 justify-center">
+                      <p className="font-semibold text-sm">{displayName}</p>
+                      {isOwner && (
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={startEditName}
+                          className="text-muted-foreground hover:text-foreground shrink-0"
+                        >
+                          <Pencil className="size-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-0.5">
                     {room?.type === 'DM'
                       ? 'Direct Message'

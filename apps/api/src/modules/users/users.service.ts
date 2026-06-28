@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { PrismaService } from '@/prisma/prisma.service'
 import { FollowsService } from '../follows/follows.service'
+import { ChatService } from '../chat/chat.service'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -9,8 +11,10 @@ import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly followsService: FollowsService,
+    private readonly chatService: ChatService,
   ) {}
 
   async exportData(id: string) {
@@ -37,10 +41,48 @@ export class UsersService {
     return this.usersRepository.updatePublicKey(id, publicKey)
   }
 
+  async clearMyKeys(id: string) {
+    const [groupRooms, user] = await Promise.all([
+      this.chatService.getGroupRoomIds(id),
+      this.usersRepository.findById(id),
+    ])
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.usersRepository.deleteDmRooms(id, tx)
+      await this.usersRepository.leaveGroupRooms(id, tx)
+      await this.usersRepository.clearPublicKey(id, tx)
+    })
+
+    if (groupRooms.length > 0 && user?.name) {
+      await this.chatService.notifyKeyRemoval(
+        groupRooms.map((r) => r.id),
+        user.name,
+      )
+    }
+  }
+
+  async clearAllPublicKeys() {
+    return this.usersRepository.clearAllPublicKeys()
+  }
+
   async getPublicKey(id: string) {
     const user = await this.usersRepository.findPublicKey(id)
     if (!user) throw new NotFoundException('User not found')
     return user
+  }
+
+  async updateKeyBackup(id: string, keyBackup: string) {
+    return this.usersRepository.updateKeyBackup(id, keyBackup)
+  }
+
+  async getKeyBackup(id: string) {
+    const user = await this.usersRepository.findKeyBackup(id)
+    if (!user) throw new NotFoundException('User not found')
+    return { keyBackup: user.keyBackup }
+  }
+
+  async clearKeyBackup(id: string) {
+    return this.usersRepository.clearKeyBackup(id)
   }
 
   async updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {

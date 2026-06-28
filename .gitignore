@@ -14,3 +14,4 @@ apps/web/src/lib/api/generated/
 
 .DS_Store
 .planning
+demo-output/

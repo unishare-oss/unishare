@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -155,7 +155,6 @@ export function GroupChatDialog({
         if (roomId && hasRoomKey(roomId)) {
           const results = await Promise.all(
             Array.from(selectedIds).map(async (id) => {
-              //TODO: maybe add key in selectedId?
               const member = networkUsers.find((u) => u.id === id)
               if (!member?.publicKey) return null
               const encryptedKey = await encryptRoomKeyForUser(roomId, member.publicKey)
@@ -163,10 +162,10 @@ export function GroupChatDialog({
             }),
           )
 
-          console.log(results)
-          if (results.every((r) => r !== null)) {
-            encryptedRoomKeys = results as { userId: string; encryptedKey: string }[]
-          }
+          const keyed = results.filter(
+            (r): r is { userId: string; encryptedKey: string } => r !== null,
+          )
+          if (keyed.length > 0) encryptedRoomKeys = keyed
         }
 
         await inviteMembers({
@@ -213,7 +212,7 @@ export function GroupChatDialog({
   const submitLabel = mode === 'create' ? 'Create Group' : 'Invite'
   const submittingLabel = mode === 'create' ? 'Creating…' : 'Inviting…'
 
-  const nameValue = form.watch('name') ?? ''
+  const nameValue = useWatch({ control: form.control, name: 'name' }) ?? ''
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

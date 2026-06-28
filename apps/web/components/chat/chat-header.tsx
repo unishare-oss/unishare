@@ -4,13 +4,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { User as UserIcon, Users, LockKeyhole } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useNowTick } from '@/hooks/use-now-tick'
 import { cn } from '@/lib/utils'
-import type { PresenceEntry } from '@/contexts/chat-socket-context'
 import type { ChatRoomParticipantEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+
+interface PresenceEntry {
+  status: 0 | 1
+  lastSeen?: number
+}
 
 interface DMHeaderProps {
   mode: 'dm'
   isEncrypted?: boolean
+  unreadCount?: number
   user?: {
     name: string
     image?: string | null
@@ -21,6 +27,7 @@ interface DMHeaderProps {
 interface GroupHeaderProps {
   mode: 'group'
   isEncrypted?: boolean
+  unreadCount?: number
   groupName?: string | null
   groupImage?: string | null
   participants?: ChatRoomParticipantEntity[]
@@ -36,8 +43,9 @@ export function ChatHeader(props: ChatHeaderProps) {
   return <DMHeader {...props} />
 }
 
-function DMHeader({ user, presence, isEncrypted }: Omit<DMHeaderProps, 'mode'>) {
+function DMHeader({ user, presence, isEncrypted, unreadCount }: Omit<DMHeaderProps, 'mode'>) {
   const isOnline = presence?.status === 1
+  useNowTick() // keeps the relative last-seen text fresh while the header stays mounted
 
   const getStatus = () => {
     if (isOnline) return 'Active'
@@ -59,6 +67,11 @@ function DMHeader({ user, presence, isEncrypted }: Omit<DMHeaderProps, 'mode'>) 
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-sm tracking-tight">{user?.name || 'Chat'}</span>
+            {unreadCount != null && unreadCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[0.6rem] font-semibold text-primary-foreground leading-none">
+                {unreadCount} new
+              </span>
+            )}
             {isEncrypted && (
               <TooltipProvider>
                 <Tooltip>
@@ -90,6 +103,7 @@ function GroupHeader({
   participants = [],
   presenceMap,
   isEncrypted,
+  unreadCount,
 }: Omit<GroupHeaderProps, 'mode'>) {
   const total = participants.length
   const onlineCount = participants.filter((p) => presenceMap?.get(p.userId)?.status === 1).length
@@ -109,6 +123,11 @@ function GroupHeader({
             <span className="font-semibold text-sm tracking-tight truncate">
               {groupName || 'Group Chat'}
             </span>
+            {unreadCount != null && unreadCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[0.6rem] font-semibold text-primary-foreground leading-none shrink-0">
+                {unreadCount} new
+              </span>
+            )}
             {isEncrypted && (
               <TooltipProvider>
                 <Tooltip>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
@@ -71,7 +71,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
       departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     })
-  }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name])
+  }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name, user.university?.id])
 
   const { data: depts } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
@@ -83,7 +83,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
 
   const { mutateAsync: updateMe } = useUsersControllerUpdateMe()
   const { mutateAsync: updateAcademic } = useUsersControllerUpdateAcademicProfile()
-  const bioValue = form.watch('bio')
+  const bioValue = useWatch({ control: form.control, name: 'bio' })
 
   async function handleSave(values: EditProfileValues) {
     setSaving(true)

@@ -39,7 +39,7 @@ import { TriangleAlert } from 'lucide-react'
 
 const steps = ['TYPE', 'COURSE', 'DETAILS', 'FILES'] as const
 
-const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION', 'ASSIGNMENT'])
+const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE'])
 type PostCreateType = z.infer<typeof postTypeSchema>
 
 const createPostFormSchema = z
@@ -61,7 +61,7 @@ const createPostFormSchema = z
     if (
       values.postType === 'NOTE' ||
       values.postType === 'OLD_QUESTION' ||
-      values.postType === 'ASSIGNMENT'
+      values.postType === 'EXERCISE'
     ) {
       const moduleResult = moduleNumberSchema.safeParse(values.moduleNum)
       if (!moduleResult.success) {

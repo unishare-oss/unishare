@@ -25,6 +25,7 @@ import {
   normalizeKeyTransferPassphrase,
   privateKeyMatchesPublicKey,
 } from '@/src/lib/crypto'
+import { fetchKeyBackup, uploadKeyBackup } from '@/src/lib/key-backup'
 
 // --- Export dialog (show QR on old device) ---
 
@@ -41,6 +42,7 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
   const [error, setError] = useState<string | null>(null)
   const [passphrase, setPassphrase] = useState('')
   const [confirmPassphrase, setConfirmPassphrase] = useState('')
+  const [backupStatus, setBackupStatus] = useState<'saving' | 'saved' | 'failed' | null>(null)
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -49,6 +51,7 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
       setError(null)
       setPassphrase('')
       setConfirmPassphrase('')
+      setBackupStatus(null)
     }
     onOpenChange(next)
   }
@@ -75,6 +78,16 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
       )
       setPayload(encryptedPayload)
       setConfirmed(true)
+
+      // Best-effort encrypted backup: the server only stores the
+      // passphrase-encrypted blob, so other devices can restore without QR.
+      setBackupStatus('saving')
+      try {
+        await uploadKeyBackup(encryptedPayload)
+        setBackupStatus('saved')
+      } catch {
+        setBackupStatus('failed')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to export key.')
     }
@@ -130,8 +143,26 @@ export function ExportKeysDialog({ open, onOpenChange }: ExportKeysDialogProps) 
               <QRCodeSVG value={payload!} size={220} level="L" />
             </div>
             <p className="text-xs text-muted-foreground text-center">
-              Scan from the new device and enter your transfer passphrase to import.
+              Scan from the new device and enter your transfer passphrase to import — or just pick
+              “Restore from backup” there and enter the passphrase.
             </p>
+            {backupStatus === 'saving' && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Loader2 className="size-3 animate-spin" />
+                Saving encrypted backup to your account…
+              </p>
+            )}
+            {backupStatus === 'saved' && (
+              <p className="text-xs text-green-600 flex items-center gap-1.5">
+                <ShieldCheck className="size-3" />
+                Encrypted backup saved — other devices can restore with this passphrase.
+              </p>
+            )}
+            {backupStatus === 'failed' && (
+              <p className="text-xs text-destructive">
+                Could not save the encrypted backup to the server. QR transfer still works.
+              </p>
+            )}
             <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
               Done
             </Button>
@@ -154,7 +185,9 @@ interface ImportKeysDialogProps {
 export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKeysDialogProps) {
   const { session } = useAuth()
   const userId = session?.user?.id
-  const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'restoring' | 'scanning' | 'success' | 'error'>(
+    'idle',
+  )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [passphrase, setPassphrase] = useState('')
   const scannerRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null)
@@ -169,15 +202,52 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
     }
   }
 
-  const startScanner = async () => {
-    const scanPassphrase = normalizeKeyTransferPassphrase(passphrase)
-    if (scanPassphrase.length < MIN_KEY_TRANSFER_PASSPHRASE_LENGTH) {
+  /** Decrypts a transfer payload, validates it against the account, and stores it. */
+  const importPayload = async (payloadString: string, transferPassphrase: string) => {
+    const privateKeyJwk = await decryptPrivateKeyTransferPayload(payloadString, transferPassphrase)
+    if (!privateKeyMatchesPublicKey(privateKeyJwk, userPublicKey)) {
+      throw new Error("Key transfer decrypted, but this key pair doesn't match your account.")
+    }
+    if (!userId) throw new Error('User not authenticated.')
+    const key = await importPrivateKeyFromJwk(privateKeyJwk)
+    await storePrivateKey(key, userId)
+  }
+
+  const validatedPassphrase = (): string | null => {
+    const normalized = normalizeKeyTransferPassphrase(passphrase)
+    if (normalized.length < MIN_KEY_TRANSFER_PASSPHRASE_LENGTH) {
       setErrorMsg(
-        `Enter a transfer passphrase with at least ${MIN_KEY_TRANSFER_PASSPHRASE_LENGTH} characters before scanning.`,
+        `Enter a transfer passphrase with at least ${MIN_KEY_TRANSFER_PASSPHRASE_LENGTH} characters.`,
       )
       setStatus('error')
-      return
+      return null
     }
+    return normalized
+  }
+
+  const restoreFromBackup = async () => {
+    const restorePassphrase = validatedPassphrase()
+    if (!restorePassphrase) return
+    setStatus('restoring')
+    setErrorMsg(null)
+    try {
+      const backup = await fetchKeyBackup()
+      if (!backup) {
+        throw new Error(
+          'No encrypted backup found for your account. Use the QR transfer from your other device instead — it also saves a backup for next time.',
+        )
+      }
+      await importPayload(backup, restorePassphrase)
+      setStatus('success')
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to restore from backup.')
+      setStatus('error')
+    }
+  }
+
+  const startScanner = async () => {
+    const scanPassphrase = validatedPassphrase()
+    if (!scanPassphrase) return
     setStatus('scanning')
     setErrorMsg(null)
     const { Html5Qrcode } = await import('html5-qrcode')
@@ -191,18 +261,7 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
         async (decodedText) => {
           await stopScanner()
           try {
-            const privateKeyJwk = await decryptPrivateKeyTransferPayload(
-              decodedText,
-              scanPassphrase,
-            )
-            if (!privateKeyMatchesPublicKey(privateKeyJwk, userPublicKey)) {
-              throw new Error(
-                "Key transfer decrypted, but this key pair doesn't match your account.",
-              )
-            }
-            if (!userId) throw new Error('User not authenticated.')
-            const key = await importPrivateKeyFromJwk(privateKeyJwk)
-            await storePrivateKey(key, userId)
+            await importPayload(decodedText, scanPassphrase)
             setStatus('success')
           } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : 'Invalid QR code.')
@@ -239,15 +298,17 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
         <DialogHeader>
           <DialogTitle>Import encryption keys</DialogTitle>
           <DialogDescription>
-            Point your camera at the QR code shown on your other device.
+            Restore your keys with the transfer passphrase, or scan the QR code shown on your other
+            device.
           </DialogDescription>
         </DialogHeader>
 
         {status === 'idle' && (
           <>
             <p className="text-sm text-muted-foreground">
-              Open the chat info panel on your other device, go to Settings, and choose{' '}
-              <strong>Export encryption keys</strong>.
+              If you exported your keys before, enter your transfer passphrase to restore the
+              encrypted backup. Otherwise, open the chat info panel on your other device, go to
+              Settings, and choose <strong>Export encryption keys</strong>.
             </p>
             <Input
               type="password"
@@ -255,11 +316,12 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
               placeholder="Enter transfer passphrase"
               onChange={(e) => setPassphrase(e.target.value)}
             />
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button
+                variant="outline"
                 onClick={startScanner}
                 disabled={
                   normalizeKeyTransferPassphrase(passphrase).length <
@@ -267,10 +329,27 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
                 }
               >
                 <ScanLine className="size-4 mr-2" />
-                Start scanning
+                Scan QR
+              </Button>
+              <Button
+                onClick={restoreFromBackup}
+                disabled={
+                  normalizeKeyTransferPassphrase(passphrase).length <
+                  MIN_KEY_TRANSFER_PASSPHRASE_LENGTH
+                }
+              >
+                <ShieldCheck className="size-4 mr-2" />
+                Restore from backup
               </Button>
             </DialogFooter>
           </>
+        )}
+
+        {status === 'restoring' && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Decrypting your key backup…</p>
+          </div>
         )}
 
         {status === 'scanning' && (
@@ -311,8 +390,12 @@ export function ImportKeysDialog({ open, onOpenChange, userPublicKey }: ImportKe
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
-              <Button onClick={startScanner}>
-                <Loader2 className="size-4 mr-2" />
+              <Button
+                onClick={() => {
+                  setErrorMsg(null)
+                  setStatus('idle')
+                }}
+              >
                 Try again
               </Button>
             </DialogFooter>

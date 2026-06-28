@@ -1,6 +1,10 @@
 'use client'
 
-import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
+import {
+  useChatControllerGetRooms,
+  useChatControllerGetPresence,
+} from '@/src/lib/api/generated/chat/chat'
+import type { NetworkUser } from '@/hooks/use-network-users'
 import { useAuth } from '@/contexts/auth-context'
 import { useCreateDM } from '@/hooks/use-chat-mutations'
 import { useNetworkUsers } from '@/hooks/use-network-users'
@@ -8,7 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useNowTick } from '@/hooks/use-now-tick'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
@@ -18,17 +24,26 @@ import { useCrypto } from '@/hooks/use-crypto'
 import { useGlobalTypingIndicator } from '@/hooks/use-typing-indicator'
 
 import { useChatSocket } from '@/hooks/use-chat-socket'
+import { useMutedRoomsStore } from '@/lib/store'
 import { SidebarTypingIndicator } from './sidebar-typing-indicator'
 
 interface ChatSidebarProps {
   selectedRoomId?: string
 }
 
+// Time for today's messages (matches the bubble's HH:mm), day labels otherwise —
+// a bare clock time is misleading for messages from previous days.
+function formatLastMessageTime(date: Date): string {
+  if (isToday(date)) return format(date, 'HH:mm')
+  if (isYesterday(date)) return 'Yesterday'
+  return format(date, 'MMM d')
+}
+
 export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
-  const { session, user: currentUser } = useAuth()
+  const { session } = useAuth()
   const currentUserId = session?.user?.id
-  const { createEncryptedRoomKeys, loadRoomKey, hasRoomKey, decrypt } = useCrypto()
+  const { loadRoomKey, hasRoomKey, hasPrivateKey, decrypt } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
   const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
@@ -36,7 +51,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   const { networkUsers, isLoading: networkLoading } = useNetworkUsers()
 
-  const rooms = roomsResponse?.data || []
+  const rooms = useMemo(() => roomsResponse?.data ?? [], [roomsResponse])
 
   useEffect(() => {
     if (rooms.length === 0) return
@@ -47,7 +62,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
           if (hasRoomKey(room.id)) return
           const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
           const encryptedRoomKey = myParticipant?.encryptedRoomKey
-          if (encryptedRoomKey) {
+          if (encryptedRoomKey && hasPrivateKey) {
             await loadRoomKey(room.id, encryptedRoomKey).catch(console.error)
           }
         }),
@@ -57,13 +72,17 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
         rooms.map(async (room) => {
           const lastMsg = room.messages?.[0]
           const isTextual = lastMsg?.type === 'TEXT' || lastMsg?.type === 'LINK'
-          if (!lastMsg?.content || !isTextual || !hasRoomKey(room.id))
-            return [room.id, lastMsg?.content ?? ''] as const
+          if (!lastMsg?.content || !isTextual) return [room.id, lastMsg?.content ?? ''] as const
+          if (!hasRoomKey(room.id)) {
+            const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+            const isRoomEncrypted = !!myParticipant?.encryptedRoomKey
+            return [room.id, isRoomEncrypted ? '' : lastMsg.content] as const
+          }
           try {
             const plaintext = await decrypt(room.id, lastMsg.content)
             return [room.id, plaintext] as const
           } catch {
-            return [room.id, lastMsg.content] as const
+            return [room.id, ''] as const
           }
         }),
       )
@@ -77,36 +96,25 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
 
-  const handleNetworkUserClick = async (user: any) => {
+  const handleNetworkUserClick = async (user: NetworkUser) => {
     try {
       setCreatingDMForUserId(user.id)
 
       // Check if a DM room already exists with this user
       const existingRoom = rooms.find(
-        (room: any) =>
-          room.type === 'DM' && room.participants?.some((p: any) => p.userId === user.id),
+        (room) => room.type === 'DM' && room.participants?.some((p) => p.userId === user.id),
       )
 
       if (existingRoom) {
         // Navigate directly to existing room
         router.push(`/chat/${existingRoom.id}`)
       } else {
-        // Build encrypted room keys for both participants if public keys are available
-        let encryptedRoomKeys: { userId: string; encryptedKey: string }[] | undefined
-
-        if (currentUser?.publicKey && user.publicKey) {
-          encryptedRoomKeys = await createEncryptedRoomKeys([
-            { userId: currentUserId!, publicKeyJwk: currentUser.publicKey },
-            { userId: user.id, publicKeyJwk: user.publicKey },
-          ])
-        }
-
-        // Create new DM room
+        // Create new DM room unencrypted — the upgrade effect in UnifiedChatWindow
+        // handles E2EE setup once both participants have public keys.
         const response = await createDM({
           data: {
             type: 'DM',
             participantIds: [user.id],
-            encryptedRoomKeys,
           },
         })
         // Navigate to the created room
@@ -119,9 +127,33 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
   }
 
-  const { socketRef, presence } = useChatSocket()
+  const { socketRef } = useChatSocket()
   // eslint-disable-next-line react-hooks/refs
   const { typingByRoom } = useGlobalTypingIndicator(socketRef.current, currentUserId)
+  const { isMuted } = useMutedRoomsStore()
+
+  const networkUserIds = useMemo(() => networkUsers.map((u) => u.id).sort(), [networkUsers])
+
+  const { data: presenceResponse } = useChatControllerGetPresence(
+    { userIds: networkUserIds.join(',') },
+    // refetchInterval: offline-by-TTL (api pod crash) emits no broadcast, so the cache needs periodic self-heal
+    { query: { enabled: networkUserIds.length > 0, refetchInterval: 60_000 } },
+  )
+
+  const presence = useMemo(() => {
+    const map = new Map<string, { status: 0 | 1; lastSeen?: number }>()
+    presenceResponse?.data?.forEach((e) => map.set(e.userId, e))
+    return map
+  }, [presenceResponse])
+
+  useNowTick() // keeps relative last-seen tooltips fresh
+
+  const presenceLabel = (entry?: { status: 0 | 1; lastSeen?: number }) => {
+    if (entry?.status === 1) return 'Active now'
+    if (entry?.lastSeen)
+      return `Last seen ${formatDistanceToNow(entry.lastSeen, { addSuffix: true })}`
+    return 'Offline'
+  }
 
   // Filter out network users who already have a DM room with messages
   const filteredNetworkUsers = useMemo(() => {
@@ -147,7 +179,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
 
   if (roomsLoading || networkLoading) {
     return (
-      <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
+      <Card className="flex flex-col h-full border-none gap-0 rounded-none bg-background py-2 shadow-none">
         <div className="flex flex-col gap-2 p-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-16 w-full rounded-lg bg-muted" />
@@ -158,9 +190,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full border-none gap-0 rounded-none backdrop-blur bg-background/95 py-2 shadow-none">
+    <Card className="flex flex-col h-full border-none gap-0 rounded-none bg-background py-2 shadow-none">
       <ScrollArea className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]>div]:block! [&>[data-radix-scroll-area-viewport]>div]:w-full!">
-        <div className="flex flex-col pb-20">
+        <div className="flex flex-col pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-4">
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
             <div className="px-4 py-2 mt-2">
@@ -184,6 +216,16 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
               ? presence.get(otherParticipant.userId)?.status === 1
               : false
 
+            const myParticipant = room.participants?.find((p) => p.userId === currentUserId)
+            const isUnread = !!(
+              lastMessage &&
+              lastMessage.userId !== currentUserId &&
+              myParticipant &&
+              new Date(lastMessage.createdAt).getTime() >
+                new Date(myParticipant.lastReadAt).getTime()
+            )
+            const showBadge = isUnread && !isMuted(room.id)
+
             return (
               <button
                 key={room.id}
@@ -194,27 +236,56 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                 )}
               >
-                <Avatar
-                  className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
-                >
-                  <AvatarImage src={displayImage} alt={displayName} />
-                  <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
-                    {displayName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Avatar
+                        className={cn(
+                          'h-10 w-10 rounded-[6px]',
+                          isOnline && 'ring-2 ring-green-500',
+                        )}
+                      >
+                        <AvatarImage src={displayImage} alt={displayName} />
+                        <AvatarFallback className="text-xs bg-border text-foreground rounded-none font-mono font-medium">
+                          {displayName.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    {otherParticipant && (
+                      <TooltipContent side="right">
+                        {presenceLabel(presence.get(otherParticipant.userId))}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="grid grid-cols-[1fr_auto] items-center gap-2 min-w-0 overflow-hidden">
-                    <span className="font-medium truncate text-sm min-w-0">{displayName}</span>
-                    {lastMessage && (
-                      <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
-                        {format(new Date(lastMessage.createdAt), 'h:mm a')}
-                      </span>
-                    )}
+                    <span
+                      className={cn(
+                        'truncate text-sm min-w-0',
+                        showBadge ? 'font-semibold' : 'font-medium',
+                      )}
+                    >
+                      {displayName}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {lastMessage && (
+                        <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
+                          {formatLastMessageTime(new Date(lastMessage.createdAt))}
+                        </span>
+                      )}
+                      {showBadge && <span className="size-2 rounded-full bg-primary shrink-0" />}
+                    </div>
                   </div>
                   {roomTypingUsers.length > 0 ? (
                     <SidebarTypingIndicator />
                   ) : lastMessage ? (
-                    <div className="text-xs text-muted-foreground opacity-70 mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden">
+                    <div
+                      className={cn(
+                        'text-xs mt-0.5 flex items-center gap-1 min-w-0 overflow-hidden',
+                        showBadge ? 'text-foreground/80' : 'text-muted-foreground opacity-70',
+                      )}
+                    >
                       {lastMessage.type === 'IMAGE' ? (
                         <>
                           <ImageIcon className="size-3 shrink-0" />
@@ -304,14 +375,26 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                         'bg-accent/50 before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:bg-primary',
                     )}
                   >
-                    <Avatar
-                      className={cn('h-10 w-10 rounded-[6px]', isOnline && 'ring-2 ring-green-500')}
-                    >
-                      <AvatarImage src={user.image || ''} alt={user.name} />
-                      <AvatarFallback className="text-xs rounded-none bg-border text-foreground font-mono font-medium">
-                        {user.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar
+                            className={cn(
+                              'h-10 w-10 rounded-[6px]',
+                              isOnline && 'ring-2 ring-green-500',
+                            )}
+                          >
+                            <AvatarImage src={user.image || ''} alt={user.name} />
+                            <AvatarFallback className="text-xs rounded-none bg-border text-foreground font-mono font-medium">
+                              {user.name.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {presenceLabel(presence.get(user.id))}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <div className="flex-1 overflow-hidden">
                       <span className="font-medium truncate text-sm block">{user.name}</span>
                       {roomTypingUsers.length > 0 ? (

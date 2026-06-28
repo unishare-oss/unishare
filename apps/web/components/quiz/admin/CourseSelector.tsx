@@ -38,14 +38,13 @@ export function CourseSelector({
     { query: { select: (r) => r.data } },
   )
 
-  const allCourses = coursesData?.items ?? []
-
   const courseOptions = useMemo(() => {
+    const allCourses = coursesData?.items ?? []
     const yearNum = Number(yearLevel)
     return allCourses
       .filter((c) => !yearLevel || c.yearLevel == null || c.yearLevel === yearNum)
       .map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))
-  }, [allCourses, yearLevel])
+  }, [coursesData?.items, yearLevel])
 
   const deptOptions = useMemo(
     () => (departments ?? []).map((d) => ({ value: d.id, label: d.name })),

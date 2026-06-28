@@ -37,6 +37,8 @@ export class FilesService {
       void this.aiSummaryService.summarizePost(postId)
     }
 
+    void this.aiSummaryService.screenContent(postId)
+
     const { postId: _postId, ...rest } = file
     return rest
   }

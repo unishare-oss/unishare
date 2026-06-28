@@ -17,6 +17,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { FollowersDialog } from '@/components/profile/followers-dialog'
 import { cn } from '@/lib/utils'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -128,7 +129,7 @@ function PublicProfileHeader({
 
 function UserPosts({ userId }: { userId: string }) {
   const [page, setPage] = useState(1)
-  const { data } = usePostsControllerFindAll(
+  const { data, isLoading } = usePostsControllerFindAll(
     { authorId: userId, page, limit: 20 },
     { query: { select: (r) => r.data } },
   )
@@ -136,6 +137,7 @@ function UserPosts({ userId }: { userId: string }) {
     <div className="border border-border rounded-[6px] bg-card overflow-hidden">
       <PostFeed
         posts={data?.items ?? []}
+        loading={isLoading}
         page={data?.page ?? 1}
         totalPages={data?.totalPages ?? 1}
         onPageChange={setPage}
@@ -146,9 +148,19 @@ function UserPosts({ userId }: { userId: string }) {
 }
 
 function UserLists({ userId }: { userId: string }) {
-  const { data: lists } = useReadingListsControllerFindPublicByUser(userId, {
+  const { data: lists, isLoading } = useReadingListsControllerFindPublicByUser(userId, {
     query: { select: (r) => r.data },
   })
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-3">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-[6px]" />
+        ))}
+      </div>
+    )
+  }
 
   if (!lists?.length) {
     return (
@@ -191,7 +203,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   const [followDialog, setFollowDialog] = useState<FollowDialog>(null)
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts')
 
-  const { data: user } = useUsersControllerGetById(id, {
+  const { data: user, isLoading: userLoading } = useUsersControllerGetById(id, {
     query: { select: (r) => r.data },
   })
 
@@ -240,6 +252,31 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       <PageHeader title={user?.name ?? 'Profile'} />
       <div className="flex-1 bg-card">
         <div className="max-w-[700px] mx-auto px-6 py-8">
+          {userLoading && (
+            <div className="border border-border rounded-[6px] p-6 bg-card mb-6">
+              <div className="flex items-start gap-5">
+                <Skeleton className="size-16 rounded-full shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+              <div className="flex gap-6 mt-5 pt-5 border-t border-border">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-14" />
+                ))}
+              </div>
+            </div>
+          )}
+          {!userLoading && !user && (
+            <div className="border border-border rounded-[6px] bg-card px-6 py-16 text-center">
+              <p className="text-sm font-medium text-foreground">User not found</p>
+              <p className="text-xs text-text-muted mt-1">
+                This account may have been deleted or the link is wrong.
+              </p>
+            </div>
+          )}
           {user && (
             <>
               <PublicProfileHeader

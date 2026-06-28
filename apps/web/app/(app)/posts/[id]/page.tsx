@@ -7,7 +7,7 @@ import {
   usePostsControllerFindOne,
   usePostsControllerRemove,
 } from '@/src/lib/api/generated/posts/posts'
-import { useUIStore } from '@/lib/store'
+import { useUIStore, useFeedStyleStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
@@ -26,7 +26,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const markRead = useUIStore((s) => s.markRead)
-  const collapsed = useUIStore((s) => s.sidebarCollapsed)
+  const feedStyle = useFeedStyleStore((s) => s.feedStyle)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const { mutateAsync: removeFile } = useFilesControllerRemove()
@@ -58,15 +58,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!post) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen" data-detail-style={feedStyle}>
         <PageHeader title="Post" />
-        <div className="flex-1 bg-card">
-          <div
-            className={cn(
-              'mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4 transition-[max-width] duration-300',
-              collapsed ? 'max-w-360' : 'max-w-240',
-            )}
-          >
+        <div className={cn('flex-1', feedStyle === 'classic' ? 'bg-card' : 'bg-background')}>
+          <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4', 'max-w-300')}>
             <Skeleton className="h-3 w-48" />
             <div className="space-y-3 pt-2">
               <Skeleton className="h-4 w-24" />
@@ -90,22 +85,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const isOwner = post.isOwner
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen" data-detail-style={feedStyle}>
       <PageHeader title={post.title ?? 'Post'} />
 
-      <div className="flex-1 bg-card">
-        <div
-          className={cn(
-            'mx-auto px-4 py-4 md:px-6 md:py-6 transition-[max-width] duration-300',
-            collapsed ? 'max-w-360' : 'max-w-240',
-          )}
-        >
+      <div className={cn('flex-1', feedStyle === 'classic' ? 'bg-card' : 'bg-background')}>
+        <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6', 'max-w-300')}>
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}
             title={post.title ?? ''}
           />
-          <div className="mt-6">
+          <div className="mt-6 detail-surface">
             <PostHeader
               post={post}
               isOwner={isOwner}
@@ -121,16 +111,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <div className="mt-4">
             <PostAiChat post={post} />
           </div>
-          <div className="mt-8">
+          <div className="mt-8 detail-surface">
             <PostFiles post={post} />
           </div>
-          <div className="mt-8">
+          <div className="mt-8 detail-surface">
             <PostReactions post={post} />
           </div>
           <div className="mt-8">
             <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
           </div>
-          <div className="mt-8">
+          <div className="mt-8 detail-surface">
             <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
           </div>
         </div>

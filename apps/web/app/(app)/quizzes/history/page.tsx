@@ -86,7 +86,7 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <Card>
+    <Card className="card-pop">
       <CardContent className="pt-6 pb-5 text-center space-y-2">
         <div className="flex justify-center text-primary">{icon}</div>
         <p className="text-2xl font-bold">{value}</p>
@@ -172,7 +172,7 @@ export default function QuizHistoryPage() {
       </div>
 
       {/* Session list */}
-      <Card>
+      <Card className="card-pop">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Attempts</CardTitle>
         </CardHeader>
@@ -227,7 +227,7 @@ export default function QuizHistoryPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <p className="font-medium text-sm truncate">{session.quiz.title}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Target className="w-3 h-3" />
                         {isIncomplete ? 'Incomplete' : `${session.score}/${session.totalPoints}`}

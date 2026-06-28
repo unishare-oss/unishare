@@ -20,6 +20,7 @@ interface CryptoContextValue {
   encryptRoomKeyForUser: (roomId: string, publicKeyJwk: string) => Promise<string>
   createEncryptedRoomKeys: (
     participants: { userId: string; publicKeyJwk: string }[],
+    roomId?: string,
   ) => Promise<{ userId: string; encryptedKey: string }[]>
   /** Increments each time a new room key is loaded — use as a React dependency. */
   roomKeyVersion: number
@@ -33,6 +34,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()
   const userId = session?.user?.id
   const roomKeys = useRef<Map<string, CryptoKey>>(new Map())
+  const loadingRooms = useRef<Set<string>>(new Set())
   const [roomKeyVersion, setRoomKeyVersion] = useState(0)
   const [hasPrivateKey, setHasPrivateKey] = useState(false)
 
@@ -43,12 +45,19 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {
     if (roomKeys.current.has(roomId)) return
-    if (!userId) throw new Error('User not authenticated')
-    const privateKey = await getPrivateKey(userId)
-    if (!privateKey) throw new Error('Private key not found')
-    const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
-    roomKeys.current.set(roomId, roomKey)
-    setRoomKeyVersion((v) => v + 1)
+    if (loadingRooms.current.has(roomId)) return
+    loadingRooms.current.add(roomId)
+    try {
+      if (!userId) throw new Error('User not authenticated')
+      const privateKey = await getPrivateKey(userId)
+      if (!privateKey) throw new Error('Private key not found')
+      const roomKey = await decryptRoomKey(encryptedRoomKey, privateKey)
+      roomKeys.current.set(roomId, roomKey)
+      setHasPrivateKey(true)
+      setRoomKeyVersion((v) => v + 1)
+    } finally {
+      loadingRooms.current.delete(roomId)
+    }
   }
 
   const encrypt = async (roomId: string, content: string) => {
@@ -74,8 +83,14 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
 
   const createEncryptedRoomKeys = async (
     participants: { userId: string; publicKeyJwk: string }[],
+    roomId?: string,
   ) => {
     const roomKey = await generateRoomKey()
+    // Store immediately so the upgrader can send messages without waiting for server round-trip
+    if (roomId) {
+      roomKeys.current.set(roomId, roomKey)
+      setRoomKeyVersion((v) => v + 1)
+    }
     return Promise.all(
       participants.map(async ({ userId, publicKeyJwk }) => {
         const pubKey = await importPublicKey(publicKeyJwk)

@@ -10,7 +10,7 @@ export const FileCategory = {
   Notes: 'NOTES',
   PastPaper: 'PAST_PAPER',
   Slides: 'SLIDES',
-  Assignment: 'ASSIGNMENT',
+  Exercise: 'EXERCISE',
   Other: 'OTHER',
 } as const
 export type FileCategory = (typeof FileCategory)[keyof typeof FileCategory]

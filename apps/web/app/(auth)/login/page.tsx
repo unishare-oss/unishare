@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authClient } from '@/src/lib/auth/client'
@@ -103,6 +103,8 @@ export default function LoginPage() {
     },
   })
 
+  const universityId = useWatch({ control: signUpForm.control, name: 'universityId' })
+
   const activeForm = mode === 'signin' ? signInForm : signUpForm
   const loading = activeForm.formState.isSubmitting
 
@@ -149,9 +151,11 @@ export default function LoginPage() {
           <span className="font-mono text-lg font-bold text-[#F7F3EE]">Unishare</span>
         </div>
 
-        <blockquote className="max-w-lg">
-          <p className="text-[30px] font-light leading-snug text-[#F7F3EE] tracking-tight text-balance">
-            {'Every lecture note and study guide \u2014 shared by students who\u2019ve been there.'}
+        <blockquote className="max-w-xl">
+          <p className="text-4xl xl:text-5xl font-extrabold leading-[1.15] text-[#F7F3EE] tracking-tight text-balance">
+            Every lecture note and study guide {'\u2014'}{' '}
+            <span className="hand-underline text-[#fbbf24]">shared</span>{' '}
+            {'by students who\u2019ve been there.'}
           </p>
         </blockquote>
 
@@ -254,7 +258,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <Select
-                  value={signUpForm.watch('universityId') || '_none'}
+                  value={universityId || '_none'}
                   onValueChange={(v) => signUpForm.setValue('universityId', v === '_none' ? '' : v)}
                 >
                   <SelectTrigger className="w-full bg-card">
