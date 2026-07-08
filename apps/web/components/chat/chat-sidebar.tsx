@@ -43,7 +43,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   const router = useRouter()
   const { session } = useAuth()
   const currentUserId = session?.user?.id
-  const { loadRoomKey, hasRoomKey, hasPrivateKey, decrypt } = useCrypto()
+  const { loadRoomKey, hasRoomKey, hasPrivateKey, decrypt, roomKeyVersion } = useCrypto()
   const [creatingDMForUserId, setCreatingDMForUserId] = useState<string | null>(null)
   const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, string>>({})
 
@@ -91,7 +91,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
 
     loadAndDecrypt()
-  }, [rooms]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rooms, roomKeyVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
