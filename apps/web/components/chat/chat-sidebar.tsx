@@ -91,7 +91,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
     }
 
     loadAndDecrypt()
-  }, [rooms, roomKeyVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rooms, roomKeyVersion, hasPrivateKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create DM mutation
   const { mutateAsync: createDM } = useCreateDM()
