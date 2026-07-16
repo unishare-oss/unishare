@@ -20,7 +20,7 @@ function parsePageParam(value: string | null): number {
   return Number.isSafeInteger(n) && n >= 1 && n <= PAGE_PARAM_MAX ? n : 1
 }
 
-export function stripPage(params: URLSearchParams): string {
+function stripPage(params: URLSearchParams): string {
   const next = new URLSearchParams(params)
   next.delete('page')
   return next.toString()
