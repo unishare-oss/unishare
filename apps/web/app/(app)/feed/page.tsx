@@ -100,6 +100,21 @@ function FeedContent() {
     }
   }, [hasSelectedYear, setSelectedYear, user?.yearLevel])
 
+  // Consume any cross-page filter set via setPendingFilter() on mount.
+  useEffect(() => {
+    consumePendingFilter()
+  }, [consumePendingFilter])
+
+  // Normalize URL: strip ?page= when the parsed value resolves to page 1
+  // so shared links like /feed?page=1 or /feed?page=abc stay consistent
+  // with the rendered state.
+  useEffect(() => {
+    if (page === 1 && searchParams.has('page')) {
+      const next = stripPage(new URLSearchParams(searchParams))
+      router.replace(`/feed${next ? `?${next}` : ''}`, { scroll: false })
+    }
+  }, [page, searchParams, router])
+
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)
     stripPageFromUrl()
