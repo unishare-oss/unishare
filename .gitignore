@@ -15,3 +15,7 @@ apps/web/src/lib/api/generated/
 .DS_Store
 .planning
 demo-output/
+
+# Personal tooling — not part of the shared codebase
+openspec/
+.opencode/
