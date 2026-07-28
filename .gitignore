@@ -19,3 +19,10 @@ demo-output/
 # Personal tooling — not part of the shared codebase
 openspec/
 .opencode/
+.agents/skills/slade-*/
+slade/
+
+# Local agent instructions
+/AGENTS.md
+/apps/web/AGENTS.md
+/apps/api/AGENTS.md
