@@ -47,7 +47,7 @@
     "@unishare/types": "workspace:*",
     "@willsoto/nestjs-prometheus": "^6.1.0",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.6.5",
+    "better-auth": "^1.6.25",
     "cache-manager": "^7.2.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
