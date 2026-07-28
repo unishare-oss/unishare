@@ -82,7 +82,9 @@ jobs:
           push: true
           no-cache: ${{ inputs.no_cache == true }}
           platforms: linux/arm64
-          tags: ghcr.io/${{ env.OWNER }}/unishare-api:latest
+          tags: |
+            ghcr.io/${{ env.OWNER }}/unishare-api:latest
+            ghcr.io/${{ env.OWNER }}/unishare-api:sha-${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -116,9 +118,84 @@ jobs:
           push: true
           no-cache: ${{ inputs.no_cache == true }}
           platforms: linux/arm64
-          tags: ghcr.io/${{ env.OWNER }}/unishare-web:latest
+          tags: |
+            ghcr.io/${{ env.OWNER }}/unishare-web:latest
+            ghcr.io/${{ env.OWNER }}/unishare-web:sha-${{ github.sha }}
           build-args: |
             API_URL=${{ secrets.API_URL }}
             APP_URL=${{ secrets.APP_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Write image tags to GitOps repo
+    needs: [changes, build-api, build-web]
+    if: >-
+      always() &&
+      (needs.build-api.result == 'success' || needs.build-web.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: gitops-write-back
+      cancel-in-progress: false
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.GITOPS_APP_ID }}
+          private_key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          repositories: >-
+            ["k8s-practice"]
+
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v7
+        with:
+          repository: unishare-oss/k8s-practice
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+          path: gitops
+
+      - name: Update image tags
+        working-directory: gitops
+        env:
+          API_BUILT: ${{ needs.build-api.result == 'success' }}
+          WEB_BUILT: ${{ needs.build-web.result == 'success' }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          F=unishare-chart/values.yaml
+          TAG="sha-${SHA}"
+
+          if [ "$API_BUILT" = "true" ]; then
+            yq -i ".image.api.tag = \"${TAG}\"" "$F"
+            echo "api -> ${TAG}"
+          fi
+          if [ "$WEB_BUILT" = "true" ]; then
+            yq -i ".image.web.tag = \"${TAG}\"" "$F"
+            echo "web -> ${TAG}"
+          fi
+
+          echo "--- resulting image block ---"
+          yq '.image' "$F"
+
+      - name: Commit and publish
+        working-directory: gitops
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No tag change (this commit is already deployed) -- nothing to do."
+            exit 0
+          fi
+          git config user.name  "unishare-ci[bot]"
+          git config user.email "unishare-ci[bot]@users.noreply.github.com"
+          git add unishare-chart/values.yaml
+          git commit -m "deploy: unishare @ ${SHA:0:7}"
+          git -c push.default=current push origin HEAD:main || {
+            echo "rejected -- rebasing onto latest main and retrying once"
+            git pull --rebase origin main
+            git -c push.default=current push origin HEAD:main
+          }
