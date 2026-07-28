@@ -46,6 +46,9 @@
       "esbuild",
       "prisma",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "@xhmikosr/decompress": "^11.1.3"
+    }
   }
 }
