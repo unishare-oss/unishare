@@ -59,10 +59,11 @@ function SidebarLink({
 }) {
   const pathname = usePathname()
   const active = isRouteActive(pathname, item.href)
+  const badgeLabel = badge ? ` (${badge > 99 ? '99+' : badge})` : ''
   const content = (
     <Link
       href={item.href}
-      aria-label={item.label}
+      aria-label={`${item.label}${badgeLabel}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex min-h-11 items-center gap-3 rounded-xl border-2 px-3 outline-none transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
