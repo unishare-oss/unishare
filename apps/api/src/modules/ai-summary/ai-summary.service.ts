@@ -126,7 +126,10 @@ export class AiSummaryService {
     if (this.provider) {
       this.s3Client = new S3Client({
         region: config.get('S3_REGION') ?? 'auto',
-        endpoint: config.getOrThrow('S3_ENDPOINT'),
+        // Server-side GetObject only -- this client never presigns anything for a
+        // browser, so it always prefers the direct in-cluster route when one is
+        // configured. Falls back to S3_ENDPOINT when it is not.
+        endpoint: config.get<string>('S3_INTERNAL_ENDPOINT') ?? config.getOrThrow('S3_ENDPOINT'),
         forcePathStyle: true,
         credentials: {
           accessKeyId: config.getOrThrow('S3_ACCESS_KEY_ID'),
