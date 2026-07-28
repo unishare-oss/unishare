@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import { AppShell } from '@/components/app-shell'
 import { useUIStore } from '@/lib/store'
@@ -22,11 +22,6 @@ describe('AppShell navigation layout', () => {
     vi.useFakeTimers()
     mocks.pathname = '/feed'
     useUIStore.setState({ sidebarCollapsed: false })
-  })
-
-  afterEach(() => {
-    vi.clearAllTimers()
-    vi.useRealTimers()
   })
 
   it('tracks expanded and collapsed sidebar widths', () => {
