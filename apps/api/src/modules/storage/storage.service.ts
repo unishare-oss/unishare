@@ -84,7 +84,10 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
 
 @Injectable()
 export class StorageService implements OnModuleInit {
+  /** Server-side operations. Uses S3_INTERNAL_ENDPOINT when configured. */
   private s3Client: S3Client
+  /** Presigning only. Always the browser-reachable S3_ENDPOINT. */
+  private signingClient: S3Client
   private bucket: string
   private publicUrl: string
   private readonly partEtagCache = new Map<string, Map<number, string>>()
@@ -92,15 +95,39 @@ export class StorageService implements OnModuleInit {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit() {
-    this.s3Client = new S3Client({
+    // Two endpoints, two clients.
+    //
+    // S3_ENDPOINT must be reachable by BROWSERS, because presigned URLs are
+    // signed for a specific host -- sign one against an in-cluster address and
+    // the browser cannot use it. Every other operation (head, delete, the whole
+    // multipart flow) is server-to-server and has no such requirement.
+    //
+    // Left as one endpoint, a self-hosted setup sends server-side calls out to
+    // the public internet and back to reach storage sitting beside it: added
+    // latency on every request, plus a hard dependency on the ingress/CDN path
+    // for operations that never needed it. S3_INTERNAL_ENDPOINT lets those take
+    // the direct route (e.g. http://garage.garage.svc.cluster.local:3900).
+    //
+    // Optional: unset, both clients use S3_ENDPOINT and behaviour is unchanged.
+    const publicEndpoint = this.config.getOrThrow<string>('S3_ENDPOINT')
+    const internalEndpoint = this.config.get<string>('S3_INTERNAL_ENDPOINT') ?? publicEndpoint
+
+    const shared = {
       region: this.config.get('S3_REGION') ?? 'auto',
-      endpoint: this.config.getOrThrow('S3_ENDPOINT'),
       forcePathStyle: true,
       credentials: {
         accessKeyId: this.config.getOrThrow('S3_ACCESS_KEY_ID'),
         secretAccessKey: this.config.getOrThrow('S3_SECRET_ACCESS_KEY'),
       },
-    })
+    }
+
+    this.s3Client = new S3Client({ ...shared, endpoint: internalEndpoint })
+    // Reuse the same client when the endpoints match, rather than carrying a
+    // second identical connection pool.
+    this.signingClient =
+      internalEndpoint === publicEndpoint
+        ? this.s3Client
+        : new S3Client({ ...shared, endpoint: publicEndpoint })
 
     this.bucket = this.config.getOrThrow('S3_BUCKET')
     this.publicUrl = this.config.getOrThrow('STORAGE_PUBLIC_URL')
@@ -122,7 +149,8 @@ export class StorageService implements OnModuleInit {
 
     const key = `${folder}/${this.generateFileName(mimeType)}`
     const command = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: mimeType })
-    const url = await getSignedUrl(this.s3Client, command, { expiresIn })
+    // signingClient, not s3Client: the browser performs this PUT.
+    const url = await getSignedUrl(this.signingClient, command, { expiresIn })
 
     return { url, key, publicUrl: this.getPublicUrl(key) }
   }
@@ -130,7 +158,8 @@ export class StorageService implements OnModuleInit {
   async generatePresignedDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
     this.assertSafeKey(key)
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
-    return getSignedUrl(this.s3Client, command, { expiresIn })
+    // signingClient, not s3Client: the browser performs this GET.
+    return getSignedUrl(this.signingClient, command, { expiresIn })
   }
 
   private assertSafeKey(key: string): void {

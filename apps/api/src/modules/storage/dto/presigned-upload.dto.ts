@@ -2,10 +2,7 @@ import { ApiProperty } from '@nestjs/swagger'
 import { IsIn, IsString, Matches, MaxLength } from 'class-validator'
 
 export type UploadPurpose =
-  | 'profile-picture'
-  | 'post-attachment'
-  | 'chat-attachment'
-  | 'group-picture'
+  'profile-picture' | 'post-attachment' | 'chat-attachment' | 'group-picture'
 
 const UPLOAD_PURPOSE_FOLDER: Record<UploadPurpose, string> = {
   'profile-picture': 'profile',

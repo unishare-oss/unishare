@@ -11,6 +11,21 @@ import { useFeedStore, type TypeFilter } from '@/lib/store'
 import { PostFeed } from '@/components/feed/post-feed'
 import type { ApiPost } from '@/lib/api-types'
 
+const PAGE_PARAM_MAX = 10000
+
+//validator
+function parsePageParam(value: string | null): number {
+  if (value === null || !/^\d+$/.test(value)) return 1
+  const n = Number(value)
+  return Number.isSafeInteger(n) && n >= 1 && n <= PAGE_PARAM_MAX ? n : 1
+}
+
+function stripPage(params: URLSearchParams): string {
+  const next = new URLSearchParams(params)
+  next.delete('page')
+  return next.toString()
+}
+
 function FeedContent() {
   const { user } = useAuth()
   const router = useRouter()
@@ -32,14 +47,10 @@ function FeedContent() {
     consumePendingFilter,
   } = useFeedStore()
 
-  useState(() => {
-    consumePendingFilter()
-  })
-
   const [searchQuery, setSearchQuery] = useState(qParam ?? '')
   const [debouncedSearch, setDebouncedSearch] = useState(qParam ?? '')
-  const [page, setPage] = useState(1)
   const [sortType, setSortType] = useState<SortType>('recent')
+  const page = parsePageParam(searchParams.get('page'))
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
   // When user types, clear ?tag= and instantly update ?q= in the URL
@@ -57,8 +68,24 @@ function FeedContent() {
   function handleTagSelect(tagName: string) {
     setSearchQuery('')
     setDebouncedSearch('')
-    setPage(1)
     router.replace(`/feed?tag=${encodeURIComponent(tagName)}`, { scroll: false })
+  }
+
+  function handlePageChange(newPage: number) {
+    const params = new URLSearchParams(window.location.search)
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', String(newPage))
+    }
+    const qs = params.toString()
+    router.push(`/feed${qs ? `?${qs}` : ''}`, { scroll: false })
+  }
+
+  function stripPageFromUrl() {
+    if (!searchParams.has('page')) return
+    const next = stripPage(new URLSearchParams(searchParams))
+    router.replace(`/feed${next ? `?${next}` : ''}`, { scroll: false })
   }
 
   // Debounce the actual search query (API call fires after 300ms pause)
@@ -73,34 +100,49 @@ function FeedContent() {
     }
   }, [hasSelectedYear, setSelectedYear, user?.yearLevel])
 
+  // Consume any cross-page filter set via setPendingFilter() on mount.
+  useEffect(() => {
+    consumePendingFilter()
+  }, [consumePendingFilter])
+
+  // Normalize URL: strip ?page= when the parsed value resolves to page 1
+  // so shared links like /feed?page=1 or /feed?page=abc stay consistent
+  // with the rendered state.
+  useEffect(() => {
+    if (page === 1 && searchParams.has('page')) {
+      const next = stripPage(new URLSearchParams(searchParams))
+      router.replace(`/feed${next ? `?${next}` : ''}`, { scroll: false })
+    }
+  }, [page, searchParams, router])
+
   function handleDeptChange(deptId: string) {
     setSelectedDeptId(deptId)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   function handleFilterChange(filter: TypeFilter) {
     setActiveFilter(filter)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   function handleYearChange(year: number | null) {
     setSelectedYear(year)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   function handleCourseChange(courseId: string) {
     setSelectedCourseId(courseId)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   function handleModuleChange(moduleNumber: number | null) {
     setSelectedModuleNumber(moduleNumber)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   function handleSortChange(sort: SortType) {
     setSortType(sort)
-    setPage(1)
+    stripPageFromUrl()
   }
 
   // tagParam drives a tag filter on the regular feed endpoint (fast exact match)
@@ -177,11 +219,7 @@ function FeedContent() {
     : isSearchActive
       ? Math.ceil((searchData?.total ?? 0) / 10)
       : (data?.totalPages ?? 1)
-  const currentPage = isTrendingActive
-    ? (trendingData?.page ?? 1)
-    : isSearchActive
-      ? (searchData?.page ?? 1)
-      : (data?.page ?? 1)
+
   const loading = isTrendingActive ? trendingLoading : isSearchActive ? searchLoading : isLoading
 
   return (
@@ -209,9 +247,9 @@ function FeedContent() {
       <PostFeed
         posts={items}
         loading={loading}
-        page={currentPage}
+        page={page}
         totalPages={totalPages}
-        onPageChange={setPage}
+        onPageChange={handlePageChange}
         emptyDescription={
           isTrendingActive
             ? 'No trending posts yet. Check back soon!'

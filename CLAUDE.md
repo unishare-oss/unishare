@@ -2,181 +2,181 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Before Starting Any Task
+## Repository shape
 
-Always read the `.planning/` directory to get an up-to-date overview of the project before doing any work:
+Turborepo + pnpm workspaces monorepo. Two apps, two internal packages:
 
-- `.planning/codebase/` — architecture, stack, conventions, structure, integrations, testing, and concerns docs
-- `.planning/todos/pending/` — outstanding tasks and work in progress
-- `.planning/todos/completed/` — finished work (useful for understanding recent changes)
+| Path                | What it is                                                               |
+| ------------------- | ------------------------------------------------------------------------ |
+| `apps/api`          | NestJS 11 backend — Prisma 7 / PostgreSQL, Socket.IO, Better Auth, S3    |
+| `apps/web`          | Next.js 16 App Router frontend — React 19, TanStack Query, Tailwind 4    |
+| `packages/types`    | `@unishare/types` — shared TS types, consumed as source (no build step)  |
+| `packages/tsconfig` | `@unishare/tsconfig` — `base.json`, `nestjs.json`, `nextjs.json` presets |
 
-These files are the authoritative source of project context and should be consulted before planning or implementing anything.
-
-## Project Overview
-
-**Unishare** is an open-source academic content sharing platform for university students — a self-hostable monorepo with a NestJS API and Next.js frontend.
+`turbo.json` only defines `build`, `dev`, `lint`, `format`. **There is no root `test` task** — tests are always run with `--filter`.
 
 ## Commands
 
-### Root (run from repo root)
+```bash
+pnpm install
+pnpm dev                              # both apps (web :3000, api :3001, Swagger /docs)
+pnpm build                            # turbo build
+pnpm lint                             # turbo lint (depends on ^build)
+pnpm --filter api dev                 # api only (nest start -b swc --watch)
+pnpm --filter web dev                 # web only
+```
+
+### Database (run from `apps/api`, or with `--filter api`)
 
 ```bash
-pnpm dev              # Start both apps concurrently via Turborepo
-pnpm build            # Build all workspaces
-pnpm lint             # Lint all workspaces
-pnpm format           # Format all files with Prettier
-pnpm api:sync         # Pull OpenAPI spec from API and regenerate client types
+pnpm --filter api db:generate         # regenerate Prisma client into src/generated/prisma
+pnpm --filter api db:migrate          # prisma migrate dev
+pnpm --filter api db:push
+pnpm --filter api db:studio
+pnpm --filter api exec prisma db seed # seeds universities + departments/courses per faculty
 ```
 
-### API (`apps/api`)
+Prisma is configured via `apps/api/prisma.config.ts` (not the datasource block) — the schema's `datasource db` has no `url`; it comes from `DATABASE_URL` through that config file. The client is generated to `apps/api/src/generated/prisma` and imported as `@/generated/prisma/client`, **not** `@prisma/client`. That directory is gitignored, so run `db:generate` after a fresh clone or any schema change or lint/build fails on missing types. (`apps/api/src/metadata.ts`, the Nest Swagger plugin output, is gitignored for the same reason.)
+
+### API client codegen (Orval)
 
 ```bash
-pnpm --filter api dev          # NestJS dev server (SWC, watch mode)
-pnpm --filter api build        # Production build
-pnpm --filter api test         # Jest unit tests
-pnpm --filter api test:e2e     # E2E tests
-pnpm --filter api test:watch   # Jest in watch mode
-pnpm --filter api db:migrate   # Run Prisma migrations (dev)
-pnpm --filter api db:push      # Push schema without migration
-pnpm --filter api db:studio    # Open Prisma Studio
+pnpm api:sync                         # curl :3001/docs-json > apps/web/openapi.json, then generate
+pnpm --filter web api:generate        # regenerate from the existing openapi.json
 ```
 
-### Web (`apps/web`)
+The API must be running for `api:sync`. Everything under `apps/web/src/lib/api/generated/` is overwritten on each run — never hand-edit it. It's gitignored and excluded from `tsconfig.json`, so a fresh clone needs a generate pass before typecheck succeeds. `orval.config.ts` sets `useInfinite: true` globally with `page` as the param, with per-operation overrides (chat messages paginate by `cursor`; a few endpoints opt out of infinite entirely) — add an override there when a new endpoint isn't page-paginated. See `docs/api-codegen.md`.
+
+### Tests
 
 ```bash
-pnpm --filter web dev           # Next.js dev server
-pnpm --filter web build         # Production build
-pnpm --filter web test          # Vitest
-pnpm --filter web test:watch    # Vitest watch mode
-pnpm --filter web api:generate  # Regenerate API client from OpenAPI spec (orval)
+pnpm --filter api test                        # jest, rootDir=src, *.spec.ts
+pnpm --filter api test -- chat.service        # single file by path regex
+pnpm --filter api test -- -t "should get rooms"   # single case by name
+pnpm --filter api test:e2e                    # jest --config test/jest-e2e.json (supertest)
+pnpm --filter api test:cov
+
+pnpm --filter web test                        # vitest run (jsdom)
+pnpm --filter web test -- app-shell           # single file
+pnpm --filter web test:watch
 ```
 
-## Architecture
+Web tests live next to their subjects (`components/app-shell.test.tsx`, `src/lib/presence.test.ts`) and use `@testing-library/react` with `vitest.setup.ts`.
 
-### Monorepo Structure
+## Backend architecture
 
-```
-apps/
-  api/   — NestJS 11 backend (port 3001)
-  web/   — Next.js 16 frontend (port 3000)
-packages/
-  types/    — Shared TypeScript types
-  tsconfig/ — Shared TS configs
-```
+`apps/api/src/modules/<domain>/` follows **controller → service → repository**:
 
-Turborepo orchestrates builds; pnpm workspaces manage dependencies.
+- `*.controller.ts` — routing, `class-validator` DTO validation, Swagger decorators
+- `*.service.ts` — business logic, cross-module orchestration, event emitting
+- `*.repository.ts` — all Prisma access (shared `postInclude()`-style include builders live here)
+- `dto/` — **inbound** request bodies (`class-validator`)
+- `entities/` — **outbound** response shapes (`@ApiProperty`), the source of frontend types
 
-### API Contract & Code Generation
+Cross-cutting pieces in `src/common/`: `filters/http-exception.filter.ts`, `interceptors/response.interceptor.ts`, `decorators/response-message.decorator.ts`, `guards/`, `utils/paginate.ts`, `dto/pagination.dto.ts`.
 
-The API generates an OpenAPI spec at `http://localhost:3001/docs`. `pnpm api:sync` fetches it and runs **Orval** to generate TanStack Query hooks into `apps/web/src/lib/api/generated/`. **Treat generated files as read-only.** To add a new endpoint: define it in NestJS → run `pnpm api:sync` → use the generated hook in the frontend.
+### The response envelope
 
-### Backend (`apps/api`)
+`ResponseInterceptor` wraps every non-SSE response as `{ success, message, data }`, where `message` comes from `@ResponseMessage('...')` (default `'OK'`). Two consequences:
 
-- **NestJS modules** live in `src/modules/` (posts, users, chat, quizzes, notifications, storage, etc.)
-- **Auth** is handled by Better Auth (`src/auth/`) with Prisma adapter; supports email/password, Google OAuth, and Microsoft Entra ID
-- **Database**: PostgreSQL via Prisma ORM (`prisma/schema.prisma`); generated client is in `src/generated/`
-- **WebSockets**: Socket.io for real-time chat and notifications
-- **File storage**: S3-compatible (Cloudflare R2, MinIO, or AWS S3) via the storage module
-- **AI**: Optional integrations for Groq, Gemini, and Ollama (post summary generation)
-- **Validation**: `class-validator` + `class-transformer` on DTOs; response envelope is `{ success, message, data }`
+1. Every controller method needs `@ApiOkResponse({ type: SomeEntity })` — without it Orval generates `data: void`.
+2. On the frontend, `customFetch` unwraps one level, so the payload sits at `res.data`. Always unwrap with TanStack Query's `select`:
 
-### Frontend (`apps/web`)
-
-- **Next.js App Router** with two route groups: `(app)/` (authenticated) and `(auth)/` (unauthenticated)
-- **Server state**: TanStack Query 5 using generated Orval hooks
-- **UI state**: Zustand stores (settings, theme, sidebar, etc.)
-- **Styling**: Tailwind CSS 4 with 12 built-in themes (Catppuccin, Nord, Tokyo Night, etc.) stored in Zustand and persisted to localStorage
-- **Auth client**: Better Auth; `src/lib/auth/` exposes the auth instance; `src/contexts/auth-context.tsx` provides session to the tree
-- **Permissions**: Role-based (`STUDENT` / `ADMIN`) checked via `src/lib/permissions.ts`
-- **Real-time**: Socket.io client wired up in feature hooks
-
-### Key Data Flow
-
-1. User action → React Hook Form + Zod validation
-2. Submit → generated TanStack Query mutation (wraps `fetch` with auth cookie)
-3. NestJS controller → service → Prisma → PostgreSQL
-4. Response → TanStack Query cache invalidation → UI update
-
-### Post Lifecycle
-
-Posts follow a moderation workflow: `DRAFT → PENDING_APPROVAL → PUBLISHED` (or `REJECTED`). Admins approve/reject via the admin panel.
-
-## Planning Workflow
-
-Before implementing any feature:
-
-1. Check `docs/{feature-name}/planning.md` for existing plans and `platform-phases.md` for roadmap context.
-2. Create or update `docs/{feature-name}/planning.md` with: feature overview, API design, data model, folder structure, trade-offs, and step-by-step plan.
-3. Present the plan and wait for approval before writing any code.
-4. After each step, show what changed and ask before continuing or committing.
-
-After implementation, always ask before staging or committing changes.
-
-## Implementation Log
-
-After completing any implementation, ask permission to write a log file at:
-
-```
-docs/{module-name}/{feature-name}-{YYYY-MM-DD}.md
+```tsx
+const { data: post } = usePostsControllerGetOne(id, { query: { select: (r) => r.data } })
 ```
 
-The log should cover: what was implemented, files changed, any decisions made, and known limitations or follow-ups. Use today's date (ISO format) in the filename.
+### Bootstrap specifics (`src/main.ts`)
 
-## Environment Setup
+- Global prefix `api`, **excluding** `/health`, `/metrics`, and `api/(.*)` (Better Auth mounts its own `/api/*` routes)
+- `bodyParser: false` — file uploads go through Multer/S3 presigning, not a global parser
+- Swagger is only mounted when `NODE_ENV !== 'production'`
+- `RedisIoAdapter` replaces the default WS adapter, so **Redis is required for websockets to work at all**, not just for scaling
 
-```bash
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+### Auth
+
+Better Auth is configured once server-side in `apps/api/src/auth/auth.config.ts` (Prisma adapter, email+password, Google, Microsoft Entra, `admin` and `anonymous` plugins, RBAC from `src/lib/permissions.ts`) and wired in via `@thallesp/nestjs-better-auth`'s `AuthModule.forRoot({ auth })`. Controllers use that package's `@Session()`, `@OptionalAuth()`, `@Roles()`.
+
+The web side mirrors it in `apps/web/src/lib/auth/client.ts` with `inferAdditionalFields` — **when you add a custom user field on the server, add it there too**, plus to `apps/web/src/lib/permissions.ts` for role changes. `apps/web/src/proxy.ts` is a cookie-presence-only guard (`better-auth.session_token`) for redirects; real authorization is always server-side.
+
+### Realtime
+
+Two Socket.IO gateways, both authenticating by parsing the session cookie:
+
+- `/chat` — `modules/chat/chat.gateway.ts`, with `presence.service.ts` (Redis Lua scripts in `presence.scripts.ts`) and `chat-cleanup.service.ts`
+- `/collab` — `modules/collab/collab.gateway.ts`, a Yjs update relay for the Excalidraw canvas plus cursor presence (throttled to 16ms)
+
+### End-to-end encrypted chat
+
+Chat message bodies are encrypted in the browser; the server stores ciphertext and never has the plaintext or private keys.
+
+- Crypto primitives: `apps/web/src/lib/crypto.ts` (ECDH P-256 + AES-GCM 256, PBKDF2 600k for the passphrase-wrapped backup)
+- Private key lives in IndexedDB (`apps/web/src/lib/indexeddb.ts`, db `unishare-crypto`), keyed by user id — it is **device-local**
+- `User.publicKey` and `User.keyBackup` on the server are opaque blobs; per-room AES keys are wrapped per participant
+- Runtime surface: `contexts/crypto-context.tsx`, `hooks/use-crypto.ts`, `hooks/use-decrypted-chat-messages.ts`
+
+Never add server-side logic that assumes readable chat content (search, moderation, summarization of DMs).
+
+Because keys are device-local, a stale `User.publicKey` with no matching IndexedDB key makes chats permanently undecryptable. `pnpm --filter api db:reset-encryption` (`apps/api/scripts/reset-encryption.ts`) is the escape hatch for local testing — it **deletes all chat messages, participants, and rooms** and nulls every `publicKey`. Destructive; dev databases only.
+
+## Frontend architecture
+
+`apps/web` has an unusual split: **the `@/` alias points at the app root, not at `src/`**. So both of these are normal and appear side by side:
+
+```
+apps/web/
+├── app/                  # App Router — route groups (app), (auth), plus /api routes
+├── components/           # nearly all UI (feature subfolders + ui/ primitives)
+├── hooks/                # use-*.ts
+├── contexts/             # auth, chat-socket, crypto, collab providers
+├── lib/                  # store.ts (Zustand), constants, utils
+└── src/
+    ├── lib/api/          # fetcher.ts + generated/
+    ├── lib/auth/         # better-auth client
+    ├── lib/crypto.ts, indexeddb.ts, presence.ts, cursor-coords.ts
+    ├── components/canvas/
+    ├── providers/        # QueryProvider + persist rehydration
+    └── proxy.ts
 ```
 
-Minimum required variables:
+Import as `@/components/...`, `@/hooks/...`, `@/src/lib/...`. Put new code where its neighbours already are rather than trying to normalize the layout.
 
-- `apps/api/.env`: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `FRONTEND_URL`
-- `apps/web/.env`: `NEXT_PUBLIC_API_URL`, `BETTER_AUTH_SECRET`
+### State boundaries
 
-A Docker Compose file is included for local PostgreSQL (`docker-compose.yml`). After standing up the DB, run `pnpm --filter api db:migrate` then `pnpm --filter api db:push` and seed if needed.
+| State                          | Tool                                                    |
+| ------------------------------ | ------------------------------------------------------- |
+| Server data                    | TanStack Query (Orval hooks)                            |
+| Session                        | Better Auth client / `contexts/auth-context`            |
+| Shared UI state with no DB row | Zustand — `lib/store.ts`, `persist` under `unishare-ui` |
+| Local component state          | `useState`                                              |
+
+The Zustand store uses `skipHydration: true` and is rehydrated once in `src/providers/index.tsx`; don't add per-page `mounted` guards. Anything with a database table belongs in TanStack Query, not Zustand — see `docs/zustand.md`.
+
+Form validation is Zod + `react-hook-form`; toasts are `sonner`; UI primitives are Radix-based in `components/ui`.
 
 ## Conventions
 
-- Use `pnpm` for all package management; never `npm` or `yarn`.
-- Keep frontend/backend boundaries clean — no direct Prisma imports in `apps/web`.
-- New API modules follow the NestJS module pattern: `module.ts`, `controller.ts`, `service.ts`, `dto/`.
-- New frontend features go in `src/features/<feature>/` for hooks/logic and `src/components/` for shared UI.
-- Swagger decorators (`@ApiOperation`, `@ApiResponse`) are required on all new controller endpoints so `api:sync` picks them up correctly.
+- Prettier (`.prettierrc`): no semicolons, single quotes, trailing commas, `printWidth: 100`. Enforced on commit via husky + lint-staged.
+- Commits: Conventional Commits, enforced by commitlint (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
+- Branches: `feat/short-name`, `fix/...`, `chore/...`, `docs/...`. Large features use sub-branches off the parent feature branch, not off `main`.
+- Files are kebab-case (`post-card.tsx`, `chat.service.ts`). Some older components are PascalCase (`SearchBox.tsx`, `TagFilter.tsx`) — match the directory you're in.
+- Path alias is `@/*` in both apps (api → `src/`, web → app root).
 
-## Flutter Mobile Agent Logging (`apps/mobile/`)
+## Working agreements (from `.github/copilot-instructions.md`)
 
-Every session touching `apps/mobile/` must be logged in `docs/agent-log.md`. This is mandatory for all team members — no exceptions.
+- Read `.planning/**` before starting a task — it holds the phase plans, plus `codebase/{ARCHITECTURE,CONVENTIONS,STRUCTURE,TESTING,STACK,CONCERNS}.md`. It is gitignored (local-only), and the analyses carry 2024–2025 dates and have drifted; verify against the code. Don't commit `.planning/` docs or phase-completion artifacts.
+- For feature work: present a plan and the list of files to be touched, and wait for explicit approval before writing. Larger features get a `docs/{feature-name}/planning.md` (overview, API design, data model, folder structure, trade-offs, step-by-step plan).
+- Ask before staging or committing.
+- Treat generated code (`src/generated/prisma`, `src/lib/api/generated`) as read-only unless the task is about generation itself.
 
-### At the start of every mobile session
+## Deployment
 
-Before doing any work, ask the user for their name if not already known, then immediately append this header to `docs/agent-log.md`:
+`docker-compose.yml` runs Postgres 17, the API image, postgres-exporter, and Prometheus, with tight memory limits tuned for a 1GB Oracle box (API is capped at 300M with `--max-old-space-size=256`). `Dockerfile.api` / `Dockerfile.web`, `deploy.sh` pulls `ghcr.io/unishare-oss/unishare-api:latest` and health-checks `/health`. `.github/workflows/docker.yml` builds only the app whose paths changed; `release.yml` runs semantic-release on the `release` branch.
 
-```
----
-Date: YYYY-MM-DD HH:MM
-Member: [member name]
-Agent: [flutter-architect | flutter-engineer | flutter-qa-engineer | flutter-security-reviewer]
-Task: [one-line description of what this session will accomplish]
-Prompt: [the exact task or instruction the member gave]
-```
+CI (`ci.yml`) order matters and mirrors what you need locally: install → `db:generate` → `api:generate` → `lint`. Prometheus scrape config is `prometheus.yml`; the API exposes `/metrics` via `@willsoto/nestjs-prometheus`.
 
-### At the end of every mobile session
+## Environment
 
-Before closing, append the outcome block directly after the header:
+`apps/api/.env` is required (`apps/api/.env.example` documents it). `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `FRONTEND_URL`, `COOKIE_DOMAIN` are hard-required in production — `auth.config.ts` throws at startup if any is missing. Optional blocks: OAuth providers, S3 (`S3_ENDPOINT`/`S3_BUCKET`/keys/`STORAGE_PUBLIC_URL`), `REDIS_URL`, `ACADEMIC_START_MONTH`, and AI summarization (`AI_SUMMARY_PROVIDER` = `groq` | `gemini` | `ollama`, empty to disable).
 
-```
-Outcome: [what was completed]
-Decisions: [non-obvious choices made and why]
-Handoff: [what the next agent or reviewer needs to know]
-Review: [PENDING | APPROVED by <name> | CHANGES REQUESTED by <name>]
-```
-
-The Stop hook will automatically append the changed file list after this block.
-
-### Rules
-
-- Log every session, even if no files were changed (e.g., planning, review-only sessions)
-- If switching agent roles mid-session, close the current entry and open a new one
-- The agent that writes code must not be the agent listed under Review: APPROVED
-- For Plan Mode sessions, paste the full task breakdown under the Prompt field
+`apps/web/.env` needs `API_URL` (used by `next.config.ts` rewrites, so `/api/*` proxies to the backend), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. New external image hosts must be added to `next.config.ts` `remotePatterns`.

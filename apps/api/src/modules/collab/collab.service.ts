@@ -159,8 +159,7 @@ export class CollabService {
     // for authenticated users, use session.displayName or user.name as fallback
     const displayName =
       ((activeSession.session as unknown as Record<string, unknown>).displayName as
-        | string
-        | undefined) ?? activeSession.user.name
+        string | undefined) ?? activeSession.user.name
 
     return {
       roomSlug: room.slug,
