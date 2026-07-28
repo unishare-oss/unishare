@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 
 describe('scene-update sync logic', () => {
   it('only emits elements with version higher than last broadcast', () => {
