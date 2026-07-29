@@ -32,4 +32,20 @@ describe('groupIntoWindows', () => {
     // 10 x 2000 = 20000 chars -> 2 windows at 12000
     expect(windows).toHaveLength(2)
   })
+
+  it('keeps items in one window when the combined length exactly equals the budget', () => {
+    // 48 + separator(2) + 50 = 100 exactly. Must NOT split: the budget is
+    // inclusive, so a `>=` comparison here would wrongly open a second window.
+    const windows = groupIntoWindows(['x'.repeat(48), 'y'.repeat(50)], 100)
+
+    expect(windows).toHaveLength(1)
+    expect(windows[0]).toHaveLength(100)
+  })
+
+  it('splits when the combined length exceeds the budget by one', () => {
+    // 48 + separator(2) + 51 = 101. One over, so this must split.
+    const windows = groupIntoWindows(['x'.repeat(48), 'y'.repeat(51)], 100)
+
+    expect(windows).toHaveLength(2)
+  })
 })
