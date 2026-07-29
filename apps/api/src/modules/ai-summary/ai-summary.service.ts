@@ -1,21 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import { Cache } from 'cache-manager'
+import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
-import mammoth from 'mammoth'
-import { PDFParse } from 'pdf-parse'
-
-const SUPPORTED_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
-
-const MAX_TEXT_CHARS = 6000
+import {
+  DocumentExtractorService,
+  SUPPORTED_MIME_TYPES,
+} from '../ai/extraction/document-extractor.service'
 
 const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
 Respond with exactly this format — no extra text, no markdown headers:
@@ -110,32 +100,13 @@ Document content:
 @Injectable()
 export class AiSummaryService {
   private readonly logger = new Logger(AiSummaryService.name)
-  private s3Client: S3Client
-  private bucket: string
 
   constructor(
-    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly tagsService: TagsService,
     private readonly llm: LlmService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {
-    if (this.llm.enabled) {
-      this.s3Client = new S3Client({
-        region: config.get('S3_REGION') ?? 'auto',
-        // Server-side GetObject only -- this client never presigns anything for a
-        // browser, so it always prefers the direct in-cluster route when one is
-        // configured. Falls back to S3_ENDPOINT when it is not.
-        endpoint: config.get<string>('S3_INTERNAL_ENDPOINT') ?? config.getOrThrow('S3_ENDPOINT'),
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: config.getOrThrow('S3_ACCESS_KEY_ID'),
-          secretAccessKey: config.getOrThrow('S3_SECRET_ACCESS_KEY'),
-        },
-      })
-      this.bucket = config.getOrThrow('S3_BUCKET')
-    }
-  }
+    private readonly extractor: DocumentExtractorService,
+  ) {}
 
   async chatWithPost(
     postId: string,
@@ -155,7 +126,7 @@ export class AiSummaryService {
     const supportedFiles = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
 
     const textParts = await Promise.all(
-      supportedFiles.map((f) => this.extractText(f.key, f.mimeType).catch(() => '')),
+      supportedFiles.map((f) => this.extractJoinedText(f.key, f.mimeType).catch(() => '')),
     )
     const documentText = textParts
       .map((t) => t.trim())
@@ -196,7 +167,7 @@ export class AiSummaryService {
       if (supportedFiles.length === 0) return
 
       const textParts = await Promise.all(
-        supportedFiles.map((f) => this.extractText(f.key, f.mimeType).catch(() => '')),
+        supportedFiles.map((f) => this.extractJoinedText(f.key, f.mimeType).catch(() => '')),
       )
       const text = textParts
         .map((t) => t.trim())
@@ -287,9 +258,10 @@ export class AiSummaryService {
       // Include file text if available (first supported file only — quick scan)
       const supportedFile = post.files.find((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
       if (supportedFile) {
-        const fileText = await this.extractText(supportedFile.key, supportedFile.mimeType).catch(
-          () => '',
-        )
+        const fileText = await this.extractJoinedText(
+          supportedFile.key,
+          supportedFile.mimeType,
+        ).catch(() => '')
         if (fileText.trim()) parts.push(`File content excerpt:\n${fileText}`)
       }
 
@@ -383,50 +355,16 @@ export class AiSummaryService {
     }
   }
 
+  /** Delegates to the extractor. Kept so `quizzes.service.ts` keeps working unchanged. */
   async extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
-    let text: string
-
-    if (mimeType === 'application/pdf') {
-      const parser = new PDFParse({ data: new Uint8Array(buffer) })
-      const result = await parser.getText()
-      text = result.text
-    } else {
-      const result = await mammoth.extractRawText({ buffer })
-      text = result.value
-    }
-
-    return text.slice(0, MAX_TEXT_CHARS)
+    return this.extractor.extractTextFromBuffer(buffer, mimeType)
   }
 
-  private async extractText(key: string, mimeType: string): Promise<string> {
-    const cacheKey = `ai:text:${key}`
-    const cached = await this.cacheManager.get<string>(cacheKey)
-    if (cached !== undefined && cached !== null) return cached
-
-    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
-    const response = await this.s3Client.send(command)
-    const chunks: Uint8Array[] = []
-
-    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
-      chunks.push(chunk)
-    }
-
-    const buffer = Buffer.concat(chunks)
-
-    let text: string
-
-    if (mimeType === 'application/pdf') {
-      const parser = new PDFParse({ data: new Uint8Array(buffer) })
-      const result = await parser.getText()
-      text = result.text
-    } else {
-      const result = await mammoth.extractRawText({ buffer })
-      text = result.value
-    }
-
-    const truncated = text.slice(0, MAX_TEXT_CHARS)
-    // Cache the truncated text for 1 hour (3_600_000 ms)
-    await this.cacheManager.set(cacheKey, truncated, 3_600_000)
-    return truncated
+  private async extractJoinedText(key: string, mimeType: string): Promise<string> {
+    const doc = await this.extractor.extractFromKey(key, mimeType)
+    return doc.pages
+      .map((page) => page.text.trim())
+      .filter(Boolean)
+      .join('\n\n')
   }
 }
