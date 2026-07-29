@@ -2,7 +2,7 @@ name: Build & Push Docker Images
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
     inputs:
       force_api:
@@ -30,8 +30,48 @@ jobs:
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
+      env: ${{ steps.target.outputs.env }}
+      values_file: ${{ steps.target.outputs.values_file }}
+      tag_suffix: ${{ steps.target.outputs.tag_suffix }}
+      moving_tag: ${{ steps.target.outputs.moving_tag }}
     steps:
       - uses: actions/checkout@v7
+
+      # Which environment this ref deploys to. Everything downstream keys off
+      # these four outputs rather than re-testing the ref, so there is one place
+      # to look when a build lands in the wrong environment.
+      #
+      # `main` keeps the exact tags it always used, so production is unaffected
+      # by the existence of the dev path.
+      - name: Resolve target environment
+        id: target
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$REF_NAME" = "main" ]; then
+            ENV=prod
+            VALUES_FILE=unishare-chart/values.yaml
+            TAG_SUFFIX=""
+            MOVING_TAG=latest
+          else
+            ENV=dev
+            VALUES_FILE=unishare-values-dev.yaml
+            # The web image bakes API_URL/APP_URL and NEXT_PUBLIC_* at build time,
+            # so the same commit produces a DIFFERENT web image per environment.
+            # The suffix keeps them from overwriting each other. The API image is
+            # env-agnostic but carries the suffix too, so one tag pattern covers
+            # both and the values file never mixes conventions.
+            TAG_SUFFIX="-dev"
+            MOVING_TAG=dev
+          fi
+          {
+            echo "env=$ENV"
+            echo "values_file=$VALUES_FILE"
+            echo "tag_suffix=$TAG_SUFFIX"
+            echo "moving_tag=$MOVING_TAG"
+          } >> "$GITHUB_OUTPUT"
+          echo "$REF_NAME -> $ENV (tags: $MOVING_TAG, sha-<commit>$TAG_SUFFIX)"
 
       - uses: dorny/paths-filter@v4
         id: filter
@@ -83,8 +123,8 @@ jobs:
           no-cache: ${{ inputs.no_cache == true }}
           platforms: linux/arm64
           tags: |
-            ghcr.io/${{ env.OWNER }}/unishare-api:latest
-            ghcr.io/${{ env.OWNER }}/unishare-api:sha-${{ github.sha }}
+            ghcr.io/${{ env.OWNER }}/unishare-api:${{ needs.changes.outputs.moving_tag }}
+            ghcr.io/${{ env.OWNER }}/unishare-api:sha-${{ github.sha }}${{ needs.changes.outputs.tag_suffix }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -119,11 +159,11 @@ jobs:
           no-cache: ${{ inputs.no_cache == true }}
           platforms: linux/arm64
           tags: |
-            ghcr.io/${{ env.OWNER }}/unishare-web:latest
-            ghcr.io/${{ env.OWNER }}/unishare-web:sha-${{ github.sha }}
+            ghcr.io/${{ env.OWNER }}/unishare-web:${{ needs.changes.outputs.moving_tag }}
+            ghcr.io/${{ env.OWNER }}/unishare-web:sha-${{ github.sha }}${{ needs.changes.outputs.tag_suffix }}
           build-args: |
-            API_URL=${{ secrets.API_URL }}
-            APP_URL=${{ secrets.APP_URL }}
+            API_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_API_URL || secrets.API_URL }}
+            APP_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_APP_URL || secrets.APP_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
@@ -163,10 +203,18 @@ jobs:
           API_BUILT: ${{ needs.build-api.result == 'success' }}
           WEB_BUILT: ${{ needs.build-web.result == 'success' }}
           SHA: ${{ github.sha }}
+          F: ${{ needs.changes.outputs.values_file }}
+          TAG_SUFFIX: ${{ needs.changes.outputs.tag_suffix }}
         run: |
           set -euo pipefail
-          F=unishare-chart/values.yaml
-          TAG="sha-${SHA}"
+          TAG="sha-${SHA}${TAG_SUFFIX}"
+
+          # `yq -i` will not create a missing file, and a silent failure here is
+          # the failure mode this whole pipeline exists to avoid.
+          if [ ! -f "$F" ]; then
+            echo "::error::${F} does not exist in the GitOps repo -- nothing to deploy into."
+            exit 1
+          fi
 
           if [ "$API_BUILT" = "true" ]; then
             yq -i ".image.api.tag = \"${TAG}\"" "$F"
@@ -184,6 +232,8 @@ jobs:
         working-directory: gitops
         env:
           SHA: ${{ github.sha }}
+          F: ${{ needs.changes.outputs.values_file }}
+          TARGET_ENV: ${{ needs.changes.outputs.env }}
         run: |
           set -euo pipefail
           if git diff --quiet; then
@@ -192,8 +242,12 @@ jobs:
           fi
           git config user.name  "unishare-ci[bot]"
           git config user.email "unishare-ci[bot]@users.noreply.github.com"
-          git add unishare-chart/values.yaml
-          git commit -m "deploy: unishare @ ${SHA:0:7}"
+          git add "$F"
+          if [ "$TARGET_ENV" = "prod" ]; then
+            git commit -m "deploy: unishare @ ${SHA:0:7}"
+          else
+            git commit -m "deploy: unishare ${TARGET_ENV} @ ${SHA:0:7}"
+          fi
           git -c push.default=current push origin HEAD:main || {
             echo "rejected -- rebasing onto latest main and retrying once"
             git pull --rebase origin main
