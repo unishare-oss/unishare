@@ -12,6 +12,7 @@ import {
   type PresignedUploadEntity,
   type UploadedPartEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { putToPresignedUrl, sha256Base64 } from '@/src/lib/upload'
 
 const MULTIPART_THRESHOLD = 10 * 1024 * 1024 // 10MB — use multipart above this
 const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB per part (S3 minimum)
@@ -129,15 +130,12 @@ export async function uploadPostFile(
     mimeType,
     uploadType,
     purpose: PresignedUploadDtoPurpose['post-attachment'],
+    checksumSha256: await sha256Base64(file),
   })
 
   const { url, key } = presignedRes.data as PresignedUploadEntity
 
-  await fetch(url, {
-    method: 'PUT',
-    body: file,
-    headers: { 'Content-Type': mimeType },
-  })
+  await putToPresignedUrl(url, file, mimeType)
 
   onProgress?.(100)
 

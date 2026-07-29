@@ -122,12 +122,11 @@ export class StorageService implements OnModuleInit {
     }
 
     this.s3Client = new S3Client({ ...shared, endpoint: internalEndpoint })
-    // Reuse the same client when the endpoints match, rather than carrying a
-    // second identical connection pool.
-    this.signingClient =
-      internalEndpoint === publicEndpoint
-        ? this.s3Client
-        : new S3Client({ ...shared, endpoint: publicEndpoint })
+    this.signingClient = new S3Client({
+      ...shared,
+      endpoint: publicEndpoint,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+    })
 
     this.bucket = this.config.getOrThrow('S3_BUCKET')
     this.publicUrl = this.config.getOrThrow('STORAGE_PUBLIC_URL')
@@ -137,7 +136,7 @@ export class StorageService implements OnModuleInit {
     folder: string,
     mimeType: string,
     uploadType: UploadType = 'document',
-    expiresIn = 3600,
+    { expiresIn = 3600, checksumSha256 }: { expiresIn?: number; checksumSha256?: string } = {},
   ): Promise<{ url: string; key: string; publicUrl: string }> {
     const typeConfig = FILE_TYPE_CONFIG[uploadType]
 
@@ -148,7 +147,12 @@ export class StorageService implements OnModuleInit {
     }
 
     const key = `${folder}/${this.generateFileName(mimeType)}`
-    const command = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: mimeType })
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: mimeType,
+      ...(checksumSha256 && { ChecksumSHA256: checksumSha256 }),
+    })
     // signingClient, not s3Client: the browser performs this PUT.
     const url = await getSignedUrl(this.signingClient, command, { expiresIn })
 

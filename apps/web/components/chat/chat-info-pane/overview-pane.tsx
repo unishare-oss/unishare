@@ -32,6 +32,7 @@ import {
   PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { putToPresignedUrl, sha256Base64 } from '@/src/lib/upload'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { SectionRow } from './section-row'
@@ -112,9 +113,10 @@ export function OverviewPane({
         mimeType: file.type,
         uploadType: PresignedUploadDtoUploadType.image,
         purpose: PresignedUploadDtoPurpose['group-picture'],
+        checksumSha256: await sha256Base64(file),
       })
       const { url, publicUrl } = res.data as PresignedUploadEntity
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      await putToPresignedUrl(url, file, file.type)
       updateRoom({ id: room.id, data: { imageUrl: publicUrl } })
     } catch {
       toast.error('Failed to upload image')

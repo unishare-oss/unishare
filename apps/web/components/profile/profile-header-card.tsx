@@ -12,6 +12,7 @@ import {
   PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { putToPresignedUrl, sha256Base64 } from '@/src/lib/upload'
 import {
   useUsersControllerUpdateMe,
   getUsersControllerGetMeQueryKey,
@@ -47,9 +48,10 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
         mimeType: file.type,
         uploadType: PresignedUploadDtoUploadType.image,
         purpose: PresignedUploadDtoPurpose['profile-picture'],
+        checksumSha256: await sha256Base64(file),
       })
       const { url, publicUrl } = res.data as PresignedUploadEntity
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      await putToPresignedUrl(url, file, file.type)
       await updateMe({ data: { image: publicUrl } })
       await queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
     } finally {

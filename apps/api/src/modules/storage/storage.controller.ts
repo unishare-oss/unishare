@@ -25,7 +25,9 @@ export class StorageController {
   @ApiOkResponse({ type: PresignedUploadEntity })
   getPresignedUploadUrl(@Body() dto: PresignedUploadDto, @Session() session: UserSession) {
     const folder = getFolderForPurpose(dto.purpose, session.user.id)
-    return this.storageService.generatePresignedUploadUrl(folder, dto.mimeType, dto.uploadType)
+    return this.storageService.generatePresignedUploadUrl(folder, dto.mimeType, dto.uploadType, {
+      checksumSha256: dto.checksumSha256,
+    })
   }
 
   @Post('multipart/create')
