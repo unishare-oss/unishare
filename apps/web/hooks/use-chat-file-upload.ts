@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ChatMessageEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
+import { putToPresignedUrl, sha256Base64 } from '@/src/lib/upload'
 import type { useSendMessage } from './use-chat-mutations'
 
 interface UseChatFileUploadParams {
@@ -58,9 +59,10 @@ export function useChatFileUpload({
         mimeType,
         uploadType: 'image',
         purpose: 'chat-attachment',
+        checksumSha256: await sha256Base64(file),
       })
       const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
+      await putToPresignedUrl(url, file, mimeType)
       sendMessage({
         id: roomId,
         data: {
@@ -86,9 +88,10 @@ export function useChatFileUpload({
         mimeType,
         uploadType: 'document',
         purpose: 'chat-attachment',
+        checksumSha256: await sha256Base64(file),
       })
       const { url, publicUrl } = presignedRes.data as { url: string; publicUrl: string }
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': mimeType } })
+      await putToPresignedUrl(url, file, mimeType)
       sendMessage({
         id: roomId,
         data: {

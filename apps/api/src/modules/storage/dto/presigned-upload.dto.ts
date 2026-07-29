@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsIn, IsString, Matches, MaxLength } from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
 
 export type UploadPurpose =
   'profile-picture' | 'post-attachment' | 'chat-attachment' | 'group-picture'
@@ -34,4 +34,14 @@ export class PresignedUploadDto {
   @ApiProperty({ enum: ['profile-picture', 'post-attachment', 'chat-attachment', 'group-picture'] })
   @IsIn(['profile-picture', 'post-attachment', 'chat-attachment', 'group-picture'])
   purpose: UploadPurpose
+
+  @ApiPropertyOptional({
+    description: 'Base64-encoded SHA-256 of the file body, verified by storage on upload.',
+    example: 'eWPfwx9oFQy+i82Q9/7n0jdzN2qLAM0XGuurO4CgUmk=',
+  })
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9+/]{43}=$/, {
+    message: 'checksumSha256 must be a base64-encoded SHA-256 digest',
+  })
+  checksumSha256?: string
 }

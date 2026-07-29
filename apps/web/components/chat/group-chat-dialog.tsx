@@ -25,6 +25,7 @@ import {
   PresignedUploadDtoUploadType,
   type PresignedUploadEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { putToPresignedUrl, sha256Base64 } from '@/src/lib/upload'
 import { useNetworkUsers } from '@/hooks/use-network-users'
 import { useCreateGroup, useInviteMembers } from '@/hooks/use-chat-mutations'
 import { UserRow, SelectedBadge } from '@/components/chat/group-chat-user-row'
@@ -122,9 +123,10 @@ export function GroupChatDialog({
         mimeType: file.type,
         uploadType: PresignedUploadDtoUploadType.image,
         purpose: PresignedUploadDtoPurpose['group-picture'],
+        checksumSha256: await sha256Base64(file),
       })
       const { url, publicUrl } = res.data as PresignedUploadEntity
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      await putToPresignedUrl(url, file, file.type)
       setImagePublicUrl(publicUrl)
     } catch {
       setImagePreview(null)
