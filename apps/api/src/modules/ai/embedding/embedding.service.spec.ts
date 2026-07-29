@@ -109,14 +109,28 @@ describe('EmbeddingService', () => {
     const service = await build()
     const result = await service.embedDocuments(Array.from({ length: 40 }, (_, i) => `t${i}`))
 
-    expect(result[0][0]).toBe(0)
-    expect(result[39][0]).toBe(39)
+    // Every index, not just the boundaries: a shuffle confined to the interior of
+    // a batch (e.g. reversing everything but each batch's first/last element)
+    // must fail too — checking only result[0] and result[39] would not catch that.
+    result.forEach((v, i) => expect(v[0]).toBe(i))
+    expect(result).toHaveLength(40)
   })
 
   it('rejects a vector whose width does not match the configured dimensions', async () => {
     mockEmbed([vector(512)])
     const service = await build()
     await expect(service.embedQuery('hi')).rejects.toThrow(
+      'Embedding width mismatch: expected 768, got 512',
+    )
+  })
+
+  it('rejects a wrong-width vector even when it is not the first in the batch', async () => {
+    // The bad vector is at index 1. A validator that only checks embeddings[0]
+    // would pass this, which is precisely the mutation the suite must catch.
+    mockEmbed([vector(768), vector(512)])
+    const service = await build()
+
+    await expect(service.embedDocuments(['a', 'b'])).rejects.toThrow(
       'Embedding width mismatch: expected 768, got 512',
     )
   })
@@ -131,5 +145,32 @@ describe('EmbeddingService', () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 500 } as Response)
     const service = await build()
     await expect(service.embedQuery('hi')).rejects.toThrow('500')
+  })
+
+  it('never exceeds the concurrent batch ceiling', async () => {
+    let inFlight = 0
+    let maxInFlight = 0
+
+    jest.spyOn(global, 'fetch').mockImplementation((async (_url: string, init: RequestInit) => {
+      inFlight++
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      inFlight--
+      const body = JSON.parse(init.body as string)
+      return {
+        ok: true,
+        json: async () => ({ embeddings: body.input.map(() => vector()) }),
+      } as Response
+    }) as unknown as typeof fetch)
+
+    const service = await build()
+    // 5 batches of 32 from 160 inputs, so the ceiling is actually exercised.
+    await service.embedDocuments(Array.from({ length: 160 }, (_, i) => `t${i}`))
+
+    // MAX_CONCURRENT_BATCHES is not exported from embedding.service.ts, so this is
+    // hardcoded to 2 deliberately: if the constant changes, this assertion should
+    // break loudly and force someone to revisit it, rather than silently drifting.
+    expect(maxInFlight).toBeGreaterThan(0)
+    expect(maxInFlight).toBeLessThanOrEqual(2)
   })
 })
