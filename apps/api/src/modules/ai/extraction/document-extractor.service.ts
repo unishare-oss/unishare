@@ -1,3 +1,11 @@
+// `pdf-parse` wraps pdfjs-dist, which is ESM-only and, on Node, loads its "fake worker"
+// via a runtime `await import(...)`. Jest's vm.Script sandbox can't resolve that without
+// `--experimental-vm-modules` on NODE_OPTIONS, or every PDF path here throws
+// `Setting up fake worker failed: "A dynamic import callback was invoked without
+// --experimental-vm-modules"`. `test`/`test:watch`/`test:cov` in package.json already set
+// the flag. `test:e2e` currently does NOT — safe for now because no e2e spec exercises
+// this module, but the next e2e test that imports this service (or anything that pulls
+// in `pdf-parse`) will need the same flag added there too.
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'

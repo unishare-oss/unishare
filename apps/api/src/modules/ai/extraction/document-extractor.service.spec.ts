@@ -38,11 +38,26 @@ describe('DocumentExtractorService', () => {
 
     it('does not truncate content — the regression this work exists to fix', async () => {
       const doc = await service.extractFromBuffer(buffer(), 'application/pdf')
-      const total = doc.pages.reduce((sum, p) => sum + p.text.length, 0)
-      expect(total).toBeGreaterThan(0)
-      // Every page must survive. The old implementation sliced the joined text to
-      // 6000 chars, which silently dropped trailing pages on real documents.
+      const combined = doc.pages.map((p) => p.text.trim()).join('\n\n')
+
+      // Guard the fixture itself: if it ever shrinks below the old cap, every
+      // assertion below silently stops proving anything.
+      expect(combined.length).toBeGreaterThan(6_000)
+
+      // The real catch. The old code did text.slice(0, 6000) on the joined text,
+      // which dropped everything past ~page 1 of this fixture.
+      expect(doc.pages).toHaveLength(3)
+      expect(doc.pages[2].text).toContain('PAGE THREE CHARLIE')
+      expect(combined).toContain('PAGE THREE CHARLIE')
       expect(doc.pages.every((p) => p.text.trim().length > 0)).toBe(true)
+    })
+
+    it('returns untruncated joined text — the path the old cap lived on', async () => {
+      const text = await service.extractTextFromBuffer(buffer(), 'application/pdf')
+
+      expect(text.length).toBeGreaterThan(6_000)
+      expect(text).toContain('PAGE ONE ALPHA')
+      expect(text).toContain('PAGE THREE CHARLIE')
     })
   })
 
