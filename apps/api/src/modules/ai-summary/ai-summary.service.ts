@@ -5,10 +5,9 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
+import { LlmService } from '../ai/llm/llm.service'
 import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
-
-type AiProvider = 'groq' | 'gemini' | 'ollama'
 
 const SUPPORTED_MIME_TYPES = [
   'application/pdf',
@@ -111,7 +110,6 @@ Document content:
 @Injectable()
 export class AiSummaryService {
   private readonly logger = new Logger(AiSummaryService.name)
-  private readonly provider: AiProvider | null
   private s3Client: S3Client
   private bucket: string
 
@@ -119,11 +117,10 @@ export class AiSummaryService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly tagsService: TagsService,
+    private readonly llm: LlmService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
-    this.provider = (config.get<string>('AI_SUMMARY_PROVIDER') as AiProvider) || null
-
-    if (this.provider) {
+    if (this.llm.enabled) {
       this.s3Client = new S3Client({
         region: config.get('S3_REGION') ?? 'auto',
         // Server-side GetObject only -- this client never presigns anything for a
@@ -144,7 +141,7 @@ export class AiSummaryService {
     postId: string,
     messages: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ reply: string; offTopic: boolean }> {
-    if (!this.provider) {
+    if (!this.llm.enabled) {
       throw new Error('AI service not configured')
     }
 
@@ -170,7 +167,10 @@ export class AiSummaryService {
       documentText || 'No document content available.',
     )
 
-    const reply = await this.callLlmWithHistory(systemPrompt, messages, 600)
+    const reply = await this.llm.chat([{ role: 'system', content: systemPrompt }, ...messages], {
+      maxTokens: 600,
+      temperature: 0.3,
+    })
     if (!reply) throw new Error('No response from AI')
 
     const offTopic = reply.trim().toUpperCase() === 'OFF_TOPIC'
@@ -178,7 +178,7 @@ export class AiSummaryService {
   }
 
   async summarizePost(postId: string): Promise<void> {
-    if (!this.provider) return
+    if (!this.llm.enabled) return
 
     try {
       const post = await this.prisma.post.findUnique({
@@ -204,7 +204,13 @@ export class AiSummaryService {
         .join('\n\n')
       if (!text) return
 
-      const summary = await this.callLlm(SUMMARY_PROMPT, text, 500)
+      const summary = await this.llm.chat(
+        [
+          { role: 'system', content: SUMMARY_PROMPT },
+          { role: 'user', content: text },
+        ],
+        { maxTokens: 500 },
+      )
       if (!summary) return
 
       await this.prisma.post.update({
@@ -228,7 +234,13 @@ export class AiSummaryService {
       const existingTags = await this.prisma.tag.findMany({ select: { name: true } })
       const existingTagNames = existingTags.map((t) => t.name)
 
-      const raw = await this.callLlm(buildTaggingPrompt(existingTagNames), summary, 100)
+      const raw = await this.llm.chat(
+        [
+          { role: 'system', content: buildTaggingPrompt(existingTagNames) },
+          { role: 'user', content: summary },
+        ],
+        { maxTokens: 100 },
+      )
       if (!raw) return
 
       const tagNames = raw
@@ -253,7 +265,7 @@ export class AiSummaryService {
   }
 
   async screenContent(postId: string): Promise<void> {
-    if (!this.provider) return
+    if (!this.llm.enabled) return
 
     try {
       const post = await this.prisma.post.findUnique({
@@ -284,7 +296,13 @@ export class AiSummaryService {
       if (parts.length === 0) return
 
       const input = parts.join('\n\n')
-      const result = await this.callLlm(SCREENING_PROMPT, input, 100)
+      const result = await this.llm.chat(
+        [
+          { role: 'system', content: SCREENING_PROMPT },
+          { role: 'user', content: input },
+        ],
+        { maxTokens: 100 },
+      )
       if (!result) return
 
       const trimmed = result.trim()
@@ -313,7 +331,7 @@ export class AiSummaryService {
       difficulty: 'easy' | 'medium' | 'hard'
     }>
   > {
-    if (!this.provider) {
+    if (!this.llm.enabled) {
       throw new Error('AI service not configured')
     }
 
@@ -322,10 +340,17 @@ export class AiSummaryService {
     }
 
     try {
-      const response = await this.callLlm(
-        buildQuestionGenerationPrompt(questionCount).replace('{TEXT}', text.slice(0, 4000)),
-        '',
-        questionCount * 300,
+      const response = await this.llm.chat(
+        [
+          {
+            role: 'system',
+            content: buildQuestionGenerationPrompt(questionCount).replace(
+              '{TEXT}',
+              text.slice(0, 4000),
+            ),
+          },
+        ],
+        { maxTokens: questionCount * 300 },
       )
 
       if (!response) {
@@ -402,174 +427,5 @@ export class AiSummaryService {
     // Cache the truncated text for 1 hour (3_600_000 ms)
     await this.cacheManager.set(cacheKey, truncated, 3_600_000)
     return truncated
-  }
-
-  private async callLlm(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    switch (this.provider) {
-      case 'groq':
-        return this.callGroq(systemPrompt, userContent, maxTokens)
-      case 'gemini':
-        return this.callGemini(systemPrompt, userContent)
-      case 'ollama':
-        return this.callOllama(systemPrompt, userContent, maxTokens)
-      default:
-        return null
-    }
-  }
-
-  private async callGroq(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    const { default: Groq } = await import('groq-sdk')
-    const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
-
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0,
-    })
-
-    return response.choices[0]?.message?.content?.trim() ?? null
-  }
-
-  private async callGemini(systemPrompt: string, userContent: string): Promise<string | null> {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
-
-    const genModel = genAI.getGenerativeModel({
-      model,
-      systemInstruction: systemPrompt,
-      generationConfig: { temperature: 0 },
-    })
-
-    const result = await genModel.generateContent(userContent)
-    return result.response.text().trim() || null
-  }
-
-  private async callOllama(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    const endpoint = this.config.get('AI_SUMMARY_ENDPOINT') ?? 'http://localhost:11434'
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama3.2'
-
-    const response = await fetch(`${endpoint}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        options: { num_predict: maxTokens, temperature: 0 },
-      }),
-    })
-
-    if (!response.ok) throw new Error(`Ollama responded with ${response.status}`)
-
-    const data = (await response.json()) as { message?: { content?: string } }
-    return data.message?.content?.trim() ?? null
-  }
-
-  private async callLlmWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    switch (this.provider) {
-      case 'groq':
-        return this.callGroqWithHistory(systemPrompt, messages, maxTokens)
-      case 'gemini':
-        return this.callGeminiWithHistory(systemPrompt, messages)
-      case 'ollama':
-        return this.callOllamaWithHistory(systemPrompt, messages, maxTokens)
-      default:
-        return null
-    }
-  }
-
-  private async callGroqWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    const { default: Groq } = await import('groq-sdk')
-    const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
-
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: maxTokens,
-      temperature: 0.3,
-    })
-
-    return response.choices[0]?.message?.content?.trim() ?? null
-  }
-
-  private async callGeminiWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-  ): Promise<string | null> {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
-
-    const genModel = genAI.getGenerativeModel({
-      model,
-      systemInstruction: systemPrompt,
-      generationConfig: { temperature: 0.3 },
-    })
-
-    // Gemini uses 'model' instead of 'assistant'
-    const history = messages.slice(0, -1).map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }))
-    const lastMessage = messages[messages.length - 1].content
-
-    const chat = genModel.startChat({ history })
-    const result = await chat.sendMessage(lastMessage)
-    return result.response.text().trim() || null
-  }
-
-  private async callOllamaWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    const endpoint = this.config.get('AI_SUMMARY_ENDPOINT') ?? 'http://localhost:11434'
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama3.2'
-
-    const response = await fetch(`${endpoint}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        options: { num_predict: maxTokens, temperature: 0.3 },
-      }),
-    })
-
-    if (!response.ok) throw new Error(`Ollama responded with ${response.status}`)
-
-    const data = (await response.json()) as { message?: { content?: string } }
-    return data.message?.content?.trim() ?? null
   }
 }
