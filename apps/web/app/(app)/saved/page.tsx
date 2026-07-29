@@ -70,7 +70,7 @@ export default function SavedPage() {
         {isAuthenticated && (
           <ReadingListsSidebar selectedListId={selectedListId} onSelect={handleListSelect} />
         )}
-        <div className="flex-1 bg-card">
+        <div className="flex flex-1 flex-col">
           {isAuthenticated ? (
             <PostFeed
               posts={activeData?.items ?? []}

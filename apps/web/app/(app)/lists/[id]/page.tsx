@@ -72,12 +72,14 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
           )
         }
       />
-      <div className="flex-1 bg-card">
+      <div className="flex flex-1 flex-col">
         {isPrivate ? (
-          <EmptyState
-            message="This reading list is private."
-            description="Only the owner can view its contents."
-          />
+          <div className="flex-1 bg-card">
+            <EmptyState
+              message="This reading list is private."
+              description="Only the owner can view its contents."
+            />
+          </div>
         ) : (
           <PostFeed
             posts={postsData?.items ?? []}

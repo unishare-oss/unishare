@@ -134,7 +134,7 @@ function UserPosts({ userId }: { userId: string }) {
     { query: { select: (r) => r.data } },
   )
   return (
-    <div className="border border-border rounded-[6px] bg-card overflow-hidden">
+    <div className="border border-border rounded-[6px] overflow-hidden">
       <PostFeed
         posts={data?.items ?? []}
         loading={isLoading}
