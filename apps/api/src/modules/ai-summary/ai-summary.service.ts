@@ -349,8 +349,9 @@ export class AiSummaryService {
               text.slice(0, 4000),
             ),
           },
+          { role: 'user', content: '' },
         ],
-        { maxTokens: questionCount * 300 },
+        { maxTokens: questionCount * 300, temperature: 0 },
       )
 
       if (!response) {
