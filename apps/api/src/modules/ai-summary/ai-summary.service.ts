@@ -4,8 +4,10 @@ import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
 import {
   DocumentExtractorService,
+  ExtractedDocument,
   SUPPORTED_MIME_TYPES,
 } from '../ai/extraction/document-extractor.service'
+import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 
 const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
 Respond with exactly this format — no extra text, no markdown headers:
@@ -18,6 +20,10 @@ One sentence describing what this document is (e.g. "Past paper for ENG301 cover
 • Key topic or concept covered
 
 Use 3 to 7 bullet points depending on how much content there is. Be specific about subject matter — not generic. No fluff.`
+
+const SUMMARY_MAP_PROMPT = `You are extracting the key content from one section of a longer academic document.
+List the specific topics, concepts and definitions this section covers, as short bullet points.
+Be concrete about subject matter. No preamble, no conclusion, no summary sentence — bullets only.`
 
 function buildTaggingPrompt(existingTags: string[]): string {
   const tagList = existingTags.length > 0 ? existingTags.join(', ') : 'none yet'
@@ -163,25 +169,11 @@ export class AiSummaryService {
 
       if (!post) return
 
-      const supportedFiles = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
-      if (supportedFiles.length === 0) return
+      const texts = await this.summarySourceTexts(postId, post.files)
+      const windows = groupIntoWindows(texts, SUMMARY_WINDOW_CHARS)
+      if (windows.length === 0) return
 
-      const textParts = await Promise.all(
-        supportedFiles.map((f) => this.extractJoinedText(f.key, f.mimeType).catch(() => '')),
-      )
-      const text = textParts
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .join('\n\n')
-      if (!text) return
-
-      const summary = await this.llm.chat(
-        [
-          { role: 'system', content: SUMMARY_PROMPT },
-          { role: 'user', content: text },
-        ],
-        { maxTokens: 500 },
-      )
+      const summary = await this.reduceToSummary(windows)
       if (!summary) return
 
       await this.prisma.post.update({
@@ -189,7 +181,7 @@ export class AiSummaryService {
         data: { summary, summarizedAt: new Date() },
       })
 
-      this.logger.log(`Summarized post ${postId}`)
+      this.logger.log(`Summarized post ${postId} from ${windows.length} window(s)`)
 
       // Auto-tag only if post has no existing tags
       if (post.tags.length === 0) {
@@ -198,6 +190,77 @@ export class AiSummaryService {
     } catch (err) {
       this.logger.warn(`Failed to summarize post ${postId}: ${(err as Error).message}`)
     }
+  }
+
+  /**
+   * Prefers stored chunks — they cover the whole document. Falls back to extracting the
+   * files directly when ingestion has not run yet.
+   *
+   * Chunks overlap by CHUNK_OVERLAP_CHARS, so windows built from them contain some
+   * duplicated text. Harmless for summarisation.
+   */
+  private async summarySourceTexts(
+    postId: string,
+    files: { key: string; mimeType: string }[],
+  ): Promise<string[]> {
+    const chunks = await this.prisma.postChunk.findMany({
+      where: { postId },
+      orderBy: { chunkIndex: 'asc' },
+      select: { content: true },
+    })
+    if (chunks.length > 0) return chunks.map((chunk) => chunk.content)
+
+    const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
+    const docs = await Promise.all(
+      supported.map((file) =>
+        this.extractor
+          .extractFromKey(file.key, file.mimeType)
+          .catch((): ExtractedDocument => ({ pages: [], hasPageNumbers: false })),
+      ),
+    )
+    return docs.flatMap((doc) => doc.pages.map((page) => page.text))
+  }
+
+  /**
+   * One window is summarised directly. More than one is mapped to per-window bullet lists
+   * first, then reduced — a single window that fails is dropped rather than losing the
+   * whole summary.
+   */
+  private async reduceToSummary(windows: string[]): Promise<string | null> {
+    if (windows.length === 1) {
+      return this.llm.chat(
+        [
+          { role: 'system', content: SUMMARY_PROMPT },
+          { role: 'user', content: windows[0] },
+        ],
+        { maxTokens: 500 },
+      )
+    }
+
+    const partials = await Promise.all(
+      windows.map((window) =>
+        this.llm
+          .chat(
+            [
+              { role: 'system', content: SUMMARY_MAP_PROMPT },
+              { role: 'user', content: window },
+            ],
+            { maxTokens: 300 },
+          )
+          .catch(() => null),
+      ),
+    )
+
+    const merged = partials.filter(Boolean).join('\n\n')
+    if (!merged) return null
+
+    return this.llm.chat(
+      [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: merged },
+      ],
+      { maxTokens: 500 },
+    )
   }
 
   private async autoTagPost(postId: string, summary: string): Promise<void> {
