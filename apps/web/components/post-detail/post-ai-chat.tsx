@@ -11,6 +11,8 @@ import { usePostAiChat } from '@/hooks/use-post-ai-chat'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
+// Mirrors SUPPORTED_MIME_TYPES in apps/api/src/modules/ai/extraction/document-extractor.service.ts,
+// which is the source of truth. Keep the two in step.
 const SUPPORTED_MIME_TYPES = [
   'application/pdf',
   'application/msword',
@@ -138,7 +140,11 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 )}
 
                 {isPreparing && (
-                  <div className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
+                  >
                     <Loader2
                       className="size-3.5 shrink-0 mt-0.5 animate-spin"
                       strokeWidth={1.5}
@@ -155,7 +161,11 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 )}
 
                 {indexFailed && (
-                  <div className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
+                  >
                     <AlertCircle
                       className="size-3.5 shrink-0 mt-0.5 text-amber"
                       strokeWidth={1.5}

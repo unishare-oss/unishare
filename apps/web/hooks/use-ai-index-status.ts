@@ -1,9 +1,8 @@
 'use client'
 
 import { usePostsControllerGetAiIndexStatus } from '@/src/lib/api/generated/posts/posts'
-import type { AiIndexStatusDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-const POLL_INTERVAL_MS = 4000
+export const POLL_INTERVAL_MS = 4000
 
 /**
  * Live indexing progress for a post's documents, so the AI chat panel can stop silently
@@ -24,5 +23,5 @@ export function useAiIndexStatus(postId: string, enabled = true) {
     },
   })
 
-  return { status: data as AiIndexStatusDto | undefined, isLoading }
+  return { status: data, isLoading }
 }

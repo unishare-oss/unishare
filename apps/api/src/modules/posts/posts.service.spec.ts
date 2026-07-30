@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { NotFoundException } from '@nestjs/common'
-import { IngestStatus } from '@/generated/prisma/client'
+import { IngestStatus, PostPublicationStatus, PostStatus } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsService } from './posts.service'
 import { PostsRepository } from './posts.repository'
@@ -8,20 +8,30 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
+import { EmbeddingService } from '../ai/embedding/embedding.service'
 
 const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const IMAGE = 'image/png'
 
+const UNSUPPORTED_RESULT = {
+  state: 'unsupported',
+  indexedChunks: 0,
+  supportedFiles: 0,
+  readyFiles: 0,
+}
+
 describe('PostsService', () => {
   let service: PostsService
   let prismaMock: any
+  let embeddingMock: { enabled: boolean }
 
   beforeEach(async () => {
     prismaMock = {
       post: { findFirst: jest.fn() },
       postChunk: { count: jest.fn().mockResolvedValue(0) },
     }
+    embeddingMock = { enabled: true }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +42,7 @@ describe('PostsService', () => {
         { provide: TagsService, useValue: {} },
         { provide: PrismaService, useValue: prismaMock },
         { provide: AiSummaryService, useValue: {} },
+        { provide: EmbeddingService, useValue: embeddingMock },
       ],
     }).compile()
 
@@ -40,7 +51,11 @@ describe('PostsService', () => {
 
   describe('getAiIndexStatus', () => {
     function givenFiles(files: { mimeType: string; ingestStatus: IngestStatus }[]) {
-      prismaMock.post.findFirst.mockResolvedValue({ files })
+      prismaMock.post.findFirst.mockResolvedValue({
+        publicationStatus: PostPublicationStatus.PUBLISHED,
+        status: PostStatus.APPROVED,
+        files,
+      })
     }
 
     it('throws when the post does not exist', async () => {
@@ -168,5 +183,56 @@ describe('PostsService', () => {
 
       expect(result.state).toBe('failed')
     })
+
+    it('ignores files whose mime type cannot be indexed when deciding state', async () => {
+      // A PNG sits at PENDING forever: ingestFile early-returns for unsupported mime types and
+      // the migration backfilled every row to PENDING. Aggregating over post.files instead of
+      // `supported` would read that as 'preparing' and poll forever.
+      givenFiles([
+        { mimeType: PDF, ingestStatus: IngestStatus.READY },
+        { mimeType: IMAGE, ingestStatus: IngestStatus.PENDING },
+      ])
+
+      const result = await service.getAiIndexStatus('post-1')
+
+      expect(result.state).toBe('ready')
+      expect(result.supportedFiles).toBe(1)
+      expect(result.readyFiles).toBe(1)
+    })
+
+    it('reports unsupported when embedding is disabled, so it never polls forever', async () => {
+      // Embedding off is a supported mode. ingestFile returns before writing a status and the
+      // recovery sweep skips too, so every row stays PENDING permanently -- 'preparing' would
+      // be a lie that never resolves.
+      embeddingMock.enabled = false
+      givenFiles([{ mimeType: PDF, ingestStatus: IngestStatus.PENDING }])
+
+      const result = await service.getAiIndexStatus('post-1')
+
+      expect(result).toEqual(UNSUPPORTED_RESULT)
+      // Short-circuits before touching the database at all.
+      expect(prismaMock.post.findFirst).not.toHaveBeenCalled()
+      expect(prismaMock.postChunk.count).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['a draft', PostPublicationStatus.DRAFT, PostStatus.APPROVED],
+      ['an unapproved post', PostPublicationStatus.PUBLISHED, PostStatus.PENDING],
+    ])(
+      'reports unsupported for %s, because chatWithPost would 403',
+      async (_label, publicationStatus, status) => {
+        prismaMock.post.findFirst.mockResolvedValue({
+          publicationStatus,
+          status,
+          files: [{ mimeType: PDF, ingestStatus: IngestStatus.PENDING }],
+        })
+
+        const result = await service.getAiIndexStatus('post-1')
+
+        // The notice must not say "you can ask questions now" when every send returns 403.
+        expect(result).toEqual(UNSUPPORTED_RESULT)
+        expect(prismaMock.postChunk.count).not.toHaveBeenCalled()
+      },
+    )
   })
 })

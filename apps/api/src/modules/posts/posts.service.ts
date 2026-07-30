@@ -28,6 +28,7 @@ import { ReactToPostDto } from './dto/react-to-post.dto'
 import { AiChatDto, AiChatResponse } from './dto/ai-chat.dto'
 import { AiIndexState, AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { SUPPORTED_MIME_TYPES } from '../ai/extraction/document-extractor.service'
+import { EmbeddingService } from '../ai/embedding/embedding.service'
 
 @Injectable()
 export class PostsService {
@@ -40,6 +41,7 @@ export class PostsService {
     private readonly tagsService: TagsService,
     private readonly prisma: PrismaService,
     private readonly aiSummaryService: AiSummaryService,
+    private readonly embedding: EmbeddingService,
   ) {}
 
   /**
@@ -526,11 +528,35 @@ export class PostsService {
    * Ollama, so minutes for a large PDF), so the frontend needs a way to say so.
    */
   async getAiIndexStatus(postId: string): Promise<AiIndexStatusDto> {
+    // Embedding disabled is a supported mode, and in it nothing will ever move a row off
+    // PENDING: ingestFile returns before writing a status and the recovery sweep skips too.
+    // Reporting 'preparing' would be a permanent lie AND would poll forever. 'unsupported' is
+    // the honest answer -- chat still works (it runs off the LLM, not embeddings), the
+    // whole-document fallback is simply the only path.
+    if (!this.embedding.enabled) {
+      return { state: 'unsupported', indexedChunks: 0, supportedFiles: 0, readyFiles: 0 }
+    }
+
     const post = await this.prisma.post.findFirst({
       where: { id: postId, deletedAt: null },
-      select: { files: { select: { mimeType: true, ingestStatus: true } } },
+      select: {
+        publicationStatus: true,
+        status: true,
+        files: { select: { mimeType: true, ingestStatus: true } },
+      },
     })
     if (!post) throw new NotFoundException('Post not found')
+
+    // Same gate chatWithPost enforces. Without it an author viewing their own draft would be
+    // told "you can ask questions now" while every send comes back 403 'Post is not available'.
+    // Reported as 'unsupported' (render nothing) rather than 403, because the notice is
+    // decoration on a page the author is legitimately allowed to see.
+    if (
+      post.publicationStatus !== PostPublicationStatus.PUBLISHED ||
+      post.status !== PostStatus.APPROVED
+    ) {
+      return { state: 'unsupported', indexedChunks: 0, supportedFiles: 0, readyFiles: 0 }
+    }
 
     const supported = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
     if (supported.length === 0) {
