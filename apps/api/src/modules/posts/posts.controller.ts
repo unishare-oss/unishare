@@ -24,6 +24,7 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
 import { AiChatDto, AiChatResponseDto } from './dto/ai-chat.dto'
+import { AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { PostDetailEntity } from './entities/post.entity'
 import { PaginatedPostEntity } from './entities/paginated-post.entity'
 
@@ -137,6 +138,15 @@ export class PostsController {
     const pageNum = parseInt(page, 10) || 1
     const limitNum = parseInt(limit, 10) || 20
     return this.trendingService.getTrendingPosts(limitNum, pageNum)
+  }
+
+  @Get(':id/ai-index-status')
+  @OptionalAuth()
+  @ApiOperation({ summary: 'Progress of document indexing for AI chat' })
+  @ApiOkResponse({ type: AiIndexStatusDto })
+  @ResponseMessage('AI index status fetched successfully')
+  getAiIndexStatus(@Param('id') id: string) {
+    return this.postsService.getAiIndexStatus(id)
   }
 
   @Get(':id')

@@ -1,4 +1,4 @@
-import { PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
+import { IngestStatus, PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class PostTagEntity {
@@ -83,6 +83,12 @@ export class PostFileEntity {
 
   @ApiProperty()
   downloads: number
+
+  @ApiProperty({ enum: IngestStatus, enumName: 'IngestStatus' })
+  ingestStatus: IngestStatus
+
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  ingestedAt: Date | null
 }
 
 export class PostCountEntity {
