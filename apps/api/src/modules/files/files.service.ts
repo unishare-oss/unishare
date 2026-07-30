@@ -8,6 +8,7 @@ import { UserRole } from '@/generated/prisma/client'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
+import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
 import { FilesRepository } from './files.repository'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
 
@@ -18,6 +19,7 @@ export class FilesService {
     private readonly storageService: StorageService,
     private readonly postsService: PostsService,
     private readonly aiSummaryService: AiSummaryService,
+    private readonly ingestionService: IngestionService,
   ) {}
 
   async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
@@ -37,6 +39,7 @@ export class FilesService {
       void this.aiSummaryService.summarizePost(postId)
     }
 
+    void this.ingestionService.ingestFile(file.id)
     void this.aiSummaryService.screenContent(postId)
 
     const { postId: _postId, ...rest } = file
