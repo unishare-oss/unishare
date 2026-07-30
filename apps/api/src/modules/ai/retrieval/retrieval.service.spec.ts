@@ -51,9 +51,11 @@ describe('RetrievalService', () => {
     // testing the fixture.
     const sql = (prismaMock.$queryRaw.mock.calls[0][0] as string[]).join('?')
 
-    // <=> is cosine distance. The HNSW index was created with vector_cosine_ops, so
-    // <-> (L2) or <#> (inner product) would BOTH skip the index and rank wrongly —
-    // silently, since all three return plausible-looking numbers.
+    // <=> is cosine distance, the metric the rest of the pipeline assumes. <-> (L2) or
+    // <#> (inner product) would rank wrongly — silently, since all three return
+    // plausible-looking numbers. Not an index concern: with `WHERE "postId" = $1` the
+    // planner usually prefers post_chunk_postId_idx plus a sort, so the HNSW index is not
+    // used by this query today (see the migration's own note).
     expect(sql).toContain('<=>')
     expect(sql).not.toContain('<->')
     expect(sql).not.toContain('<#>')
