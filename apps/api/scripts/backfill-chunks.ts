@@ -55,6 +55,12 @@ async function main() {
 
   console.log(`\nDone. ${ready} ready, ${failed} not ready.`)
   await app.close()
+
+  // Explicit exit. app.close() runs onModuleDestroy hooks, but AppModule still holds handles
+  // that keep the event loop alive -- the CacheModule's KeyvRedis connection plus the ioredis
+  // clients in RedisThrottlerStorageService and CronLockService. Without this the script
+  // prints "Done." and then hangs indefinitely (observed: still alive after 2m20s).
+  process.exit(0)
 }
 
 main().catch((e) => {
