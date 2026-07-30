@@ -5,6 +5,7 @@ import { DocumentExtractorService } from './extraction/document-extractor.servic
 import { EmbeddingService } from './embedding/embedding.service'
 import { IngestionService } from './ingestion/ingestion.service'
 import { IngestionScheduler } from './ingestion/ingestion.scheduler'
+import { RetrievalService } from './retrieval/retrieval.service'
 
 @Module({
   imports: [CronLockModule],
@@ -15,7 +16,14 @@ import { IngestionScheduler } from './ingestion/ingestion.scheduler'
     EmbeddingService,
     IngestionService,
     IngestionScheduler,
+    RetrievalService,
   ],
-  exports: [LlmService, DocumentExtractorService, EmbeddingService, IngestionService],
+  exports: [
+    LlmService,
+    DocumentExtractorService,
+    EmbeddingService,
+    IngestionService,
+    RetrievalService,
+  ],
 })
 export class AiModule {}
