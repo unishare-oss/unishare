@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { IngestStatus } from '@/generated/prisma/client'
+import { IngestStatus, Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import {
   DocumentExtractorService,
@@ -31,20 +31,23 @@ export class IngestionService {
     })
     if (!file) return
 
-    if (!SUPPORTED_MIME_TYPES.includes(file.mimeType)) {
-      await this.prisma.file.update({
-        where: { id: fileId },
-        data: { ingestStatus: IngestStatus.UNSUPPORTED },
-      })
-      return
-    }
-
-    await this.prisma.file.update({
-      where: { id: fileId },
-      data: { ingestStatus: IngestStatus.PROCESSING, ingestStartedAt: new Date() },
-    })
-
+    // Everything below can outlive the File row: FilesService.remove() hard-deletes it,
+    // and it cascades away if the parent Post is deleted, both reachable while this
+    // fire-and-forget ingestion is still mid S3-download or mid-Ollama round-trip. Every
+    // status write below goes through setStatus (updateMany, not update) so a vanished
+    // row can never throw P2025 -- there is no unhandledRejection handler on this path,
+    // and an escaped rejection here takes the whole process down.
     try {
+      if (!SUPPORTED_MIME_TYPES.includes(file.mimeType)) {
+        await this.setStatus(fileId, { ingestStatus: IngestStatus.UNSUPPORTED })
+        return
+      }
+
+      await this.setStatus(fileId, {
+        ingestStatus: IngestStatus.PROCESSING,
+        ingestStartedAt: new Date(),
+      })
+
       const doc = await this.extractor.extractFromKey(file.key, file.mimeType)
       const chunks = chunkDocument(doc)
 
@@ -53,24 +56,29 @@ export class IngestionService {
         await this.replaceChunks(file.postId, file.id, chunks, vectors)
       }
 
-      await this.prisma.file.update({
-        where: { id: fileId },
-        data: {
-          ingestStatus: IngestStatus.READY,
-          ingestError: null,
-          ingestedAt: new Date(),
-        },
+      await this.setStatus(fileId, {
+        ingestStatus: IngestStatus.READY,
+        ingestError: null,
+        ingestedAt: new Date(),
       })
 
       this.logger.log(`Ingested file ${fileId}: ${chunks.length} chunks`)
     } catch (err) {
       const message = (err as Error).message.slice(0, MAX_ERROR_CHARS)
-      await this.prisma.file.update({
-        where: { id: fileId },
-        data: { ingestStatus: IngestStatus.FAILED, ingestError: message },
-      })
+      await this.setStatus(fileId, { ingestStatus: IngestStatus.FAILED, ingestError: message })
       this.logger.warn(`Failed to ingest file ${fileId}: ${message}`)
     }
+  }
+
+  /**
+   * Status writes go through updateMany, not update: the row can legitimately vanish
+   * mid-ingestion (FilesService.remove hard-deletes, and File cascades from Post), and
+   * update() throws P2025 when it does. Ingestion is dispatched fire-and-forget with no
+   * unhandledRejection handler, so an escaped rejection would take the process down.
+   * A missing row means there is nothing left to record -- count 0 is the correct outcome.
+   */
+  private async setStatus(fileId: string, data: Prisma.FileUpdateManyMutationInput): Promise<void> {
+    await this.prisma.file.updateMany({ where: { id: fileId }, data })
   }
 
   async ingestPost(postId: string): Promise<void> {
