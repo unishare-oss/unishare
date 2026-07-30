@@ -88,7 +88,13 @@ export class IngestionService {
       orderBy: { createdAt: 'asc' },
     })
     for (const file of files) {
-      await this.ingestFile(file.id)
+      // One bad file must not abort the batch: a connection blip on file N shouldn't
+      // stop files N+1..end from ever being attempted, and shouldn't reject ingestPost
+      // itself into a caller that may not be awaiting it any more carefully than
+      // FilesService does.
+      await this.ingestFile(file.id).catch((err: Error) => {
+        this.logger.warn(`Skipping file ${file.id} in post ${postId}: ${err.message}`)
+      })
     }
   }
 

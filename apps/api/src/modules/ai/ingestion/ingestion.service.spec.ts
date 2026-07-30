@@ -217,4 +217,23 @@ describe('IngestionService', () => {
     expect(spy).toHaveBeenNthCalledWith(1, 'f1')
     expect(spy).toHaveBeenNthCalledWith(2, 'f2')
   })
+
+  it('ingestPost continues to the next file when one rejects, and resolves rather than rejecting', async () => {
+    // ingestFile already recovers from its own internal failures by writing FAILED --
+    // this covers what's left over: a rejection escaping ingestFile entirely (e.g. the
+    // same kind of connection blip that can hit its own findUnique or catch-block write).
+    // One bad file must not abort files after it in the same post, and must not reject
+    // ingestPost into a caller that may be no more careful about awaiting it than
+    // FilesService is.
+    prismaMock.file.findMany.mockResolvedValue([{ id: 'f1' }, { id: 'f2' }])
+    const spy = jest
+      .spyOn(service, 'ingestFile')
+      .mockRejectedValueOnce(new Error('connection dropped'))
+      .mockResolvedValueOnce(undefined)
+
+    await expect(service.ingestPost('p1')).resolves.toBeUndefined()
+
+    expect(spy).toHaveBeenNthCalledWith(1, 'f1')
+    expect(spy).toHaveBeenNthCalledWith(2, 'f2')
+  })
 })
