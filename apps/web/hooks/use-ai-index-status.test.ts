@@ -71,6 +71,21 @@ describe('useAiIndexStatus', () => {
     })
   })
 
+  it('surfaces the fetched status to the caller', () => {
+    // The whole feature is invisible if this link breaks: `status` undefined means isPreparing
+    // and indexFailed are permanently false and the notice never renders. `data` here is
+    // already post-`select`, so returning `data.data` would unwrap one level too many.
+    const status = { state: 'preparing', indexedChunks: 12, supportedFiles: 1, readyFiles: 0 }
+    usePostsControllerGetAiIndexStatus.mockReturnValueOnce({
+      data: status,
+      isLoading: false,
+    } as any)
+
+    const result = useAiIndexStatus('post-1')
+
+    expect(result.status).toEqual(status)
+  })
+
   it('passes the post id through and gates the query on the enabled flag', () => {
     expect(optionsFor('abc').id).toBe('abc')
     expect(optionsFor('abc', true).query.enabled).toBe(true)
