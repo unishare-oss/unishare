@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { IngestStatus } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
@@ -10,17 +11,34 @@ import {
 import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 import { chunkDocument } from '../ai/chunking/chunker'
 
+// The bullet character must stay `•`. apps/web/components/post-detail/post-summary.tsx parses
+// this output literally, splitting lines and keeping only those starting with `•` — it does NOT
+// render markdown. Switching to `-` or `*` makes every bullet vanish from the UI silently.
+//
+// The opening line deliberately carries NO worked example. It used to read
+//   (e.g. "Past paper for ENG301 covering chapters 4–7 from the 2023 finals.")
+// and the model copied the example's shape and fabricated specifics to fill it: a textbook
+// ("Think Data Structures", Downey 2016) was summarised as "Past paper for CS201 ... from the
+// 2022 finals." — an invented course code, an invented year, and the wrong document type.
+// An example full of invented particulars teaches the model that inventing particulars is
+// the task, so the grounding rules below replace it rather than sit beside it.
 const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
-Respond with exactly this format — no extra text, no markdown headers:
+Respond with exactly this format — no extra text, no markdown headers, no preamble:
 
-One sentence describing what this document is (e.g. "Past paper for ENG301 covering chapters 4–7 from the 2023 finals.").
-• Key topic or concept covered
-• Key topic or concept covered
+One sentence describing what this document is and what it covers.
 • Key topic or concept covered
 • Key topic or concept covered
 • Key topic or concept covered
 
-Use 3 to 7 bullet points depending on how much content there is. Be specific about subject matter — not generic. No fluff.`
+Use 3 to 7 bullet points depending on how much content there is, each starting with •.
+
+Ground every statement in the text provided. Identify the document's actual type from evidence
+in the text: it may be a textbook, lecture notes, a past paper, a problem set, a lab manual, a
+thesis, an article or slides. Do not assume it is an exam. Never invent a course code, year,
+institution, author or exam sitting — if the text does not state one, leave it out entirely.
+When the type is genuinely unclear, describe the document by its content instead.
+
+Be specific about subject matter — not generic. No fluff.`
 
 const SUMMARY_MAP_PROMPT = `You are extracting the key content from one section of a longer academic document.
 List the specific topics, concepts and definitions this section covers, as short bullet points.
@@ -207,7 +225,13 @@ export class AiSummaryService {
     const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
 
     const chunks = await this.prisma.postChunk.findMany({
-      where: { postId },
+      // READY only. Ingestion persists chunks per embedding batch rather than in one
+      // transaction, so a file that failed partway leaves committed chunks behind — without
+      // this filter a half-ingested file would be summarised as though it were the whole
+      // document. Filtering here rather than deleting on failure covers a hard crash, an OOM
+      // kill or a pod eviction too, where no catch block ever runs. Matches the same guard in
+      // RetrievalService.searchPost.
+      where: { postId, file: { ingestStatus: IngestStatus.READY } },
       // chunkIndex restarts at 0 per file (@@unique([fileId, chunkIndex])), so ordering by
       // it alone interleaves unrelated documents on a multi-file post and every window ends
       // up a jumble. Grouping by file first keeps each document contiguous, and ordering
@@ -220,9 +244,10 @@ export class AiSummaryService {
     })
 
     if (chunks.length > 0) {
-      // Deliberate: a post that is only partly ingested is summarised from the files that
-      // do have chunks rather than topping up the rest by extraction. Warned about, not
-      // silently accepted, because the summary that lands is incomplete.
+      // Deliberate: a post that is only partly ingested is summarised from the files that are
+      // READY rather than topping up the rest by extraction. Warned about, not silently
+      // accepted, because the summary that lands is incomplete. Counts distinct READY files,
+      // since the query above excludes every other status.
       const ingested = new Set(chunks.map((chunk) => chunk.fileId)).size
       if (ingested < supported.length) {
         this.logger.warn(

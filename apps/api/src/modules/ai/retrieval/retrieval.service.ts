@@ -37,11 +37,29 @@ export class RetrievalService {
     const literal = toVectorLiteral(await this.embedding.embedQuery(query))
 
     // <=> is cosine distance (0 identical, 2 opposite), so similarity is 1 - distance.
+    //
+    // The join to `file` restricts results to chunks whose owning file finished ingesting.
+    // Ingestion commits chunks per embedding batch (so progress is observable), so a run
+    // that dies partway leaves committed, fully-embedded chunks behind for a document that
+    // is only fractionally indexed — citing those would present a third of a PDF as the
+    // whole of it, and the scheduler sweep never reclaims FAILED files.
+    //
+    // DO NOT "simplify" this by deleting chunks in ingestion's catch block instead. Filtering
+    // at read time is correct under ANY partial state, including a hard crash, an OOM kill or
+    // a pod eviction, where no catch block ever runs. A cleanup path can only ever be a
+    // best-effort supplement to this filter, never a replacement for it.
+    //
+    // 'READY' is a bare literal, not a bind parameter: Postgres resolves an unknown-typed
+    // literal against the "IngestStatus" enum on its own. Parameterising it would need an
+    // explicit ${'x'}::"IngestStatus" cast or the comparison is rejected at runtime.
     return this.prisma.$queryRaw<RetrievedChunk[]>`
-      SELECT id, content, "pageNum", 1 - (embedding <=> ${literal}::vector) AS similarity
-      FROM post_chunk
-      WHERE "postId" = ${postId} AND embedding IS NOT NULL
-      ORDER BY embedding <=> ${literal}::vector
+      SELECT c.id, c.content, c."pageNum", 1 - (c.embedding <=> ${literal}::vector) AS similarity
+      FROM post_chunk c
+      JOIN file f ON f.id = c."fileId"
+      WHERE c."postId" = ${postId}
+        AND c.embedding IS NOT NULL
+        AND f."ingestStatus" = 'READY'
+      ORDER BY c.embedding <=> ${literal}::vector
       LIMIT ${limit}
     `
   }

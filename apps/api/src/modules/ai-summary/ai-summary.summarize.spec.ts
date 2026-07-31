@@ -94,6 +94,26 @@ describe('AiSummaryService.summarizePost', () => {
     })
   })
 
+  it('asks for • bullets and forbids inventing document metadata', async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'body' }])
+
+    await service.summarizePost('p1')
+
+    const system = llmMock.chat.mock.calls[0][0][0].content
+
+    // apps/web/components/post-detail/post-summary.tsx parses this output literally: it keeps
+    // only lines starting with '•' and does NOT render markdown. Swapping the character for
+    // '-' or '*' would make every bullet vanish from the UI with no error anywhere, and that
+    // coupling spans two apps with nothing else asserting the two agree.
+    expect(system).toContain('•')
+
+    // A worked example here previously caused fabrication — a textbook was summarised as
+    // "Past paper for CS201 ... from the 2022 finals", inventing the course code, the year and
+    // the document type. These two rules are what replaced it; losing them regresses that.
+    expect(system).toMatch(/never invent a course code/i)
+    expect(system).toMatch(/do not assume it is an exam/i)
+  })
+
   it("reads only this post's chunks, keeping each file's chunks contiguous", async () => {
     prismaMock.postChunk.findMany.mockResolvedValue([
       { content: 'FILE-A-CHUNK-0' },
@@ -111,9 +131,13 @@ describe('AiSummaryService.summarizePost', () => {
     // still interleaves), and `[{ file: { createdAt: 'asc' } }]` (loses order within a file).
     // `select` is pinned too: dropping it would pull a 768-dim embedding per chunk into a
     // 256MB heap.
+    // `where` pins the READY filter as well as the post scope. Ingestion persists chunks per
+    // embedding batch, so a file that failed partway leaves committed chunks behind; without
+    // the status filter a half-ingested document would be summarised as if it were complete.
+    // Dropping `file: { ingestStatus: 'READY' }` is the mutant this kills.
     expect(prismaMock.postChunk.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { postId: 'p1' },
+        where: { postId: 'p1', file: { ingestStatus: 'READY' } },
         orderBy: [{ file: { createdAt: 'asc' } }, { chunkIndex: 'asc' }],
         select: { content: true, fileId: true },
       }),

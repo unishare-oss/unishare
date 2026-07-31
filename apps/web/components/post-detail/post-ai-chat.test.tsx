@@ -59,9 +59,22 @@ describe('PostAiChat indexing notice', () => {
     givenStatus('preparing', 32)
     await renderOpened()
 
-    const notice = screen.getByRole('status')
-    expect(notice).toHaveTextContent(/Preparing this document for AI chat/i)
-    expect(notice).toHaveTextContent(/indexed 32 sections so far/i)
+    // Asserted on raw textContent, NOT toHaveTextContent: that matcher normalises whitespace,
+    // so it would still pass if the words ran together as "sectionsso far" via a stray
+    // non-space character. This pins the spacing exactly.
+    expect(screen.getByRole('status').textContent).toBe(
+      'Preparing this document for AI chat — indexed 32 sections so far. ' +
+        "You can ask questions now, but answers won't cite page numbers until this finishes.",
+    )
+  })
+
+  it('says "1 section" rather than "1 sections"', async () => {
+    // The singular branch of the count label had no coverage, so pluralisation could regress
+    // silently — and 1 is a state every document passes through while indexing.
+    givenStatus('preparing', 1)
+    await renderOpened()
+
+    expect(screen.getByRole('status').textContent).toContain('indexed 1 section so far.')
   })
 
   it('keeps the chat input enabled while preparing, because the fallback works', async () => {
