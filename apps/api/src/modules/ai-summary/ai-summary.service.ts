@@ -205,7 +205,11 @@ export class AiSummaryService {
   ): Promise<string[]> {
     const chunks = await this.prisma.postChunk.findMany({
       where: { postId },
-      orderBy: { chunkIndex: 'asc' },
+      // chunkIndex restarts at 0 per file (@@unique([fileId, chunkIndex])), so ordering by
+      // it alone interleaves unrelated documents on a multi-file post and every window ends
+      // up a jumble. fileId first keeps each file's chunks contiguous — the order between
+      // files is arbitrary but stable, which is all summarisation needs.
+      orderBy: [{ fileId: 'asc' }, { chunkIndex: 'asc' }],
       select: { content: true },
     })
     if (chunks.length > 0) return chunks.map((chunk) => chunk.content)

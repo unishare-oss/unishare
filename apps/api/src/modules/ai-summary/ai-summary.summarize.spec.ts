@@ -87,15 +87,25 @@ describe('AiSummaryService.summarizePost', () => {
     })
   })
 
-  it('reads chunks for the requested post only, in chunk order', async () => {
-    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'body' }])
+  it("reads only this post's chunks, keeping each file's chunks contiguous", async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue([
+      { content: 'FILE-A-CHUNK-0' },
+      { content: 'FILE-A-CHUNK-1' },
+      { content: 'FILE-B-CHUNK-0' },
+      { content: 'FILE-B-CHUNK-1' },
+    ])
 
     await service.summarizePost('p1')
 
+    // chunkIndex restarts at 0 per file, so ordering by it alone interleaves two unrelated
+    // documents and every window becomes a jumble. Deep-equal on the ORDERED array: the
+    // mutants this kills are `{ chunkIndex: 'asc' }` (the original bug),
+    // `[{ chunkIndex: 'asc' }, { fileId: 'asc' }]` (the plausible wrong fix — still
+    // interleaves), and `[{ fileId: 'asc' }]` (loses ordering within a file).
     expect(prismaMock.postChunk.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { postId: 'p1' },
-        orderBy: { chunkIndex: 'asc' },
+        orderBy: [{ fileId: 'asc' }, { chunkIndex: 'asc' }],
       }),
     )
   })
