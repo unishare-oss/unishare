@@ -19,11 +19,15 @@ import { Chunk, chunkDocument } from '../chunking/chunker'
  * `OR` is the dangerous one -- it drops post scoping entirely, so one user's document would
  * surface in another user's answer. None of those are visible without running the query.
  *
+ * The same applies to the `file."ingestStatus" = 'READY'` filter: `OR` in front of it, or
+ * relaxing it to `!= 'FAILED'`, is invisible to any text assertion. The non-READY files
+ * seeded on post A below are what actually pin that predicate's meaning.
+ *
  * Requires a live pgvector + Ollama. Enable with RUN_DB_TESTS=1 -- the default suite must
  * never depend on live infrastructure.
  *
  * WARNING: this spec WRITES to whatever DATABASE_URL points at -- it creates a university,
- * department, course, user and two posts with files and chunks, and deletes them again in
+ * department, course, user and three posts with files and chunks, and deletes them again in
  * afterAll. Nothing here checks that the target is not production. Run it only against a
  * disposable database.
  */
@@ -38,8 +42,26 @@ const COURSE_ID = 'ret-int-course'
 const USER_ID = 'ret-int-user'
 const POST_A_ID = 'ret-int-post-a'
 const POST_B_ID = 'ret-int-post-b'
+/** A post whose ONLY file failed ingestion — every chunk it has is unciteable. */
+const POST_C_ID = 'ret-int-post-c'
+const FILE_C_ID = 'ret-int-file-c'
 const FILE_A_ID = 'ret-int-file-a'
 const FILE_B_ID = 'ret-int-file-b'
+
+/**
+ * Extra files on post A that never finished ingesting. Ingestion commits chunks per
+ * embedding batch, so a run that dies partway leaves fully-embedded chunks behind on a
+ * document that is only fractionally indexed — retrieval must not cite them.
+ *
+ * One per non-READY status that can carry embedded chunks, so the filter cannot be
+ * `!= 'FAILED'`: that would still let PROCESSING (a live or stuck run) and PENDING (a row
+ * whose chunks are left over from an earlier attempt) through.
+ */
+const NON_READY_FILES = [
+  ['ret-int-file-a-failed', 'FAILED'],
+  ['ret-int-file-a-processing', 'PROCESSING'],
+  ['ret-int-file-a-pending', 'PENDING'],
+] as const
 
 /**
  * Post B's content is deliberately unrelated to the fixture and deliberately matched by
@@ -78,6 +100,9 @@ describeDb('RetrievalService (live pgvector)', () => {
   let chunksA: Chunk[]
   let idsA: string[]
   let idsB: string[]
+  let idsC: string[]
+  /** Chunk ids on post A whose owning file never reached READY, keyed by ingestStatus. */
+  let nonReadyIds: Record<string, string[]>
   /** A verbatim chunk of post A, used as a query that should retrieve itself. */
   let probeA: string
 
@@ -114,7 +139,7 @@ describeDb('RetrievalService (live pgvector)', () => {
   /** Deleting a post cascades its files and chunks. Run before seeding too, so a crashed
    * previous run cannot make this one fail on a unique constraint. */
   async function cleanup(): Promise<void> {
-    await prisma.post.deleteMany({ where: { id: { in: [POST_A_ID, POST_B_ID] } } })
+    await prisma.post.deleteMany({ where: { id: { in: [POST_A_ID, POST_B_ID, POST_C_ID] } } })
     await prisma.user.deleteMany({ where: { id: USER_ID } })
     await prisma.course.deleteMany({ where: { id: COURSE_ID } })
     await prisma.department.deleteMany({ where: { id: DEPARTMENT_ID } })
@@ -184,6 +209,9 @@ describeDb('RetrievalService (live pgvector)', () => {
           size: 1,
           mimeType: 'application/pdf',
           postId,
+          // File.ingestStatus defaults to PENDING, and retrieval only returns chunks whose
+          // owning file is READY. Without this every assertion below matches zero rows.
+          ingestStatus: 'READY',
         },
       })
     }
@@ -197,6 +225,56 @@ describeDb('RetrievalService (live pgvector)', () => {
 
     const chunksB = chunkDocument({ pages: [{ num: 1, text: POST_B_TEXT }], hasPageNumbers: true })
     idsB = await insertChunks(POST_B_ID, FILE_B_ID, chunksB)
+
+    // Extra files on post A, one per non-READY status, each carrying a fully-embedded
+    // *verbatim copy* of probeA. Verbatim matters: an identical embedding scores ~1.0
+    // cosine, so these chunks are guaranteed to outrank every genuine post-A chunk when
+    // probeA is the query. A leak therefore shows up at the very top of the results, and
+    // the test cannot pass just because the excluded rows would have missed top-k anyway.
+    nonReadyIds = {}
+    for (const [fileId, status] of NON_READY_FILES) {
+      await prisma.file.create({
+        data: {
+          id: fileId,
+          key: `retrieval-integration/${fileId}.pdf`,
+          name: `${fileId}.pdf`,
+          size: 1,
+          mimeType: 'application/pdf',
+          postId: POST_A_ID,
+          ingestStatus: status,
+        },
+      })
+      nonReadyIds[status] = await insertChunks(POST_A_ID, fileId, [
+        { chunkIndex: 0, content: probeA, pageNum: 99 },
+      ])
+    }
+
+    // Post C: a post whose ONLY file failed. Retrieval must return nothing for it, which is
+    // what makes AiSummaryService's `chunks.length === 0` full-text fallback reachable.
+    await prisma.post.create({
+      data: {
+        id: POST_C_ID,
+        shortCode: 'retint-c',
+        type: 'NOTE',
+        title: 'Retrieval integration post C',
+        authorId: USER_ID,
+        courseId: COURSE_ID,
+      },
+    })
+    await prisma.file.create({
+      data: {
+        id: FILE_C_ID,
+        key: `retrieval-integration/${FILE_C_ID}.pdf`,
+        name: `${FILE_C_ID}.pdf`,
+        size: 1,
+        mimeType: 'application/pdf',
+        postId: POST_C_ID,
+        ingestStatus: 'FAILED',
+      },
+    })
+    idsC = await insertChunks(POST_C_ID, FILE_C_ID, [
+      { chunkIndex: 0, content: POST_B_TEXT, pageNum: 1 },
+    ])
   })
 
   afterAll(async () => {
@@ -223,6 +301,48 @@ describeDb('RetrievalService (live pgvector)', () => {
     const rowsB = await service.searchPost(POST_B_ID, PROBE_B)
     expect(rowsB.length).toBeGreaterThan(0)
     expect(rowsB.map((row) => row.id).filter((id) => !idsB.includes(id))).toEqual([])
+  })
+
+  it('seeded non-READY chunks that WOULD rank top-k without the ingestStatus filter', async () => {
+    // Guards the case below against being vacuously true. If the excluded chunks could
+    // never have placed in top-k anyway, their absence proves nothing about the filter.
+    // This is the pre-33bc0b70 query verbatim: no join, no status predicate.
+    const literal = toVectorLiteral(await embedding.embedQuery(probeA))
+    const unfiltered = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM post_chunk
+      WHERE "postId" = ${POST_A_ID} AND embedding IS NOT NULL
+      ORDER BY embedding <=> ${literal}::vector
+      LIMIT ${RETRIEVAL_TOP_K}
+    `
+
+    const returned = unfiltered.map((row) => row.id)
+    const excluded = NON_READY_FILES.flatMap(([, status]) => nonReadyIds[status])
+    expect(excluded.filter((id) => returned.includes(id))).toEqual(excluded)
+  })
+
+  it('excludes chunks whose owning file never finished ingesting', async () => {
+    const rows = await service.searchPost(POST_A_ID, probeA)
+    const returned = rows.map((row) => row.id)
+
+    // Non-empty first, and full: a join that matched nothing, or one that dropped the
+    // READY file too, would satisfy the exclusions below vacuously.
+    expect(returned).toHaveLength(RETRIEVAL_TOP_K)
+    expect(returned.filter((id) => !idsA.includes(id))).toEqual([])
+
+    // Asserted per status rather than in aggregate, so a filter written as `!= 'FAILED'`
+    // names PROCESSING and PENDING instead of passing on the FAILED case alone.
+    for (const [, status] of NON_READY_FILES) {
+      expect(returned.filter((id) => nonReadyIds[status].includes(id))).toEqual([])
+    }
+  })
+
+  it('returns nothing for a post whose only file failed ingestion', async () => {
+    // Chunks exist and are embedded — the pre-fix query returned them, so this is a real
+    // behaviour change, not a no-op. Callers must treat empty as "not indexed", not as
+    // "nothing in the document matches": AiSummaryService falls back to full-text
+    // extraction on an empty result, so the answer degrades in quality, not to nothing.
+    expect(idsC.length).toBeGreaterThan(0)
+    expect(await service.searchPost(POST_C_ID, POST_B_TEXT)).toEqual([])
   })
 
   it('orders rows by descending similarity', async () => {

@@ -59,7 +59,7 @@ describe('RetrievalService', () => {
     expect(sql).toContain('<=>')
     expect(sql).not.toContain('<->')
     expect(sql).not.toContain('<#>')
-    expect(sql).toMatch(/ORDER BY\s+embedding <=>/)
+    expect(sql).toMatch(/ORDER BY\s+\w+\.embedding <=>/)
 
     // Without this filter, chunks whose embedding is still NULL (mid-ingestion) sort
     // last but can still occupy top-k slots on a post with few chunks.
@@ -67,7 +67,20 @@ describe('RetrievalService', () => {
 
     // similarity must be derived as 1 - distance, not returned as raw distance, or
     // MIN_SIMILARITY in Task 11 compares against an inverted scale.
-    expect(sql).toMatch(/1 - \(embedding <=>/)
+    expect(sql).toMatch(/1 - \(\w+\.embedding <=>/)
+  })
+
+  it('restricts to chunks whose owning file is READY', async () => {
+    await service.searchPost('p1', 'q')
+    const sql = (prismaMock.$queryRaw.mock.calls[0][0] as string[]).join('?')
+
+    // Text only, and deliberately not the primary evidence for this filter: mutating the
+    // `AND` before it into an `OR` — which matches every chunk in the table — satisfies
+    // every assertion below. retrieval.integration.spec.ts executes the query against a
+    // live pgvector with non-READY rows seeded, and that is what actually pins the meaning.
+    expect(sql).toMatch(/JOIN\s+file\s+\w+\s+ON/)
+    expect(sql).toMatch(/"ingestStatus" = 'READY'/)
+    expect(sql).not.toMatch(/"ingestStatus" (!=|<>)/)
   })
 
   it('passes the rows through unchanged', async () => {
