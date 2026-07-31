@@ -94,6 +94,26 @@ describe('AiSummaryService.summarizePost', () => {
     })
   })
 
+  it('asks for • bullets and forbids inventing document metadata', async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'body' }])
+
+    await service.summarizePost('p1')
+
+    const system = llmMock.chat.mock.calls[0][0][0].content
+
+    // apps/web/components/post-detail/post-summary.tsx parses this output literally: it keeps
+    // only lines starting with '•' and does NOT render markdown. Swapping the character for
+    // '-' or '*' would make every bullet vanish from the UI with no error anywhere, and that
+    // coupling spans two apps with nothing else asserting the two agree.
+    expect(system).toContain('•')
+
+    // A worked example here previously caused fabrication — a textbook was summarised as
+    // "Past paper for CS201 ... from the 2022 finals", inventing the course code, the year and
+    // the document type. These two rules are what replaced it; losing them regresses that.
+    expect(system).toMatch(/never invent a course code/i)
+    expect(system).toMatch(/do not assume it is an exam/i)
+  })
+
   it("reads only this post's chunks, keeping each file's chunks contiguous", async () => {
     prismaMock.postChunk.findMany.mockResolvedValue([
       { content: 'FILE-A-CHUNK-0' },
