@@ -124,6 +124,7 @@ model Post {
   files               File[]
   notifications       Notification[]
   author              User                     @relation("AuthorPosts", fields: [authorId], references: [id])
+  chunks              PostChunk[]
   course              Course                   @relation(fields: [courseId], references: [id])
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
@@ -169,18 +170,40 @@ model Reaction {
 }
 
 model File {
-  id        String   @id @default(cuid())
-  key       String
-  name      String
-  size      Int
-  mimeType  String
-  postId    String
-  createdAt DateTime @default(now())
-  downloads Int      @default(0)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  key             String
+  name            String
+  size            Int
+  mimeType        String
+  postId          String
+  createdAt       DateTime     @default(now())
+  downloads       Int          @default(0)
+  ingestStatus    IngestStatus @default(PENDING)
+  ingestError     String?
+  ingestStartedAt DateTime?
+  ingestedAt      DateTime?
+  post            Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  chunks          PostChunk[]
 
   @@index([postId])
   @@map("file")
+}
+
+model PostChunk {
+  id         String                      @id @default(cuid())
+  postId     String
+  fileId     String
+  chunkIndex Int
+  content    String
+  pageNum    Int?
+  embedding  Unsupported("vector(768)")?
+  createdAt  DateTime                    @default(now())
+  file       File                        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  post       Post                        @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, chunkIndex])
+  @@index([postId])
+  @@map("post_chunk")
 }
 
 model Comment {
@@ -463,14 +486,14 @@ model ChatRoom {
 }
 
 model ChatRoomParticipant {
-  id         String   @id @default(cuid())
-  roomId     String
-  userId     String
+  id               String   @id @default(cuid())
+  roomId           String
+  userId           String
   lastReadAt       DateTime @default(now())
   joinedAt         DateTime @default(now())
   encryptedRoomKey String?
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room             ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
   @@index([userId])
@@ -615,6 +638,14 @@ enum RoomVisibility {
   OPEN
   VIEW_ONLY
   PRIVATE
+}
+
+enum IngestStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  UNSUPPORTED
 }
 
 enum PostRequestStatus {

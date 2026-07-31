@@ -2,22 +2,27 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
+import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
 import { FilesRepository } from './files.repository'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
 
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name)
+
   constructor(
     private readonly filesRepository: FilesRepository,
     private readonly storageService: StorageService,
     private readonly postsService: PostsService,
     private readonly aiSummaryService: AiSummaryService,
+    private readonly ingestionService: IngestionService,
   ) {}
 
   async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
@@ -37,6 +42,14 @@ export class FilesService {
       void this.aiSummaryService.summarizePost(postId)
     }
 
+    // ingestFile is fire-and-forget: nothing awaits it, and there is no
+    // unhandledRejection handler in this app, so an escaped rejection would take the
+    // process down. ingestFile already records FAILED for the errors it can see; this
+    // catches the ones it cannot -- a connection drop in its own findUnique or in its
+    // catch-block status write.
+    void this.ingestionService.ingestFile(file.id).catch((err: Error) => {
+      this.logger.warn(`Ingestion dispatch failed for file ${file.id}: ${err.message}`)
+    })
     void this.aiSummaryService.screenContent(postId)
 
     const { postId: _postId, ...rest } = file

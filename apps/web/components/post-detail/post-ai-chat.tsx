@@ -1,15 +1,18 @@
 'use client'
 
 import { useRef, useState, useEffect, KeyboardEvent } from 'react'
-import { Bot, ChevronDown, Send, AlertCircle } from 'lucide-react'
+import { Bot, ChevronDown, Send, AlertCircle, Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { usePostAiChat } from '@/hooks/use-post-ai-chat'
+import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
+// Mirrors SUPPORTED_MIME_TYPES in apps/api/src/modules/ai/extraction/document-extractor.service.ts,
+// which is the source of truth. Keep the two in step.
 const SUPPORTED_MIME_TYPES = [
   'application/pdf',
   'application/msword',
@@ -28,6 +31,10 @@ export function PostAiChat({ post }: PostAiChatProps) {
 
   const hasSupportedFiles = post.files?.some((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
   const { messages, sendMessage, isPending } = usePostAiChat(post.id)
+  const { status: indexStatus } = useAiIndexStatus(post.id, Boolean(hasSupportedFiles))
+
+  const isPreparing = indexStatus?.state === 'preparing'
+  const indexFailed = indexStatus?.state === 'failed'
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -71,6 +78,9 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 strokeWidth={1.5}
               />
             </motion.span>
+            {isPreparing && !open && (
+              <span className="ml-1.5 font-mono text-[10px] text-text-muted">Indexing…</span>
+            )}
           </CollapsibleTrigger>
         </div>
 
@@ -126,6 +136,45 @@ export function PostAiChat({ post }: PostAiChatProps) {
                       </div>
                     )}
                     <div ref={bottomRef} />
+                  </div>
+                )}
+
+                {isPreparing && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
+                  >
+                    <Loader2
+                      className="size-3.5 shrink-0 mt-0.5 animate-spin"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Preparing this document for AI chat — indexed{' '}
+                      {indexStatus?.indexedChunks ?? 0}{' '}
+                      {indexStatus?.indexedChunks === 1 ? 'section' : 'sections'} so far. You can
+                      ask questions now, but answers won&apos;t cite page numbers until this
+                      finishes.
+                    </span>
+                  </div>
+                )}
+
+                {indexFailed && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
+                  >
+                    <AlertCircle
+                      className="size-3.5 shrink-0 mt-0.5 text-amber"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      This document couldn&apos;t be prepared for AI chat. Answers will come from
+                      the whole document and won&apos;t cite page numbers.
+                    </span>
                   </div>
                 )}
 

@@ -4,6 +4,7 @@ import { NotificationsModule } from '../notifications/notifications.module'
 import { TagsModule } from '../tags/tags.module'
 import { TrendingModule } from '../trending/trending.module'
 import { AiSummaryModule } from '../ai-summary/ai-summary.module'
+import { AiModule } from '../ai/ai.module'
 import { CommentsController } from './comments/comments.controller'
 import { CommentsRepository } from './comments/comments.repository'
 import { CommentsService } from './comments/comments.service'
@@ -13,7 +14,16 @@ import { PostsService } from './posts.service'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 
 @Module({
-  imports: [NotificationsModule, FollowsModule, TagsModule, TrendingModule, AiSummaryModule],
+  imports: [
+    NotificationsModule,
+    FollowsModule,
+    TagsModule,
+    TrendingModule,
+    AiSummaryModule,
+    // For EmbeddingService.enabled: getAiIndexStatus must report 'unsupported' rather than a
+    // permanent 'preparing' when embedding is switched off.
+    AiModule,
+  ],
   controllers: [PostsController, CommentsController],
   providers: [
     PostsService,

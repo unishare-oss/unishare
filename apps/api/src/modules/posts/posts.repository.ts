@@ -36,6 +36,12 @@ const postInclude = (viewerId?: string): Prisma.PostInclude => ({
       mimeType: true,
       createdAt: true,
       downloads: true,
+      // Free to select (same row, no extra query) and it is what lets the AI chat panel stop
+      // silently degrading. The live chunk count deliberately does NOT live here: a
+      // `_count: { chunks: true }` on postInclude would add a count query per post on every
+      // feed render, so it is served by GET /posts/:id/ai-index-status instead.
+      ingestStatus: true,
+      ingestedAt: true,
     },
   },
   reactions: { select: { type: true, userId: true } },

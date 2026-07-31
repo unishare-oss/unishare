@@ -13,16 +13,17 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:reset-encryption": "ts-node -r tsconfig-paths/register scripts/reset-encryption.ts"
+    "db:reset-encryption": "ts-node -r tsconfig-paths/register scripts/reset-encryption.ts",
+    "db:backfill-chunks": "ts-node -r tsconfig-paths/register scripts/backfill-chunks.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1096.0",

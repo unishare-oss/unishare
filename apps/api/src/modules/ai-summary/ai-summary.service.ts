@@ -1,22 +1,14 @@
-import { Inject, Injectable, Logger } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import { Cache } from 'cache-manager'
+import { Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
-import mammoth from 'mammoth'
-import { PDFParse } from 'pdf-parse'
-
-type AiProvider = 'groq' | 'gemini' | 'ollama'
-
-const SUPPORTED_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
-
-const MAX_TEXT_CHARS = 6000
+import { LlmService } from '../ai/llm/llm.service'
+import {
+  DocumentExtractorService,
+  ExtractedDocument,
+  SUPPORTED_MIME_TYPES,
+} from '../ai/extraction/document-extractor.service'
+import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
+import { chunkDocument } from '../ai/chunking/chunker'
 
 const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
 Respond with exactly this format — no extra text, no markdown headers:
@@ -29,6 +21,10 @@ One sentence describing what this document is (e.g. "Past paper for ENG301 cover
 • Key topic or concept covered
 
 Use 3 to 7 bullet points depending on how much content there is. Be specific about subject matter — not generic. No fluff.`
+
+const SUMMARY_MAP_PROMPT = `You are extracting the key content from one section of a longer academic document.
+List the specific topics, concepts and definitions this section covers, as short bullet points.
+Be concrete about subject matter. No preamble, no conclusion, no summary sentence — bullets only.`
 
 function buildTaggingPrompt(existingTags: string[]): string {
   const tagList = existingTags.length > 0 ? existingTags.join(', ') : 'none yet'
@@ -111,40 +107,19 @@ Document content:
 @Injectable()
 export class AiSummaryService {
   private readonly logger = new Logger(AiSummaryService.name)
-  private readonly provider: AiProvider | null
-  private s3Client: S3Client
-  private bucket: string
 
   constructor(
-    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly tagsService: TagsService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {
-    this.provider = (config.get<string>('AI_SUMMARY_PROVIDER') as AiProvider) || null
-
-    if (this.provider) {
-      this.s3Client = new S3Client({
-        region: config.get('S3_REGION') ?? 'auto',
-        // Server-side GetObject only -- this client never presigns anything for a
-        // browser, so it always prefers the direct in-cluster route when one is
-        // configured. Falls back to S3_ENDPOINT when it is not.
-        endpoint: config.get<string>('S3_INTERNAL_ENDPOINT') ?? config.getOrThrow('S3_ENDPOINT'),
-        forcePathStyle: true,
-        credentials: {
-          accessKeyId: config.getOrThrow('S3_ACCESS_KEY_ID'),
-          secretAccessKey: config.getOrThrow('S3_SECRET_ACCESS_KEY'),
-        },
-      })
-      this.bucket = config.getOrThrow('S3_BUCKET')
-    }
-  }
+    private readonly llm: LlmService,
+    private readonly extractor: DocumentExtractorService,
+  ) {}
 
   async chatWithPost(
     postId: string,
     messages: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ reply: string; offTopic: boolean }> {
-    if (!this.provider) {
+    if (!this.llm.enabled) {
       throw new Error('AI service not configured')
     }
 
@@ -158,7 +133,7 @@ export class AiSummaryService {
     const supportedFiles = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
 
     const textParts = await Promise.all(
-      supportedFiles.map((f) => this.extractText(f.key, f.mimeType).catch(() => '')),
+      supportedFiles.map((f) => this.extractJoinedText(f.key, f.mimeType).catch(() => '')),
     )
     const documentText = textParts
       .map((t) => t.trim())
@@ -170,7 +145,10 @@ export class AiSummaryService {
       documentText || 'No document content available.',
     )
 
-    const reply = await this.callLlmWithHistory(systemPrompt, messages, 600)
+    const reply = await this.llm.chat([{ role: 'system', content: systemPrompt }, ...messages], {
+      maxTokens: 600,
+      temperature: 0.3,
+    })
     if (!reply) throw new Error('No response from AI')
 
     const offTopic = reply.trim().toUpperCase() === 'OFF_TOPIC'
@@ -178,7 +156,7 @@ export class AiSummaryService {
   }
 
   async summarizePost(postId: string): Promise<void> {
-    if (!this.provider) return
+    if (!this.llm.enabled) return
 
     try {
       const post = await this.prisma.post.findUnique({
@@ -192,19 +170,11 @@ export class AiSummaryService {
 
       if (!post) return
 
-      const supportedFiles = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
-      if (supportedFiles.length === 0) return
+      const texts = await this.summarySourceTexts(postId, post.files)
+      const windows = groupIntoWindows(texts, SUMMARY_WINDOW_CHARS)
+      if (windows.length === 0) return
 
-      const textParts = await Promise.all(
-        supportedFiles.map((f) => this.extractText(f.key, f.mimeType).catch(() => '')),
-      )
-      const text = textParts
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .join('\n\n')
-      if (!text) return
-
-      const summary = await this.callLlm(SUMMARY_PROMPT, text, 500)
+      const summary = await this.reduceToSummary(windows)
       if (!summary) return
 
       await this.prisma.post.update({
@@ -212,7 +182,7 @@ export class AiSummaryService {
         data: { summary, summarizedAt: new Date() },
       })
 
-      this.logger.log(`Summarized post ${postId}`)
+      this.logger.log(`Summarized post ${postId} from ${windows.length} window(s)`)
 
       // Auto-tag only if post has no existing tags
       if (post.tags.length === 0) {
@@ -223,12 +193,135 @@ export class AiSummaryService {
     }
   }
 
+  /**
+   * Prefers stored chunks — they cover the whole document. Falls back to extracting the
+   * files directly when ingestion has not run yet.
+   *
+   * Chunks overlap by CHUNK_OVERLAP_CHARS, so windows built from them contain some
+   * duplicated text. Harmless for summarisation.
+   */
+  private async summarySourceTexts(
+    postId: string,
+    files: { key: string; mimeType: string }[],
+  ): Promise<string[]> {
+    const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
+
+    const chunks = await this.prisma.postChunk.findMany({
+      where: { postId },
+      // chunkIndex restarts at 0 per file (@@unique([fileId, chunkIndex])), so ordering by
+      // it alone interleaves unrelated documents on a multi-file post and every window ends
+      // up a jumble. Grouping by file first keeps each document contiguous, and ordering
+      // those groups by upload time keeps "notes part 1" ahead of "part 2" — fileId is a
+      // cuid, so it would have grouped correctly but sequenced the parts arbitrarily.
+      orderBy: [{ file: { createdAt: 'asc' } }, { chunkIndex: 'asc' }],
+      // Never widen to a bare findMany: `embedding` is a 768-dim vector per chunk and this
+      // API runs with --max-old-space-size=256.
+      select: { content: true, fileId: true },
+    })
+
+    if (chunks.length > 0) {
+      // Deliberate: a post that is only partly ingested is summarised from the files that
+      // do have chunks rather than topping up the rest by extraction. Warned about, not
+      // silently accepted, because the summary that lands is incomplete.
+      const ingested = new Set(chunks.map((chunk) => chunk.fileId)).size
+      if (ingested < supported.length) {
+        this.logger.warn(
+          `Post ${postId} summarised from ${ingested}/${supported.length} files — the rest are not ingested yet`,
+        )
+      }
+      return chunks.map((chunk) => chunk.content)
+    }
+
+    const docs = await Promise.all(
+      supported.map((file) =>
+        this.extractor
+          .extractFromKey(file.key, file.mimeType)
+          .catch((err: Error): ExtractedDocument => {
+            // A partial summary beats none, but it must not look complete in the logs.
+            this.logger.warn(
+              `Extraction failed for ${file.key} on post ${postId}, summarising without it: ${err.message}`,
+            )
+            return { pages: [], hasPageNumbers: false }
+          }),
+      ),
+    )
+
+    // mammoth returns an entire .docx as a single page, and a PDF page can exceed the
+    // window on its own, so page texts are split down to the window size before grouping.
+    // Without this, groupIntoWindows hands an oversized text its own window and the single
+    // window path posts the whole document in one call — the truncation-era failure mode.
+    // Zero overlap: 200 duplicated chars across a 12k seam buys nothing for summarisation.
+    const pages = docs.flatMap((doc) => doc.pages)
+    return chunkDocument(
+      { pages, hasPageNumbers: false },
+      {
+        maxChars: SUMMARY_WINDOW_CHARS,
+        overlapChars: 0,
+      },
+    ).map((chunk) => chunk.content)
+  }
+
+  /**
+   * One window is summarised directly. More than one is mapped to per-window bullet lists
+   * first, then reduced — a single window that fails is dropped rather than losing the
+   * whole summary.
+   */
+  private async reduceToSummary(windows: string[]): Promise<string | null> {
+    if (windows.length === 1) {
+      return this.llm.chat(
+        [
+          { role: 'system', content: SUMMARY_PROMPT },
+          { role: 'user', content: windows[0] },
+        ],
+        { maxTokens: 500 },
+      )
+    }
+
+    const partials = await Promise.all(
+      windows.map((window, index) =>
+        this.llm
+          .chat(
+            [
+              { role: 'system', content: SUMMARY_MAP_PROMPT },
+              { role: 'user', content: window },
+            ],
+            { maxTokens: 300 },
+          )
+          .catch((err: Error) => {
+            // Dropped, not fatal — but a summary missing a quarter of the document must
+            // not be indistinguishable from a complete one in the logs.
+            this.logger.warn(
+              `Summary window ${index + 1}/${windows.length} failed for this post: ${err.message}`,
+            )
+            return null
+          }),
+      ),
+    )
+
+    const merged = partials.filter(Boolean).join('\n\n')
+    if (!merged) return null
+
+    return this.llm.chat(
+      [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: merged },
+      ],
+      { maxTokens: 500 },
+    )
+  }
+
   private async autoTagPost(postId: string, summary: string): Promise<void> {
     try {
       const existingTags = await this.prisma.tag.findMany({ select: { name: true } })
       const existingTagNames = existingTags.map((t) => t.name)
 
-      const raw = await this.callLlm(buildTaggingPrompt(existingTagNames), summary, 100)
+      const raw = await this.llm.chat(
+        [
+          { role: 'system', content: buildTaggingPrompt(existingTagNames) },
+          { role: 'user', content: summary },
+        ],
+        { maxTokens: 100 },
+      )
       if (!raw) return
 
       const tagNames = raw
@@ -253,7 +346,7 @@ export class AiSummaryService {
   }
 
   async screenContent(postId: string): Promise<void> {
-    if (!this.provider) return
+    if (!this.llm.enabled) return
 
     try {
       const post = await this.prisma.post.findUnique({
@@ -275,16 +368,23 @@ export class AiSummaryService {
       // Include file text if available (first supported file only — quick scan)
       const supportedFile = post.files.find((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
       if (supportedFile) {
-        const fileText = await this.extractText(supportedFile.key, supportedFile.mimeType).catch(
-          () => '',
-        )
+        const fileText = await this.extractJoinedText(
+          supportedFile.key,
+          supportedFile.mimeType,
+        ).catch(() => '')
         if (fileText.trim()) parts.push(`File content excerpt:\n${fileText}`)
       }
 
       if (parts.length === 0) return
 
       const input = parts.join('\n\n')
-      const result = await this.callLlm(SCREENING_PROMPT, input, 100)
+      const result = await this.llm.chat(
+        [
+          { role: 'system', content: SCREENING_PROMPT },
+          { role: 'user', content: input },
+        ],
+        { maxTokens: 100 },
+      )
       if (!result) return
 
       const trimmed = result.trim()
@@ -313,7 +413,7 @@ export class AiSummaryService {
       difficulty: 'easy' | 'medium' | 'hard'
     }>
   > {
-    if (!this.provider) {
+    if (!this.llm.enabled) {
       throw new Error('AI service not configured')
     }
 
@@ -322,10 +422,18 @@ export class AiSummaryService {
     }
 
     try {
-      const response = await this.callLlm(
-        buildQuestionGenerationPrompt(questionCount).replace('{TEXT}', text.slice(0, 4000)),
-        '',
-        questionCount * 300,
+      const response = await this.llm.chat(
+        [
+          {
+            role: 'system',
+            content: buildQuestionGenerationPrompt(questionCount).replace(
+              '{TEXT}',
+              text.slice(0, 4000),
+            ),
+          },
+          { role: 'user', content: '' },
+        ],
+        { maxTokens: questionCount * 300, temperature: 0 },
       )
 
       if (!response) {
@@ -357,219 +465,16 @@ export class AiSummaryService {
     }
   }
 
+  /** Delegates to the extractor. Kept so `quizzes.service.ts` keeps working unchanged. */
   async extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
-    let text: string
-
-    if (mimeType === 'application/pdf') {
-      const parser = new PDFParse({ data: new Uint8Array(buffer) })
-      const result = await parser.getText()
-      text = result.text
-    } else {
-      const result = await mammoth.extractRawText({ buffer })
-      text = result.value
-    }
-
-    return text.slice(0, MAX_TEXT_CHARS)
+    return this.extractor.extractTextFromBuffer(buffer, mimeType)
   }
 
-  private async extractText(key: string, mimeType: string): Promise<string> {
-    const cacheKey = `ai:text:${key}`
-    const cached = await this.cacheManager.get<string>(cacheKey)
-    if (cached !== undefined && cached !== null) return cached
-
-    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
-    const response = await this.s3Client.send(command)
-    const chunks: Uint8Array[] = []
-
-    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
-      chunks.push(chunk)
-    }
-
-    const buffer = Buffer.concat(chunks)
-
-    let text: string
-
-    if (mimeType === 'application/pdf') {
-      const parser = new PDFParse({ data: new Uint8Array(buffer) })
-      const result = await parser.getText()
-      text = result.text
-    } else {
-      const result = await mammoth.extractRawText({ buffer })
-      text = result.value
-    }
-
-    const truncated = text.slice(0, MAX_TEXT_CHARS)
-    // Cache the truncated text for 1 hour (3_600_000 ms)
-    await this.cacheManager.set(cacheKey, truncated, 3_600_000)
-    return truncated
-  }
-
-  private async callLlm(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    switch (this.provider) {
-      case 'groq':
-        return this.callGroq(systemPrompt, userContent, maxTokens)
-      case 'gemini':
-        return this.callGemini(systemPrompt, userContent)
-      case 'ollama':
-        return this.callOllama(systemPrompt, userContent, maxTokens)
-      default:
-        return null
-    }
-  }
-
-  private async callGroq(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    const { default: Groq } = await import('groq-sdk')
-    const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
-
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0,
-    })
-
-    return response.choices[0]?.message?.content?.trim() ?? null
-  }
-
-  private async callGemini(systemPrompt: string, userContent: string): Promise<string | null> {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
-
-    const genModel = genAI.getGenerativeModel({
-      model,
-      systemInstruction: systemPrompt,
-      generationConfig: { temperature: 0 },
-    })
-
-    const result = await genModel.generateContent(userContent)
-    return result.response.text().trim() || null
-  }
-
-  private async callOllama(
-    systemPrompt: string,
-    userContent: string,
-    maxTokens: number,
-  ): Promise<string | null> {
-    const endpoint = this.config.get('AI_SUMMARY_ENDPOINT') ?? 'http://localhost:11434'
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama3.2'
-
-    const response = await fetch(`${endpoint}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        options: { num_predict: maxTokens, temperature: 0 },
-      }),
-    })
-
-    if (!response.ok) throw new Error(`Ollama responded with ${response.status}`)
-
-    const data = (await response.json()) as { message?: { content?: string } }
-    return data.message?.content?.trim() ?? null
-  }
-
-  private async callLlmWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    switch (this.provider) {
-      case 'groq':
-        return this.callGroqWithHistory(systemPrompt, messages, maxTokens)
-      case 'gemini':
-        return this.callGeminiWithHistory(systemPrompt, messages)
-      case 'ollama':
-        return this.callOllamaWithHistory(systemPrompt, messages, maxTokens)
-      default:
-        return null
-    }
-  }
-
-  private async callGroqWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    const { default: Groq } = await import('groq-sdk')
-    const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
-
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: maxTokens,
-      temperature: 0.3,
-    })
-
-    return response.choices[0]?.message?.content?.trim() ?? null
-  }
-
-  private async callGeminiWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-  ): Promise<string | null> {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
-
-    const genModel = genAI.getGenerativeModel({
-      model,
-      systemInstruction: systemPrompt,
-      generationConfig: { temperature: 0.3 },
-    })
-
-    // Gemini uses 'model' instead of 'assistant'
-    const history = messages.slice(0, -1).map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }))
-    const lastMessage = messages[messages.length - 1].content
-
-    const chat = genModel.startChat({ history })
-    const result = await chat.sendMessage(lastMessage)
-    return result.response.text().trim() || null
-  }
-
-  private async callOllamaWithHistory(
-    systemPrompt: string,
-    messages: { role: 'user' | 'assistant'; content: string }[],
-    maxTokens: number,
-  ): Promise<string | null> {
-    const endpoint = this.config.get('AI_SUMMARY_ENDPOINT') ?? 'http://localhost:11434'
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama3.2'
-
-    const response = await fetch(`${endpoint}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        options: { num_predict: maxTokens, temperature: 0.3 },
-      }),
-    })
-
-    if (!response.ok) throw new Error(`Ollama responded with ${response.status}`)
-
-    const data = (await response.json()) as { message?: { content?: string } }
-    return data.message?.content?.trim() ?? null
+  private async extractJoinedText(key: string, mimeType: string): Promise<string> {
+    const doc = await this.extractor.extractFromKey(key, mimeType)
+    return doc.pages
+      .map((page) => page.text.trim())
+      .filter(Boolean)
+      .join('\n\n')
   }
 }
