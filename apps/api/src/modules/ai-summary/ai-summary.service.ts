@@ -8,6 +8,7 @@ import {
   SUPPORTED_MIME_TYPES,
 } from '../ai/extraction/document-extractor.service'
 import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
+import { chunkDocument } from '../ai/chunking/chunker'
 
 const SUMMARY_PROMPT = `You are summarizing an academic document for university students.
 Respond with exactly this format — no extra text, no markdown headers:
@@ -203,26 +204,61 @@ export class AiSummaryService {
     postId: string,
     files: { key: string; mimeType: string }[],
   ): Promise<string[]> {
+    const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
+
     const chunks = await this.prisma.postChunk.findMany({
       where: { postId },
       // chunkIndex restarts at 0 per file (@@unique([fileId, chunkIndex])), so ordering by
       // it alone interleaves unrelated documents on a multi-file post and every window ends
-      // up a jumble. fileId first keeps each file's chunks contiguous — the order between
-      // files is arbitrary but stable, which is all summarisation needs.
-      orderBy: [{ fileId: 'asc' }, { chunkIndex: 'asc' }],
-      select: { content: true },
+      // up a jumble. Grouping by file first keeps each document contiguous, and ordering
+      // those groups by upload time keeps "notes part 1" ahead of "part 2" — fileId is a
+      // cuid, so it would have grouped correctly but sequenced the parts arbitrarily.
+      orderBy: [{ file: { createdAt: 'asc' } }, { chunkIndex: 'asc' }],
+      // Never widen to a bare findMany: `embedding` is a 768-dim vector per chunk and this
+      // API runs with --max-old-space-size=256.
+      select: { content: true, fileId: true },
     })
-    if (chunks.length > 0) return chunks.map((chunk) => chunk.content)
 
-    const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
+    if (chunks.length > 0) {
+      // Deliberate: a post that is only partly ingested is summarised from the files that
+      // do have chunks rather than topping up the rest by extraction. Warned about, not
+      // silently accepted, because the summary that lands is incomplete.
+      const ingested = new Set(chunks.map((chunk) => chunk.fileId)).size
+      if (ingested < supported.length) {
+        this.logger.warn(
+          `Post ${postId} summarised from ${ingested}/${supported.length} files — the rest are not ingested yet`,
+        )
+      }
+      return chunks.map((chunk) => chunk.content)
+    }
+
     const docs = await Promise.all(
       supported.map((file) =>
         this.extractor
           .extractFromKey(file.key, file.mimeType)
-          .catch((): ExtractedDocument => ({ pages: [], hasPageNumbers: false })),
+          .catch((err: Error): ExtractedDocument => {
+            // A partial summary beats none, but it must not look complete in the logs.
+            this.logger.warn(
+              `Extraction failed for ${file.key} on post ${postId}, summarising without it: ${err.message}`,
+            )
+            return { pages: [], hasPageNumbers: false }
+          }),
       ),
     )
-    return docs.flatMap((doc) => doc.pages.map((page) => page.text))
+
+    // mammoth returns an entire .docx as a single page, and a PDF page can exceed the
+    // window on its own, so page texts are split down to the window size before grouping.
+    // Without this, groupIntoWindows hands an oversized text its own window and the single
+    // window path posts the whole document in one call — the truncation-era failure mode.
+    // Zero overlap: 200 duplicated chars across a 12k seam buys nothing for summarisation.
+    const pages = docs.flatMap((doc) => doc.pages)
+    return chunkDocument(
+      { pages, hasPageNumbers: false },
+      {
+        maxChars: SUMMARY_WINDOW_CHARS,
+        overlapChars: 0,
+      },
+    ).map((chunk) => chunk.content)
   }
 
   /**
@@ -242,7 +278,7 @@ export class AiSummaryService {
     }
 
     const partials = await Promise.all(
-      windows.map((window) =>
+      windows.map((window, index) =>
         this.llm
           .chat(
             [
@@ -251,7 +287,14 @@ export class AiSummaryService {
             ],
             { maxTokens: 300 },
           )
-          .catch(() => null),
+          .catch((err: Error) => {
+            // Dropped, not fatal — but a summary missing a quarter of the document must
+            // not be indistinguishable from a complete one in the logs.
+            this.logger.warn(
+              `Summary window ${index + 1}/${windows.length} failed for this post: ${err.message}`,
+            )
+            return null
+          }),
       ),
     )
 

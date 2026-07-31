@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import { PrismaService } from '@/prisma/prisma.service'
 import { AiSummaryService } from './ai-summary.service'
@@ -23,8 +24,14 @@ describe('AiSummaryService.summarizePost', () => {
   let prismaMock: any
   let llmMock: any
   let extractorMock: any
+  let warnSpy: jest.SpyInstance
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
 
   beforeEach(async () => {
+    warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     llmMock = { enabled: true, chat: jest.fn().mockResolvedValue('A summary.\n• point') }
     extractorMock = { extractFromKey: jest.fn() }
     prismaMock = {
@@ -100,12 +107,15 @@ describe('AiSummaryService.summarizePost', () => {
     // chunkIndex restarts at 0 per file, so ordering by it alone interleaves two unrelated
     // documents and every window becomes a jumble. Deep-equal on the ORDERED array: the
     // mutants this kills are `{ chunkIndex: 'asc' }` (the original bug),
-    // `[{ chunkIndex: 'asc' }, { fileId: 'asc' }]` (the plausible wrong fix — still
-    // interleaves), and `[{ fileId: 'asc' }]` (loses ordering within a file).
+    // `[{ chunkIndex: 'asc' }, { file: { createdAt: 'asc' } }]` (the plausible wrong fix —
+    // still interleaves), and `[{ file: { createdAt: 'asc' } }]` (loses order within a file).
+    // `select` is pinned too: dropping it would pull a 768-dim embedding per chunk into a
+    // 256MB heap.
     expect(prismaMock.postChunk.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { postId: 'p1' },
-        orderBy: [{ fileId: 'asc' }, { chunkIndex: 'asc' }],
+        orderBy: [{ file: { createdAt: 'asc' } }, { chunkIndex: 'asc' }],
+        select: { content: true, fileId: true },
       }),
     )
   })
@@ -145,9 +155,6 @@ describe('AiSummaryService.summarizePost', () => {
     const calls: [LlmMessage[], any][] = llmMock.chat.mock.calls
     const mapMessages = calls.map(([messages]) => messages).filter(isMapCall)
     expect(mapMessages).toHaveLength(2)
-    for (const messages of mapMessages) {
-      expect(userContentOf(messages).length).toBeLessThanOrEqual(SUMMARY_WINDOW_CHARS)
-    }
 
     // The reduce call must run last and see the map partials, NOT the raw document text.
     const [reduceMessages] = calls[calls.length - 1]
@@ -226,6 +233,33 @@ describe('AiSummaryService.summarizePost', () => {
     expect(prismaMock.post.update).toHaveBeenCalled()
   })
 
+  it('splits an oversized extracted page so no map call exceeds the window', async () => {
+    // mammoth returns an entire .docx as ONE page, so the fallback path can hand
+    // groupIntoWindows a single text far larger than the window. Unsplit, that text gets a
+    // window to itself, windows.length === 1, and the whole document goes out in one call —
+    // exactly the un-windowed prompt this task exists to remove.
+    prismaMock.postChunk.findMany.mockResolvedValue([])
+    extractorMock.extractFromKey.mockResolvedValue({
+      pages: [{ num: 1, text: 'w'.repeat(SUMMARY_WINDOW_CHARS * 3) }],
+      hasPageNumbers: false,
+    })
+    useMapReduceLlm()
+
+    await service.summarizePost('p1')
+
+    const calls: [LlmMessage[], any][] = llmMock.chat.mock.calls
+    const mapMessages = calls.map(([messages]) => messages).filter(isMapCall)
+
+    expect(mapMessages.length).toBeGreaterThanOrEqual(2)
+    for (const messages of mapMessages) {
+      expect(userContentOf(messages).length).toBeLessThanOrEqual(SUMMARY_WINDOW_CHARS)
+    }
+    // Nothing may be dropped on the floor by the split.
+    const totalSent = mapMessages.reduce((sum, m) => sum + userContentOf(m).length, 0)
+    expect(totalSent).toBeGreaterThanOrEqual(SUMMARY_WINDOW_CHARS * 3)
+    expect(prismaMock.post.update).toHaveBeenCalled()
+  })
+
   it('summarises every extracted page, not just the first', async () => {
     prismaMock.postChunk.findMany.mockResolvedValue([])
     extractorMock.extractFromKey.mockResolvedValue({
@@ -267,6 +301,71 @@ describe('AiSummaryService.summarizePost', () => {
     expect(extractorMock.extractFromKey).toHaveBeenCalledTimes(2)
     expect(userContentOf(llmMock.chat.mock.calls[0][0])).toContain('readable body')
     expect(prismaMock.post.update).toHaveBeenCalled()
+
+    // A summary built from one of two documents is stamped summarizedAt and never retried,
+    // so it must not be silently indistinguishable from a complete one.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('broken.pdf'))
+  })
+
+  it('warns when a map window fails rather than silently shrinking the summary', async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue(
+      Array.from({ length: 4 }, () => ({ content: 'z'.repeat(5000) })),
+    )
+    let mapCalls = 0
+    llmMock.chat = jest.fn(async (messages: LlmMessage[]) => {
+      if (isMapCall(messages)) {
+        mapCalls += 1
+        if (mapCalls === 1) throw new Error('provider 503')
+        return `PARTIAL-${mapCalls}`
+      }
+      return 'FINAL SUMMARY'
+    })
+
+    await service.summarizePost('p1')
+
+    expect(prismaMock.post.update).toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('provider 503'))
+  })
+
+  it('warns when only some of the post files have been ingested', async () => {
+    prismaMock.post.findUnique.mockResolvedValue({
+      id: 'p1',
+      files: [
+        { key: 'a.pdf', mimeType: 'application/pdf' },
+        { key: 'b.pdf', mimeType: 'application/pdf' },
+      ],
+      tags: [{ tagId: 't1' }],
+    })
+    // Only file A produced chunks; B is still PENDING. The chunk path short-circuits the
+    // extraction fallback, so B never contributes — deliberate, but it must be visible.
+    prismaMock.postChunk.findMany.mockResolvedValue([
+      { content: 'file a chunk 0', fileId: 'fa' },
+      { content: 'file a chunk 1', fileId: 'fa' },
+    ])
+
+    await service.summarizePost('p1')
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('1/2 files'))
+    expect(prismaMock.post.update).toHaveBeenCalled()
+  })
+
+  it('does not warn about ingestion when every file has chunks', async () => {
+    prismaMock.post.findUnique.mockResolvedValue({
+      id: 'p1',
+      files: [
+        { key: 'a.pdf', mimeType: 'application/pdf' },
+        { key: 'b.pdf', mimeType: 'application/pdf' },
+      ],
+      tags: [{ tagId: 't1' }],
+    })
+    prismaMock.postChunk.findMany.mockResolvedValue([
+      { content: 'file a chunk 0', fileId: 'fa' },
+      { content: 'file b chunk 0', fileId: 'fb' },
+    ])
+
+    await service.summarizePost('p1')
+
+    expect(warnSpy).not.toHaveBeenCalled()
   })
 
   it('does nothing when there is no text at all', async () => {
@@ -303,6 +402,13 @@ describe('AiSummaryService.summarizePost', () => {
 
     await service.summarizePost('p1')
 
+    // `createMany` alone is NOT enough: with the guard deleted, autoTagPost still runs and
+    // dies on `tag.id` (findOrCreate is a bare jest.fn() resolving undefined) inside its own
+    // try/catch, so createMany is unreached and the test passes for the wrong reason. The
+    // observables that actually distinguish the branch are the tagging LLM call and the
+    // existing-tag lookup that precedes it.
+    expect(llmMock.chat).toHaveBeenCalledTimes(1)
+    expect(prismaMock.tag.findMany).not.toHaveBeenCalled()
     expect(prismaMock.postTag.createMany).not.toHaveBeenCalled()
   })
 
