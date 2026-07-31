@@ -19,6 +19,25 @@ const SUPPORTED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
+/**
+ * Built as a single string rather than JSX text interleaved with `{' '}` expressions.
+ *
+ * The interleaved form rendered as "sectionsso far" in the browser while the component test
+ * passed, because the space before "so far" was a JSX text node sitting directly after an
+ * expression container, and the test transform and the Next build do not treat that whitespace
+ * identically. One string has no whitespace for a transform to disagree about.
+ *
+ * Deliberately no percentage or ratio: the total chunk count is unknown until chunking finishes,
+ * so any denominator would be invented.
+ */
+function preparingMessage(indexedChunks: number): string {
+  const label = indexedChunks === 1 ? 'section' : 'sections'
+  return (
+    `Preparing this document for AI chat — indexed ${indexedChunks} ${label} so far. ` +
+    `You can ask questions now, but answers won't cite page numbers until this finishes.`
+  )
+}
+
 interface PostAiChatProps {
   post: PostDetailEntity
 }
@@ -150,13 +169,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                       strokeWidth={1.5}
                       aria-hidden="true"
                     />
-                    <span>
-                      Preparing this document for AI chat — indexed{' '}
-                      {indexStatus?.indexedChunks ?? 0}{' '}
-                      {indexStatus?.indexedChunks === 1 ? 'section' : 'sections'} so far. You can
-                      ask questions now, but answers won&apos;t cite page numbers until this
-                      finishes.
-                    </span>
+                    <span>{preparingMessage(indexStatus?.indexedChunks ?? 0)}</span>
                   </div>
                 )}
 
