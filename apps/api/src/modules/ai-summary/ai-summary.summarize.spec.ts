@@ -131,9 +131,13 @@ describe('AiSummaryService.summarizePost', () => {
     // still interleaves), and `[{ file: { createdAt: 'asc' } }]` (loses order within a file).
     // `select` is pinned too: dropping it would pull a 768-dim embedding per chunk into a
     // 256MB heap.
+    // `where` pins the READY filter as well as the post scope. Ingestion persists chunks per
+    // embedding batch, so a file that failed partway leaves committed chunks behind; without
+    // the status filter a half-ingested document would be summarised as if it were complete.
+    // Dropping `file: { ingestStatus: 'READY' }` is the mutant this kills.
     expect(prismaMock.postChunk.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { postId: 'p1' },
+        where: { postId: 'p1', file: { ingestStatus: 'READY' } },
         orderBy: [{ file: { createdAt: 'asc' } }, { chunkIndex: 'asc' }],
         select: { content: true, fileId: true },
       }),

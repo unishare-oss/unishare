@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { IngestStatus } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
@@ -224,7 +225,13 @@ export class AiSummaryService {
     const supported = files.filter((file) => SUPPORTED_MIME_TYPES.includes(file.mimeType))
 
     const chunks = await this.prisma.postChunk.findMany({
-      where: { postId },
+      // READY only. Ingestion persists chunks per embedding batch rather than in one
+      // transaction, so a file that failed partway leaves committed chunks behind — without
+      // this filter a half-ingested file would be summarised as though it were the whole
+      // document. Filtering here rather than deleting on failure covers a hard crash, an OOM
+      // kill or a pod eviction too, where no catch block ever runs. Matches the same guard in
+      // RetrievalService.searchPost.
+      where: { postId, file: { ingestStatus: IngestStatus.READY } },
       // chunkIndex restarts at 0 per file (@@unique([fileId, chunkIndex])), so ordering by
       // it alone interleaves unrelated documents on a multi-file post and every window ends
       // up a jumble. Grouping by file first keeps each document contiguous, and ordering
@@ -237,9 +244,10 @@ export class AiSummaryService {
     })
 
     if (chunks.length > 0) {
-      // Deliberate: a post that is only partly ingested is summarised from the files that
-      // do have chunks rather than topping up the rest by extraction. Warned about, not
-      // silently accepted, because the summary that lands is incomplete.
+      // Deliberate: a post that is only partly ingested is summarised from the files that are
+      // READY rather than topping up the rest by extraction. Warned about, not silently
+      // accepted, because the summary that lands is incomplete. Counts distinct READY files,
+      // since the query above excludes every other status.
       const ingested = new Set(chunks.map((chunk) => chunk.fileId)).size
       if (ingested < supported.length) {
         this.logger.warn(
