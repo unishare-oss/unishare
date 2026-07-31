@@ -21,6 +21,11 @@ import { Chunk, chunkDocument } from '../chunking/chunker'
  *
  * Requires a live pgvector + Ollama. Enable with RUN_DB_TESTS=1 -- the default suite must
  * never depend on live infrastructure.
+ *
+ * WARNING: this spec WRITES to whatever DATABASE_URL points at -- it creates a university,
+ * department, course, user and two posts with files and chunks, and deletes them again in
+ * afterAll. Nothing here checks that the target is not production. Run it only against a
+ * disposable database.
  */
 const describeDb = process.env.RUN_DB_TESTS === '1' ? describe : describe.skip
 
@@ -256,8 +261,20 @@ describeDb('RetrievalService (live pgvector)', () => {
     expect(rows[0].similarity).toBeCloseTo(cosine(queryVector, parseVector(stored.vec)), 3)
   })
 
-  it('ranks a chunk first when searched with its own text', async () => {
+  it('ranks a chunk first when searched with its own text, and cites its real page', async () => {
     const rows = await service.searchPost(POST_A_ID, probeA)
     expect(rows[0].content).toBe(probeA)
+
+    // pageNum exists solely so a citation can name a real page, and Task 11 builds that
+    // surface next. Without this, `SELECT "chunkIndex" AS "pageNum"` passes every other
+    // assertion in this file -- types, row count, ordering, ids and similarity are all
+    // untouched by which column is projected here. The fixture makes the two clearly
+    // distinguishable: 3 pages against 15 chunks.
+    expect(rows[0].pageNum).toBe(chunksA.find((chunk) => chunk.content === probeA)!.pageNum)
+
+    // Every row, not just the first, matched back to the page it was seeded from.
+    for (const row of rows) {
+      expect(row.pageNum).toBe(chunksA.find((chunk) => chunk.content === row.content)!.pageNum)
+    }
   })
 })
