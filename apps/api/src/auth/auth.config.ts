@@ -83,7 +83,6 @@ export const auth = betterAuth({
             metadata: { scopes_supported: mcpScopes },
             oidcConfig: {
               loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-              consentPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp/consent`,
               scopes: ['boards:read', 'boards:write'],
               metadata: { scopes_supported: mcpScopes },
               allowPlainCodeChallengeMethod: false,
