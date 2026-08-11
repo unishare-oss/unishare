@@ -59,6 +59,30 @@ interface CollabPresenceContextValue {
   emitCursorMove: (e: React.PointerEvent<HTMLElement>) => void
 }
 
+function isRenderableElement(element: unknown): element is ExcalidrawElement {
+  if (!element || typeof element !== 'object') return false
+  const candidate = element as Record<string, unknown>
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.type !== 'string' ||
+    typeof candidate.x !== 'number' ||
+    typeof candidate.y !== 'number' ||
+    typeof candidate.width !== 'number' ||
+    typeof candidate.height !== 'number' ||
+    typeof candidate.version !== 'number' ||
+    !Array.isArray(candidate.groupIds)
+  ) {
+    return false
+  }
+  return (
+    (candidate.type !== 'arrow' && candidate.type !== 'line') || Array.isArray(candidate.points)
+  )
+}
+
+function renderableElements(elements: unknown[]): ExcalidrawElement[] {
+  return elements.filter(isRenderableElement)
+}
+
 interface CollabProviderProps {
   slug: string
   isAnonymous: boolean
@@ -157,9 +181,10 @@ export function CollabProvider({
     })
 
     socket.on('room-joined', ({ elements }: { slug: string; elements: ExcalidrawElement[] }) => {
+      const validElements = renderableElements(elements)
       const isReconnect = broadcastedVersionsRef.current.size > 0
-      setInitialElements(elements)
-      broadcastedVersionsRef.current = new Map(elements.map((el) => [el.id, el.version]))
+      setInitialElements(validElements)
+      broadcastedVersionsRef.current = new Map(validElements.map((el) => [el.id, el.version]))
       setConnectionStatus('connected')
       if (isReconnect) {
         toast.dismiss('collab-status')
@@ -168,7 +193,7 @@ export function CollabProvider({
     })
 
     socket.on('scene-update', (elements: ExcalidrawElement[]) => {
-      remoteHandlerRef.current?.(elements)
+      remoteHandlerRef.current?.(renderableElements(elements))
     })
 
     socket.on('participant-list', (list: Participant[]) => {
