@@ -54,6 +54,9 @@ model User {
   studyMaterialsUploaded  StudyMaterial[]          @relation("StudyMaterialsUploaded")
   department              Department?              @relation(fields: [departmentId], references: [id])
   university              University?              @relation(fields: [universityId], references: [id])
+  oauthApplications       OauthApplication[]
+  oauthAccessTokens       OauthAccessToken[]
+  oauthConsents           OauthConsent[]
 
   @@map("user")
 }
@@ -293,6 +296,62 @@ model Verification {
   @@map("verification")
 }
 
+model OauthApplication {
+  id           String             @id
+  name         String
+  icon         String?
+  metadata     String?
+  clientId     String             @unique
+  clientSecret String?
+  redirectUrls String
+  type         String
+  disabled     Boolean?           @default(false)
+  userId       String?
+  createdAt    DateTime
+  updatedAt    DateTime
+  user         User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessTokens OauthAccessToken[]
+  consents     OauthConsent[]
+
+  @@index([userId])
+  @@map("oauth_application")
+}
+
+model OauthAccessToken {
+  id                    String           @id
+  accessToken           String           @unique
+  refreshToken          String           @unique
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  clientId              String
+  userId                String?
+  scopes                String
+  createdAt             DateTime
+  updatedAt             DateTime
+  client                OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user                  User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauth_access_token")
+}
+
+model OauthConsent {
+  id           String           @id
+  clientId     String
+  userId       String
+  scopes       String
+  createdAt    DateTime
+  updatedAt    DateTime
+  consentGiven Boolean
+  client       OauthApplication @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauth_consent")
+}
+
 model Notification {
   id         String           @id @default(cuid())
   userId     String
@@ -463,14 +522,14 @@ model ChatRoom {
 }
 
 model ChatRoomParticipant {
-  id         String   @id @default(cuid())
-  roomId     String
-  userId     String
+  id               String   @id @default(cuid())
+  roomId           String
+  userId           String
   lastReadAt       DateTime @default(now())
   joinedAt         DateTime @default(now())
   encryptedRoomKey String?
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room             ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
   @@index([userId])
