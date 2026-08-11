@@ -33,6 +33,24 @@ export class McpService {
       async () => this.listBoards(session),
     )
 
+    server.registerTool(
+      'create_board',
+      {
+        description: 'Create a board owned by the authenticated UniShare user',
+        inputSchema: z.object({
+          title: z.string().min(1).max(120).optional(),
+          visibility: z.enum(['OPEN', 'VIEW_ONLY', 'PRIVATE']).optional(),
+        }),
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+      },
+      async (input) => this.createBoard(session, input),
+    )
+
     try {
       await server.connect(transport)
       await transport.handleRequest(req, res, parsedBody)
@@ -64,6 +82,32 @@ export class McpService {
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(result) }],
       structuredContent: result,
+    }
+  }
+
+  async createBoard(
+    session: McpAuthSession,
+    input: { title?: string; visibility?: 'OPEN' | 'VIEW_ONLY' | 'PRIVATE' },
+  ) {
+    if (!this.hasScope(session, 'boards:write')) {
+      return {
+        content: [{ type: 'text' as const, text: 'Missing required scope: boards:write' }],
+        isError: true,
+      }
+    }
+
+    const room = await this.collabService.createRoom(input, session.userId)
+    const board = {
+      slug: room.slug,
+      title: room.title,
+      visibility: room.visibility,
+      hasPassword: room.hasPassword,
+      url: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/canvas/${room.slug}`,
+    }
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify({ board }) }],
+      structuredContent: { board },
     }
   }
 

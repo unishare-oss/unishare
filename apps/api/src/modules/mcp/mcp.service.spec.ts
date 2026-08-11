@@ -7,6 +7,7 @@ jest.mock('@/modules/collab/collab.service', () => ({
 
 describe('McpService', () => {
   const collabService = {
+    createRoom: jest.fn(),
     getRoomsByOwner: jest.fn(),
   }
   const service = new McpService(collabService as unknown as CollabService)
@@ -83,6 +84,66 @@ describe('McpService', () => {
         isError: true,
       })
       expect(collabService.getRoomsByOwner).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('createBoard', () => {
+    it('creates a board for the authenticated user', async () => {
+      collabService.createRoom.mockResolvedValue({
+        id: 'room-1',
+        slug: 'board-slug',
+        title: 'Architecture',
+        visibility: 'PRIVATE',
+        hasPassword: false,
+      })
+
+      const result = await service.createBoard(
+        { userId: 'user-1', scopes: 'openid boards:write' },
+        { title: 'Architecture', visibility: 'PRIVATE' },
+      )
+
+      expect(collabService.createRoom).toHaveBeenCalledWith(
+        { title: 'Architecture', visibility: 'PRIVATE' },
+        'user-1',
+      )
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              board: {
+                slug: 'board-slug',
+                title: 'Architecture',
+                visibility: 'PRIVATE',
+                hasPassword: false,
+                url: 'http://localhost:3000/canvas/board-slug',
+              },
+            }),
+          },
+        ],
+        structuredContent: {
+          board: {
+            slug: 'board-slug',
+            title: 'Architecture',
+            visibility: 'PRIVATE',
+            hasPassword: false,
+            url: 'http://localhost:3000/canvas/board-slug',
+          },
+        },
+      })
+    })
+
+    it('rejects access without boards:write', async () => {
+      await expect(
+        service.createBoard(
+          { userId: 'user-1', scopes: 'openid boards:read' },
+          { title: 'Architecture' },
+        ),
+      ).resolves.toEqual({
+        content: [{ type: 'text', text: 'Missing required scope: boards:write' }],
+        isError: true,
+      })
+      expect(collabService.createRoom).not.toHaveBeenCalled()
     })
   })
 })
