@@ -9,6 +9,7 @@ describe('McpService', () => {
   const collabService = {
     createRoom: jest.fn(),
     deleteRoom: jest.fn(),
+    drawRoom: jest.fn(),
     getRoomsByOwner: jest.fn(),
   }
   const service = new McpService(collabService as unknown as CollabService)
@@ -173,6 +174,38 @@ describe('McpService', () => {
         isError: true,
       })
       expect(collabService.deleteRoom).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('drawBoard', () => {
+    const elements = [{ id: 'rectangle-1', type: 'rectangle', version: 1 }]
+
+    it('writes elements using the authenticated user for ownership verification', async () => {
+      const result = await service.drawBoard(
+        { userId: 'user-1', scopes: 'openid boards:write' },
+        { slug: 'board-slug', elements },
+      )
+
+      expect(collabService.drawRoom).toHaveBeenCalledWith('board-slug', elements, 'user-1')
+      expect(result).toEqual({
+        content: [
+          { type: 'text', text: JSON.stringify({ slug: 'board-slug', updatedElements: 1 }) },
+        ],
+        structuredContent: { slug: 'board-slug', updatedElements: 1 },
+      })
+    })
+
+    it('rejects access without boards:write', async () => {
+      await expect(
+        service.drawBoard(
+          { userId: 'user-1', scopes: 'openid boards:read' },
+          { slug: 'board-slug', elements },
+        ),
+      ).resolves.toEqual({
+        content: [{ type: 'text', text: 'Missing required scope: boards:write' }],
+        isError: true,
+      })
+      expect(collabService.drawRoom).not.toHaveBeenCalled()
     })
   })
 })
