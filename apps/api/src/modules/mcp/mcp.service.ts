@@ -4,11 +4,44 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { CollabService } from '@/modules/collab/collab.service'
+import { createExcalidrawElements, type McpDrawingInput } from './mcp-drawing'
 
 export interface McpAuthSession {
   userId: string
   scopes: string
 }
+
+const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
+const drawingStyleSchema = {
+  strokeColor: hexColorSchema.optional(),
+  backgroundColor: z.union([z.literal('transparent'), hexColorSchema]).optional(),
+}
+
+const drawingElementSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.enum(['rectangle', 'ellipse', 'diamond']),
+    x: z.number(),
+    y: z.number(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    ...drawingStyleSchema,
+  }),
+  z.object({
+    type: z.literal('text'),
+    x: z.number(),
+    y: z.number(),
+    text: z.string().min(1),
+    ...drawingStyleSchema,
+  }),
+  z.object({
+    type: z.literal('arrow'),
+    x: z.number(),
+    y: z.number(),
+    endX: z.number(),
+    endY: z.number(),
+    ...drawingStyleSchema,
+  }),
+])
 
 @Injectable()
 export class McpService {
@@ -54,21 +87,10 @@ export class McpService {
       'draw_board',
       {
         description:
-          'Add or update Excalidraw elements in a board owned by the authenticated UniShare user',
+          'Draw clear, labeled diagrams. Use rectangles for systems or processes, diamonds for decisions, ellipses for entry or exit points, text for labels, and arrows for flow. The API automatically colors rectangles blue, diamonds amber, and ellipses green. Use optional strokeColor and backgroundColor (#RRGGBB) only when a different semantic color is needed, such as red for errors.',
         inputSchema: z.object({
           slug: z.string().min(1),
-          elements: z
-            .array(
-              z
-                .object({
-                  id: z.string().min(1),
-                  type: z.string().min(1),
-                  version: z.number().int().nonnegative(),
-                })
-                .passthrough(),
-            )
-            .min(1)
-            .max(100),
+          elements: z.array(drawingElementSchema).min(1).max(100),
         }),
       },
       async (input) => this.drawBoard(session, input),
@@ -151,10 +173,7 @@ export class McpService {
     }
   }
 
-  async drawBoard(
-    session: McpAuthSession,
-    input: { slug: string; elements: Record<string, unknown>[] },
-  ) {
+  async drawBoard(session: McpAuthSession, input: { slug: string; elements: McpDrawingInput[] }) {
     if (!this.hasScope(session, 'boards:write')) {
       return {
         content: [{ type: 'text' as const, text: 'Missing required scope: boards:write' }],
@@ -162,8 +181,9 @@ export class McpService {
       }
     }
 
-    await this.collabService.drawRoom(input.slug, input.elements, session.userId)
-    const result = { slug: input.slug, updatedElements: input.elements.length }
+    const elements = createExcalidrawElements(input.elements)
+    await this.collabService.drawRoom(input.slug, elements, session.userId)
+    const result = { slug: input.slug, updatedElements: elements.length }
 
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(result) }],

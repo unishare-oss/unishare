@@ -178,7 +178,7 @@ describe('McpService', () => {
   })
 
   describe('drawBoard', () => {
-    const elements = [{ id: 'rectangle-1', type: 'rectangle', version: 1 }]
+    const elements = [{ type: 'rectangle' as const, x: 100, y: 100, width: 200, height: 100 }]
 
     it('writes elements using the authenticated user for ownership verification', async () => {
       const result = await service.drawBoard(
@@ -186,7 +186,11 @@ describe('McpService', () => {
         { slug: 'board-slug', elements },
       )
 
-      expect(collabService.drawRoom).toHaveBeenCalledWith('board-slug', elements, 'user-1')
+      expect(collabService.drawRoom).toHaveBeenCalledWith(
+        'board-slug',
+        [expect.objectContaining({ type: 'rectangle', x: 100, y: 100, width: 200, height: 100 })],
+        'user-1',
+      )
       expect(result).toEqual({
         content: [
           { type: 'text', text: JSON.stringify({ slug: 'board-slug', updatedElements: 1 }) },
