@@ -108,8 +108,18 @@ export default function LoginPage() {
   const activeForm = mode === 'signin' ? signInForm : signUpForm
   const loading = activeForm.formState.isSubmitting
 
+  function oauthAuthorizeUrl() {
+    if (!window.location.search.includes('client_id=')) return null
+    const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? window.location.origin
+    return `${apiOrigin}/api/auth/mcp/authorize${window.location.search}`
+  }
+
   function signInWith(provider: 'google' | 'microsoft') {
-    authClient.signIn.social({ provider, callbackURL: `${window.location.origin}/` })
+    const continuation = oauthAuthorizeUrl()
+    authClient.signIn.social({
+      provider,
+      callbackURL: continuation ?? `${window.location.origin}/`,
+    })
   }
 
   function switchMode() {
@@ -121,7 +131,11 @@ export default function LoginPage() {
     setServerError('')
     const { error } = await authClient.signIn.email(values)
     if (error) setServerError(error.message ?? 'Invalid email or password')
-    else router.replace('/')
+    else {
+      const continuation = oauthAuthorizeUrl()
+      if (continuation) window.location.assign(continuation)
+      else router.replace('/')
+    }
   }
 
   async function onSignUp(values: SignUpValues) {
