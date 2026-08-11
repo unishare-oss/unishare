@@ -23,12 +23,7 @@ export class McpService {
       {
         description: 'List boards owned by the authenticated UniShare user',
         inputSchema: z.object({}),
-        annotations: {
-          readOnlyHint: true,
-          destructiveHint: false,
-          idempotentHint: true,
-          openWorldHint: false,
-        },
+        annotations: { readOnlyHint: true },
       },
       async () => this.listBoards(session),
     )
@@ -41,12 +36,6 @@ export class McpService {
           title: z.string().min(1).max(120).optional(),
           visibility: z.enum(['OPEN', 'VIEW_ONLY', 'PRIVATE']).optional(),
         }),
-        annotations: {
-          readOnlyHint: false,
-          destructiveHint: false,
-          idempotentHint: false,
-          openWorldHint: false,
-        },
       },
       async (input) => this.createBoard(session, input),
     )
