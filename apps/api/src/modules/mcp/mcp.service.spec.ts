@@ -8,6 +8,7 @@ jest.mock('@/modules/collab/collab.service', () => ({
 describe('McpService', () => {
   const collabService = {
     createRoom: jest.fn(),
+    deleteRoom: jest.fn(),
     getRoomsByOwner: jest.fn(),
   }
   const service = new McpService(collabService as unknown as CollabService)
@@ -144,6 +145,34 @@ describe('McpService', () => {
         isError: true,
       })
       expect(collabService.createRoom).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('deleteBoard', () => {
+    it('deletes a board using the authenticated user for ownership verification', async () => {
+      const result = await service.deleteBoard(
+        { userId: 'user-1', scopes: 'openid boards:write' },
+        { slug: 'board-slug' },
+      )
+
+      expect(collabService.deleteRoom).toHaveBeenCalledWith('board-slug', 'user-1')
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify({ slug: 'board-slug', deleted: true }) }],
+        structuredContent: { slug: 'board-slug', deleted: true },
+      })
+    })
+
+    it('rejects access without boards:write', async () => {
+      await expect(
+        service.deleteBoard(
+          { userId: 'user-1', scopes: 'openid boards:read' },
+          { slug: 'board-slug' },
+        ),
+      ).resolves.toEqual({
+        content: [{ type: 'text', text: 'Missing required scope: boards:write' }],
+        isError: true,
+      })
+      expect(collabService.deleteRoom).not.toHaveBeenCalled()
     })
   })
 })

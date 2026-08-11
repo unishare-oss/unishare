@@ -40,6 +40,16 @@ export class McpService {
       async (input) => this.createBoard(session, input),
     )
 
+    server.registerTool(
+      'delete_board',
+      {
+        description: 'Permanently delete a board owned by the authenticated UniShare user',
+        inputSchema: z.object({ slug: z.string().min(1) }),
+        annotations: { destructiveHint: true },
+      },
+      async (input) => this.deleteBoard(session, input),
+    )
+
     try {
       await server.connect(transport)
       await transport.handleRequest(req, res, parsedBody)
@@ -97,6 +107,23 @@ export class McpService {
     return {
       content: [{ type: 'text' as const, text: JSON.stringify({ board }) }],
       structuredContent: { board },
+    }
+  }
+
+  async deleteBoard(session: McpAuthSession, input: { slug: string }) {
+    if (!this.hasScope(session, 'boards:write')) {
+      return {
+        content: [{ type: 'text' as const, text: 'Missing required scope: boards:write' }],
+        isError: true,
+      }
+    }
+
+    await this.collabService.deleteRoom(input.slug, session.userId)
+    const result = { slug: input.slug, deleted: true }
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      structuredContent: result,
     }
   }
 
