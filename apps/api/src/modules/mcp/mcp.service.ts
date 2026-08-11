@@ -50,6 +50,30 @@ export class McpService {
       async (input) => this.deleteBoard(session, input),
     )
 
+    server.registerTool(
+      'draw_board',
+      {
+        description:
+          'Add or update Excalidraw elements in a board owned by the authenticated UniShare user',
+        inputSchema: z.object({
+          slug: z.string().min(1),
+          elements: z
+            .array(
+              z
+                .object({
+                  id: z.string().min(1),
+                  type: z.string().min(1),
+                  version: z.number().int().nonnegative(),
+                })
+                .passthrough(),
+            )
+            .min(1)
+            .max(100),
+        }),
+      },
+      async (input) => this.drawBoard(session, input),
+    )
+
     try {
       await server.connect(transport)
       await transport.handleRequest(req, res, parsedBody)
@@ -120,6 +144,26 @@ export class McpService {
 
     await this.collabService.deleteRoom(input.slug, session.userId)
     const result = { slug: input.slug, deleted: true }
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      structuredContent: result,
+    }
+  }
+
+  async drawBoard(
+    session: McpAuthSession,
+    input: { slug: string; elements: Record<string, unknown>[] },
+  ) {
+    if (!this.hasScope(session, 'boards:write')) {
+      return {
+        content: [{ type: 'text' as const, text: 'Missing required scope: boards:write' }],
+        isError: true,
+      }
+    }
+
+    await this.collabService.drawRoom(input.slug, input.elements, session.userId)
+    const result = { slug: input.slug, updatedElements: input.elements.length }
 
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(result) }],

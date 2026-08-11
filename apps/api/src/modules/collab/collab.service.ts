@@ -12,6 +12,7 @@ import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
+import { CollabRoomService } from './collab.room.service'
 import { CreateCollabRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
@@ -22,6 +23,7 @@ export class CollabService {
   constructor(
     private readonly collabRepository: CollabRepository,
     private readonly collabGateway: CollabGateway,
+    private readonly collabRoomService: CollabRoomService,
   ) {}
 
   async createRoom(dto: CreateCollabRoomDto, ownerId: string) {
@@ -54,6 +56,19 @@ export class CollabService {
     if (room.ownerId !== userId)
       throw new ForbiddenException('Only the room owner can delete this room')
     await this.collabRepository.deleteBySlug(slug)
+  }
+
+  //for mcp only
+  async drawRoom(slug: string, elements: Record<string, unknown>[], userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can edit this room through MCP')
+
+    await this.collabRoomService.getOrLoadElements(slug)
+    this.collabRoomService.mergeElements(slug, elements)
+    await this.collabRoomService.flushSnapshot(slug)
+    this.collabGateway.server.to(slug).emit('scene-update', elements)
   }
 
   async updateRoom(slug: string, dto: UpdateRoomDto, userId: string) {
