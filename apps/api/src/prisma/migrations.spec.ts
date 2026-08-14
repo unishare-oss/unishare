@@ -37,11 +37,17 @@ describe('prisma migrations', () => {
     expect(migrationFiles().length).toBeGreaterThan(0)
   })
 
-  it.each(Object.entries(PROTECTED_INDEXES))(
-    'no migration drops %s',
-    (indexName, creatingMigration) => {
+  it.each(Object.keys(PROTECTED_INDEXES))(
+    'no migration drops %s without recreating it',
+    (indexName) => {
+      const drops = new RegExp(`DROP\\s+INDEX[^;]*${indexName}`, 'i')
+      const creates = new RegExp(`CREATE\\s+INDEX[^;]*${indexName}`, 'i')
+
+      // A migration that drops AND recreates is a deliberate retune — changing the HNSW `m` or
+      // `ef_construction`, say — and is allowed. A bare drop is the accident this guards: that is
+      // exactly what `prisma migrate dev` emits, with no CREATE alongside it.
       const offenders = migrationFiles()
-        .filter((m) => new RegExp(`DROP\\s+INDEX[^;]*${indexName}`, 'i').test(m.sql))
+        .filter((m) => drops.test(m.sql) && !creates.test(m.sql))
         .map((m) => m.name)
 
       expect(offenders).toEqual([])
