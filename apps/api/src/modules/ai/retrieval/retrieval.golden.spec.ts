@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ConfigModule } from '@nestjs/config'
@@ -59,6 +60,22 @@ const MEASURED_LOWEST_ON_TOPIC = 0.675
 const MEASURED_TOP1 = 1
 const MEASURED_TOP3 = 1
 
+/**
+ * Digests of the fixtures every number above was measured against.
+ *
+ * Without these, swapping `document.pdf` is invisible to the infra-free half — it only checks that
+ * page numbers fall in a range — and the opt-in eval would then measure a different document
+ * against a stale `expectedPages` mapping, reporting confident nonsense. `questions.json` is pinned
+ * for the same reason in reverse: editing a question changes what the bounds mean.
+ *
+ * If you deliberately change either file, re-run the eval and re-transcribe both the digest and
+ * every MEASURED_* constant. Do not update a digest on its own.
+ */
+const MEASURED_FIXTURE_SHA256: Record<string, string> = {
+  'document.pdf': 'ae7572e5d209e986306ee2ebd978fa92b09394d8da471575f37896802eed61aa',
+  'questions.json': '3a87d9f9aa6c69d8bd7a01b2e68b7bdb8e05e9c5e67427226945d3e86798491e',
+}
+
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
@@ -92,6 +109,19 @@ describe('MIN_SIMILARITY calibration (no infrastructure)', () => {
     // is MIN_SIMILARITY = 0 plus the model-emitted OFF_TOPIC sentinel as the only check.
     expect(MEASURED_LOWEST_ON_TOPIC).toBeGreaterThan(MEASURED_HIGHEST_OFF_TOPIC)
   })
+
+  it.each(Object.entries(MEASURED_FIXTURE_SHA256))(
+    '%s is still the file the numbers were measured against',
+    (name, expected) => {
+      // The page-range check below cannot tell one 18-page document from another, so without
+      // this a swapped document.pdf would leave every assertion here passing while the opt-in
+      // eval silently scored a different document against a stale expectedPages mapping.
+      const actual = createHash('sha256')
+        .update(readFileSync(join(GOLDEN, name)))
+        .digest('hex')
+      expect(actual).toBe(expected)
+    },
+  )
 
   it('has a question set whose expected pages exist in the fixture', () => {
     // Cheap, infra-free staleness check on the mapping the eval scores against. It cannot
