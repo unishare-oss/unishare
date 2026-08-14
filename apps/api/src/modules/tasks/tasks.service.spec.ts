@@ -50,24 +50,28 @@ describe('TasksService', () => {
   })
 
   describe('pruneAnonymousUsers', () => {
-    it('should call prisma.user.deleteMany with isAnonymous and 7-day cutoff', async () => {
+    it('deletes anonymous users only once every session of theirs has expired', async () => {
       prisma.user.deleteMany.mockResolvedValue({ count: 0 })
 
       const before = new Date()
       await service.pruneAnonymousUsers()
 
+      // This replaces an assertion for `createdAt: { lt: sevenDaysAgo }`, which had gone stale
+      // against the implementation and failed on every run. Session-based is the correct rule
+      // and the age-based one was a real bug: an anonymous user who has been browsing for more
+      // than seven days would have been deleted mid-session.
       expect(prisma.user.deleteMany).toHaveBeenCalledWith({
         where: {
           isAnonymous: true,
-          createdAt: { lt: expect.any(Date) },
+          sessions: { none: { expiresAt: { gt: expect.any(Date) } } },
         },
       })
 
-      // Verify the cutoff date is approximately 7 days ago
-      const cutoffArg = prisma.user.deleteMany.mock.calls[0][0].where.createdAt.lt as Date
-      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-      const expectedCutoff = new Date(before.getTime() - sevenDaysMs)
-      expect(Math.abs(cutoffArg.getTime() - expectedCutoff.getTime())).toBeLessThan(5000) // within 5s
+      // The boundary is "now", not an offset — anything else either spares expired users or
+      // reaps live ones.
+      const gt = prisma.user.deleteMany.mock.calls[0][0].where.sessions.none.expiresAt.gt as Date
+      expect(gt.getTime()).toBeGreaterThanOrEqual(before.getTime())
+      expect(gt.getTime()).toBeLessThan(before.getTime() + 5000)
     })
 
     it('should log when users are pruned', async () => {
