@@ -1,11 +1,15 @@
-import { ServiceUnavailableException } from '@nestjs/common'
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import { PrismaService } from '@/prisma/prisma.service'
-import { AiSummaryService } from './ai-summary.service'
+import { AiSummaryService, SNIPPET_CHARS } from './ai-summary.service'
 import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
-import { RetrievalService, MIN_SIMILARITY } from '../ai/retrieval/retrieval.service'
+import {
+  RetrievalService,
+  MIN_SIMILARITY,
+  RETRIEVAL_TOP_K,
+} from '../ai/retrieval/retrieval.service'
 import { DocumentExtractorService } from '../ai/extraction/document-extractor.service'
 import { LlmMessage } from '../ai/llm/llm.types'
 
@@ -33,7 +37,6 @@ describe('AiSummaryService.chatWithPost', () => {
     embeddingMock = { enabled: true }
     prismaMock = {
       post: { findUnique: jest.fn().mockResolvedValue({ files: [] }) },
-      postChunk: { findMany: jest.fn() },
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -100,8 +103,27 @@ describe('AiSummaryService.chatWithPost', () => {
 
     // A citation is rendered in a chat bubble; shipping 400+ chars per citation would
     // swamp the UI. Untruncated content would satisfy a looser assertion.
-    expect(result.citations[0].snippet.length).toBeLessThan(long.length)
     expect(result.citations[0].snippet.endsWith('…')).toBe(true)
+    // The LENGTH is pinned to a literal, not to SNIPPET_CHARS. Asserting against the imported
+    // constant would track any change to it, so widening 160 to 300 — six citations of prompt
+    // and bubble growth per reply — would pass silently. This is the tripwire: if the budget
+    // moves deliberately, both numbers move together.
+    expect(SNIPPET_CHARS).toBe(160)
+    expect(result.citations[0].snippet).toHaveLength(161) // 160 chars + the ellipsis
+  })
+
+  it('leaves a snippet exactly at the budget untruncated', async () => {
+    // The off-by-one boundary: `>` rather than `>=`. A chunk of exactly SNIPPET_CHARS needs no
+    // ellipsis, and appending one would claim text was cut that was not.
+    const exact = 'y'.repeat(SNIPPET_CHARS)
+    retrievalMock.searchPost.mockResolvedValue([
+      { id: 'c1', content: exact, pageNum: 3, similarity: 0.9 },
+    ])
+
+    const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+    expect(result.citations[0].snippet).toBe(exact)
+    expect(result.citations[0].snippet.endsWith('…')).toBe(false)
   })
 
   it('puts page markers in the system prompt so the model can cite', async () => {
@@ -154,7 +176,11 @@ describe('AiSummaryService.chatWithPost', () => {
   it('does not condense a first-turn question', async () => {
     await service.chatWithPost('p1', [{ role: 'user', content: 'What is an eigenvalue?' }])
 
-    expect(retrievalMock.searchPost).toHaveBeenCalledWith('p1', 'What is an eigenvalue?', 6)
+    expect(retrievalMock.searchPost).toHaveBeenCalledWith(
+      'p1',
+      'What is an eigenvalue?',
+      RETRIEVAL_TOP_K,
+    )
     expect(llmMock.chat).toHaveBeenCalledTimes(1)
   })
 
@@ -172,7 +198,7 @@ describe('AiSummaryService.chatWithPost', () => {
     expect(retrievalMock.searchPost).toHaveBeenCalledWith(
       'p1',
       'What is the second eigenvalue property?',
-      6,
+      RETRIEVAL_TOP_K,
     )
     expect(result.reply).toBe('It is that the trace equals the sum.')
     expect(llmMock.chat).toHaveBeenCalledTimes(2)
@@ -195,7 +221,11 @@ describe('AiSummaryService.chatWithPost', () => {
       { role: 'user', content: 'what about the second one?' },
     ])
 
-    expect(retrievalMock.searchPost).toHaveBeenCalledWith('p1', 'what about the second one?', 6)
+    expect(retrievalMock.searchPost).toHaveBeenCalledWith(
+      'p1',
+      'what about the second one?',
+      RETRIEVAL_TOP_K,
+    )
     expect(result.reply).toBe('An eigenvalue is a scalar.')
   })
 
@@ -274,6 +304,170 @@ describe('AiSummaryService.chatWithPost', () => {
     ])
 
     expect(result).toEqual({ reply: 'OFF_TOPIC', offTopic: true, citations: [] })
+  })
+
+  // The sentinel is the PRIMARY refusal check, and it used to require exact equality with
+  // 'OFF_TOPIC'. Every near miss returned offTopic: false, which handed the student the literal
+  // sentinel string as their answer WITH citations attached — strictly worse than the
+  // pre-retrieval behaviour. A model appending a full stop is entirely ordinary, so each of
+  // these is a likely production reply, not a contrived one. Every case asserts citations are
+  // dropped too: a refusal wearing a sourcing badge is the actual user-visible harm.
+  describe.each([
+    ['a trailing full stop', 'OFF_TOPIC.'],
+    ['a trailing colon', 'OFF_TOPIC:'],
+    ['surrounding whitespace', '  OFF_TOPIC  '],
+    ['lowercase', 'off_topic'],
+    ['lowercase with a full stop and whitespace', '  off_topic.  '],
+    ['markdown bold', '**OFF_TOPIC**'],
+    ['double quotes', '"OFF_TOPIC"'],
+    ['an em-dash explanation', 'OFF_TOPIC — this question is unrelated to the document'],
+    ['a hyphen explanation', 'OFF_TOPIC - unrelated'],
+    ['an explanation on the next line', 'OFF_TOPIC\nThis is not covered by the excerpts.'],
+    ['mixed case with an exclamation', 'Off_Topic!'],
+  ])('recognises a decorated sentinel: %s', (_label, reply) => {
+    it('refuses, canonicalises the reply and drops the citations', async () => {
+      llmMock.chat.mockResolvedValue(reply)
+
+      const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      // The canonical 'OFF_TOPIC' is what the frontend switches on, so the decorated form must
+      // never survive into the response either.
+      expect(result).toEqual({ reply: 'OFF_TOPIC', offTopic: true, citations: [] })
+    })
+  })
+
+  // The other direction, and the reason the match is anchored to the start of the first line
+  // and requires a non-alphanumeric separator after the token. A student can legitimately ask
+  // what OFF_TOPIC means; swallowing the model's explanation as a refusal would be a worse
+  // failure than the one being fixed, because it is silent and unrecoverable for that user.
+  describe.each([
+    ['prose that begins with the token', 'OFF_TOPIC is the marker returned for unrelated asks.'],
+    ['the token mid-sentence', 'The assistant replies OFF_TOPIC when a question is unrelated.'],
+    ['a quoted mention', 'Page 3 defines the OFF_TOPIC convention used by the grader.'],
+    // These two carry a SEPARATOR after the token — a full stop and a colon — so they are the
+    // only cases that pin the start-of-line anchor. Without the anchor the pattern matches
+    // anywhere and both of these become silent refusals; with a letter after the token (the
+    // three above) the anchor makes no difference, so they cannot catch its removal.
+    ['the token ending the sentence', 'Rule 4 says I should reply with OFF_TOPIC.'],
+    ['the token before a colon', 'The excerpts never mention OFF_TOPIC: it is not defined here.'],
+  ])('does not mistake discussion of the token for a refusal: %s', (_label, reply) => {
+    it('answers normally and keeps the citations', async () => {
+      llmMock.chat.mockResolvedValue(reply)
+
+      const result = await service.chatWithPost('p1', [
+        { role: 'user', content: 'what does OFF_TOPIC mean?' },
+      ])
+
+      expect(result.offTopic).toBe(false)
+      expect(result.reply).toBe(reply)
+      expect(result.citations).toHaveLength(2)
+    })
+  })
+
+  it('recognises a decorated sentinel on the full-text fallback path too', async () => {
+    // Both paths call isOffTopic; a fix applied to only one is a real possibility.
+    retrievalMock.searchPost.mockResolvedValue([])
+    prismaMock.post.findUnique.mockResolvedValue({
+      files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+    })
+    extractorMock.extractFromKey.mockResolvedValue({
+      pages: [{ num: 1, text: 'full document text' }],
+      hasPageNumbers: true,
+    })
+    llmMock.chat.mockResolvedValue('off_topic.')
+
+    const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+    expect(result).toEqual({ reply: 'OFF_TOPIC', offTopic: true, citations: [] })
+  })
+
+  it('reports a null reply from the provider as service-unavailable on the retrieval path', async () => {
+    // llm.service.chat returns null whenever no provider is built, and a real provider can
+    // return no choices (Groq under load). Part of the same status-code change as the
+    // disabled-LLM gate, so it must not regress to a bare Error either.
+    llmMock.chat.mockResolvedValue(null)
+
+    await expect(
+      service.chatWithPost('p1', [{ role: 'user', content: 'q' }]),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException)
+  })
+
+  it('reports a null reply as service-unavailable on the fallback path too', async () => {
+    retrievalMock.searchPost.mockResolvedValue([])
+    prismaMock.post.findUnique.mockResolvedValue({
+      files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+    })
+    extractorMock.extractFromKey.mockResolvedValue({
+      pages: [{ num: 1, text: 'full document text' }],
+      hasPageNumbers: true,
+    })
+    llmMock.chat.mockResolvedValue(null)
+
+    await expect(
+      service.chatWithPost('p1', [{ role: 'user', content: 'q' }]),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException)
+  })
+
+  it('reports a missing post as not-found rather than answering with an empty document', async () => {
+    // Unreachable through HTTP (posts.service 404s first), but without it a deleted post is
+    // answered as though the document were merely empty.
+    retrievalMock.searchPost.mockResolvedValue([])
+    prismaMock.post.findUnique.mockResolvedValue(null)
+
+    await expect(
+      service.chatWithPost('p1', [{ role: 'user', content: 'q' }]),
+    ).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  describe('condensation returns a non-query shape', () => {
+    const followUp = [
+      { role: 'user' as const, content: 'What is an eigenvalue?' },
+      { role: 'assistant' as const, content: 'A scalar.' },
+      { role: 'user' as const, content: 'what about the second one?' },
+    ]
+
+    it('ignores a multi-line condensation and retrieves with the raw message', async () => {
+      // Whatever comes back is embedded verbatim, so a preamble or a rationale drags every
+      // similarity score down — and MIN_SIMILARITY has only 0.034 of headroom to give.
+      llmMock.chat
+        .mockResolvedValueOnce('Here is the standalone query:\nwhat is the second property?')
+        .mockResolvedValueOnce('It is that the trace equals the sum.')
+
+      await service.chatWithPost('p1', followUp)
+
+      expect(retrievalMock.searchPost).toHaveBeenCalledWith(
+        'p1',
+        'what about the second one?',
+        RETRIEVAL_TOP_K,
+      )
+    })
+
+    it('ignores an oversized condensation and retrieves with the raw message', async () => {
+      llmMock.chat
+        .mockResolvedValueOnce('x'.repeat(400))
+        .mockResolvedValueOnce('It is that the trace equals the sum.')
+
+      await service.chatWithPost('p1', followUp)
+
+      expect(retrievalMock.searchPost).toHaveBeenCalledWith(
+        'p1',
+        'what about the second one?',
+        RETRIEVAL_TOP_K,
+      )
+    })
+
+    it('still accepts a legitimately longer rewrite', async () => {
+      // The guard must not fire on the case condensation exists for: a standalone rewrite is
+      // routinely several times longer than the follow-up it replaces.
+      const rewrite = 'What is the second property of eigenvalues discussed in this document?'
+      llmMock.chat
+        .mockResolvedValueOnce(rewrite)
+        .mockResolvedValueOnce('It is that the trace equals the sum.')
+
+      await service.chatWithPost('p1', followUp)
+
+      expect(retrievalMock.searchPost).toHaveBeenCalledWith('p1', rewrite, RETRIEVAL_TOP_K)
+    })
   })
 
   it('reports a disabled LLM as a service-unavailable failure, not an opaque 500', async () => {

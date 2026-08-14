@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
 import { IngestStatus } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { TagsService } from '../tags/tags.service'
@@ -144,6 +144,13 @@ const CONDENSE_PROMPT = `Rewrite the user's final message as a standalone search
 Respond with ONLY the rewritten query — no preamble, no quotes, no explanation.
 If the final message is already standalone, repeat it unchanged.`
 
+/**
+ * Above this, whatever came back is not a rewritten query. Generous on purpose: resolving
+ * "what about the second one?" legitimately produces something several times longer than the
+ * message it replaces, and falling back on a valid rewrite costs real retrieval quality.
+ */
+const CONDENSE_MAX_CHARS = 300
+
 /** Fallback for documents with no chunks yet — the pre-retrieval behaviour. */
 const FULL_TEXT_SYSTEM_PROMPT = `You are a study assistant for university students. You help students understand the academic document provided below.
 
@@ -159,8 +166,38 @@ Document content:
 /**
  * A citation is rendered inline in a chat bubble, so it quotes the chunk rather than
  * reproducing it — chunks run to CHUNK_MAX_CHARS (2000) and would swamp the UI.
+ *
+ * ai-summary.chat.spec.ts pins this literal value. Widening it grows every citation in every
+ * response, so change it deliberately and update that assertion with it.
  */
-const SNIPPET_CHARS = 160
+export const SNIPPET_CHARS = 160
+
+/**
+ * Markdown emphasis and quoting around the edges of a reply, so `**OFF_TOPIC**` and
+ * `"OFF_TOPIC"` still read as the sentinel. Edges only — `OFF_TOPIC` contains an underscore
+ * of its own, which must survive.
+ */
+const EDGE_DECORATION = /^[\s*_`"'>[(]+|[\s*_`"')\]]+$/g
+
+/**
+ * The refusal sentinel, as models actually emit it.
+ *
+ * Matches when the reply's first line is the sentinel alone, or the sentinel followed by a
+ * NON-alphanumeric separator: `OFF_TOPIC`, `off_topic`, `OFF_TOPIC.`, `OFF_TOPIC:`,
+ * `**OFF_TOPIC**`, `OFF_TOPIC — this is unrelated`, or the sentinel on its own line with an
+ * explanation beneath.
+ *
+ * It deliberately does NOT match when a letter or digit follows the token, so a reply that
+ * merely discusses the word — "OFF_TOPIC is the marker the assistant returns when..." for a
+ * student who asked what it means — is answered rather than swallowed as a refusal. That is
+ * the line: a separator after the token means the model is signalling, ordinary prose
+ * continuing the sentence means it is talking.
+ *
+ * Nor does it search the whole reply. A sentinel buried mid-paragraph is far more likely to
+ * be discussion than a refusal, and matching anywhere would let any answer that quotes the
+ * token be replaced by a refusal — a worse failure than the one being fixed.
+ */
+const OFF_TOPIC_SENTINEL = /^off_topic\s*(?:$|[^\p{L}\p{N}\s])/iu
 
 /**
  * Maps retrieved chunks straight onto citations. Deliberately NOT derived from pages the
@@ -294,7 +331,26 @@ export class AiSummaryService {
       )
       // The raw final message still retrieves something useful most of the time, so a failed
       // condensation degrades the query rather than the request.
-      return condensed?.trim() || last
+      const trimmed = condensed?.trim()
+      if (!trimmed) return last
+
+      // Whatever comes back becomes the embedding input verbatim, so a model that ignored
+      // "ONLY the rewritten query" and wrote a preamble, a rationale or an answer would
+      // quietly drag every similarity score down — and MIN_SIMILARITY has only 0.034 of
+      // headroom to give. A rewritten query is one short line; anything multi-line or
+      // oversized is a different kind of output, not a worse query.
+      //
+      // Deliberately NOT stripping a leading "...:" preamble: that pattern also matches
+      // legitimate queries like "Theorem 3: what does it state?" and would amputate the part
+      // that carries the meaning. A single-line inline preamble is therefore bounded here
+      // rather than removed — it still embeds near the document, so it degrades the query
+      // slightly instead of breaking it.
+      if (trimmed.includes('\n') || trimmed.length > CONDENSE_MAX_CHARS) {
+        this.logger.warn('Condensation returned a non-query shape, using the raw message')
+        return last
+      }
+
+      return trimmed
     } catch (err) {
       this.logger.warn(
         `Query condensation failed, using the raw message: ${(err as Error).message}`,
@@ -310,7 +366,14 @@ export class AiSummaryService {
       select: { files: { select: { key: true, mimeType: true } } },
     })
 
-    const supported = (post?.files ?? []).filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
+    // Restored from the pre-Task-11 implementation, as NotFoundException rather than the bare
+    // Error it used to be. Unreachable through HTTP — posts.service.chatWithPost 404s on a
+    // missing post before this service is called — but without it a deleted post answers
+    // "No document content available." as though the document were merely empty, and any
+    // future non-HTTP caller would get that silently.
+    if (!post) throw new NotFoundException('Post not found')
+
+    const supported = post.files.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
     const docs = await Promise.all(
       supported.map((f) =>
         this.extractor.extractFromKey(f.key, f.mimeType).catch((err: Error): ExtractedDocument => {
@@ -345,8 +408,19 @@ export class AiSummaryService {
     return { reply: offTopic ? 'OFF_TOPIC' : reply, offTopic, citations: [] }
   }
 
+  /**
+   * The PRIMARY refusal check — `MIN_SIMILARITY` is only a weak secondary guard, so this is
+   * what actually has to hold.
+   *
+   * It used to demand exact equality with 'OFF_TOPIC'. A model appending a full stop is
+   * entirely ordinary, and every near miss returned `offTopic: false`, which handed the
+   * student the literal sentinel string as their answer WITH citations attached to it — worse
+   * than the pre-retrieval behaviour, where the same near miss at least carried no sourcing.
+   * See OFF_TOPIC_SENTINEL for exactly what counts and what deliberately does not.
+   */
   private isOffTopic(reply: string): boolean {
-    return reply.trim().toUpperCase() === 'OFF_TOPIC'
+    const firstLine = reply.trim().split('\n', 1)[0].replace(EDGE_DECORATION, '')
+    return OFF_TOPIC_SENTINEL.test(firstLine)
   }
 
   async summarizePost(postId: string): Promise<void> {
