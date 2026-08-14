@@ -136,6 +136,25 @@ describe('AiSummaryService.chatWithPost', () => {
     expect(messages[0].content).toContain('Eigenvalues are defined as...')
   })
 
+  it('instructs the model to distinguish "not in these excerpts" from off-topic', async () => {
+    // v1 conflated the two: a question about the document's own subject that top-6 retrieval
+    // missed came back as a bare OFF_TOPIC, telling the student their reasonable question was
+    // unrelated. Measured live — "What does this document say about Fourier transforms?" against
+    // eigenvalue excerpts. With top-k = 6 on a long document that is the COMMON miss, not an
+    // edge case, so the split is the user-facing point of the v2 prompt.
+    //
+    // Asserted on the prompt that actually reaches llm.chat, and on both halves of the split:
+    // rule 4 must forbid the sentinel for in-subject misses, and rule 5 must still mandate it
+    // for genuinely unrelated questions. Collapsing them back into one rule fails here.
+    await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+    const prompt = lastSystemPrompt(llmMock)
+    expect(prompt).toContain('This is NOT off-topic')
+    expect(prompt).toContain('suggest rephrasing')
+    expect(prompt).toContain("unrelated to this document's subject altogether")
+    expect(prompt).toContain('respond with exactly: OFF_TOPIC')
+  })
+
   it('marks a null pageNum as unknown instead of inventing or dropping a page', async () => {
     // .docx has no page concept (hasPageNumbers === false), so pageNum is nullable. The two
     // failure modes: `[page null]`/`[page 0]` in the prompt, which invites the model to cite a
@@ -229,29 +248,67 @@ describe('AiSummaryService.chatWithPost', () => {
     expect(result.reply).toBe('An eigenvalue is a scalar.')
   })
 
-  it('refuses without calling the LLM when the best match is below the threshold', async () => {
-    // Derived from the constant, not hardcoded: Task 10 calibrates MIN_SIMILARITY, and a
-    // hardcoded 0.11 would silently stop testing anything near the boundary once the real
-    // value moved.
-    retrievalMock.searchPost.mockResolvedValue([
-      { id: 'c9', content: 'unrelated', pageNum: 2, similarity: MIN_SIMILARITY - 0.01 },
-    ])
+  describe('a below-threshold best match falls back and never refuses', () => {
+    // MIN_SIMILARITY is a retrieval-QUALITY gate, not a refusal gate. It used to refuse here
+    // pre-LLM with no fallback, on a floor whose on-topic side clears it by only 0.025 and
+    // which was calibrated against clean authored prose — so a real question about a scanned
+    // past paper could be flatly refused. Falling back can never wrongly refuse.
+    //
+    // Similarities are derived from the constant, never hardcoded: Task 10 calibrates
+    // MIN_SIMILARITY, and a hardcoded 0.64 would silently stop testing the boundary once the
+    // real value moved.
+    beforeEach(() => {
+      retrievalMock.searchPost.mockResolvedValue([
+        { id: 'c9', content: 'weakly related', pageNum: 2, similarity: MIN_SIMILARITY - 0.01 },
+      ])
+      prismaMock.post.findUnique.mockResolvedValue({
+        files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+      })
+      extractorMock.extractFromKey.mockResolvedValue({
+        pages: [{ num: 1, text: 'full document text' }],
+        hasPageNumbers: true,
+      })
+    })
 
-    const result = await service.chatWithPost('p1', [
-      { role: 'user', content: 'Who won the 2018 World Cup?' },
-    ])
+    it('answers from the full document text instead of refusing', async () => {
+      const result = await service.chatWithPost('p1', [
+        { role: 'user', content: 'Who won the 2018 World Cup?' },
+      ])
 
-    expect(result).toEqual({ reply: 'OFF_TOPIC', offTopic: true, citations: [] })
-    expect(llmMock.chat).not.toHaveBeenCalled()
+      expect(result.offTopic).toBe(false)
+      expect(result.reply).toBe('An eigenvalue is a scalar.')
+      expect(extractorMock.extractFromKey).toHaveBeenCalledWith('k.pdf', 'application/pdf')
+      expect(lastSystemPrompt(llmMock)).toContain('full document text')
+    })
+
+    it('emits no citations, because the weak chunks were not used', async () => {
+      // Citations must describe what the answer was actually built from. The reply here came
+      // from extracted full text, so citing the chunks that lost would be a fabricated source.
+      const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      expect(result.citations).toEqual([])
+    })
+
+    it('logs the peak similarity, which is the only thing distinguishing it from empty retrieval', async () => {
+      // Both branches now return the same shape by the same route, so this warning is the ONLY
+      // observable difference between them — it is what makes a mutation merging the two
+      // conditions detectable at all. It doubles as the calibration instrument for the open
+      // question about 0.65 on real scanned uploads.
+      const warn = jest.spyOn(service['logger'], 'warn').mockImplementation(() => {})
+
+      await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('below MIN_SIMILARITY'))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining((MIN_SIMILARITY - 0.01).toFixed(3)))
+    })
   })
 
-  it('refuses rather than falling back to full text when everything is below the threshold', async () => {
-    // The two empty-ish cases must stay distinct. Chunks exist here, so the document IS
-    // indexed and full-text extraction would add nothing but cost and an uncited answer.
-    // The mirror of the fallback assertions below.
-    retrievalMock.searchPost.mockResolvedValue([
-      { id: 'c9', content: 'unrelated', pageNum: 2, similarity: MIN_SIMILARITY - 0.2 },
-    ])
+  it('does not log the below-threshold warning when retrieval simply returned nothing', async () => {
+    // The mirror of the assertion above, and the other half of the discriminator: an unindexed
+    // post takes the same route for a DIFFERENT reason, and must not claim a weak score it never
+    // measured. Merging the two conditions into one `if` is caught here.
+    const warn = jest.spyOn(service['logger'], 'warn').mockImplementation(() => {})
+    retrievalMock.searchPost.mockResolvedValue([])
     prismaMock.post.findUnique.mockResolvedValue({
       files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
     })
@@ -260,16 +317,16 @@ describe('AiSummaryService.chatWithPost', () => {
       hasPageNumbers: true,
     })
 
-    const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+    await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
 
-    expect(result.offTopic).toBe(true)
-    expect(extractorMock.extractFromKey).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('below MIN_SIMILARITY'))
   })
 
-  it('answers normally when the best match is just above the threshold', async () => {
-    // The other half of the boundary. Without this, a comparison inverted to `>` — which
-    // would refuse everything at or above the floor — passes the refusal test above and
-    // breaks chat entirely.
+  it('uses the retrieved excerpts when the best match is just above the threshold', async () => {
+    // The other half of the boundary. Asserting on CITATIONS, not just `offTopic: false`: since
+    // the below-threshold case now also answers with offTopic false, a comparison inverted to
+    // `>` would send above-threshold traffic to the uncited fallback and still satisfy a
+    // looser assertion. Non-empty citations are what prove the RAG path ran.
     retrievalMock.searchPost.mockResolvedValue([
       { id: 'c9', content: 'closely related', pageNum: 2, similarity: MIN_SIMILARITY + 0.01 },
     ])
@@ -277,7 +334,9 @@ describe('AiSummaryService.chatWithPost', () => {
     const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
 
     expect(result.offTopic).toBe(false)
-    expect(llmMock.chat).toHaveBeenCalled()
+    expect(result.citations).toEqual([{ chunkId: 'c9', pageNum: 2, snippet: 'closely related' }])
+    expect(lastSystemPrompt(llmMock)).toContain('[page 2]')
+    expect(extractorMock.extractFromKey).not.toHaveBeenCalled()
   })
 
   it('still honours an OFF_TOPIC sentinel emitted by the model', async () => {

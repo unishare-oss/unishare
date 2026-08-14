@@ -6,7 +6,18 @@ import { toVectorLiteral } from '../embedding/vector-literal'
 export const RETRIEVAL_TOP_K = 6
 
 /**
- * Cosine-similarity floor below which the best match is treated as unrelated to the document.
+ * Cosine-similarity floor below which the best match is treated as too weak to answer FROM.
+ *
+ * A RETRIEVAL-QUALITY gate, not a refusal gate, and the distinction is the whole point. Nothing
+ * refuses a question on the strength of this number. `AiSummaryService.chatWithPost` routes a
+ * below-floor result to the full-text fallback — the same route it takes when a post has no
+ * indexed chunks at all — because "the best chunk is weak" and "there are no chunks" mean the
+ * same thing operationally: retrieval did not help. Refusal there is reachable only through the
+ * model-emitted OFF_TOPIC sentinel.
+ *
+ * It used to refuse, pre-LLM and with no fallback. That put more weight on the number than the
+ * measurement below can carry — see warning 1 — so if you are tempted to restore it, read that
+ * warning first and then don't.
  *
  * Calibrated 2026-08-14 by retrieval.golden.spec.ts against test/fixtures/golden (18 pages of
  * linear algebra, nomic-embed-text, CHUNK_MAX_CHARS = 2000): the lowest on-topic best match
@@ -16,13 +27,16 @@ export const RETRIEVAL_TOP_K = 6
  *
  * TWO WARNINGS, both load-bearing:
  *
- * 1. That gap is 0.034 wide. nomic-embed-text has a high similarity floor — "What is the
- *    capital of France?" still scores 0.509 against a linear-algebra page — so on- and
- *    off-topic bands nearly touch. This threshold is a weak secondary signal, NOT a reliable
- *    off-topic detector. Keep the model-emitted OFF_TOPIC sentinel as the primary check.
+ * 1. That gap is 0.034 wide, and the on-topic side clears it by only 0.025. nomic-embed-text has
+ *    a high similarity floor — "What is the capital of France?" still scores 0.509 against a
+ *    linear-algebra page — so on- and off-topic bands nearly touch. This threshold is a weak
+ *    signal, NOT a reliable off-topic detector, which is exactly why it no longer refuses
+ *    anything. The model-emitted OFF_TOPIC sentinel is the only refusal check.
  * 2. The fixture is authored prose: no OCR noise, no tables, no figure captions, uniform
- *    register. Real uploads score lower and more raggedly, so 0.675 is an optimistic floor.
- *    Re-validate against a genuine past paper before trusting a refusal in production.
+ *    register. Real uploads score lower and more raggedly, so 0.675 is an optimistic floor. The
+ *    consequence is now a lost citation rather than a wrongly refused question, which is what
+ *    makes the optimism survivable. To find out how often it happens on real uploads, grep the
+ *    API logs for "below MIN_SIMILARITY" — chatWithPost warns with the actual peak score.
  *
  * Re-run `RUN_GOLDEN_EVAL=1 pnpm --filter api test -- retrieval.golden` after changing the
  * embedding model or the chunk size, and update the bounds recorded in that spec too.
