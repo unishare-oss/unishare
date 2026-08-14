@@ -6,12 +6,28 @@ import { toVectorLiteral } from '../embedding/vector-literal'
 export const RETRIEVAL_TOP_K = 6
 
 /**
- * Cosine-similarity floor below which the best match is treated as unrelated to the
- * document. CALIBRATED IN TASK 10 against the golden set — do not adjust by intuition.
- * 0.5 is the starting point: for nomic-embed-text, on-topic matches typically land
- * around 0.6-0.8 and unrelated text around 0.3-0.5.
+ * Cosine-similarity floor below which the best match is treated as unrelated to the document.
+ *
+ * Calibrated 2026-08-14 by retrieval.golden.spec.ts against test/fixtures/golden (18 pages of
+ * linear algebra, nomic-embed-text, CHUNK_MAX_CHARS = 2000): the lowest on-topic best match
+ * scored 0.675 and the highest off-topic best match scored 0.641. 0.65 sits in that gap,
+ * deliberately near the off-topic ceiling — a wrong refusal of a real question is worse for a
+ * student than a weak answer to a marginal one.
+ *
+ * TWO WARNINGS, both load-bearing:
+ *
+ * 1. That gap is 0.034 wide. nomic-embed-text has a high similarity floor — "What is the
+ *    capital of France?" still scores 0.509 against a linear-algebra page — so on- and
+ *    off-topic bands nearly touch. This threshold is a weak secondary signal, NOT a reliable
+ *    off-topic detector. Keep the model-emitted OFF_TOPIC sentinel as the primary check.
+ * 2. The fixture is authored prose: no OCR noise, no tables, no figure captions, uniform
+ *    register. Real uploads score lower and more raggedly, so 0.675 is an optimistic floor.
+ *    Re-validate against a genuine past paper before trusting a refusal in production.
+ *
+ * Re-run `RUN_GOLDEN_EVAL=1 pnpm --filter api test -- retrieval.golden` after changing the
+ * embedding model or the chunk size, and update the bounds recorded in that spec too.
  */
-export const MIN_SIMILARITY = 0.5
+export const MIN_SIMILARITY = 0.65
 
 export interface RetrievedChunk {
   id: string
