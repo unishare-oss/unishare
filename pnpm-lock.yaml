@@ -146,6 +146,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       groq-sdk:
         specifier: ^1.4.0
         version: 1.5.0

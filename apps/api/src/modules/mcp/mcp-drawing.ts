@@ -5,6 +5,8 @@ type McpDrawingStyle = {
   backgroundColor?: string
 }
 
+type McpDrawingPoint = [number, number]
+
 export type McpDrawingInput =
   | ({
       type: 'rectangle' | 'ellipse' | 'diamond'
@@ -14,16 +16,23 @@ export type McpDrawingInput =
       height: number
     } & McpDrawingStyle)
   | ({ type: 'text'; x: number; y: number; text: string } & McpDrawingStyle)
-  | ({ type: 'arrow'; x: number; y: number; endX: number; endY: number } & McpDrawingStyle)
+  | ({
+      type: 'arrow'
+      x: number
+      y: number
+      endX?: number
+      endY?: number
+      points?: McpDrawingPoint[]
+    } & McpDrawingStyle)
 
 function randomInteger() {
   return Math.floor(Math.random() * 2 ** 31)
 }
 
 const defaultColors = {
-  rectangle: { strokeColor: '#2563eb', backgroundColor: '#dbeafe' },
-  diamond: { strokeColor: '#d97706', backgroundColor: '#fef3c7' },
-  ellipse: { strokeColor: '#16a34a', backgroundColor: '#dcfce7' },
+  rectangle: { strokeColor: '#2563eb', backgroundColor: 'transparent' },
+  diamond: { strokeColor: '#d97706', backgroundColor: 'transparent' },
+  ellipse: { strokeColor: '#16a34a', backgroundColor: 'transparent' },
   arrow: { strokeColor: '#475569', backgroundColor: 'transparent' },
   text: { strokeColor: '#1e1e1e', backgroundColor: 'transparent' },
 } as const
@@ -100,14 +109,18 @@ export function createExcalidrawElements(inputs: McpDrawingInput[]): Record<stri
         }
       }
       case 'arrow': {
-        const width = input.endX - input.x
-        const height = input.endY - input.y
+        const points = input.points ?? [
+          [0, 0],
+          [(input.endX ?? input.x) - input.x, (input.endY ?? input.y) - input.y],
+        ]
+        const minX = Math.min(...points.map(([x]) => x))
+        const minY = Math.min(...points.map(([, y]) => y))
+        const normalizedPoints = points.map(([x, y]) => [x - minX, y - minY])
+        const width = Math.max(...normalizedPoints.map(([x]) => x))
+        const height = Math.max(...normalizedPoints.map(([, y]) => y))
         return {
-          ...baseElement('arrow', input.x, input.y, width, height, input),
-          points: [
-            [0, 0],
-            [width, height],
-          ],
+          ...baseElement('arrow', input.x + minX, input.y + minY, width, height, input),
+          points: normalizedPoints,
           lastCommittedPoint: null,
           startBinding: null,
           endBinding: null,

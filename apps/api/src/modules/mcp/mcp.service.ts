@@ -5,6 +5,7 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { CollabService } from '@/modules/collab/collab.service'
 import { createExcalidrawElements, type McpDrawingInput } from './mcp-drawing'
+import { drawingGuide } from './mcp-drawing-guide'
 
 export interface McpAuthSession {
   userId: string
@@ -16,6 +17,8 @@ const drawingStyleSchema = {
   strokeColor: hexColorSchema.optional(),
   backgroundColor: z.union([z.literal('transparent'), hexColorSchema]).optional(),
 }
+
+const drawingPointSchema = z.tuple([z.number(), z.number()])
 
 const drawingElementSchema = z.discriminatedUnion('type', [
   z.object({
@@ -33,15 +36,22 @@ const drawingElementSchema = z.discriminatedUnion('type', [
     text: z.string().min(1),
     ...drawingStyleSchema,
   }),
-  z.object({
-    type: z.literal('arrow'),
-    x: z.number(),
-    y: z.number(),
-    endX: z.number(),
-    endY: z.number(),
-    ...drawingStyleSchema,
-  }),
+  z
+    .object({
+      type: z.literal('arrow'),
+      x: z.number(),
+      y: z.number(),
+      endX: z.number().optional(),
+      endY: z.number().optional(),
+      points: z.array(drawingPointSchema).min(2).optional(),
+      ...drawingStyleSchema,
+    })
+    .refine((input) => input.points || (input.endX !== undefined && input.endY !== undefined), {
+      message: 'Arrows need points or both endX and endY',
+    }),
 ])
+
+const drawingElementsSchema = z.array(drawingElementSchema).min(1).max(100)
 
 @Injectable()
 export class McpService {
@@ -87,13 +97,26 @@ export class McpService {
       'draw_board',
       {
         description:
-          'Draw clear, labeled diagrams. Use rectangles for systems or processes, diamonds for decisions, ellipses for entry or exit points, text for labels, and arrows for flow. The API automatically colors rectangles blue, diamonds amber, and ellipses green. Use optional strokeColor and backgroundColor (#RRGGBB) only when a different semantic color is needed, such as red for errors.',
+          'Draw a clear, labeled diagram. Before the first draw_board call in a task, you MUST call read_me and apply its rules. Pass elements as a JSON-stringified array. Arrows accept points as relative [x, y] waypoints for orthogonal or bent routes; use endX/endY only for a straight arrow.',
         inputSchema: z.object({
           slug: z.string().min(1),
-          elements: z.array(drawingElementSchema).min(1).max(100),
+          elements: z.string().min(2),
         }),
       },
       async (input) => this.drawBoard(session, input),
+    )
+
+    server.registerTool(
+      'read_me',
+      {
+        description:
+          'Read the UniShare Excalidraw drawing rules. Call this before the first draw_board call in a task and follow the rules for every draw.',
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => ({
+        content: [{ type: 'text' as const, text: drawingGuide.trim() }],
+      }),
     )
 
     try {
@@ -173,7 +196,7 @@ export class McpService {
     }
   }
 
-  async drawBoard(session: McpAuthSession, input: { slug: string; elements: McpDrawingInput[] }) {
+  async drawBoard(session: McpAuthSession, input: { slug: string; elements: string }) {
     if (!this.hasScope(session, 'boards:write')) {
       return {
         content: [{ type: 'text' as const, text: 'Missing required scope: boards:write' }],
@@ -181,7 +204,25 @@ export class McpService {
       }
     }
 
-    const elements = createExcalidrawElements(input.elements)
+    let parsedElements: unknown
+    try {
+      parsedElements = JSON.parse(input.elements)
+    } catch {
+      return {
+        content: [{ type: 'text' as const, text: 'Invalid elements: expected a JSON array' }],
+        isError: true,
+      }
+    }
+
+    const validatedElements = drawingElementsSchema.safeParse(parsedElements)
+    if (!validatedElements.success) {
+      return {
+        content: [{ type: 'text' as const, text: 'Invalid elements: drawing rules not satisfied' }],
+        isError: true,
+      }
+    }
+
+    const elements = createExcalidrawElements(validatedElements.data as McpDrawingInput[])
     await this.collabService.drawRoom(input.slug, elements, session.userId)
     const result = { slug: input.slug, updatedElements: elements.length }
 
