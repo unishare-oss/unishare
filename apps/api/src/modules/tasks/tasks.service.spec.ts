@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { TasksService } from './tasks.service'
+import { TasksService, TASK_LOCK_TTL_MS, TaskLockName } from './tasks.service'
 import { PrismaService } from '@/prisma/prisma.service'
+import { CronLockService } from '@/common/cron-lock.service'
 import { StorageService } from '@/modules/storage/storage.service'
 
 describe('TasksService', () => {
@@ -14,6 +15,7 @@ describe('TasksService', () => {
     [key: string]: any
   }
   let storage: { deleteFile: jest.Mock }
+  let cronLock: { acquire: jest.Mock; release: jest.Mock; renew: jest.Mock }
 
   beforeEach(async () => {
     prisma = {
@@ -27,12 +29,20 @@ describe('TasksService', () => {
       },
     }
     storage = { deleteFile: jest.fn() }
+    // Defaults to "this replica won the race", so every pre-existing body assertion below
+    // still exercises the body exactly as it did before the lock was introduced.
+    cronLock = {
+      acquire: jest.fn().mockResolvedValue(true),
+      release: jest.fn().mockResolvedValue(undefined),
+      renew: jest.fn().mockResolvedValue(undefined),
+    }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: storage },
+        { provide: CronLockService, useValue: cronLock },
       ],
     }).compile()
 
@@ -76,6 +86,113 @@ describe('TasksService', () => {
       await service.pruneAnonymousUsers()
 
       expect(logSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  // Production runs api.replicas: 2 and ScheduleModule registers @Cron in every replica, so
+  // each job below fires once per pod per tick. Every write is idempotent, so this is a
+  // wasted-work fix rather than a corruption fix -- but the guarantee still has to hold.
+  describe('cross-pod lock', () => {
+    /**
+     * One row per job: the handler, and the Prisma call that proves its body actually ran.
+     * Asserting on the Prisma call rather than on a spy over the callback is deliberate --
+     * it is the observable effect a duplicate replica would have on the database.
+     */
+    const jobs: { name: TaskLockName; run: () => Promise<void>; body: () => jest.Mock }[] = [
+      {
+        name: 'prune-old-notifications',
+        run: () => service.pruneOldNotifications(),
+        body: () => prisma.notification.deleteMany,
+      },
+      {
+        name: 'prune-expired-sessions',
+        run: () => service.pruneExpiredSessions(),
+        body: () => prisma.session.deleteMany,
+      },
+      {
+        name: 'lift-expired-bans',
+        run: () => service.liftExpiredBans(),
+        body: () => prisma.user.updateMany,
+      },
+      {
+        name: 'prune-anonymous-users',
+        run: () => service.pruneAnonymousUsers(),
+        body: () => prisma.user.deleteMany,
+      },
+      {
+        name: 'purge-deleted-content',
+        run: () => service.purgeDeletedContent(),
+        body: () => prisma.comment.deleteMany,
+      },
+    ]
+
+    beforeEach(() => {
+      for (const model of ['user', 'notification', 'session', 'comment', 'post'] as const) {
+        for (const fn of ['deleteMany', 'updateMany'] as const) {
+          prisma[model][fn]?.mockResolvedValue({ count: 0 })
+        }
+      }
+    })
+
+    it.each(jobs)('$name acquires its own lock with its own TTL', async ({ name, run }) => {
+      await run()
+      expect(cronLock.acquire).toHaveBeenCalledWith(name, TASK_LOCK_TTL_MS[name])
+    })
+
+    it.each(jobs)('$name runs its body when the lock is acquired', async ({ run, body }) => {
+      await run()
+      expect(body()).toHaveBeenCalled()
+    })
+
+    it.each(jobs)('$name releases the lock afterwards', async ({ name, run }) => {
+      await run()
+      expect(cronLock.release).toHaveBeenCalledWith(name)
+    })
+
+    it.each(jobs)(
+      '$name does NOT touch the database when another replica holds the lock',
+      async ({ run, body }) => {
+        cronLock.acquire.mockResolvedValue(false)
+        await run()
+        expect(body()).not.toHaveBeenCalled()
+      },
+    )
+
+    // Releasing here would let the losing replica free the winner's lock mid-run.
+    it.each(jobs)('$name does NOT release a lock it never held', async ({ run }) => {
+      cronLock.acquire.mockResolvedValue(false)
+      await run()
+      expect(cronLock.release).not.toHaveBeenCalled()
+    })
+
+    // A leaked lock silently disables the job on BOTH replicas until the TTL expires, and
+    // nothing errors while that is happening -- the worst failure available here.
+    it.each(jobs)(
+      '$name releases the lock even when its body throws',
+      async ({ name, run, body }) => {
+        body().mockRejectedValue(new Error('db down'))
+        await expect(run()).rejects.toThrow('db down')
+        expect(cronLock.release).toHaveBeenCalledWith(name)
+      },
+    )
+
+    // Pins the VALUES. Every assertion above reads the same constant the implementation reads,
+    // which is a tautology: a TTL could regress to 2 hours -- long enough for one crash to
+    // skip the hourly job outright -- and they would all still pass.
+    it('pins each TTL below its job cadence', () => {
+      const hour = 60 * 60 * 1000
+      expect(TASK_LOCK_TTL_MS['lift-expired-bans']).toBeLessThan(hour)
+      for (const ttl of Object.values(TASK_LOCK_TTL_MS)) {
+        expect(ttl).toBe(5 * 60 * 1000)
+      }
+    })
+
+    // The stagger at 00:00 / 00:05 / 00:15 / 00:20 only survives if the jobs cannot contend
+    // for one another's locks. Distinct keys are what guarantees that.
+    it('gives every job a distinct lock key', () => {
+      const keys = Object.keys(TASK_LOCK_TTL_MS)
+      expect(new Set(keys).size).toBe(keys.length)
+      expect(keys).toHaveLength(5)
     })
   })
 })

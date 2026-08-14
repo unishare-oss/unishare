@@ -10,9 +10,10 @@ import { PresenceService } from './presence.service'
 import { StorageModule } from '../storage/storage.module'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
+import { CronLockModule } from '@/common/cron-lock.module'
 
 @Module({
-  imports: [StorageModule, ConfigModule, NotificationsModule],
+  imports: [StorageModule, ConfigModule, NotificationsModule, CronLockModule],
   controllers: [ChatController],
   providers: [
     {
