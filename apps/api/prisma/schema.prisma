@@ -204,6 +204,18 @@ model PostChunk {
   @@unique([fileId, chunkIndex])
   @@index([postId])
   @@map("post_chunk")
+
+  // `post_chunk_embedding_idx` — the HNSW index on `embedding` — exists in the database but
+  // CANNOT be represented here: Prisma models neither the `vector` type nor `USING hnsw`. It is
+  // created in raw SQL by 20260729000000_add_post_chunk_vectors.
+  //
+  // Consequence: `prisma migrate dev` diffs this schema against the database, sees an index it
+  // has no source for, and generates `DROP INDEX "post_chunk_embedding_idx"`. That has already
+  // happened once. DELETE any such migration — do not apply or commit it. Dropping the index
+  // does not break correctness, so nothing would fail loudly; retrieval would just fall back to
+  // sequential scans and quietly get slower as the corpus grows.
+  //
+  // migrations.spec.ts fails the build if such a migration is ever committed.
 }
 
 model Comment {
