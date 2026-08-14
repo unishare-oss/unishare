@@ -49,12 +49,29 @@ export class AiChatDto {
   messages: AiChatMessageDto[]
 }
 
+export class AiChatCitationDto {
+  @ApiProperty()
+  chunkId: string
+
+  @ApiProperty({ nullable: true, description: 'Null for .docx, which has no pages' })
+  pageNum: number | null
+
+  @ApiProperty({ description: 'Short excerpt of the cited chunk' })
+  snippet: string
+}
+
 export class AiChatResponseDto {
   @ApiProperty({ description: 'AI reply text, or "OFF_TOPIC" sentinel' })
   reply: string
 
   @ApiProperty({ description: 'True when the question was unrelated to the document' })
   offTopic: boolean
+
+  // Empty on the full-text fallback path (a post with no indexed chunks yet) and on any
+  // off-topic refusal. Never partially populated: every entry corresponds to a chunk that
+  // was actually retrieved and placed in the model's context.
+  @ApiProperty({ type: [AiChatCitationDto] })
+  citations: AiChatCitationDto[]
 }
 
 // Keep alias for internal use
