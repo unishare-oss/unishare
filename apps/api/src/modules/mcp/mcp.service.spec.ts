@@ -1,5 +1,6 @@
 import { McpService, type McpAuthSession } from './mcp.service'
 import type { CollabService } from '@/modules/collab/collab.service'
+import { drawingGuide } from './mcp-drawing-guide'
 
 jest.mock('@/modules/collab/collab.service', () => ({
   CollabService: class CollabService {},
@@ -177,13 +178,21 @@ describe('McpService', () => {
     })
   })
 
+  describe('drawing guide', () => {
+    it('requires agents to read the rules before drawing', () => {
+      expect(drawingGuide).toContain('Call read_me before the first draw_board call in a task')
+      expect(drawingGuide).toContain('do not let arrows overlap')
+      expect(drawingGuide).toContain('Keep shape backgrounds transparent by default')
+    })
+  })
+
   describe('drawBoard', () => {
     const elements = [{ type: 'rectangle' as const, x: 100, y: 100, width: 200, height: 100 }]
 
     it('writes elements using the authenticated user for ownership verification', async () => {
       const result = await service.drawBoard(
         { userId: 'user-1', scopes: 'openid boards:write' },
-        { slug: 'board-slug', elements },
+        { slug: 'board-slug', elements: JSON.stringify(elements) },
       )
 
       expect(collabService.drawRoom).toHaveBeenCalledWith(
@@ -203,10 +212,23 @@ describe('McpService', () => {
       await expect(
         service.drawBoard(
           { userId: 'user-1', scopes: 'openid boards:read' },
-          { slug: 'board-slug', elements },
+          { slug: 'board-slug', elements: JSON.stringify(elements) },
         ),
       ).resolves.toEqual({
         content: [{ type: 'text', text: 'Missing required scope: boards:write' }],
+        isError: true,
+      })
+      expect(collabService.drawRoom).not.toHaveBeenCalled()
+    })
+
+    it('rejects malformed element JSON without writing the board', async () => {
+      await expect(
+        service.drawBoard(
+          { userId: 'user-1', scopes: 'openid boards:write' },
+          { slug: 'board-slug', elements: 'not-json' },
+        ),
+      ).resolves.toEqual({
+        content: [{ type: 'text', text: 'Invalid elements: expected a JSON array' }],
         isError: true,
       })
       expect(collabService.drawRoom).not.toHaveBeenCalled()
