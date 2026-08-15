@@ -53,7 +53,12 @@ export class AiChatCitationDto {
   @ApiProperty()
   chunkId: string
 
-  @ApiProperty({ nullable: true, description: 'Null for .docx, which has no pages' })
+  // `type: Number` is required, not decorative. Without it Swagger has no type for a
+  // `number | null` union — reflection reports Object — and Orval generated
+  // `{ [key: string]: unknown } | null`, so the frontend could not treat a page as a number
+  // without casting. The nullability is real (mammoth returns a .docx as one page), so the
+  // fix is to declare the type, never to drop the null.
+  @ApiProperty({ type: Number, nullable: true, description: 'Null for .docx, which has no pages' })
   pageNum: number | null
 
   @ApiProperty({ description: 'Short excerpt of the cited chunk' })
