@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { usePostAiChat } from '@/hooks/use-post-ai-chat'
+import { usePostAiChat, type AiChatCitation } from '@/hooks/use-post-ai-chat'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -35,6 +35,60 @@ function preparingMessage(indexedChunks: number): string {
   return (
     `Preparing this document for AI chat — indexed ${indexedChunks} ${label} so far. ` +
     `You can ask questions now, but answers won't cite page numbers until this finishes.`
+  )
+}
+
+/** Built as one string for the same whitespace reason as `preparingMessage` above. */
+function unpaginatedLabel(count: number): string {
+  return `${count} ${count === 1 ? 'excerpt' : 'excerpts'} · no page numbers`
+}
+
+/**
+ * The excerpts retrieval put in front of the model — every one of them, not the subset the model
+ * actually leaned on, which the server has no way to know.
+ *
+ * So this is deliberately framed as "Sources consulted" and rendered as a footer under the whole
+ * message rather than inline with any sentence. Nothing here may read as "this claim came from
+ * page 12": the model can and does reply "these excerpts do not cover X" with citations still
+ * attached, and under this framing that reads correctly — here is what was searched, and it
+ * didn't contain the answer.
+ *
+ * Pages are de-duplicated because the top chunks frequently share a page. Chunks with no page
+ * (`.docx` has no pagination) are counted instead of being given an invented page label, and
+ * snippets are not rendered at all: capped at 160 chars and often starting mid-sentence, they
+ * would masquerade as quotations of record.
+ */
+function CitationFooter({ citations }: { citations: AiChatCitation[] }) {
+  const pages = [...new Set(citations.map((c) => c.pageNum).filter((p) => p !== null))].sort(
+    (a, b) => a - b,
+  )
+
+  return (
+    <div
+      role="note"
+      className="flex flex-wrap items-center gap-1 border-t border-border/60 pt-1.5 mt-0.5"
+    >
+      <span
+        className="font-mono text-[10px] uppercase tracking-wide text-text-muted"
+        title="Excerpts from this document that were retrieved and shown to the AI. Not every one of them necessarily shaped the answer."
+      >
+        Sources consulted
+      </span>
+      {pages.length > 0 ? (
+        pages.map((page) => (
+          <span
+            key={page}
+            className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border text-text-muted"
+          >
+            {`p. ${page}`}
+          </span>
+        ))
+      ) : (
+        <span className="font-mono text-[10px] text-text-muted">
+          {unpaginatedLabel(citations.length)}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -116,7 +170,8 @@ export function PostAiChat({ post }: PostAiChatProps) {
               <div className="px-4 pb-4 flex flex-col gap-3">
                 {messages.length === 0 && (
                   <p className="text-xs text-text-muted py-2">
-                    Ask a question about this document.
+                    Ask a question about this document. This conversation isn&apos;t saved — it
+                    clears when you leave the page.
                   </p>
                 )}
 
@@ -136,14 +191,21 @@ export function PostAiChat({ post }: PostAiChatProps) {
                             msg.role === 'user'
                               ? 'bg-primary text-primary-foreground'
                               : msg.offTopic
-                                ? 'bg-muted border border-border text-text-muted flex items-start gap-1.5'
+                                ? 'bg-muted border border-border text-text-muted'
                                 : 'bg-muted border border-border',
                           )}
                         >
-                          {msg.offTopic && (
-                            <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-amber" />
-                          )}
-                          {msg.content}
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-start gap-1.5">
+                              {msg.offTopic && (
+                                <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-amber" />
+                              )}
+                              <span>{msg.content}</span>
+                            </div>
+                            {msg.citations && msg.citations.length > 0 && (
+                              <CitationFooter citations={msg.citations} />
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -189,6 +251,14 @@ export function PostAiChat({ post }: PostAiChatProps) {
                       the whole document and won&apos;t cite page numbers.
                     </span>
                   </div>
+                )}
+
+                {/* Sits outside the scrolling message list on purpose, so the reminder that
+                    nothing is persisted stays visible instead of scrolling away with history. */}
+                {messages.length > 0 && (
+                  <p className="font-mono text-[10px] text-text-muted uppercase tracking-wide">
+                    Not saved
+                  </p>
                 )}
 
                 <div className="flex gap-2 items-end">
