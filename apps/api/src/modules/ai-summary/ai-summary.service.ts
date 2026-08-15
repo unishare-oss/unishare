@@ -144,7 +144,10 @@ Generate the questions now:`
  * unrelated probes — trivia, an instruction-shaped query, another science, and a prompt
  * injection — still return the bare sentinel.
  */
-const RAG_SYSTEM_PROMPT = `You are a study assistant for university students. Answer using ONLY the document excerpts below.
+// Exported solely so scripts/probe-rag-prompt.ts can validate THIS text against a live model
+// rather than a copy of it. A copy would drift, and the probe's whole value is that it exercises
+// what actually ships.
+export const RAG_SYSTEM_PROMPT = `You are a study assistant for university students. Answer using ONLY the document excerpts below.
 
 STRICT RULES:
 1. Answer only from the excerpts. Never use outside knowledge.
