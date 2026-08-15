@@ -162,6 +162,30 @@ describe('PostAiChat citations', () => {
     expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 12')
   })
 
+  it('puts the sources under the whole answer, never above it or inline beside it', async () => {
+    // The one constraint this feature hangs on. Every other citation assertion is scoped inside
+    // the footer, which leaves its POSITION unpinned — and a footer sitting inline next to a
+    // sentence is exactly the "this sentence came from page 12" reading the design forbids.
+    givenStatus('ready', 40)
+    mocks.messages = [
+      assistant('A scalar λ such that Av = λv.', [
+        { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' },
+      ]),
+    ]
+    await renderOpened()
+
+    const body = screen.getByRole('note').parentElement!
+
+    // DOM order: the answer first, the sources after it.
+    expect(body.textContent).toBe('A scalar λ such that Av = λv.Sources consultedp. 12')
+    // jsdom has no layout engine, so the stacking direction can only be asserted through the
+    // class that produces it. `flex-row` here would sit the chips beside the sentence.
+    expect(body).toHaveClass('flex-col')
+    expect(body).not.toHaveClass('flex-row')
+    // The rule that reads the block as a footer rather than as a trailing caption.
+    expect(screen.getByRole('note')).toHaveClass('border-t')
+  })
+
   it('de-duplicates and orders the pages, because the top chunks repeat a page', async () => {
     givenStatus('ready', 40)
     mocks.messages = [

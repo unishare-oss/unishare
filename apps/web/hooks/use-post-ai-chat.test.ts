@@ -88,6 +88,30 @@ describe('usePostAiChat', () => {
     expect(result.current.messages[1].content).not.toContain('OFF_TOPIC')
   })
 
+  it('substitutes the sentinel even if the server forgets to set the flag', async () => {
+    // A contract violation rather than a live path, but it costs one `||` to close: the sentinel
+    // is a protocol token and must never be readable as an answer.
+    mutateAsync.mockResolvedValue(
+      envelope({
+        reply: 'OFF_TOPIC',
+        offTopic: false,
+        citations: [{ chunkId: 'c1', pageNum: 3, snippet: 'x' }],
+      }),
+    )
+
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    await act(async () => {
+      await result.current.sendMessage('Who won the World Cup?')
+    })
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+    expect(result.current.messages[1].content).not.toContain('OFF_TOPIC')
+    expect(result.current.messages[1].content).toContain(
+      'only answer questions about this document',
+    )
+    expect(result.current.messages[1].citations).toEqual([])
+  })
+
   it('drops citations on an off-topic reply even if the server sends some', async () => {
     // The server contract says citations are empty here, but the UI must not depend on that:
     // attaching sources to a refusal reads as evidence for a statement that has none.
@@ -146,9 +170,9 @@ describe('usePostAiChat', () => {
   })
 
   it('normalises a non-numeric pageNum to null rather than passing it through', async () => {
-    // The generated type for `pageNum` is `{ [key: string]: unknown } | null` — the API DTO's
-    // `@ApiProperty({ nullable: true })` carries no `type: Number`, so Swagger emits an untyped
-    // nullable. Anything that is not a number must become null, never a rendered page label.
+    // `pageNum` is typed `number | null`, but the type describes the contract, not the payload
+    // that actually arrives — an omitted field compiles fine and is not a page. Anything
+    // non-numeric must become null rather than reaching the UI as a page label.
     mutateAsync.mockResolvedValue(
       envelope({
         reply: 'From the document.',

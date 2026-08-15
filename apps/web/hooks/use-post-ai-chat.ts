@@ -29,11 +29,14 @@ const OFF_TOPIC_MESSAGE =
 
 const ERROR_MESSAGE = 'Something went wrong. Please try again.'
 
+/** What the server canonicalises an off-topic reply to. It must never reach the screen. */
+const OFF_TOPIC_SENTINEL = 'OFF_TOPIC'
+
 /**
- * The generated `AiChatCitationDto.pageNum` is `{ [key: string]: unknown } | null`, because the
- * API DTO's `@ApiProperty({ nullable: true })` carries no `type: Number` and Swagger emits an
- * untyped nullable. Rather than widen the response cast, narrow here: anything that is not a
- * number becomes null, so the UI can only ever render a page label it actually received.
+ * `pageNum` is typed `number | null`, but that is a claim about the contract, not about the bytes
+ * on the wire — an absent field or a stringified number would both satisfy the compiler and
+ * neither is a page. So this narrows at runtime: anything non-numeric becomes null, and the UI can
+ * only ever render a page label it was actually given.
  */
 function normaliseCitations(raw: AiChatCitationDto[] | undefined): AiChatCitation[] {
   if (!Array.isArray(raw)) return []
@@ -76,7 +79,9 @@ export function usePostAiChat(postId: string) {
         // payload sits at `result.data`. Reaching one level further is the bug that shipped in
         // `use-ai-index-status.ts`.
         const data = result.data
-        const offTopic = data.offTopic
+        // The flag is the contract, but the literal sentinel is checked too: a server that sent
+        // `{ reply: 'OFF_TOPIC', offTopic: false }` would otherwise print the sentinel verbatim.
+        const offTopic = data.offTopic || data.reply === OFF_TOPIC_SENTINEL
 
         updateMessages((prev) => [
           ...prev,

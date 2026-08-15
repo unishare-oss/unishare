@@ -68,10 +68,10 @@ function CitationFooter({ citations }: { citations: AiChatCitation[] }) {
       role="note"
       className="flex flex-wrap items-center gap-1 border-t border-border/60 pt-1.5 mt-0.5"
     >
-      <span
-        className="font-mono text-[10px] uppercase tracking-wide text-text-muted"
-        title="Excerpts from this document that were retrieved and shown to the AI. Not every one of them necessarily shaped the answer."
-      >
+      {/* Deliberately no `title` tooltip: it is invisible on touch, unreachable by keyboard and
+          announced inconsistently, so it cannot be the thing that makes this block honest. The
+          visible label has to carry that on its own. */}
+      <span className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
         Sources consulted
       </span>
       {pages.length > 0 ? (
