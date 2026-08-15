@@ -28,7 +28,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ConfigService } from '@nestjs/config'
-import { RAG_SYSTEM_PROMPT } from '../src/modules/ai-summary/ai-summary.service'
+import { RAG_SYSTEM_PROMPT, isOffTopicReply } from '../src/modules/ai-summary/ai-summary.service'
 import { LlmService } from '../src/modules/ai/llm/llm.service'
 
 /**
@@ -54,6 +54,9 @@ singular. The sum of the eigenvalues equals the trace and their product equals t
 [page 3]
 The rank of a matrix is the dimension of its column space. The rank-nullity theorem states that for
 a matrix with n columns, rank plus nullity equals n.`
+
+/** Must track the `temperature` chatWithPost and chatWithFullText pass to `llm.chat`. */
+const PRODUCTION_TEMPERATURE = 0.3
 
 type Expectation = 'refuse' | 'answer'
 
@@ -135,28 +138,46 @@ async function main(): Promise<void> {
           { role: 'system', content: system },
           { role: 'user', content: probe.question },
         ],
-        { maxTokens: 300 },
+        // Must match what chatWithPost/chatWithFullText actually send. Decoration variance is
+        // precisely what rises with temperature, so probing at 0 while the service samples at
+        // 0.3 would confirm the sentinel at a temperature production never uses.
+        { maxTokens: 300, temperature: PRODUCTION_TEMPERATURE },
       )) ?? ''
 
     const trimmed = reply.trim()
-    // Deliberately loose: the point is to notice the token appearing AT ALL where it should not,
-    // and to notice it missing where it should. Matching exactly as the service does would hide
-    // a model that started decorating the sentinel.
-    const mentionsSentinel = /OFF_TOPIC/i.test(trimmed)
-    const ok = probe.expect === 'refuse' ? mentionsSentinel : !mentionsSentinel
+
+    // Two matches on purpose, and the gap between them IS the finding.
+    //   `mentions` is deliberately loose, so a model that has STARTED decorating the sentinel is
+    //     visible rather than hidden by the service's own stricter rule.
+    //   `refuses` is the SHIPPING predicate, imported — the probe must fail when the service
+    //     would mishandle a reply, not merely when the token is absent.
+    const mentions = /OFF_TOPIC/i.test(trimmed)
+    const refuses = isOffTopicReply(trimmed)
+
+    // A reply the service will not treat as a refusal but which mentions the token is the exact
+    // prefixed-refusal failure — the student is shown the sentinel as an answer.
+    const unrecognised = mentions && !refuses
+    const ok = probe.expect === 'refuse' ? refuses : !mentions
     if (!ok) failures += 1
 
     const bare = trimmed === 'OFF_TOPIC'
-    const shape = bare ? 'bare sentinel' : mentionsSentinel ? 'DECORATED sentinel' : 'prose'
+    const shape = bare
+      ? 'bare sentinel'
+      : refuses
+        ? 'decorated sentinel (recognised)'
+        : mentions
+          ? 'SENTINEL NOT RECOGNISED'
+          : 'prose'
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${probe.label.padEnd(24)} want=${probe.expect} ${shape}`)
     console.log(`     q: ${probe.question}`)
     console.log(`     a: ${JSON.stringify(trimmed.slice(0, 200))}\n`)
 
-    if (probe.expect === 'refuse' && mentionsSentinel && !bare) {
+    if (unrecognised) {
       console.log(
-        '     NOTE: sentinel is decorated. AiSummaryService.isOffTopic anchors the token to the\n' +
-          '     start of the first line — a PREFIXED refusal ("I am sorry, but OFF_TOPIC") is NOT\n' +
-          '     recognised and would reach the student as an answer. Check isOffTopic before shipping.\n',
+        '     ^ The model emitted OFF_TOPIC in a form isOffTopicReply does NOT match — most\n' +
+          '       likely a prefixed refusal ("I am sorry, but OFF_TOPIC"). The student would be\n' +
+          '       shown the sentinel as their answer. Fix isOffTopicReply before shipping this\n' +
+          '       provider/model; do NOT loosen it to an unanchored search.\n',
       )
     }
   }

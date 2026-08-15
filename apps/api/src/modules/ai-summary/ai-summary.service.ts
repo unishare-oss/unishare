@@ -128,9 +128,9 @@ Generate the questions now:`
 }
 
 /**
- * v2, validated live against llama-3.3-70b-versatile at temperature 0 (9/9 probes) — the exact
- * wording below is what the evidence covers, so REWORD ONLY WITH A FRESH PROBE. The harness is
- * `.superpowers/sdd/implementation-plan/validated-rag-prompt-v2.mjs`.
+ * v2, validated live against llama-3.3-70b-versatile at temperature 0.3 — the temperature
+ * chatWithPost actually sends — 9/9 probes. The exact wording below is what that evidence
+ * covers, so REWORD ONLY WITH A FRESH PROBE: `pnpm --filter api probe:rag-prompt`.
  *
  * v1 conflated two different failures into one OFF_TOPIC: "unrelated to this document" and "in
  * this document but absent from the six retrieved excerpts". The second is the COMMON case
@@ -221,6 +221,17 @@ const EDGE_DECORATION = /^[\s*_`"'>[(]+|[\s*_`"')\]]+$/g
 const OFF_TOPIC_SENTINEL = /^off_topic\s*(?:$|[^\p{L}\p{N}\s])/iu
 
 /**
+ * The refusal predicate, as a pure function, so `scripts/probe-rag-prompt.ts` can assert THE
+ * SHIPPING LOGIC against a live model rather than a lookalike of it. A probe that reimplements
+ * the match can pass while the service still misbehaves, which is the one thing it exists to
+ * prevent.
+ */
+export function isOffTopicReply(reply: string): boolean {
+  const firstLine = reply.trim().split('\n', 1)[0].replace(EDGE_DECORATION, '')
+  return OFF_TOPIC_SENTINEL.test(firstLine)
+}
+
+/**
  * Maps retrieved chunks straight onto citations. Deliberately NOT derived from pages the
  * model happened to name in its reply: parsing the answer is exactly how a page that was
  * never retrieved leaks into a citation, and a hallucinated "[page 40]" would then be
@@ -263,9 +274,16 @@ export class AiSummaryService {
    *   from files whose ingestStatus is READY, so a post that failed or is still ingesting
    *   returns zero rows for every query, however on-topic. An uncited answer beats refusing
    *   a legitimate question.
-   * - Chunks retrieved but all below the floor → refusal.
+   * - Chunks retrieved but all below MIN_SIMILARITY → the SAME full-text path. Weak retrieval
+   *   means "retrieval did not help", which is the same predicament as "not indexed", so it
+   *   falls back rather than refusing. MIN_SIMILARITY is a retrieval-QUALITY gate; it refuses
+   *   nothing. The measured on/off-topic gap is 0.034 wide and its ceiling rests on a single
+   *   probe, which is nowhere near enough separation to turn away a real question on.
    *
-   * The last two must never be collapsed into each other.
+   * Refusal is therefore reachable ONLY through the model-emitted sentinel (see isOffTopic).
+   * The last two outcomes converge deliberately, but they are NOT the same event — the
+   * below-floor case logs its peak score, and that log is the only way to find out how often
+   * real uploads land there. Keep them separate.
    */
   async chatWithPost(postId: string, messages: ChatMessage[]): Promise<ChatResult> {
     // Not a 500: an unconfigured provider is a deployment state, not a server fault. It used
@@ -445,8 +463,8 @@ export class AiSummaryService {
   }
 
   /**
-   * The PRIMARY refusal check — `MIN_SIMILARITY` is only a weak secondary guard, so this is
-   * what actually has to hold.
+   * The ONLY refusal check. `MIN_SIMILARITY` refuses nothing — it routes weak retrieval to the
+   * full-text fallback — so if this predicate is wrong, nothing else catches it.
    *
    * It used to demand exact equality with 'OFF_TOPIC'. A model appending a full stop is
    * entirely ordinary, and every near miss returned `offTopic: false`, which handed the
@@ -455,8 +473,7 @@ export class AiSummaryService {
    * See OFF_TOPIC_SENTINEL for exactly what counts and what deliberately does not.
    */
   private isOffTopic(reply: string): boolean {
-    const firstLine = reply.trim().split('\n', 1)[0].replace(EDGE_DECORATION, '')
-    return OFF_TOPIC_SENTINEL.test(firstLine)
+    return isOffTopicReply(reply)
   }
 
   async summarizePost(postId: string): Promise<void> {
