@@ -38,18 +38,34 @@ export class FilesService {
 
     const file = await this.filesRepository.create(postId, dto)
 
-    if (post.status === 'APPROVED') {
-      void this.aiSummaryService.summarizePost(postId)
-    }
+    // Ingest first, THEN summarise — not both at once.
+    //
+    // Dispatching them together meant the same S3 object was downloaded and parsed twice
+    // concurrently: once to chunk it, once because summarisation always won the race against
+    // its own chunks and fell through to extraction. Chained, summarisation reads the chunks
+    // ingestion just wrote, so a single-file upload extracts once for indexing instead of twice.
+    //
+    // ingestFile is fire-and-forget: nothing awaits it, and there is no unhandledRejection
+    // handler in this app, so an escaped rejection would take the process down. ingestFile
+    // already records FAILED for the errors it can see; this catches the ones it cannot -- a
+    // connection drop in its own findUnique or in its catch-block status write. The catch sits
+    // BEFORE the chain so a failed ingest still yields a summary, built from extraction.
+    void this.ingestionService
+      .ingestFile(file.id)
+      .catch((err: Error) => {
+        this.logger.warn(`Ingestion dispatch failed for file ${file.id}: ${err.message}`)
+      })
+      .then(() => {
+        if (post.status !== 'APPROVED') return
+        return this.aiSummaryService.summarizePostWhenIngested(postId)
+      })
+      .catch((err: Error) => {
+        this.logger.warn(`Summarisation after ingest failed for post ${postId}: ${err.message}`)
+      })
 
-    // ingestFile is fire-and-forget: nothing awaits it, and there is no
-    // unhandledRejection handler in this app, so an escaped rejection would take the
-    // process down. ingestFile already records FAILED for the errors it can see; this
-    // catches the ones it cannot -- a connection drop in its own findUnique or in its
-    // catch-block status write.
-    void this.ingestionService.ingestFile(file.id).catch((err: Error) => {
-      this.logger.warn(`Ingestion dispatch failed for file ${file.id}: ${err.message}`)
-    })
+    // Deliberately NOT chained. Screening is moderation: it must not wait on the embedding
+    // pipeline, which takes ~90s for a long document. It reads only the first supported file,
+    // so this is one extra extraction rather than one per file.
     void this.aiSummaryService.screenContent(postId)
 
     const { postId: _postId, ...rest } = file

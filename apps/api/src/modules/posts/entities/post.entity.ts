@@ -178,7 +178,14 @@ export class PostEntity {
   @ApiProperty()
   views: number
 
-  @ApiProperty({ type: Object, description: 'Map of ReactionType to count' })
+  // `type: Object` erases the value type, so Orval emitted `{ [key: string]: unknown }` and every
+  // count had to be cast before arithmetic. additionalProperties keeps the map shape AND says
+  // what the values are.
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'number' },
+    description: 'Map of ReactionType to count',
+  })
   reactionCounts: Record<string, number>
 
   @ApiPropertyOptional({ nullable: true, type: String })

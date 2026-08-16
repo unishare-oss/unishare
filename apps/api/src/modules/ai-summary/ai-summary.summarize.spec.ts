@@ -6,7 +6,10 @@ import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
 import { RetrievalService } from '../ai/retrieval/retrieval.service'
-import { DocumentExtractorService } from '../ai/extraction/document-extractor.service'
+import {
+  DocumentExtractorService,
+  SUPPORTED_MIME_TYPES,
+} from '../ai/extraction/document-extractor.service'
 import { LlmMessage } from '../ai/llm/llm.types'
 import { SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 
@@ -24,6 +27,7 @@ describe('AiSummaryService.summarizePost', () => {
   let prismaMock: any
   let llmMock: any
   let extractorMock: any
+  let embeddingMock: any
   let warnSpy: jest.SpyInstance
 
   afterEach(() => {
@@ -34,6 +38,7 @@ describe('AiSummaryService.summarizePost', () => {
     warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
     llmMock = { enabled: true, chat: jest.fn().mockResolvedValue('A summary.\n• point') }
     extractorMock = { extractFromKey: jest.fn() }
+    embeddingMock = { enabled: true }
     prismaMock = {
       post: {
         findUnique: jest.fn().mockResolvedValue({
@@ -44,6 +49,7 @@ describe('AiSummaryService.summarizePost', () => {
         update: jest.fn(),
       },
       postChunk: { findMany: jest.fn().mockResolvedValue([]) },
+      file: { count: jest.fn().mockResolvedValue(0) },
       tag: { findMany: jest.fn().mockResolvedValue([]) },
       postTag: { createMany: jest.fn() },
     }
@@ -54,7 +60,7 @@ describe('AiSummaryService.summarizePost', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: TagsService, useValue: { validateTag: () => true, findOrCreate: jest.fn() } },
         { provide: LlmService, useValue: llmMock },
-        { provide: EmbeddingService, useValue: { enabled: true } },
+        { provide: EmbeddingService, useValue: embeddingMock },
         { provide: RetrievalService, useValue: { searchPost: jest.fn() } },
         { provide: DocumentExtractorService, useValue: extractorMock },
       ],
@@ -465,5 +471,73 @@ describe('AiSummaryService.summarizePost', () => {
   it('swallows errors so a failed summary never breaks the caller', async () => {
     prismaMock.postChunk.findMany.mockRejectedValue(new Error('db down'))
     await expect(service.summarizePost('p1')).resolves.toBeUndefined()
+  })
+
+  describe('summarizePostWhenIngested', () => {
+    it('waits while another file on the post is still ingesting', async () => {
+      // Multi-file posts ingest one file per request. Without this the last-but-one completion
+      // would summarise from a partial set of chunks, and an N-file post would be summarised N
+      // times over.
+      prismaMock.file.count.mockResolvedValue(1)
+      // A WORKING chunk source, so summarisation would genuinely succeed if the guard were gone.
+      // Without this the default mocks make it abort into its own catch regardless, and the
+      // assertions below pass whether the guard exists or not — the mutant survives.
+      prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'chunk text', fileId: 'f1' }])
+
+      await service.summarizePostWhenIngested('p1')
+
+      expect(llmMock.chat).not.toHaveBeenCalled()
+      expect(prismaMock.post.update).not.toHaveBeenCalled()
+    })
+
+    it('summarises once the last file has settled', async () => {
+      prismaMock.file.count.mockResolvedValue(0)
+      prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'chunk text', fileId: 'f1' }])
+
+      await service.summarizePostWhenIngested('p1')
+
+      // Reads the chunks ingestion just wrote — no second extraction, which is the point of
+      // chaining rather than racing.
+      expect(extractorMock.extractFromKey).not.toHaveBeenCalled()
+      expect(prismaMock.post.update).toHaveBeenCalled()
+    })
+
+    it('counts only in-flight supported files, not every file on the post', async () => {
+      prismaMock.file.count.mockResolvedValue(0)
+
+      await service.summarizePostWhenIngested('p1')
+
+      // READY, FAILED and UNSUPPORTED are all settled — a FAILED file will never produce chunks,
+      // so counting it as in-flight would withhold the summary permanently.
+      expect(prismaMock.file.count).toHaveBeenCalledWith({
+        where: {
+          postId: 'p1',
+          mimeType: { in: SUPPORTED_MIME_TYPES },
+          ingestStatus: { in: ['PENDING', 'PROCESSING'] },
+        },
+      })
+    })
+
+    it('summarises immediately when embeddings are disabled', async () => {
+      // A supported deployment: ingestFile returns without writing a status, so every file stays
+      // PENDING forever. Waiting for "nothing in flight" would mean never summarising at all.
+      embeddingMock.enabled = false
+      prismaMock.file.count.mockResolvedValue(5)
+      prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'chunk text', fileId: 'f1' }])
+
+      await service.summarizePostWhenIngested('p1')
+
+      expect(prismaMock.file.count).not.toHaveBeenCalled()
+      expect(prismaMock.post.update).toHaveBeenCalled()
+    })
+
+    it('does nothing when the LLM is disabled', async () => {
+      llmMock.enabled = false
+
+      await service.summarizePostWhenIngested('p1')
+
+      expect(prismaMock.file.count).not.toHaveBeenCalled()
+      expect(prismaMock.post.update).not.toHaveBeenCalled()
+    })
   })
 })
