@@ -37,15 +37,23 @@ const questions = JSON.parse(
 const FIXTURE_PAGES = 18
 
 /**
- * The bounds actually observed by the opt-in eval below on 2026-08-14, against
- * nomic-embed-text at CHUNK_MAX_CHARS = 2000 (18 chunks, one per page).
+ * The bounds actually observed by the opt-in eval below on 2026-08-16, against nomic-embed-text
+ * at CHUNK_MAX_CHARS = 2000 (18 chunks, one per page), with TWELVE off-topic probes.
  *
- * Recorded here rather than only printed so the default suite — which has no Ollama and no
- * Postgres — can still fail if someone edits MIN_SIMILARITY without re-running the eval. The
- * opt-in eval re-measures these against reality and fails if the gap itself has moved, so the
- * two halves pin each other: neither the constant nor these bounds can drift alone.
+ * THE BANDS OVERLAP: off-topic reaches 0.713, above the on-topic floor of 0.675. The earlier
+ * three-probe run showed a 0.034 gap; that gap was an artefact of the sample, not a property of
+ * the corpus. Instruction-shaped and adjacent-technical queries — "derive the time complexity of
+ * quicksort" — score highly against a linear-algebra page because they share register without
+ * sharing subject, and those are what real chat traffic is made of.
+ *
+ * Consequence: no threshold can separate on- from off-topic here, so refusal cannot rest on one.
+ * It doesn't — the model's OFF_TOPIC sentinel refuses, and MIN_SIMILARITY only decides whether
+ * retrieval was good enough to answer FROM (below it, chat falls back to full document text).
+ *
+ * Recorded rather than only printed so the default suite — which has no Ollama and no Postgres —
+ * still fails if someone edits MIN_SIMILARITY without re-running the eval.
  */
-const MEASURED_HIGHEST_OFF_TOPIC = 0.641
+const MEASURED_HIGHEST_OFF_TOPIC = 0.713
 const MEASURED_LOWEST_ON_TOPIC = 0.675
 
 /**
@@ -73,7 +81,7 @@ const MEASURED_TOP3 = 1
  */
 const MEASURED_FIXTURE_SHA256: Record<string, string> = {
   'document.pdf': 'ae7572e5d209e986306ee2ebd978fa92b09394d8da471575f37896802eed61aa',
-  'questions.json': '3a87d9f9aa6c69d8bd7a01b2e68b7bdb8e05e9c5e67427226945d3e86798491e',
+  'questions.json': '68f4386610e23197f0e235f0ab306f3b5f59d82e12a16d7d6308ffa08e8e0aa0',
 }
 
 function median(values: number[]): number {
@@ -94,20 +102,25 @@ function describeDistribution(label: string, values: number[]): string {
  * nothing guarding it drifts: this is the half that notices.
  */
 describe('MIN_SIMILARITY calibration (no infrastructure)', () => {
-  it('sits strictly inside the gap measured by the golden eval', () => {
-    // Not a tautology against the service: the numbers on the right are the observed
-    // measurement, transcribed by hand. Editing MIN_SIMILARITY back to a guessed 0.5, or up
-    // to a "safer" 0.7, fails here — and the fix is to re-run RUN_GOLDEN_EVAL=1 and update
-    // both, not to widen these bounds.
-    expect(MIN_SIMILARITY).toBeGreaterThan(MEASURED_HIGHEST_OFF_TOPIC)
-    expect(MIN_SIMILARITY).toBeLessThan(MEASURED_LOWEST_ON_TOPIC)
+  it('never turns away a question retrieval answered well', () => {
+    // The property that survives the overlap. As a retrieval-QUALITY gate, MIN_SIMILARITY must
+    // sit at or below the on-topic floor: every genuine question then keeps its retrieved chunks
+    // and its page citations. Raising it to a "safer" 0.7 would start pushing real questions
+    // onto the un-cited full-text fallback, silently losing citations.
+    expect(MIN_SIMILARITY).toBeLessThanOrEqual(MEASURED_LOWEST_ON_TOPIC)
   })
 
-  it('was calibrated against a gap that exists at all', () => {
-    // If a future re-measurement finds the bands overlapping, this fails rather than letting
-    // a threshold be recorded inside an interval that runs backwards. The documented response
-    // is MIN_SIMILARITY = 0 plus the model-emitted OFF_TOPIC sentinel as the only check.
-    expect(MEASURED_LOWEST_ON_TOPIC).toBeGreaterThan(MEASURED_HIGHEST_OFF_TOPIC)
+  it('is not so low that the gate never engages', () => {
+    // Reverting to the guessed 0.5 fails here: below the off-topic floor of 0.509 every query
+    // would keep whatever retrieval returned, however irrelevant.
+    expect(MIN_SIMILARITY).toBeGreaterThan(0.51)
+  })
+
+  it('records that the bands overlap, so nobody rebuilds refusal on the threshold', () => {
+    // Deliberately asserts the OVERLAP rather than a gap. If a future change separates them
+    // again this fails, and the right response is to re-read why refusal moved to the sentinel
+    // — not to reinstate a threshold-based refusal on the strength of one lucky sample.
+    expect(MEASURED_HIGHEST_OFF_TOPIC).toBeGreaterThan(MEASURED_LOWEST_ON_TOPIC)
   })
 
   it.each(Object.entries(MEASURED_FIXTURE_SHA256))(
@@ -128,7 +141,10 @@ describe('MIN_SIMILARITY calibration (no infrastructure)', () => {
     // tell page 8 from page 9 — only the live eval can — but it does catch a question set
     // re-authored against a different, longer document.
     expect(questions.onTopic).toHaveLength(10)
-    expect(questions.offTopic).toHaveLength(3)
+    // Widened from 3 on 2026-08-16: a ceiling measured from three probes, one of which set it
+    // alone, cannot bound real chat traffic. A floor rather than an exact count, so adding
+    // adversarial probes never requires touching this assertion.
+    expect(questions.offTopic.length).toBeGreaterThanOrEqual(12)
 
     for (const item of questions.onTopic) {
       expect(item.expectedPages.length).toBeGreaterThan(0)
@@ -384,17 +400,28 @@ describeGolden('retrieval golden set (live pgvector + Ollama)', () => {
         `(width ${(lowestOnTopic - highestOffTopic).toFixed(3)}), MIN_SIMILARITY=${MIN_SIMILARITY}`,
     )
 
-    // The bands must not overlap, or no threshold can separate them and the similarity-based
-    // off-topic check is not viable for this corpus. See README.md's limitation note: authored
-    // prose with no OCR noise makes this gap wider than a real upload's would be.
-    expect(lowestOnTopic).toBeGreaterThan(highestOffTopic)
+    // THE BANDS OVERLAP, and that is a measured result rather than a failure.
+    //
+    // With three off-topic probes they did not (0.641 vs 0.675). Widening to twelve — adding
+    // instruction-shaped requests and adjacent technical subjects, which is what real chat
+    // traffic looks like — pushed the off-topic ceiling to 0.713, above the on-topic floor of
+    // 0.675. "Derive the time complexity of quicksort" scores highly against a linear-algebra
+    // page because it shares register and vocabulary without sharing subject.
+    //
+    // So NO threshold can separate on- from off-topic on this corpus, and the original
+    // three-probe gap was an artefact of too small a sample. This is precisely why refusal was
+    // moved off the threshold and onto the model's OFF_TOPIC sentinel: a threshold-based
+    // refusal calibrated on that gap would now reject genuine questions.
+    //
+    // Deliberately NOT asserting separation any more. What still has to hold is the property
+    // MIN_SIMILARITY actually has as a retrieval-QUALITY gate: it must sit at or below the
+    // on-topic floor, so a real question always keeps its retrieved chunks and its citations.
+    // Off-topic queries above it are harmless — they reach the model, which refuses them.
+    expect(MIN_SIMILARITY).toBeLessThanOrEqual(lowestOnTopic)
 
-    // The constant, re-validated against THIS run rather than against the transcribed numbers
-    // in the default-suite guard above. Changing the embedding model, the chunk size or the
-    // fixture moves the gap; if it moves out from under MIN_SIMILARITY, this fails here
-    // instead of quietly refusing real questions in Task 11's chat.
-    expect(MIN_SIMILARITY).toBeGreaterThan(highestOffTopic)
-    expect(MIN_SIMILARITY).toBeLessThan(lowestOnTopic)
+    // And it must not be so low that the gate never engages: below the off-topic floor it would
+    // pass every query through, including ones retrieval found nothing for.
+    expect(MIN_SIMILARITY).toBeGreaterThan(Math.min(...offTopicBest))
 
     // And the transcribed bounds still describe reality, so the infra-free guard above keeps
     // guarding something true.

@@ -34,8 +34,20 @@ a real past paper before trusting the off-topic refusal in production.**
 
 ## `questions.json`
 
-10 on-topic questions with `expectedPages`, plus 3 off-topic questions used to measure the
-similarity gap that `MIN_SIMILARITY` sits inside.
+10 on-topic questions with `expectedPages`, plus 12 off-topic questions.
+
+**The off-topic set was widened from 3 to 12 on 2026-08-16, and the result changed the design's
+conclusion.** With three probes the on-topic and off-topic similarity bands did not overlap
+(0.675 vs 0.641), and `MIN_SIMILARITY` was calibrated inside that 0.034 gap. With twelve —
+adding instruction-shaped requests and adjacent technical subjects, which is what real chat
+traffic is made of — the off-topic ceiling rose to **0.713 and the bands now overlap**.
+
+The gap was an artefact of the sample. No similarity threshold can separate on- from off-topic
+on this corpus, so refusal must rest on the model's `OFF_TOPIC` sentinel, and `MIN_SIMILARITY`
+survives only as a retrieval-quality gate deciding whether to answer from chunks or fall back to
+the full document.
+
+If you widen the set further, expect the ceiling to rise again rather than fall.
 
 Page numbers are **1-based** and refer to `document.pdf` in this directory. **If that document
 is replaced, every `expectedPages` value must be re-authored** — a stale mapping leaves the

@@ -19,19 +19,25 @@ export const RETRIEVAL_TOP_K = 6
  * measurement below can carry — see warning 1 — so if you are tempted to restore it, read that
  * warning first and then don't.
  *
- * Calibrated 2026-08-14 by retrieval.golden.spec.ts against test/fixtures/golden (18 pages of
- * linear algebra, nomic-embed-text, CHUNK_MAX_CHARS = 2000): the lowest on-topic best match
- * scored 0.675 and the highest off-topic best match scored 0.641. 0.65 sits in that gap,
- * deliberately near the off-topic ceiling — a wrong refusal of a real question is worse for a
- * student than a weak answer to a marginal one.
+ * Measured 2026-08-16 by retrieval.golden.spec.ts against test/fixtures/golden (18 pages of
+ * linear algebra, nomic-embed-text, CHUNK_MAX_CHARS = 2000), with twelve off-topic probes:
+ * on-topic best matches ran 0.675–0.866, off-topic 0.509–0.713.
+ *
+ * THE BANDS OVERLAP. 0.65 is chosen to sit at or below the ON-TOPIC FLOOR, so a genuine question
+ * always keeps its retrieved chunks and its citations. It is NOT chosen to exclude off-topic
+ * queries, because on this corpus no value can: an off-topic query scoring 0.71 simply reaches
+ * the model, which refuses it by sentinel.
  *
  * TWO WARNINGS, both load-bearing:
  *
- * 1. That gap is 0.034 wide, and the on-topic side clears it by only 0.025. nomic-embed-text has
- *    a high similarity floor — "What is the capital of France?" still scores 0.509 against a
- *    linear-algebra page — so on- and off-topic bands nearly touch. This threshold is a weak
- *    signal, NOT a reliable off-topic detector, which is exactly why it no longer refuses
- *    anything. The model-emitted OFF_TOPIC sentinel is the only refusal check.
+ * 1. An earlier three-probe run showed a 0.034 GAP between the bands, and that gap was an
+ *    artefact of the sample — widening to twelve probes erased it. Instruction-shaped and
+ *    adjacent-technical queries ("derive the time complexity of quicksort") score highly against
+ *    a linear-algebra page because they share register without sharing subject, and that is what
+ *    real chat traffic looks like. nomic-embed-text also has a high floor: "What is the capital
+ *    of France?" still scores 0.509. So this number can NEVER be a reliable off-topic detector,
+ *    which is exactly why it no longer refuses anything. If a future measurement appears to
+ *    reopen a gap, suspect the sample before believing it.
  * 2. The fixture is authored prose: no OCR noise, no tables, no figure captions, uniform
  *    register. Real uploads score lower and more raggedly, so 0.675 is an optimistic floor. The
  *    consequence is now a lost citation rather than a wrongly refused question, which is what
