@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
+import { ServiceUnavailableException } from '@nestjs/common'
 import { LlmService } from './llm.service'
 
 const mockSendMessage = jest.fn()
@@ -121,6 +122,51 @@ describe('LlmService', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith('')
       expect(reply).toBe('quiz json')
+    })
+  })
+
+  describe('a rate-limited provider is retryable, not a server fault', () => {
+    beforeEach(() => {
+      configValues.AI_SUMMARY_PROVIDER = 'ollama'
+      configValues.AI_SUMMARY_ENDPOINT = 'http://ollama.test:11434'
+    })
+
+    /** Fails the provider call with an SDK-shaped error carrying an HTTP status. */
+    function providerFailsWith(status: number) {
+      jest.spyOn(global, 'fetch' as never).mockImplementation((() => {
+        const err = new Error(`provider said ${status}`) as Error & { status: number }
+        err.status = status
+        return Promise.reject(err)
+      }) as never)
+    }
+
+    // 413 is the one that actually bit: Groq answers "Request too large ... tokens per minute"
+    // with a 413, so treating it as a client error would blame a request that was fine.
+    it.each([429, 413, 500, 503])('maps %i to ServiceUnavailableException', async (status) => {
+      providerFailsWith(status)
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      )
+    })
+
+    it('leaves a genuine client error alone', async () => {
+      // The mapping must be narrow. A 400 means the request really was malformed, and hiding it
+      // behind "the AI service is busy" would send someone looking in the wrong place.
+      providerFailsWith(400)
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.not.toBeInstanceOf(
+        ServiceUnavailableException,
+      )
+    })
+
+    it('says the service is busy rather than leaking the provider message', async () => {
+      providerFailsWith(429)
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow(/busy/i)
     })
   })
 })

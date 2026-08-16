@@ -78,6 +78,43 @@ Existing tags: ${tagList}
 Example output: linear algebra, matrices, past paper, engineering mathematics`
 }
 
+/**
+ * Cap on the document text sent for moderation screening.
+ *
+ * This was UNCAPPED, and it is what drained a Groq free-tier daily budget in one upload: a
+ * 111-chunk PDF produced a single screening request of 125,032 tokens against a 100,000/day
+ * limit. Both the comment on the call site and the `File content excerpt:` label claimed it was
+ * an excerpt; neither was enforced, so it read as bounded while sending the whole document.
+ *
+ * Screening asks one yes/no question — is this academic material or abuse — and the opening of a
+ * document answers it. 4000 characters is roughly a page and a half: enough to classify, and ~2%
+ * of what the unbounded version sent.
+ */
+export const SCREENING_EXCERPT_CHARS = 4000
+
+/**
+ * Ceiling on how many windows the map step will summarise.
+ *
+ * Map-reduce costs one LLM call per window, so cost scales linearly with document length while
+ * the output stays a fixed 3-7 bullets. Measured on dev: a 111-chunk PDF produces ~19 windows,
+ * about 63,000 tokens for one summary — most of a Groq free-tier DAY spent describing a single
+ * upload, and a rate limit that then breaks chat for everyone else.
+ *
+ * Eight windows is ~96,000 characters, roughly 40-50 pages. A summary that has read that much and
+ * still only emits five bullets is not improved by reading more.
+ *
+ * Biased towards the start of the document, and that bias is real: a textbook's opening is its
+ * table of contents and introduction, which suits a summary, but a document whose substance is at
+ * the end will be described from its front matter. Disclosed to the model via
+ * SUMMARY_TRUNCATION_NOTICE rather than hidden.
+ */
+export const SUMMARY_MAX_WINDOWS = 8
+
+/** Appended to the last mapped window when the ceiling bites. */
+const SUMMARY_TRUNCATION_NOTICE =
+  '[This is the first part of a longer document. Describe what it covers without implying you ' +
+  'have seen all of it.]'
+
 const SCREENING_PROMPT = `You are a content moderator for a university academic file-sharing platform.
 Review the following post and determine if it contains any of these issues:
 1. Exam cheating materials (full answer sheets, leaked exams not from past papers, solutions intended to be submitted as original work)
@@ -578,8 +615,17 @@ export class AiSummaryService {
       if (!post) return
 
       const texts = await this.summarySourceTexts(postId, post.files)
-      const windows = groupIntoWindows(texts, SUMMARY_WINDOW_CHARS)
-      if (windows.length === 0) return
+      const allWindows = groupIntoWindows(texts, SUMMARY_WINDOW_CHARS)
+      if (allWindows.length === 0) return
+
+      const windows = allWindows.slice(0, SUMMARY_MAX_WINDOWS)
+      if (allWindows.length > SUMMARY_MAX_WINDOWS) {
+        this.logger.warn(
+          `Post ${postId} summarised from ${SUMMARY_MAX_WINDOWS}/${allWindows.length} windows — ` +
+            'document exceeds the summarisation ceiling',
+        )
+        windows[windows.length - 1] += `\n\n${SUMMARY_TRUNCATION_NOTICE}`
+      }
 
       const summary = await this.reduceToSummary(windows)
       if (!summary) return
@@ -786,7 +832,9 @@ export class AiSummaryService {
           supportedFile.key,
           supportedFile.mimeType,
         ).catch(() => '')
-        if (fileText.trim()) parts.push(`File content excerpt:\n${fileText}`)
+        // Genuinely an excerpt now, not just labelled one.
+        const excerpt = fileText.trim().slice(0, SCREENING_EXCERPT_CHARS)
+        if (excerpt) parts.push(`File content excerpt:\n${excerpt}`)
       }
 
       if (parts.length === 0) return

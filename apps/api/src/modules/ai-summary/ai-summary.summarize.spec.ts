@@ -1,7 +1,11 @@
 import { Logger } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import { PrismaService } from '@/prisma/prisma.service'
-import { AiSummaryService } from './ai-summary.service'
+import {
+  AiSummaryService,
+  SUMMARY_MAX_WINDOWS,
+  SCREENING_EXCERPT_CHARS,
+} from './ai-summary.service'
 import { TagsService } from '../tags/tags.service'
 import { LlmService } from '../ai/llm/llm.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
@@ -471,6 +475,64 @@ describe('AiSummaryService.summarizePost', () => {
   it('swallows errors so a failed summary never breaks the caller', async () => {
     prismaMock.postChunk.findMany.mockRejectedValue(new Error('db down'))
     await expect(service.summarizePost('p1')).resolves.toBeUndefined()
+  })
+
+  describe('cost ceilings', () => {
+    it('stops mapping after SUMMARY_MAX_WINDOWS and tells the model it saw only part', async () => {
+      // Map-reduce is one LLM call per window, so cost grows with document length while the
+      // output stays 3-7 bullets. Measured on dev: a 111-chunk PDF is ~19 windows and ~63k
+      // tokens — most of a free-tier day for one upload, after which chat rate-limits for
+      // everyone. 20 chunks x 12000 chars = 20 windows, comfortably over the ceiling.
+      prismaMock.postChunk.findMany.mockResolvedValue(
+        Array.from({ length: 20 }, () => ({ content: 'x'.repeat(SUMMARY_WINDOW_CHARS) })),
+      )
+      useMapReduceLlm()
+
+      await service.summarizePost('p1')
+
+      const mapCalls = llmMock.chat.mock.calls.map(([m]: [LlmMessage[]]) => m).filter(isMapCall)
+      expect(mapCalls).toHaveLength(SUMMARY_MAX_WINDOWS)
+
+      // Disclosed, not silently truncated: the model must not imply it read the whole document.
+      const sentTexts = mapCalls.map((m: LlmMessage[]) => userContentOf(m))
+      expect(sentTexts.some((t: string) => t.includes('first part of a longer document'))).toBe(
+        true,
+      )
+    })
+
+    it('sends only an excerpt to screening, not the whole document', async () => {
+      // This was uncapped and is what actually drained the budget: one 111-chunk upload issued a
+      // screening request of 125,032 tokens against a 100,000/day limit, twice. The call site
+      // said "quick scan" and the payload was labelled "File content excerpt:", so it read as
+      // bounded while sending everything.
+      prismaMock.post.findUnique.mockResolvedValue({
+        id: 'p1',
+        title: 'A post',
+        description: 'desc',
+        files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+      })
+      extractorMock.extractFromKey.mockResolvedValue({
+        pages: [{ num: 1, text: 'y'.repeat(SCREENING_EXCERPT_CHARS * 10) }],
+        hasPageNumbers: true,
+      })
+      llmMock.chat.mockResolvedValue('SAFE')
+
+      await service.screenContent('p1')
+
+      const sent = userContentOf(llmMock.chat.mock.calls[0][0])
+      // Bounded by the cap plus the title/description scaffolding, not by the document's size.
+      expect(sent.length).toBeLessThan(SCREENING_EXCERPT_CHARS + 500)
+    })
+
+    it('does not claim truncation for a document within the ceiling', async () => {
+      // The notice must be conditional, or every ordinary summary carries a false disclaimer.
+      prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'short chunk' }])
+
+      await service.summarizePost('p1')
+
+      const sent = userContentOf(llmMock.chat.mock.calls[0][0])
+      expect(sent).not.toContain('first part of a longer document')
+    })
   })
 
   describe('summarizePostWhenIngested', () => {
