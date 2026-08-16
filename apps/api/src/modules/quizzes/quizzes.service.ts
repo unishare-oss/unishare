@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
@@ -83,6 +84,10 @@ export class QuizzesService {
     try {
       questions = await this.aiSummary.generateQuizQuestions(text, questionCount)
     } catch (err) {
+      // A disabled or unreachable AI provider is a deployment state, not a bad request. Flattening
+      // it into a 400 told the user their material was at fault; ServiceUnavailableException
+      // passes through so the client can say "AI is unavailable" instead.
+      if (err instanceof ServiceUnavailableException) throw err
       this.logger.error(`Question generation failed: ${(err as Error).message}`)
       throw new BadRequestException('Failed to generate questions from material')
     }
@@ -138,6 +143,8 @@ export class QuizzesService {
     try {
       questions = await this.aiSummary.generateQuizQuestions(post.summary, questionCount)
     } catch (err) {
+      // See above: a config state must not masquerade as a malformed request.
+      if (err instanceof ServiceUnavailableException) throw err
       this.logger.error(`Question generation failed: ${(err as Error).message}`)
       throw new BadRequestException('Failed to generate questions from post summary')
     }

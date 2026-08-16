@@ -542,6 +542,19 @@ describe('AiSummaryService.chatWithPost', () => {
     expect(llmMock.chat).not.toHaveBeenCalled()
   })
 
+  it('reports a disabled LLM the same way for quiz generation', async () => {
+    // Asserted HERE, on the producing side, because quizzes.service.spec.ts injects this
+    // exception itself and so cannot notice if this method stops throwing it. Reverting to a
+    // bare Error passed that suite in full — the caller turns anything it catches into a 400,
+    // which would tell a user their material was at fault when the provider is simply off.
+    llmMock.enabled = false
+
+    await expect(service.generateQuizQuestions('some text', 5)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    )
+    expect(llmMock.chat).not.toHaveBeenCalled()
+  })
+
   it('skips retrieval entirely when embeddings are disabled', async () => {
     // With embeddings off, searchPost can only ever return [], so condensing first would burn
     // an LLM call to build a query nothing will use.

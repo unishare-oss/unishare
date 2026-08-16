@@ -754,8 +754,12 @@ export class AiSummaryService {
       difficulty: 'easy' | 'medium' | 'hard'
     }>
   > {
+    // Not a plain Error: the caller wraps everything it catches in a BadRequestException, so an
+    // unconfigured provider reached the user as a 400 "Failed to generate questions from
+    // material" — telling them their request was wrong when the feature is simply switched off.
+    // Same reasoning as chatWithPost; the caller re-throws this type untouched.
     if (!this.llm.enabled) {
-      throw new Error('AI service not configured')
+      throw new ServiceUnavailableException('AI service not configured')
     }
 
     if (questionCount < 1 || questionCount > 100) {
