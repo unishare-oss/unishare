@@ -8,6 +8,7 @@ vi.mock('@/src/lib/api/generated/posts/posts', () => ({
 }))
 
 import { usePostAiChat } from './use-post-ai-chat'
+import { ApiError } from '@/src/lib/api/fetcher'
 
 /**
  * `customFetch` unwraps the `{ success, message, data }` envelope exactly once, so the mutation
@@ -209,5 +210,40 @@ describe('usePostAiChat', () => {
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].content).toContain('Something went wrong')
     expect(result.current.messages[1].citations).toEqual([])
+  })
+
+  describe('failures are distinguished rather than collapsed', () => {
+    // Every failure used to render the same opaque string, so a student could not tell a
+    // switched-off feature from a broken server, and a response-shape mismatch — which throws in
+    // the try block, not the request — was indistinguishable from either.
+    it.each([
+      [503, /unavailable right now/i, 'the AI provider is not configured — an expected state'],
+      [403, /published and approved/i, 'an author asking on their own unapproved draft'],
+    ])('renders a specific message for %i (%s)', async (status, pattern) => {
+      mutateAsync.mockRejectedValue(new ApiError('nope', status))
+
+      const { result } = renderHook(() => usePostAiChat('p1'))
+      await act(async () => {
+        await result.current.sendMessage('hi')
+      })
+
+      await waitFor(() => expect(result.current.messages).toHaveLength(2))
+      expect(result.current.messages[1].content).toMatch(pattern)
+      // The generic message must NOT also appear — that would mean the branch was skipped and
+      // the assertion above happened to match a substring of the fallback.
+      expect(result.current.messages[1].content).not.toContain('Something went wrong')
+    })
+
+    it('falls back to the generic message for an unrecognised status', async () => {
+      mutateAsync.mockRejectedValue(new ApiError('kaboom', 500))
+
+      const { result } = renderHook(() => usePostAiChat('p1'))
+      await act(async () => {
+        await result.current.sendMessage('hi')
+      })
+
+      await waitFor(() => expect(result.current.messages).toHaveLength(2))
+      expect(result.current.messages[1].content).toContain('Something went wrong')
+    })
   })
 })

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { usePostsControllerAiChat } from '@/src/lib/api/generated/posts/posts'
 import type { AiChatCitationDto } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { ApiError } from '@/src/lib/api/fetcher'
 
 /**
  * A chunk that retrieval returned and put in the model's context — a source that was consulted,
@@ -28,6 +29,22 @@ const OFF_TOPIC_MESSAGE =
   'I can only answer questions about this document. Please ask something related to its content.'
 
 const ERROR_MESSAGE = 'Something went wrong. Please try again.'
+
+/**
+ * Every failure used to render as ERROR_MESSAGE, so a student could not tell "this feature is
+ * switched off" from "the server broke", and a response-shape mismatch reached them silently.
+ *
+ * 503 is a real, expected state, not a fault: `chatWithPost` returns it when no AI provider is
+ * configured. 403 is the draft-post case — `getAiIndexStatus` filters only on `deletedAt` while
+ * chat also requires PUBLISHED and APPROVED, so an author reading their own draft is invited to
+ * ask and then refused.
+ */
+function errorMessageFor(error: unknown): string {
+  const status = error instanceof ApiError ? error.status : undefined
+  if (status === 503) return 'AI chat is unavailable right now. Please try again later.'
+  if (status === 403) return 'AI chat is available once this post is published and approved.'
+  return ERROR_MESSAGE
+}
 
 /** What the server canonicalises an off-topic reply to. It must never reach the screen. */
 const OFF_TOPIC_SENTINEL = 'OFF_TOPIC'
@@ -94,12 +111,16 @@ export function usePostAiChat(postId: string) {
             citations: offTopic ? [] : normaliseCitations(data.citations),
           },
         ])
-      } catch {
+      } catch (error) {
+        // Logged as well as rendered: a response-shape mismatch throws in the `try` above and is
+        // otherwise indistinguishable from a server error, which is exactly how a silent
+        // regression on the citations boundary would reach users unnoticed.
+        console.error('[use-post-ai-chat] send failed', error)
         updateMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: ERROR_MESSAGE,
+            content: errorMessageFor(error),
             offTopic: false,
             citations: [],
           },
