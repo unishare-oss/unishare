@@ -17,7 +17,7 @@ import { PaginationDto } from '@/common/dto/pagination.dto'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
-import { AiSummaryService } from '../ai-summary/ai-summary.service'
+import { AiChatStreamEvent, AiSummaryService } from '../ai-summary/ai-summary.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -503,6 +503,29 @@ export class PostsService {
   }
 
   async chatWithPost(postId: string, dto: AiChatDto, _userId: string): Promise<AiChatResponse> {
+    await this.assertChatable(postId)
+    return this.aiSummaryService.chatWithPost(postId, dto.messages)
+  }
+
+  /**
+   * The streaming twin of `chatWithPost`.
+   *
+   * `async` returning an iterable rather than an async generator itself, and that is deliberate:
+   * a generator body runs nothing until its first `next()`, so the 404 and 403 below would fire
+   * after the controller had already committed to a 200 and sent SSE headers. Awaiting them here
+   * keeps them real HTTP status codes, which is what the frontend's error copy is keyed on.
+   */
+  async chatWithPostStream(
+    postId: string,
+    dto: AiChatDto,
+    _userId: string,
+  ): Promise<AsyncIterable<AiChatStreamEvent>> {
+    await this.assertChatable(postId)
+    return this.aiSummaryService.chatWithPostStream(postId, dto.messages)
+  }
+
+  /** The access gate both chat paths share, so neither can be reachable on a post the other refuses. */
+  private async assertChatable(postId: string): Promise<void> {
     const post = await this.prisma.post.findFirst({
       where: { id: postId, deletedAt: null },
       select: { id: true, publicationStatus: true, status: true },
@@ -515,8 +538,6 @@ export class PostsService {
     ) {
       throw new ForbiddenException('Post is not available')
     }
-
-    return this.aiSummaryService.chatWithPost(postId, dto.messages)
   }
 
   /**

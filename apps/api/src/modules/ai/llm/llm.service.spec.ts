@@ -169,4 +169,132 @@ describe('LlmService', () => {
       await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow(/busy/i)
     })
   })
+
+  describe('chatStream', () => {
+    /** Everything the stream yielded, in order. */
+    async function drain(stream: AsyncIterable<string>): Promise<string[]> {
+      const deltas: string[] = []
+      for await (const delta of stream) deltas.push(delta)
+      return deltas
+    }
+
+    /** A fetch that answers with an NDJSON body delivered in the given byte slices. */
+    function ollamaStreams(slices: (string | Uint8Array)[], status = 200) {
+      const encoder = new TextEncoder()
+      const queue = slices.map((s) => (typeof s === 'string' ? encoder.encode(s) : s))
+      let index = 0
+
+      jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: status < 400,
+        status,
+        body: {
+          getReader: () => ({
+            read: async () =>
+              index < queue.length
+                ? { done: false, value: queue[index++] }
+                : { done: true, value: undefined },
+            cancel: async () => undefined,
+          }),
+        },
+      } as unknown as Response)
+    }
+
+    describe('ollama', () => {
+      beforeEach(() => {
+        configValues.AI_SUMMARY_PROVIDER = 'ollama'
+        configValues.AI_SUMMARY_ENDPOINT = 'http://ollama.test:11434'
+      })
+
+      it('yields each NDJSON fragment as it arrives', async () => {
+        ollamaStreams([
+          '{"message":{"content":"An "}}\n',
+          '{"message":{"content":"eigenvalue"}}\n',
+          '{"message":{"content":"."}}\n{"done":true}\n',
+        ])
+        service = await build()
+
+        // Asserted as separate deltas, not as a joined string: joining would pass just as well
+        // if the provider buffered the whole reply and yielded it once at the end.
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
+          'An ',
+          'eigenvalue',
+          '.',
+        ])
+      })
+
+      it('asks the provider to stream', async () => {
+        ollamaStreams(['{"message":{"content":"hi"}}\n'])
+        service = await build()
+        await drain(service.chatStream([{ role: 'user', content: 'hi' }], { maxTokens: 120 }))
+
+        const body = JSON.parse(
+          (jest.mocked(global.fetch).mock.calls[0][1] as RequestInit).body as string,
+        )
+        expect(body.stream).toBe(true)
+        expect(body.options.num_predict).toBe(120)
+      })
+
+      it('reassembles a JSON object split across two reads', async () => {
+        // Network chunks do not respect line boundaries. Parsing per-read would throw here and
+        // lose the fragment.
+        ollamaStreams(['{"message":{"con', 'tent":"split"}}\n'])
+        service = await build()
+
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
+          'split',
+        ])
+      })
+
+      it('reassembles a multi-byte character split across two reads', async () => {
+        // The em dash the server's own prompts use is three bytes. Decoding each read
+        // independently turns a split one into replacement characters.
+        const bytes = new TextEncoder().encode('{"message":{"content":"—"}}\n')
+        ollamaStreams([bytes.slice(0, 23), bytes.slice(23)])
+        service = await build()
+
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual(['—'])
+      })
+
+      it('maps a rate-limited stream to ServiceUnavailableException', async () => {
+        ollamaStreams([], 429)
+        service = await build()
+
+        await expect(
+          drain(service.chatStream([{ role: 'user', content: 'hi' }])),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException)
+      })
+    })
+
+    describe('a provider without streaming support', () => {
+      beforeEach(() => {
+        configValues.AI_SUMMARY_PROVIDER = 'gemini'
+        configValues.AI_SUMMARY_API_KEY = 'test-key'
+        mockSendMessage.mockReset()
+        mockSendMessage.mockResolvedValue({ response: { text: () => 'the whole answer' } })
+      })
+
+      it('falls back to one delta carrying the complete reply', async () => {
+        // The fallback has to be invisible: same event shape, same text, just delivered at once.
+        service = await build()
+
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
+          'the whole answer',
+        ])
+      })
+
+      it('maps a transient failure the same way the streaming providers do', async () => {
+        mockSendMessage.mockRejectedValue(Object.assign(new Error('rate limited'), { status: 429 }))
+        service = await build()
+
+        await expect(
+          drain(service.chatStream([{ role: 'user', content: 'hi' }])),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException)
+      })
+    })
+
+    it('yields nothing when no provider is configured', async () => {
+      service = await build()
+      expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([])
+    })
+  })
 })

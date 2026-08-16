@@ -279,7 +279,10 @@ export function PostAiChat({ post }: PostAiChatProps) {
                         </div>
                       </div>
                     ))}
-                    {isPending && (
+                    {/* Only until the first token lands. The reply now streams into its own
+                        bubble while `isPending` is still true, and showing both would tell the
+                        student the assistant is thinking about the answer they are reading. */}
+                    {isPending && messages[messages.length - 1]?.role === 'user' && (
                       <div className="flex justify-start">
                         <div className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-text-muted">
                           <span className="animate-pulse">Thinking…</span>

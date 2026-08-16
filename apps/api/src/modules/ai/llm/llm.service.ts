@@ -57,6 +57,48 @@ export class LlmService {
     }
   }
 
+  /**
+   * `chat`, delivered incrementally.
+   *
+   * Providers without streaming support are NOT excluded — they yield the finished reply as one
+   * delta, so every caller sees the same event shape and the fallback is invisible from the
+   * outside. Today Groq and Ollama stream; Gemini takes the fallback.
+   *
+   * The try/catch spans the whole generator rather than just its first `await`, because that is
+   * the difference this method exists to get right: a 429 arriving after fifty tokens is exactly
+   * as transient as one arriving before the first, and left unmapped it would reach the student
+   * as a half-written answer that simply stopped.
+   */
+  async *chatStream(
+    messages: LlmMessage[],
+    options: LlmChatOptions = {},
+  ): AsyncGenerator<string, void> {
+    if (!this.provider) return
+
+    const resolved = {
+      maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+      temperature: options.temperature ?? DEFAULT_TEMPERATURE,
+    }
+
+    try {
+      if (!this.provider.chatStream) {
+        const reply = await this.provider.chat(messages, resolved)
+        if (reply) yield reply
+        return
+      }
+
+      for await (const delta of this.provider.chatStream(messages, resolved)) {
+        yield delta
+      }
+    } catch (err) {
+      if (isTransientProviderError(err)) {
+        this.logger.warn(`AI provider is rate limited or unavailable: ${(err as Error).message}`)
+        throw new ServiceUnavailableException('The AI service is busy. Please try again shortly.')
+      }
+      throw err
+    }
+  }
+
   private build(name: LlmProviderName): LlmProvider | null {
     switch (name) {
       case 'groq':
