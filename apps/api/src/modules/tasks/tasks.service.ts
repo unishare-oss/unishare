@@ -6,6 +6,15 @@ import { runWithCronLock } from '@/common/run-with-cron-lock'
 import { StorageService } from '@/modules/storage/storage.service'
 
 /**
+ * How long an anonymous user is spared regardless of session state.
+ *
+ * Guards the gap between the user row being created and its session row existing — during which
+ * `sessions: { none: ... }` matches, because none is vacuously true for zero rows. An hour is far
+ * longer than that write gap and far shorter than the daily cadence, so it costs nothing.
+ */
+export const ANONYMOUS_GRACE_MS = 60 * 60 * 1000
+
+/**
  * Per-job cross-pod lock TTLs, in milliseconds.
  *
  * The binding constraint is the job's own CADENCE, not its runtime: a holder that crashes
@@ -112,7 +121,13 @@ export class TasksService {
       const { count } = await this.prisma.user.deleteMany({
         where: {
           isAnonymous: true,
+          // "No unexpired session" is the right rule — an age cutoff alone would delete an
+          // anonymous user who has been signed in for more than the cutoff, mid-session.
           sessions: { none: { expiresAt: { gt: new Date() } } },
+          // But `none` also matches a user with NO session rows at all, which is exactly the
+          // state of an account in the moments between being created and having its session
+          // written. Without this floor the job can delete a user who signed in seconds ago.
+          createdAt: { lt: new Date(Date.now() - ANONYMOUS_GRACE_MS) },
         },
       })
       if (count > 0) this.logger.log(`Pruned ${count} anonymous users with no active sessions`)

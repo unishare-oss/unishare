@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { TasksService, TASK_LOCK_TTL_MS, TaskLockName } from './tasks.service'
+import { TasksService, TASK_LOCK_TTL_MS, TaskLockName, ANONYMOUS_GRACE_MS } from './tasks.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { CronLockService } from '@/common/cron-lock.service'
 import { StorageService } from '@/modules/storage/storage.service'
@@ -64,6 +64,7 @@ describe('TasksService', () => {
         where: {
           isAnonymous: true,
           sessions: { none: { expiresAt: { gt: expect.any(Date) } } },
+          createdAt: { lt: expect.any(Date) },
         },
       })
 
@@ -72,6 +73,23 @@ describe('TasksService', () => {
       const gt = prisma.user.deleteMany.mock.calls[0][0].where.sessions.none.expiresAt.gt as Date
       expect(gt.getTime()).toBeGreaterThanOrEqual(before.getTime())
       expect(gt.getTime()).toBeLessThan(before.getTime() + 5000)
+    })
+
+    it('spares an anonymous user too new to have a session row yet', async () => {
+      prisma.user.deleteMany.mockResolvedValue({ count: 0 })
+
+      const before = new Date()
+      await service.pruneAnonymousUsers()
+
+      // `sessions: { none: ... }` is vacuously TRUE for a user with zero session rows, which is
+      // the state of an account between its user row being written and its session row landing.
+      // Without this floor the job deletes users who signed in seconds ago. Asserted as an
+      // offset from now, so widening or dropping ANONYMOUS_GRACE_MS fails rather than being
+      // absorbed by a loose `expect.any(Date)`.
+      const lt = prisma.user.deleteMany.mock.calls[0][0].where.createdAt.lt as Date
+      const expected = before.getTime() - ANONYMOUS_GRACE_MS
+      expect(Math.abs(lt.getTime() - expected)).toBeLessThan(5000)
+      expect(ANONYMOUS_GRACE_MS).toBeGreaterThanOrEqual(60 * 1000)
     })
 
     it('should log when users are pruned', async () => {
