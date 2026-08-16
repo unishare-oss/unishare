@@ -24,6 +24,7 @@ import {
 import { Response } from 'express'
 import { Throttle } from '@nestjs/throttler'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
+import { ThrottleBucket } from '@/common/decorators/throttle-bucket.decorator'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
@@ -228,6 +229,7 @@ export class PostsController {
   @Post(':id/ai-chat')
   @UseGuards(UserThrottlerGuard)
   @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ThrottleBucket('ai-chat')
   @ApiOperation({ summary: 'Chat with a post using AI' })
   @ApiOkResponse({ type: AiChatResponseDto, description: 'AI response to the user message' })
   @ResponseMessage('AI response generated')
@@ -255,6 +257,7 @@ export class PostsController {
   @Post(':id/ai-chat/stream')
   @UseGuards(UserThrottlerGuard)
   @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ThrottleBucket('ai-chat')
   @ApiExcludeEndpoint()
   async aiChatStream(
     @Param('id') id: string,
