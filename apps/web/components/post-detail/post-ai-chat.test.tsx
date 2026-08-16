@@ -215,6 +215,60 @@ function cite(
   return { chunkId, pageNum, snippet, ...file }
 }
 
+describe('PostAiChat reply formatting', () => {
+  beforeEach(() => {
+    mocks.status = undefined
+    mocks.messages = []
+    mocks.sendMessage.mockReset()
+  })
+
+  it('renders assistant markdown as real elements', async () => {
+    givenStatus('ready', 40)
+    mocks.messages = [assistant('Key points:\n\n- first\n- second\n\n**bold** and `code`.')]
+    await renderOpened()
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText('bold').tagName).toBe('STRONG')
+    expect(screen.getByText('code').tagName).toBe('CODE')
+  })
+
+  it("does not render the user's own message as markdown", async () => {
+    // A question containing "- " or "#" would otherwise be echoed back as a list or heading the
+    // student never wrote.
+    givenStatus('ready', 40)
+    mocks.messages = [
+      { role: 'user', content: '- is this a list?', citations: [] },
+      assistant('No.'),
+    ]
+    await renderOpened()
+
+    expect(screen.getByText('- is this a list?')).toBeInTheDocument()
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+  })
+
+  it('strips a link to plain text rather than making it clickable', async () => {
+    // The model answers from user-uploaded documents, so a URL in a reply may have come from a
+    // malicious PDF. Rendering it as an anchor would make the platform the delivery mechanism.
+    givenStatus('ready', 40)
+    mocks.messages = [assistant('See [this site](https://evil.example.com) for more.')]
+    await renderOpened()
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    // unwrapDisallowed keeps the words: silently deleting them would hide that anything was there.
+    expect(screen.getByText(/this site/)).toBeInTheDocument()
+  })
+
+  it('does not render images', async () => {
+    // A remote image URL is a tracking pixel that fires on render, before the student has decided
+    // to trust anything.
+    givenStatus('ready', 40)
+    mocks.messages = [assistant('![pixel](https://evil.example.com/track.png)')]
+    await renderOpened()
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+})
+
 describe('PostAiChat citations', () => {
   beforeEach(() => {
     mocks.status = undefined
