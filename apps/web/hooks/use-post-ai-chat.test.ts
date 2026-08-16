@@ -31,7 +31,15 @@ describe('usePostAiChat', () => {
       envelope({
         reply: 'See page 12.',
         offTopic: false,
-        citations: [{ chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' }],
+        citations: [
+          {
+            chunkId: 'c1',
+            pageNum: 12,
+            snippet: 'Eigenvalues…',
+            fileId: 'f1',
+            fileName: 'notes.pdf',
+          },
+        ],
       }),
     )
 
@@ -44,8 +52,10 @@ describe('usePostAiChat', () => {
     // Pins the unwrap level: `result.data.data` would throw and yield the error copy instead.
     expect(result.current.messages[1].content).toBe('See page 12.')
     expect(result.current.messages[1].role).toBe('assistant')
+    // fileId/fileName ride along: a page number without its document is ambiguous on a
+    // multi-file post, and the footer groups by fileId.
     expect(result.current.messages[1].citations).toEqual([
-      { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' },
+      { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…', fileId: 'f1', fileName: 'notes.pdf' },
     ])
   })
 
@@ -96,7 +106,7 @@ describe('usePostAiChat', () => {
       envelope({
         reply: 'OFF_TOPIC',
         offTopic: false,
-        citations: [{ chunkId: 'c1', pageNum: 3, snippet: 'x' }],
+        citations: [{ chunkId: 'c1', pageNum: 3, snippet: 'x', fileId: 'f1', fileName: 'n.pdf' }],
       }),
     )
 
@@ -181,7 +191,7 @@ describe('usePostAiChat', () => {
         citations: [
           { chunkId: 'c1', pageNum: null, snippet: 'a' },
           { chunkId: 'c2', pageNum: undefined, snippet: 'b' },
-          { chunkId: 'c3', pageNum: 7, snippet: 'c' },
+          { chunkId: 'c3', pageNum: 7, snippet: 'c', fileId: 'f9', fileName: 'ok.pdf' },
         ],
       }),
     )
@@ -192,10 +202,12 @@ describe('usePostAiChat', () => {
     })
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
+    // fileId/fileName are narrowed the same way and for a sharper reason: a citation grouped
+    // under `undefined` would merge two different documents into one chip in the footer.
     expect(result.current.messages[1].citations).toEqual([
-      { chunkId: 'c1', pageNum: null, snippet: 'a' },
-      { chunkId: 'c2', pageNum: null, snippet: 'b' },
-      { chunkId: 'c3', pageNum: 7, snippet: 'c' },
+      { chunkId: 'c1', pageNum: null, snippet: 'a', fileId: '', fileName: '' },
+      { chunkId: 'c2', pageNum: null, snippet: 'b', fileId: '', fileName: '' },
+      { chunkId: 'c3', pageNum: 7, snippet: 'c', fileId: 'f9', fileName: 'ok.pdf' },
     ])
   })
 

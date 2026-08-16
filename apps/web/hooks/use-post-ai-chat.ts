@@ -14,6 +14,13 @@ export interface AiChatCitation {
   chunkId: string
   /** Null for formats with no pagination (.docx via mammoth). */
   pageNum: number | null
+  /**
+   * Which document the page belongs to. `pageNum` restarts at 1 per file, so a page number
+   * without this is ambiguous on a multi-file post — and `fileId`, not `fileName`, is the
+   * identity: uploading "notes.pdf" twice is ordinary.
+   */
+  fileId: string
+  fileName: string
   /** Capped at 160 chars server-side and often mid-sentence — not a quotation of record. */
   snippet: string
 }
@@ -60,6 +67,10 @@ function normaliseCitations(raw: AiChatCitationDto[] | undefined): AiChatCitatio
   return raw.map((c) => ({
     chunkId: c.chunkId,
     pageNum: typeof c.pageNum === 'number' ? c.pageNum : null,
+    // Narrowed like pageNum: the contract says these are strings, the wire may disagree, and a
+    // citation grouped under `undefined` would silently merge two documents into one chip.
+    fileId: typeof c.fileId === 'string' ? c.fileId : '',
+    fileName: typeof c.fileName === 'string' ? c.fileName : '',
     snippet: c.snippet,
   }))
 }
