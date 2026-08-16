@@ -205,6 +205,16 @@ function assistant(content: string, citations: ChatMessage['citations'] = []): C
   return { role: 'assistant', content, citations }
 }
 
+/** A citation defaulting to a single unnamed document, so tests opt IN to multi-file cases. */
+function cite(
+  chunkId: string,
+  pageNum: number | null,
+  snippet: string,
+  file: { fileId: string; fileName: string } = { fileId: 'f1', fileName: 'notes.pdf' },
+) {
+  return { chunkId, pageNum, snippet, ...file }
+}
+
 describe('PostAiChat citations', () => {
   beforeEach(() => {
     mocks.status = undefined
@@ -216,9 +226,7 @@ describe('PostAiChat citations', () => {
     givenStatus('ready', 40)
     mocks.messages = [
       { role: 'user', content: 'What is an eigenvalue?' },
-      assistant('A scalar λ such that Av = λv.', [
-        { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' },
-      ]),
+      assistant('A scalar λ such that Av = λv.', [cite('c1', 12, 'Eigenvalues…')]),
     ]
     await renderOpened()
 
@@ -232,11 +240,7 @@ describe('PostAiChat citations', () => {
     // the footer, which leaves its POSITION unpinned — and a footer sitting inline next to a
     // sentence is exactly the "this sentence came from page 12" reading the design forbids.
     givenStatus('ready', 40)
-    mocks.messages = [
-      assistant('A scalar λ such that Av = λv.', [
-        { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' },
-      ]),
-    ]
+    mocks.messages = [assistant('A scalar λ such that Av = λv.', [cite('c1', 12, 'Eigenvalues…')])]
     await renderOpened()
 
     const body = screen.getByRole('note').parentElement!
@@ -255,9 +259,9 @@ describe('PostAiChat citations', () => {
     givenStatus('ready', 40)
     mocks.messages = [
       assistant('It is covered in two places.', [
-        { chunkId: 'c1', pageNum: 12, snippet: 'a' },
-        { chunkId: 'c2', pageNum: 12, snippet: 'b' },
-        { chunkId: 'c3', pageNum: 3, snippet: 'c' },
+        cite('c1', 12, 'a'),
+        cite('c2', 12, 'b'),
+        cite('c3', 3, 'c'),
       ]),
     ]
     await renderOpened()
@@ -265,43 +269,81 @@ describe('PostAiChat citations', () => {
     expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 3p. 12')
   })
 
-  it('shows no page chips on a multi-file post, because "p. 3" cannot say which file', async () => {
-    // `pageNum` restarts at 1 in every file (@@unique([fileId, chunkIndex])) and a citation
-    // carries no file identity at all, so a chunk from page 3 of the past paper and a chunk from
-    // page 3 of the solutions are indistinguishable by the time they reach here. The de-duplicated
-    // single "p. 3" chip therefore points the student at the wrong document half the time -- which
-    // is precisely the failure the whole citation feature exists to prevent. Suppress rather than
-    // guess.
+  it('names the document on a multi-file post, because "p. 3" alone cannot', async () => {
+    // `pageNum` restarts at 1 in every file (@@unique([fileId, chunkIndex])), so page 3 of the
+    // past paper and page 3 of the solutions are the same number meaning different things. Citing
+    // a bare "p. 3" would point the student at the wrong document half the time — precisely the
+    // failure the citation feature exists to prevent — and de-duplicating across files would
+    // collapse the two into one chip.
     givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
     mocks.messages = [
       assistant('It is covered in both documents.', [
-        { chunkId: 'c1', pageNum: 3, snippet: 'from the past paper' },
-        { chunkId: 'c2', pageNum: 3, snippet: 'from the solutions' },
+        cite('c1', 3, 'from the past paper', { fileId: 'f1', fileName: 'paper.pdf' }),
+        cite('c2', 3, 'from the solutions', { fileId: 'f2', fileName: 'solutions.pdf' }),
       ]),
     ]
     await renderOpened(makePost([PDF, PDF]))
 
+    // Both survive as distinct chips, each naming its document.
     expect(screen.getByRole('note').textContent).toBe(
-      'Sources consulted2 excerpts · from multiple documents',
+      'Sources consultedpaper.pdf p. 3solutions.pdf p. 3',
     )
-    expect(screen.queryByText(/p\. 3/)).not.toBeInTheDocument()
   })
 
-  it('counts every excerpt on a multi-file post, including ones with no page at all', async () => {
-    // The count must not be drawn from the (now unused) page list, or unpaginated excerpts would
-    // silently vanish from the total the student is shown.
+  it('keeps two same-named files apart, because the name is a label and the id is the identity', async () => {
+    // Uploading "notes.pdf" twice is ordinary. Grouping by NAME would merge them, de-duplicate
+    // their page 3s into one chip, and reintroduce exactly the ambiguity this feature removed —
+    // while looking correct, because the label would still read "notes.pdf p. 3".
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
+    mocks.messages = [
+      assistant('Both parts cover it.', [
+        cite('c1', 3, 'part one', { fileId: 'f1', fileName: 'notes.pdf' }),
+        cite('c2', 3, 'part two', { fileId: 'f2', fileName: 'notes.pdf' }),
+      ]),
+    ]
+    await renderOpened(makePost([PDF, PDF]))
+
+    // Two chips, not one: the duplicate name is a display problem, not a reason to merge.
+    expect(screen.getByRole('note').textContent).toBe(
+      'Sources consultednotes.pdf p. 3notes.pdf p. 3',
+    )
+  })
+
+  it('omits the filename when every citation came from the same document', async () => {
+    // Repeating one filename on every chip is noise, and there is nothing to disambiguate. Note
+    // this is decided from the CITATIONS, not the post's file list: a two-PDF post whose answer
+    // drew on one document only needs no labels either.
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
+    mocks.messages = [
+      assistant('Only the paper covers it.', [
+        cite('c1', 3, 'a', { fileId: 'f1', fileName: 'paper.pdf' }),
+        cite('c2', 8, 'b', { fileId: 'f1', fileName: 'paper.pdf' }),
+      ]),
+    ]
+    await renderOpened(makePost([PDF, PDF]))
+
+    expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 3p. 8')
+  })
+
+  it('shows chips per document when only some documents have page numbers', async () => {
+    // A PDF plus a .docx: mammoth gives the .docx no pages at all. The PDF's pages are still
+    // worth showing, and each is named so it cannot be read as applying to the .docx.
     givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
     mocks.messages = [
       assistant('Mixed.', [
-        { chunkId: 'c1', pageNum: 3, snippet: 'a' },
-        { chunkId: 'c2', pageNum: null, snippet: 'b' },
-        { chunkId: 'c3', pageNum: 9, snippet: 'c' },
+        cite('c1', 3, 'a', { fileId: 'f1', fileName: 'paper.pdf' }),
+        cite('c2', null, 'b', { fileId: 'f2', fileName: 'notes.docx' }),
+        cite('c3', 9, 'c', { fileId: 'f1', fileName: 'paper.pdf' }),
       ]),
     ]
     await renderOpened(makePost([PDF, PDF]))
 
+    // KNOWN LIMITATION, pinned deliberately: the .docx excerpt has no page and so contributes no
+    // chip, meaning the footer under-reports how many excerpts were consulted. Under-informative
+    // rather than misattributing — the reverse trade (inventing a page for it) is the one that
+    // would mislead. Carrying an unpaginated marker per file is the follow-up.
     expect(screen.getByRole('note').textContent).toBe(
-      'Sources consulted3 excerpts · from multiple documents',
+      'Sources consultedpaper.pdf p. 3paper.pdf p. 9',
     )
   })
 
@@ -310,7 +352,7 @@ describe('PostAiChat citations', () => {
     // count. A PDF next to a screenshot has exactly one source of page numbers, so suppressing
     // there would throw away a citation that is perfectly unambiguous.
     givenStatus('ready', 40)
-    mocks.messages = [assistant('On page 12.', [{ chunkId: 'c1', pageNum: 12, snippet: 'a' }])]
+    mocks.messages = [assistant('On page 12.', [cite('c1', 12, 'a')])]
     await renderOpened(makePost([PDF, 'image/png']))
 
     expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 12')
@@ -322,8 +364,8 @@ describe('PostAiChat citations', () => {
     givenStatus('ready', 40)
     mocks.messages = [
       assistant('The document defines it in the introduction.', [
-        { chunkId: 'c1', pageNum: null, snippet: 'a' },
-        { chunkId: 'c2', pageNum: null, snippet: 'b' },
+        cite('c1', null, 'a'),
+        cite('c2', null, 'b'),
       ]),
     ]
     await renderOpened()
@@ -336,12 +378,7 @@ describe('PostAiChat citations', () => {
 
   it('keeps only the pages it actually has when pageNum is mixed', async () => {
     givenStatus('ready', 40)
-    mocks.messages = [
-      assistant('Mixed sources.', [
-        { chunkId: 'c1', pageNum: null, snippet: 'a' },
-        { chunkId: 'c2', pageNum: 7, snippet: 'b' },
-      ]),
-    ]
+    mocks.messages = [assistant('Mixed sources.', [cite('c1', null, 'a'), cite('c2', 7, 'b')])]
     await renderOpened()
 
     expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 7')
@@ -349,7 +386,7 @@ describe('PostAiChat citations', () => {
 
   it('uses the singular noun for one unpaginated excerpt', async () => {
     givenStatus('ready', 40)
-    mocks.messages = [assistant('From the docx.', [{ chunkId: 'c1', pageNum: null, snippet: 'a' }])]
+    mocks.messages = [assistant('From the docx.', [cite('c1', null, 'a')])]
     await renderOpened()
 
     expect(screen.getByRole('note').textContent).toBe(
@@ -360,9 +397,7 @@ describe('PostAiChat citations', () => {
   it('does not quote the snippet, which is a 160-char mid-sentence fragment', async () => {
     givenStatus('ready', 40)
     mocks.messages = [
-      assistant('Answer.', [
-        { chunkId: 'c1', pageNum: 4, snippet: 'ansform of a function f is defined as the integ' },
-      ]),
+      assistant('Answer.', [cite('c1', 4, 'ansform of a function f is defined as the integ')]),
     ]
     await renderOpened()
 
@@ -389,7 +424,7 @@ describe('PostAiChat citations', () => {
   it('does not trail a previous turn’s pages onto a later uncited answer', async () => {
     givenStatus('ready', 40)
     mocks.messages = [
-      assistant('Page 12 covers it.', [{ chunkId: 'c1', pageNum: 12, snippet: 'a' }]),
+      assistant('Page 12 covers it.', [cite('c1', 12, 'a')]),
       {
         role: 'assistant',
         content: 'I can only answer questions about this document.',

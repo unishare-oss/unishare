@@ -80,25 +80,34 @@ function missingDocumentsMessage(readyFiles: number, supportedFiles: number): st
  * snippets are not rendered at all: capped at 160 chars and often starting mid-sentence, they
  * would masquerade as quotations of record.
  *
- * `multiFile` suppresses page chips entirely, and that is a correctness requirement rather than a
- * style choice. `pageNum` restarts at 1 in every file (`@@unique([fileId, chunkIndex])`) and a
- * citation carries no file identity, so on a two-PDF post — "past paper plus solutions" is an
- * ordinary shape here — a chunk from page 3 of one file and a chunk from page 3 of the other
- * de-duplicate into a single `p. 3` chip that points at the wrong document half the time. A page
- * number a student cannot resolve to a document is worse than no page number at all, because they
- * will act on it. The honest fix is to carry `fileId` through the citation DTO and label each chip
- * with its file; until that lands, suppress.
+ * Pages are grouped BY FILE, and that is a correctness requirement rather than a style choice.
+ * `pageNum` restarts at 1 in every file (`@@unique([fileId, chunkIndex])`), so on a two-PDF post —
+ * "past paper plus solutions" is an ordinary shape here — a bare `p. 3` is ambiguous between the
+ * two documents. A page a student cannot resolve to a document is worse than no page at all,
+ * because they will act on it. Citations now carry `fileId`/`fileName`, so each chip names its
+ * document; grouping is what makes the number mean something.
+ *
+ * On a single-file post the name is redundant and omitted — repeating one filename on every chip
+ * is noise, and there is nothing to disambiguate.
  */
-function CitationFooter({
-  citations,
-  multiFile,
-}: {
-  citations: AiChatCitation[]
-  multiFile: boolean
-}) {
-  const pages = multiFile
-    ? []
-    : [...new Set(citations.map((c) => c.pageNum).filter((p) => p !== null))].sort((a, b) => a - b)
+function CitationFooter({ citations }: { citations: AiChatCitation[] }) {
+  // One group per file, each with its own de-duplicated ascending pages. Files are kept in the
+  // order retrieval returned them, so the best-matching document is named first.
+  const groups: { fileId: string; fileName: string; pages: number[] }[] = []
+  for (const citation of citations) {
+    let group = groups.find((g) => g.fileId === citation.fileId)
+    if (!group) {
+      group = { fileId: citation.fileId, fileName: citation.fileName, pages: [] }
+      groups.push(group)
+    }
+    if (citation.pageNum !== null && !group.pages.includes(citation.pageNum)) {
+      group.pages.push(citation.pageNum)
+    }
+  }
+  for (const group of groups) group.pages.sort((a, b) => a - b)
+
+  const multiFile = groups.length > 1
+  const labelled = groups.filter((g) => g.pages.length > 0)
 
   return (
     <div
@@ -111,21 +120,20 @@ function CitationFooter({
       <span className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
         Sources consulted
       </span>
-      {pages.length > 0 ? (
-        pages.map((page) => (
-          <span
-            key={page}
-            className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border text-text-muted"
-          >
-            {`p. ${page}`}
-          </span>
-        ))
+      {labelled.length > 0 ? (
+        labelled.map((group) =>
+          group.pages.map((page) => (
+            <span
+              key={`${group.fileId}-${page}`}
+              className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border text-text-muted"
+            >
+              {multiFile ? `${group.fileName} p. ${page}` : `p. ${page}`}
+            </span>
+          )),
+        )
       ) : (
         <span className="font-mono text-[10px] text-text-muted">
-          {excerptLabel(
-            citations.length,
-            multiFile ? 'from multiple documents' : 'no page numbers',
-          )}
+          {excerptLabel(citations.length, 'no page numbers')}
         </span>
       )}
     </div>
@@ -142,14 +150,14 @@ export function PostAiChat({ post }: PostAiChatProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Counted from the post's own files rather than from `indexStatus.supportedFiles`, so the
-  // ambiguity check is settled before the status request resolves — citations can render on the
-  // very first answer, and a chip that appears unlabelled for one render and then corrects itself
-  // is the same wrong claim, just briefly. Only indexable files count: a PDF sitting next to a
-  // screenshot has exactly one source of page numbers, so its pages are unambiguous.
+  // Only indexable files count — a PDF next to a screenshot still has one source of pages.
+  //
+  // Whether to label chips with a filename is decided inside CitationFooter, from the citations
+  // themselves rather than from this list. That is strictly more accurate: a two-PDF post whose
+  // answer happened to draw on only one document needs no disambiguation, and labelling it would
+  // add noise to a chip that was never ambiguous.
   const supportedFiles = post.files?.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType)) ?? []
   const hasSupportedFiles = supportedFiles.length > 0
-  const hasMultipleDocuments = supportedFiles.length > 1
 
   const { messages, sendMessage, isPending } = usePostAiChat(post.id)
   const { status: indexStatus } = useAiIndexStatus(post.id, hasSupportedFiles)
@@ -256,10 +264,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                               <span>{msg.content}</span>
                             </div>
                             {msg.citations && msg.citations.length > 0 && (
-                              <CitationFooter
-                                citations={msg.citations}
-                                multiFile={hasMultipleDocuments}
-                              />
+                              <CitationFooter citations={msg.citations} />
                             )}
                           </div>
                         </div>

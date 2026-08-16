@@ -48,6 +48,10 @@ export interface RetrievedChunk {
   content: string
   pageNum: number | null
   similarity: number
+  /** Which document this chunk came from. `pageNum` is meaningless without it on a
+   *  multi-file post, because chunkIndex — and therefore pageNum — restarts at 1 per file. */
+  fileId: string
+  fileName: string
 }
 
 @Injectable()
@@ -83,7 +87,8 @@ export class RetrievalService {
     // literal against the "IngestStatus" enum on its own. Parameterising it would need an
     // explicit ${'x'}::"IngestStatus" cast or the comparison is rejected at runtime.
     return this.prisma.$queryRaw<RetrievedChunk[]>`
-      SELECT c.id, c.content, c."pageNum", 1 - (c.embedding <=> ${literal}::vector) AS similarity
+      SELECT c.id, c.content, c."pageNum", c."fileId", f.name AS "fileName",
+             1 - (c.embedding <=> ${literal}::vector) AS similarity
       FROM post_chunk c
       JOIN file f ON f.id = c."fileId"
       WHERE c."postId" = ${postId}

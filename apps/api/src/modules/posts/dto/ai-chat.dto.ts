@@ -61,6 +61,15 @@ export class AiChatCitationDto {
   @ApiProperty({ type: Number, nullable: true, description: 'Null for .docx, which has no pages' })
   pageNum: number | null
 
+  // Without these, a page number on a multi-file post is ambiguous or wrong: chunkIndex — and
+  // therefore pageNum — restarts at 1 per file, so "p. 3" could mean page 3 of either document.
+  // The UI previously had to suppress page chips entirely on such posts.
+  @ApiProperty({ description: 'Which uploaded file this chunk came from' })
+  fileId: string
+
+  @ApiProperty({ description: 'Display name of the file, for attributing the page' })
+  fileName: string
+
   @ApiProperty({ description: 'Short excerpt of the cited chunk' })
   snippet: string
 }

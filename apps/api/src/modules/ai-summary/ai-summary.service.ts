@@ -257,6 +257,10 @@ function toCitations(chunks: RetrievedChunk[]): AiChatCitationDto[] {
   return chunks.map((chunk) => ({
     chunkId: chunk.id,
     pageNum: chunk.pageNum,
+    // Taken from the retrieved row itself, never re-queried or inferred: a citation must name
+    // the document the chunk actually came from, or it is worse than no citation at all.
+    fileId: chunk.fileId,
+    fileName: chunk.fileName,
     snippet:
       chunk.content.length > SNIPPET_CHARS
         ? `${chunk.content.slice(0, SNIPPET_CHARS).trimEnd()}…`
