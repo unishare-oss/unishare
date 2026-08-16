@@ -38,9 +38,31 @@ function preparingMessage(indexedChunks: number): string {
   )
 }
 
-/** Built as one string for the same whitespace reason as `preparingMessage` above. */
-function unpaginatedLabel(count: number): string {
-  return `${count} ${count === 1 ? 'excerpt' : 'excerpts'} · no page numbers`
+/**
+ * Built as one string for the same whitespace reason as `preparingMessage` above.
+ *
+ * `reason` says why no page chips are shown, and the two reasons are genuinely different: a .docx
+ * has no pages to show, whereas a multi-file post has pages that cannot be attributed. Collapsing
+ * them into one sentence would tell a student with two PDFs that their PDFs have no page numbers.
+ */
+function excerptLabel(count: number, reason: string): string {
+  return `${count} ${count === 1 ? 'excerpt' : 'excerpts'} · ${reason}`
+}
+
+/**
+ * `getAiIndexStatus` settles on `'ready'` as soon as ONE supported file is READY, and retrieval
+ * filters to READY files — so a post whose past paper indexed and whose solutions file failed
+ * answers and cites from half of itself, with full confidence and no caveat anywhere. The status
+ * DTO has carried `readyFiles`/`supportedFiles` all along; this is the notice that reads them.
+ *
+ * One string, for the whitespace reason documented on `preparingMessage`.
+ */
+function missingDocumentsMessage(readyFiles: number, supportedFiles: number): string {
+  const missing = supportedFiles - readyFiles
+  return (
+    `${missing} of ${supportedFiles} documents couldn't be prepared for AI chat — ` +
+    `answers won't cover ${missing === 1 ? 'it' : 'them'}.`
+  )
 }
 
 /**
@@ -57,11 +79,26 @@ function unpaginatedLabel(count: number): string {
  * (`.docx` has no pagination) are counted instead of being given an invented page label, and
  * snippets are not rendered at all: capped at 160 chars and often starting mid-sentence, they
  * would masquerade as quotations of record.
+ *
+ * `multiFile` suppresses page chips entirely, and that is a correctness requirement rather than a
+ * style choice. `pageNum` restarts at 1 in every file (`@@unique([fileId, chunkIndex])`) and a
+ * citation carries no file identity, so on a two-PDF post — "past paper plus solutions" is an
+ * ordinary shape here — a chunk from page 3 of one file and a chunk from page 3 of the other
+ * de-duplicate into a single `p. 3` chip that points at the wrong document half the time. A page
+ * number a student cannot resolve to a document is worse than no page number at all, because they
+ * will act on it. The honest fix is to carry `fileId` through the citation DTO and label each chip
+ * with its file; until that lands, suppress.
  */
-function CitationFooter({ citations }: { citations: AiChatCitation[] }) {
-  const pages = [...new Set(citations.map((c) => c.pageNum).filter((p) => p !== null))].sort(
-    (a, b) => a - b,
-  )
+function CitationFooter({
+  citations,
+  multiFile,
+}: {
+  citations: AiChatCitation[]
+  multiFile: boolean
+}) {
+  const pages = multiFile
+    ? []
+    : [...new Set(citations.map((c) => c.pageNum).filter((p) => p !== null))].sort((a, b) => a - b)
 
   return (
     <div
@@ -85,7 +122,10 @@ function CitationFooter({ citations }: { citations: AiChatCitation[] }) {
         ))
       ) : (
         <span className="font-mono text-[10px] text-text-muted">
-          {unpaginatedLabel(citations.length)}
+          {excerptLabel(
+            citations.length,
+            multiFile ? 'from multiple documents' : 'no page numbers',
+          )}
         </span>
       )}
     </div>
@@ -102,12 +142,25 @@ export function PostAiChat({ post }: PostAiChatProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const hasSupportedFiles = post.files?.some((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType))
+  // Counted from the post's own files rather than from `indexStatus.supportedFiles`, so the
+  // ambiguity check is settled before the status request resolves — citations can render on the
+  // very first answer, and a chip that appears unlabelled for one render and then corrects itself
+  // is the same wrong claim, just briefly. Only indexable files count: a PDF sitting next to a
+  // screenshot has exactly one source of page numbers, so its pages are unambiguous.
+  const supportedFiles = post.files?.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType)) ?? []
+  const hasSupportedFiles = supportedFiles.length > 0
+  const hasMultipleDocuments = supportedFiles.length > 1
+
   const { messages, sendMessage, isPending } = usePostAiChat(post.id)
-  const { status: indexStatus } = useAiIndexStatus(post.id, Boolean(hasSupportedFiles))
+  const { status: indexStatus } = useAiIndexStatus(post.id, hasSupportedFiles)
 
   const isPreparing = indexStatus?.state === 'preparing'
   const indexFailed = indexStatus?.state === 'failed'
+  // Deliberately scoped to 'ready'. While indexing is in flight `readyFiles < supportedFiles` is
+  // the ordinary condition, not a failure, and the preparing notice already covers it; in the
+  // 'failed' state the existing notice already says nothing could be prepared.
+  const someDocumentsMissing =
+    indexStatus?.state === 'ready' && indexStatus.readyFiles < indexStatus.supportedFiles
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -203,7 +256,10 @@ export function PostAiChat({ post }: PostAiChatProps) {
                               <span>{msg.content}</span>
                             </div>
                             {msg.citations && msg.citations.length > 0 && (
-                              <CitationFooter citations={msg.citations} />
+                              <CitationFooter
+                                citations={msg.citations}
+                                multiFile={hasMultipleDocuments}
+                              />
                             )}
                           </div>
                         </div>
@@ -249,6 +305,26 @@ export function PostAiChat({ post }: PostAiChatProps) {
                     <span>
                       This document couldn&apos;t be prepared for AI chat. Answers will come from
                       the whole document and won&apos;t cite page numbers.
+                    </span>
+                  </div>
+                )}
+
+                {someDocumentsMissing && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
+                  >
+                    <AlertCircle
+                      className="size-3.5 shrink-0 mt-0.5 text-amber"
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {missingDocumentsMessage(
+                        indexStatus?.readyFiles ?? 0,
+                        indexStatus?.supportedFiles ?? 0,
+                      )}
                     </span>
                   </div>
                 )}

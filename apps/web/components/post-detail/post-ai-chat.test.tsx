@@ -33,13 +33,33 @@ vi.mock('@/hooks/use-post-ai-chat', () => ({
 
 const PDF = 'application/pdf'
 
-/** Only enough of the entity to get past `hasSupportedFiles`. */
-function makePost(mimeType = PDF): PostDetailEntity {
-  return { id: 'post-1', files: [{ id: 'f1', mimeType }] } as unknown as PostDetailEntity
+/** Only enough of the entity to get past `hasSupportedFiles`. Accepts one mime type or many. */
+function makePost(mimeTypes: string | string[] = PDF): PostDetailEntity {
+  const list = Array.isArray(mimeTypes) ? mimeTypes : [mimeTypes]
+  return {
+    id: 'post-1',
+    files: list.map((mimeType, i) => ({ id: `f${i + 1}`, mimeType })),
+  } as unknown as PostDetailEntity
 }
 
-function givenStatus(state: IndexStatus['state'], indexedChunks = 0): void {
-  mocks.status = { state, indexedChunks, supportedFiles: 1, readyFiles: 0 }
+/**
+ * `readyFiles` defaults to `supportedFiles` in the `'ready'` state on purpose. A ready post whose
+ * ready count is short of its supported count is the partially-indexed case, which now renders its
+ * own warning — so a hardcoded `readyFiles: 0` would silently opt every unrelated `'ready'` test
+ * into that warning and assert around a post state the test never meant to describe.
+ */
+function givenStatus(
+  state: IndexStatus['state'],
+  indexedChunks = 0,
+  overrides: Partial<Pick<IndexStatus, 'supportedFiles' | 'readyFiles'>> = {},
+): void {
+  const supportedFiles = overrides.supportedFiles ?? 1
+  mocks.status = {
+    state,
+    indexedChunks,
+    supportedFiles,
+    readyFiles: overrides.readyFiles ?? (state === 'ready' ? supportedFiles : 0),
+  }
 }
 
 /** The notice lives inside the collapsible, so the panel has to be opened to see it. */
@@ -116,6 +136,51 @@ describe('PostAiChat indexing notice', () => {
     expect(notice).toHaveTextContent(/couldn't be prepared for AI chat/i)
     expect(notice).toHaveTextContent(/won't cite page numbers/i)
     expect(screen.getByPlaceholderText(/ask about this document/i)).toBeEnabled()
+  })
+
+  it('says a document is missing when the post reports ready but not every file indexed', async () => {
+    // `getAiIndexStatus` settles on 'ready' as soon as ONE file is READY, and retrieval filters to
+    // READY files -- so a post with one good PDF and one failed PDF answers and cites from half of
+    // itself with no caveat anywhere. The student has no way to know a document is missing.
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 1 })
+    await renderOpened(makePost([PDF, PDF]))
+
+    // Exact textContent, not toHaveTextContent: that matcher normalises whitespace, which is how
+    // the "sectionsso far" spacing bug survived a passing test in this same file.
+    expect(screen.getByRole('status').textContent).toBe(
+      "1 of 2 documents couldn't be prepared for AI chat — answers won't cover it.",
+    )
+    expect(screen.getByPlaceholderText(/ask about this document/i)).toBeEnabled()
+  })
+
+  it('pluralises the pronoun when more than one document is missing', async () => {
+    givenStatus('ready', 40, { supportedFiles: 3, readyFiles: 1 })
+    await renderOpened(makePost([PDF, PDF, PDF]))
+
+    expect(screen.getByRole('status').textContent).toBe(
+      "2 of 3 documents couldn't be prepared for AI chat — answers won't cover them.",
+    )
+  })
+
+  it('shows no missing-document notice when every supported file is ready', async () => {
+    // Pins the comparison as strictly "fewer ready than supported". A `<=` here would warn on
+    // every fully-indexed multi-file post, which is noise that trains students to ignore it.
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
+    await renderOpened(makePost([PDF, PDF]))
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText(/couldn't be prepared/i)).not.toBeInTheDocument()
+  })
+
+  it('does not call a still-preparing file a missing one', async () => {
+    // While indexing is in flight, readyFiles < supportedFiles is the ORDINARY condition, not a
+    // failure. The preparing notice already covers it; a second notice saying a document couldn't
+    // be prepared would be wrong, because it still might be.
+    givenStatus('preparing', 12, { supportedFiles: 2, readyFiles: 1 })
+    await renderOpened(makePost([PDF, PDF]))
+
+    expect(screen.getByRole('status').textContent).toContain('Preparing this document')
+    expect(screen.queryByText(/couldn't be prepared/i)).not.toBeInTheDocument()
   })
 
   it('renders nothing at all for a post with no indexable files', async () => {
@@ -198,6 +263,57 @@ describe('PostAiChat citations', () => {
     await renderOpened()
 
     expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 3p. 12')
+  })
+
+  it('shows no page chips on a multi-file post, because "p. 3" cannot say which file', async () => {
+    // `pageNum` restarts at 1 in every file (@@unique([fileId, chunkIndex])) and a citation
+    // carries no file identity at all, so a chunk from page 3 of the past paper and a chunk from
+    // page 3 of the solutions are indistinguishable by the time they reach here. The de-duplicated
+    // single "p. 3" chip therefore points the student at the wrong document half the time -- which
+    // is precisely the failure the whole citation feature exists to prevent. Suppress rather than
+    // guess.
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
+    mocks.messages = [
+      assistant('It is covered in both documents.', [
+        { chunkId: 'c1', pageNum: 3, snippet: 'from the past paper' },
+        { chunkId: 'c2', pageNum: 3, snippet: 'from the solutions' },
+      ]),
+    ]
+    await renderOpened(makePost([PDF, PDF]))
+
+    expect(screen.getByRole('note').textContent).toBe(
+      'Sources consulted2 excerpts · from multiple documents',
+    )
+    expect(screen.queryByText(/p\. 3/)).not.toBeInTheDocument()
+  })
+
+  it('counts every excerpt on a multi-file post, including ones with no page at all', async () => {
+    // The count must not be drawn from the (now unused) page list, or unpaginated excerpts would
+    // silently vanish from the total the student is shown.
+    givenStatus('ready', 40, { supportedFiles: 2, readyFiles: 2 })
+    mocks.messages = [
+      assistant('Mixed.', [
+        { chunkId: 'c1', pageNum: 3, snippet: 'a' },
+        { chunkId: 'c2', pageNum: null, snippet: 'b' },
+        { chunkId: 'c3', pageNum: 9, snippet: 'c' },
+      ]),
+    ]
+    await renderOpened(makePost([PDF, PDF]))
+
+    expect(screen.getByRole('note').textContent).toBe(
+      'Sources consulted3 excerpts · from multiple documents',
+    )
+  })
+
+  it('still shows page chips when only one file on the post is a supported document', async () => {
+    // The ambiguity comes from having more than one INDEXABLE file, not from the raw attachment
+    // count. A PDF next to a screenshot has exactly one source of page numbers, so suppressing
+    // there would throw away a citation that is perfectly unambiguous.
+    givenStatus('ready', 40)
+    mocks.messages = [assistant('On page 12.', [{ chunkId: 'c1', pageNum: 12, snippet: 'a' }])]
+    await renderOpened(makePost([PDF, 'image/png']))
+
+    expect(screen.getByRole('note').textContent).toBe('Sources consultedp. 12')
   })
 
   it('never renders a page label for a null pageNum', async () => {
