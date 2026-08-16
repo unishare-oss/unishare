@@ -1,5 +1,29 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
+/**
+ * These two exist because an inline object literal on a property gives reflection nothing but
+ * `Object`, so Orval generated `{ [key: string]: unknown }` and the frontend could not read
+ * `course.code` without casting. A named class is the only way to describe the shape.
+ */
+export class QuizCourseEntity {
+  @ApiProperty()
+  code: string
+
+  @ApiProperty()
+  name: string
+}
+
+export class RecentSessionQuizEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  title: string
+
+  @ApiProperty()
+  courseId: string
+}
+
 export class QuizListItemEntity {
   @ApiProperty()
   id: string
@@ -13,8 +37,8 @@ export class QuizListItemEntity {
   @ApiProperty()
   courseId: string
 
-  @ApiProperty()
-  course: { code: string; name: string }
+  @ApiProperty({ type: QuizCourseEntity })
+  course: QuizCourseEntity
 
   @ApiProperty()
   questionsCount: number
@@ -178,8 +202,8 @@ export class RecentSessionEntity {
   @ApiPropertyOptional({ nullable: true, type: String })
   completedAt: Date | null
 
-  @ApiProperty()
-  quiz: { id: string; title: string; courseId: string }
+  @ApiProperty({ type: RecentSessionQuizEntity })
+  quiz: RecentSessionQuizEntity
 }
 
 export class StudentStatsEntity {
