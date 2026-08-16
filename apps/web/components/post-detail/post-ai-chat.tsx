@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { usePostAiChat, type AiChatCitation } from '@/hooks/use-post-ai-chat'
+import { AiReply } from '@/components/post-detail/ai-reply'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -261,7 +262,15 @@ export function PostAiChat({ post }: PostAiChatProps) {
                               {msg.offTopic && (
                                 <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-amber" />
                               )}
-                              <span>{msg.content}</span>
+                              {/* Only the assistant's replies are markdown. A user's message is
+                                  echoed back verbatim, and rendering THEIR text as markup would
+                                  let a question containing `#` or `- ` come back looking like a
+                                  heading or a list they never wrote. */}
+                              {msg.role === 'assistant' ? (
+                                <AiReply>{msg.content}</AiReply>
+                              ) : (
+                                <span>{msg.content}</span>
+                              )}
                             </div>
                             {msg.citations && msg.citations.length > 0 && (
                               <CitationFooter citations={msg.citations} />
@@ -270,7 +279,10 @@ export function PostAiChat({ post }: PostAiChatProps) {
                         </div>
                       </div>
                     ))}
-                    {isPending && (
+                    {/* Only until the first token lands. The reply now streams into its own
+                        bubble while `isPending` is still true, and showing both would tell the
+                        student the assistant is thinking about the answer they are reading. */}
+                    {isPending && messages[messages.length - 1]?.role === 'user' && (
                       <div className="flex justify-start">
                         <div className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-text-muted">
                           <span className="animate-pulse">Thinking…</span>
