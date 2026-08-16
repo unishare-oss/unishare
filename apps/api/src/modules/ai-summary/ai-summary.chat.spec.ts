@@ -601,6 +601,24 @@ describe('AiSummaryService.chatWithPost', () => {
       expect(llmMock.chat).toHaveBeenCalled()
     })
 
+    it('says the document could not be read instead of prompting with an empty document', async () => {
+      // An unreadable file leaves documentText empty. Sending FULL_TEXT_SYSTEM_PROMPT with a
+      // placeholder in the document slot makes rule 1 ("answer only what is directly related to
+      // the document content provided") vacuous — every question becomes unrelated, so a less
+      // forgiving model would refuse them all while the UI has just promised answers from the
+      // whole document. Probed live: today's model answers sensibly, but that is the model being
+      // generous rather than the prompt being right, so the LLM is not consulted at all here.
+      extractorMock.extractFromKey.mockResolvedValue({ pages: [], hasPageNumbers: false })
+
+      const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      expect(result.reply).toContain("couldn't be read")
+      expect(result.offTopic).toBe(false)
+      expect(result.citations).toEqual([])
+      // The point of the branch: no tokens spent, and no chance of a spurious refusal.
+      expect(llmMock.chat).not.toHaveBeenCalled()
+    })
+
     it('falls back when retrieval throws rather than failing the request', async () => {
       retrievalMock.searchPost.mockRejectedValue(new Error('ollama down'))
 
@@ -618,7 +636,12 @@ describe('AiSummaryService.chatWithPost', () => {
       expect(result).toEqual({ reply: 'OFF_TOPIC', offTopic: true, citations: [] })
     })
 
-    it('skips unsupported files and still answers when extraction yields nothing', async () => {
+    it('skips unsupported files and says so rather than prompting with no document', async () => {
+      // A second route to the same empty-documentText state as the test above: the post has only
+      // an unsupported mime type, so extraction is never attempted at all. This assertion used to
+      // require 'No document content available.' to reach the prompt; that placeholder is gone
+      // deliberately, because it makes rule 1 vacuous and leaves refusal-or-not to the model's
+      // goodwill.
       prismaMock.post.findUnique.mockResolvedValue({
         files: [{ key: 'sheet.xlsx', mimeType: 'application/vnd.ms-excel' }],
       })
@@ -626,7 +649,9 @@ describe('AiSummaryService.chatWithPost', () => {
       const result = await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
 
       expect(extractorMock.extractFromKey).not.toHaveBeenCalled()
-      expect(lastSystemPrompt(llmMock)).toContain('No document content available.')
+      expect(llmMock.chat).not.toHaveBeenCalled()
+      expect(result.reply).toContain("couldn't be read")
+      expect(result.offTopic).toBe(false)
       expect(result.citations).toEqual([])
     })
   })

@@ -441,14 +441,27 @@ export class AiSummaryService {
       .filter(Boolean)
       .join('\n\n')
 
+    // Short-circuit rather than sending a prompt whose document slot is a placeholder sentence.
+    //
+    // Probed live (0/3 refusals): the model handles that placeholder sensibly today, answering
+    // "There is no document content available to analyze." But FULL_TEXT_SYSTEM_PROMPT rule 1
+    // says to answer only what is "directly related to the document content provided", and with
+    // no content EVERY question is unrelated — so the sane behaviour rests on the model being
+    // forgiving, not on the prompt being right. A model or temperature change could turn every
+    // question into a refusal. Answering here costs nothing and removes the dependency.
+    if (!documentText) {
+      return {
+        reply: "This document couldn't be read, so I can't answer questions about it yet.",
+        offTopic: false,
+        citations: [],
+      }
+    }
+
     const reply = await this.llm.chat(
       [
         {
           role: 'system',
-          content: FULL_TEXT_SYSTEM_PROMPT.replace(
-            '{DOCUMENT_TEXT}',
-            documentText || 'No document content available.',
-          ),
+          content: FULL_TEXT_SYSTEM_PROMPT.replace('{DOCUMENT_TEXT}', documentText),
         },
         ...messages,
       ],
