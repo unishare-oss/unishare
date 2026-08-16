@@ -34,6 +34,7 @@ describe('FilesService', () => {
     }
     aiSummaryServiceMock = {
       summarizePost: jest.fn(),
+      summarizePostWhenIngested: jest.fn().mockResolvedValue(undefined),
       screenContent: jest.fn(),
     }
     ingestionServiceMock = {
@@ -79,6 +80,66 @@ describe('FilesService', () => {
 
       expect(ingestionServiceMock.ingestFile).toHaveBeenCalledWith('f1')
       return result
+    })
+
+    describe('summarisation waits for ingestion instead of racing it', () => {
+      /** The chain is fire-and-forget, so let its microtasks drain before asserting. */
+      const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+      beforeEach(() => {
+        postsServiceMock.findOne.mockResolvedValue({ id: 'p1', isOwner: true, status: 'APPROVED' })
+      })
+
+      it('summarises only after ingestion has settled', async () => {
+        let ingestDone: () => void
+        ingestionServiceMock.ingestFile.mockReturnValue(
+          new Promise<void>((resolve) => {
+            ingestDone = resolve
+          }),
+        )
+
+        await service.confirmUpload('p1', dto as any, 'u1')
+        await settle()
+
+        // The ordering IS the fix: dispatched together, summarisation always won the race
+        // against its own chunks and re-extracted every file from S3.
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).not.toHaveBeenCalled()
+
+        ingestDone!()
+        await settle()
+
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('still summarises when ingestion fails, so a bad ingest is not a missing summary', async () => {
+        ingestionServiceMock.ingestFile.mockRejectedValue(new Error('ollama unreachable'))
+
+        await service.confirmUpload('p1', dto as any, 'u1')
+        await settle()
+
+        // The catch sits before the chain deliberately. summarySourceTexts reads READY chunks
+        // only and falls back to extraction, so the post is still summarised.
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('does not summarise a post that is not approved', async () => {
+        postsServiceMock.findOne.mockResolvedValue({ id: 'p1', isOwner: true, status: 'PENDING' })
+
+        await service.confirmUpload('p1', dto as any, 'u1')
+        await settle()
+
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).not.toHaveBeenCalled()
+      })
+
+      it('screens immediately rather than waiting for the embedding pipeline', async () => {
+        ingestionServiceMock.ingestFile.mockReturnValue(new Promise<void>(() => {}))
+
+        await service.confirmUpload('p1', dto as any, 'u1')
+        await settle()
+
+        // Moderation must not sit behind a ~90s ingest for a long document.
+        expect(aiSummaryServiceMock.screenContent).toHaveBeenCalledWith('p1')
+      })
     })
   })
 })

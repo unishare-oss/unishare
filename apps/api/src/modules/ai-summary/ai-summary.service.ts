@@ -518,6 +518,46 @@ export class AiSummaryService {
     return isOffTopicReply(reply)
   }
 
+  /**
+   * Summarises once the post's documents have finished ingesting, rather than racing them.
+   *
+   * Upload used to dispatch `summarizePost` and `ingestFile` together, so summarisation always
+   * lost the race — the file row was PENDING, no chunks existed yet, and it fell through to
+   * extracting every file from S3 a second time. Task 12's chunk path therefore never ran on the
+   * upload path at all, and a large document was downloaded and parsed twice concurrently on a
+   * 256MB heap.
+   *
+   * Called after each file's ingestion settles. Two cases it must not get wrong:
+   *
+   * - **Embeddings disabled** is a supported deployment. `ingestFile` returns immediately without
+   *   writing a status, so every file stays PENDING forever — waiting for "no files in flight"
+   *   would mean never summarising. Summarise straight away and let the extraction fallback do
+   *   the work, which is exactly the old behaviour for that configuration.
+   * - **Multi-file posts** ingest one file per request. Without a check, each completion would
+   *   trigger its own summarisation and an N-file post would be summarised N times, each from a
+   *   partial set of chunks. Only the last file to settle proceeds.
+   *
+   * A FAILED file counts as settled: it will never produce chunks, so blocking on it would
+   * withhold the summary permanently. `summarySourceTexts` reads READY chunks only and falls
+   * back to extraction, so a post that failed to ingest still gets summarised.
+   */
+  async summarizePostWhenIngested(postId: string): Promise<void> {
+    if (!this.llm.enabled) return
+
+    if (this.embedding.enabled) {
+      const inFlight = await this.prisma.file.count({
+        where: {
+          postId,
+          mimeType: { in: SUPPORTED_MIME_TYPES },
+          ingestStatus: { in: [IngestStatus.PENDING, IngestStatus.PROCESSING] },
+        },
+      })
+      if (inFlight > 0) return
+    }
+
+    await this.summarizePost(postId)
+  }
+
   async summarizePost(postId: string): Promise<void> {
     if (!this.llm.enabled) return
 
