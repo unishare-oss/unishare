@@ -11,6 +11,7 @@ import {
   RETRIEVAL_TOP_K,
 } from '../ai/retrieval/retrieval.service'
 import { DocumentExtractorService } from '../ai/extraction/document-extractor.service'
+import { SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 import { LlmMessage } from '../ai/llm/llm.types'
 
 /** The system prompt of the last `llm.chat` call — what actually reached the model. */
@@ -630,6 +631,34 @@ describe('AiSummaryService.chatWithPost', () => {
       expect(result.citations).toEqual([])
       // The point of the branch: no tokens spent, and no chance of a spurious refusal.
       expect(llmMock.chat).not.toHaveBeenCalled()
+    })
+
+    it('bounds the document text instead of stuffing an entire long document', async () => {
+      // This branch now catches weak retrieval on INDEXED posts, i.e. the long ones, where before
+      // it only saw unindexed ones. Unbounded text overflows the context and reaches the student
+      // as "Something went wrong".
+      const huge = 'x'.repeat(SUMMARY_WINDOW_CHARS * 3)
+      extractorMock.extractFromKey.mockResolvedValue({
+        pages: [{ num: 1, text: huge }],
+        hasPageNumbers: true,
+      })
+
+      await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      const prompt = lastSystemPrompt(llmMock)
+      // Asserted against the cap plus the prompt's own scaffolding, not against a magic number:
+      // the document slot must be bounded, and the notice is small and fixed.
+      expect(prompt.length).toBeLessThan(SUMMARY_WINDOW_CHARS + 2000)
+      expect(prompt).toContain('Only the first part of this document is shown')
+    })
+
+    it('does not claim truncation when the whole document fits', async () => {
+      // The notice must be conditional. Always appending it would tell the model a complete
+      // document is partial, which is its own small lie and would make the assertion above pass
+      // for the wrong reason.
+      await service.chatWithPost('p1', [{ role: 'user', content: 'q' }])
+
+      expect(lastSystemPrompt(llmMock)).not.toContain('Only the first part')
     })
 
     it('falls back when retrieval throws rather than failing the request', async () => {

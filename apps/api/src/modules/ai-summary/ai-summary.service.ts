@@ -173,6 +173,21 @@ If the final message is already standalone, repeat it unchanged.`
 const CONDENSE_MAX_CHARS = 300
 
 /** Fallback for documents with no chunks yet — the pre-retrieval behaviour. */
+/**
+ * Cap on the document text stuffed into the un-retrieved chat fallback.
+ *
+ * Reuses the summariser's window size deliberately: it is already this codebase's "one LLM call's
+ * worth of text", so there is one knob to tune rather than two that can drift apart. Sized for an
+ * 8k-context local model, so it is conservative against Groq's 128k — the point is a bound that
+ * exists at all, since the previous behaviour was unbounded.
+ */
+const CHAT_CONTEXT_MAX_CHARS = SUMMARY_WINDOW_CHARS
+
+/** Appended when the cap bites, so the model cannot imply it read a document it only partly saw. */
+const TRUNCATION_NOTICE =
+  '[Only the first part of this document is shown. If the answer is not above, say so and ' +
+  'suggest the student ask about a specific section.]'
+
 const FULL_TEXT_SYSTEM_PROMPT = `You are a study assistant for university students. You help students understand the academic document provided below.
 
 STRICT RULES:
@@ -436,10 +451,21 @@ export class AiSummaryService {
         }),
       ),
     )
-    const documentText = docs
+    const fullText = docs
       .flatMap((doc) => doc.pages.map((page) => page.text.trim()))
       .filter(Boolean)
       .join('\n\n')
+
+    // Bounded, because this path is now reached by weak retrieval on SUCCESSFULLY INDEXED posts —
+    // i.e. exactly the long documents — where it previously only ever saw unindexed ones. Sending
+    // the whole text is what buildSummaryWindows calls "the truncation-era failure mode", and an
+    // overflow here surfaces to the student as "Something went wrong".
+    //
+    // Not "pick the most relevant window": choosing one needs a similarity ranking, and this
+    // branch exists precisely because ranking did not help. The first window is the honest
+    // fallback, and the model is told it is partial so it cannot imply it read the whole thing.
+    const documentText = fullText.slice(0, CHAT_CONTEXT_MAX_CHARS)
+    const truncated = fullText.length > CHAT_CONTEXT_MAX_CHARS
 
     // Short-circuit rather than sending a prompt whose document slot is a placeholder sentence.
     //
@@ -461,7 +487,10 @@ export class AiSummaryService {
       [
         {
           role: 'system',
-          content: FULL_TEXT_SYSTEM_PROMPT.replace('{DOCUMENT_TEXT}', documentText),
+          content: FULL_TEXT_SYSTEM_PROMPT.replace(
+            '{DOCUMENT_TEXT}',
+            truncated ? `${documentText}\n\n${TRUNCATION_NOTICE}` : documentText,
+          ),
         },
         ...messages,
       ],
