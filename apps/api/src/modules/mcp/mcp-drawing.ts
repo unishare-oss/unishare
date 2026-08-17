@@ -132,3 +132,134 @@ export function createExcalidrawElements(inputs: McpDrawingInput[]): Record<stri
     }
   })
 }
+
+export interface OccupiedBounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  width: number
+  height: number
+}
+
+export interface SuggestedPlacements {
+  right: { x: number; y: number }
+  bottom: { x: number; y: number }
+}
+
+export interface McpElementSummary {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  text?: string
+}
+
+export function calculateOccupiedBounds(
+  elements: Record<string, unknown>[],
+): OccupiedBounds | null {
+  const activeElements = elements.filter((el) => !el.isDeleted)
+  if (activeElements.length === 0) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const el of activeElements) {
+    const x = typeof el.x === 'number' && Number.isFinite(el.x) ? el.x : undefined
+    const y = typeof el.y === 'number' && Number.isFinite(el.y) ? el.y : undefined
+    const width = typeof el.width === 'number' && Number.isFinite(el.width) ? el.width : 0
+    const height = typeof el.height === 'number' && Number.isFinite(el.height) ? el.height : 0
+
+    if (x === undefined || y === undefined) continue
+
+    let elMinX = x
+    let elMinY = y
+    let elMaxX = x + width
+    let elMaxY = y + height
+
+    if (Array.isArray(el.points) && el.points.length > 0) {
+      const pointCoords = el.points.filter(
+        (pt) =>
+          Array.isArray(pt) &&
+          pt.length >= 2 &&
+          typeof pt[0] === 'number' &&
+          typeof pt[1] === 'number' &&
+          Number.isFinite(pt[0]) &&
+          Number.isFinite(pt[1]),
+      )
+
+      if (pointCoords.length > 0) {
+        const ptMinX = Math.min(...pointCoords.map(([px]) => px))
+        const ptMaxX = Math.max(...pointCoords.map(([px]) => px))
+        const ptMinY = Math.min(...pointCoords.map(([, py]) => py))
+        const ptMaxY = Math.max(...pointCoords.map(([, py]) => py))
+
+        elMinX = Math.min(elMinX, x + ptMinX)
+        elMaxX = Math.max(elMaxX, x + ptMaxX)
+        elMinY = Math.min(elMinY, y + ptMinY)
+        elMaxY = Math.max(elMaxY, y + ptMaxY)
+      }
+    }
+
+    if (elMinX < minX) minX = elMinX
+    if (elMinY < minY) minY = elMinY
+    if (elMaxX > maxX) maxX = elMaxX
+    if (elMaxY > maxY) maxY = elMaxY
+  }
+
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
+    return null
+  }
+
+  return {
+    minX: Math.round(minX),
+    minY: Math.round(minY),
+    maxX: Math.round(maxX),
+    maxY: Math.round(maxY),
+    width: Math.round(maxX - minX),
+    height: Math.round(maxY - minY),
+  }
+}
+
+export function getSuggestedPlacements(bounds: OccupiedBounds | null): SuggestedPlacements {
+  const PADDING = 100
+  if (!bounds) {
+    return {
+      right: { x: 100, y: 100 },
+      bottom: { x: 100, y: 100 },
+    }
+  }
+
+  return {
+    right: { x: bounds.maxX + PADDING, y: bounds.minY },
+    bottom: { x: bounds.minX, y: bounds.maxY + PADDING },
+  }
+}
+
+export function summarizeElements(elements: Record<string, unknown>[]): McpElementSummary[] {
+  return elements
+    .filter((el) => !el.isDeleted)
+    .map((el) => {
+      const summary: McpElementSummary = {
+        id: String(el.id ?? ''),
+        type: String(el.type ?? 'unknown'),
+        x: typeof el.x === 'number' ? Math.round(el.x) : 0,
+        y: typeof el.y === 'number' ? Math.round(el.y) : 0,
+        width: typeof el.width === 'number' ? Math.round(el.width) : 0,
+        height: typeof el.height === 'number' ? Math.round(el.height) : 0,
+      }
+      if (typeof el.text === 'string' && el.text.trim()) {
+        summary.text = el.text
+      }
+      return summary
+    })
+}

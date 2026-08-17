@@ -12,6 +12,7 @@ describe('McpService', () => {
     deleteRoom: jest.fn(),
     drawRoom: jest.fn(),
     getRoomsByOwner: jest.fn(),
+    getRoomElements: jest.fn(),
   }
   const service = new McpService(collabService as unknown as CollabService)
 
@@ -147,6 +148,88 @@ describe('McpService', () => {
         isError: true,
       })
       expect(collabService.createRoom).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getBoard', () => {
+    it('returns board metadata, occupied bounds, suggested placements, and elements', async () => {
+      collabService.getRoomElements.mockResolvedValue({
+        room: {
+          slug: 'board-slug',
+          title: 'Architecture',
+          visibility: 'PRIVATE',
+          hasPassword: false,
+        },
+        elements: [
+          {
+            id: 'rect-1',
+            type: 'rectangle',
+            x: 100,
+            y: 50,
+            width: 200,
+            height: 100,
+            isDeleted: false,
+          },
+          {
+            id: 'text-1',
+            type: 'text',
+            x: 120,
+            y: 70,
+            width: 80,
+            height: 20,
+            text: 'Service A',
+            isDeleted: false,
+          },
+        ],
+      })
+
+      const result = await service.getBoard(
+        { userId: 'user-1', scopes: 'openid boards:read' },
+        { slug: 'board-slug' },
+      )
+
+      expect(collabService.getRoomElements).toHaveBeenCalledWith('board-slug', 'user-1')
+      const expectedBoard = {
+        slug: 'board-slug',
+        title: 'Architecture',
+        visibility: 'PRIVATE',
+        hasPassword: false,
+        totalElements: 2,
+        occupiedBounds: {
+          minX: 100,
+          minY: 50,
+          maxX: 300,
+          maxY: 150,
+          width: 200,
+          height: 100,
+        },
+        suggestedPlacements: {
+          right: { x: 400, y: 50 },
+          bottom: { x: 100, y: 250 },
+        },
+        elements: [
+          { id: 'rect-1', type: 'rectangle', x: 100, y: 50, width: 200, height: 100 },
+          { id: 'text-1', type: 'text', x: 120, y: 70, width: 80, height: 20, text: 'Service A' },
+        ],
+      }
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify({ board: expectedBoard }) }],
+        structuredContent: { board: expectedBoard },
+      })
+    })
+
+    it('rejects access without boards:read', async () => {
+      await expect(
+        service.getBoard(
+          { userId: 'user-1', scopes: 'openid boards:write' },
+          { slug: 'board-slug' },
+        ),
+      ).resolves.toEqual({
+        content: [{ type: 'text', text: 'Missing required scope: boards:read' }],
+        isError: true,
+      })
+      expect(collabService.getRoomElements).not.toHaveBeenCalled()
     })
   })
 

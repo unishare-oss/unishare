@@ -546,6 +546,39 @@ describe('CollabService', () => {
     })
   })
 
+  describe('getRoomElements', () => {
+    it('should throw NotFoundException when room not found', async () => {
+      repository.findBySlug.mockResolvedValue(null)
+
+      await expect(service.getRoomElements('abc1234567', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      )
+    })
+
+    it('should throw ForbiddenException when caller is not room owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+
+      await expect(service.getRoomElements('abc1234567', 'user-999')).rejects.toThrow(
+        ForbiddenException,
+      )
+      expect(collabRoomService.getOrLoadElements).not.toHaveBeenCalled()
+    })
+
+    it('should return room metadata and elements for the owner', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      const mockElements = [{ id: 'el-1', type: 'rectangle' }]
+      collabRoomService.getOrLoadElements.mockResolvedValue(mockElements)
+
+      const result = await service.getRoomElements('abc1234567', 'user-1')
+
+      expect(collabRoomService.getOrLoadElements).toHaveBeenCalledWith('abc1234567')
+      expect(result).toEqual({
+        room: expect.objectContaining({ slug: 'abc1234567', ownerId: 'user-1' }),
+        elements: mockElements,
+      })
+    })
+  })
+
   describe('drawRoom', () => {
     const elements = [{ id: 'rectangle-1', type: 'rectangle', version: 1 }]
 

@@ -4,7 +4,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { CollabService } from '@/modules/collab/collab.service'
-import { createExcalidrawElements, type McpDrawingInput } from './mcp-drawing'
+import {
+  calculateOccupiedBounds,
+  createExcalidrawElements,
+  getSuggestedPlacements,
+  summarizeElements,
+  type McpDrawingInput,
+} from './mcp-drawing'
 import { drawingGuide } from './mcp-drawing-guide'
 
 export interface McpAuthSession {
@@ -94,10 +100,21 @@ export class McpService {
     )
 
     server.registerTool(
+      'get_board',
+      {
+        description:
+          'Get existing elements, occupied canvas bounds, and suggested placement anchors for a board. Call this before adding elements to an existing board to avoid overlapping.',
+        inputSchema: z.object({ slug: z.string().min(1) }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => this.getBoard(session, input),
+    )
+
+    server.registerTool(
       'draw_board',
       {
         description:
-          'Draw a clear, labeled diagram. Before the first draw_board call in a task, you MUST call read_me and apply its rules. Pass elements as a JSON-stringified array. Arrows accept points as relative [x, y] waypoints for orthogonal or bent routes; use endX/endY only for a straight arrow.',
+          'Draw a clear, labeled diagram. Before the first draw_board call in a task, you MUST call read_me and apply its rules. For existing boards, call get_board to check occupied space before adding more elements. Pass elements as a JSON-stringified array. Arrows accept points as relative [x, y] waypoints for orthogonal or bent routes; use endX/endY only for a straight arrow.',
         inputSchema: z.object({
           slug: z.string().min(1),
           elements: z.string().min(2),
@@ -171,6 +188,36 @@ export class McpService {
       visibility: room.visibility,
       hasPassword: room.hasPassword,
       url: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/canvas/${room.slug}`,
+    }
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify({ board }) }],
+      structuredContent: { board },
+    }
+  }
+
+  async getBoard(session: McpAuthSession, input: { slug: string }) {
+    if (!this.hasScope(session, 'boards:read')) {
+      return {
+        content: [{ type: 'text' as const, text: 'Missing required scope: boards:read' }],
+        isError: true,
+      }
+    }
+
+    const { room, elements } = await this.collabService.getRoomElements(input.slug, session.userId)
+    const bounds = calculateOccupiedBounds(elements)
+    const suggestedPlacements = getSuggestedPlacements(bounds)
+    const activeElements = summarizeElements(elements)
+
+    const board = {
+      slug: room.slug,
+      title: room.title,
+      visibility: room.visibility,
+      hasPassword: room.hasPassword,
+      totalElements: activeElements.length,
+      occupiedBounds: bounds,
+      suggestedPlacements,
+      elements: activeElements,
     }
 
     return {

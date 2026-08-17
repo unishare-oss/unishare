@@ -59,6 +59,20 @@ export class CollabService {
   }
 
   //for mcp only
+  async getRoomElements(slug: string, userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can view this room through MCP')
+
+    const elements = await this.collabRoomService.getOrLoadElements(slug)
+    return {
+      room: this.toRoomResponse(room),
+      elements,
+    }
+  }
+
+  //for mcp only
   async drawRoom(slug: string, elements: Record<string, unknown>[], userId: string) {
     const room = await this.collabRepository.findBySlug(slug)
     if (!room) throw new NotFoundException('Room not found')

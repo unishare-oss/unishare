@@ -1,6 +1,8 @@
 export const drawingGuide = `
 Before drawing:
 - Call read_me before the first draw_board call in a task, and apply these rules to every subsequent draw.
+- For existing boards or when adding more elements, call get_board first to check occupied bounds, existing elements, and suggested placement anchors (right/bottom).
+- Place newly generated components in clear space (using suggestedPlacements or offset coordinates) so they do not overlap existing elements.
 - Plan the diagram before sending elements. Keep related content grouped, leave space between sections, and use a consistent left-to-right or top-to-bottom flow.
 - Route arrows through clear space: do not let arrows overlap, cross each other, pass through shapes, or obscure labels. Reposition elements to create separate connector lanes when needed.
 - For board revisions, send the complete scene and correct existing coordinates and connectors rather than layering new arrows over a bad layout.
