@@ -21,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
-import { Response } from 'express'
+import type { Response } from 'express'
 import { Throttle } from '@nestjs/throttler'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ThrottleBucket } from '@/common/decorators/throttle-bucket.decorator'
