@@ -1,4 +1,4 @@
-import { PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
+import { IngestStatus, PostStatus, PostType, PostPublicationStatus } from '@/generated/prisma/enums'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class PostTagEntity {
@@ -83,6 +83,12 @@ export class PostFileEntity {
 
   @ApiProperty()
   downloads: number
+
+  @ApiProperty({ enum: IngestStatus, enumName: 'IngestStatus' })
+  ingestStatus: IngestStatus
+
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  ingestedAt: Date | null
 }
 
 export class PostCountEntity {
@@ -172,7 +178,14 @@ export class PostEntity {
   @ApiProperty()
   views: number
 
-  @ApiProperty({ type: Object, description: 'Map of ReactionType to count' })
+  // `type: Object` erases the value type, so Orval emitted `{ [key: string]: unknown }` and every
+  // count had to be cast before arithmetic. additionalProperties keeps the map shape AND says
+  // what the values are.
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'number' },
+    description: 'Map of ReactionType to count',
+  })
   reactionCounts: Record<string, number>
 
   @ApiPropertyOptional({ nullable: true, type: String })

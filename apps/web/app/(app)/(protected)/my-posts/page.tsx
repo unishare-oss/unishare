@@ -25,16 +25,14 @@ export default function MyPostsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader title="My Posts" />
-      <div className="flex-1 bg-card">
-        <PostFeed
-          posts={data?.items ?? []}
-          loading={authLoading || isLoading}
-          page={data?.page ?? 1}
-          totalPages={data?.totalPages ?? 1}
-          onPageChange={setPage}
-          emptyMessage="You haven't posted anything yet."
-        />
-      </div>
+      <PostFeed
+        posts={data?.items ?? []}
+        loading={authLoading || isLoading}
+        page={data?.page ?? 1}
+        totalPages={data?.totalPages ?? 1}
+        onPageChange={setPage}
+        emptyMessage="You haven't posted anything yet."
+      />
     </div>
   )
 }

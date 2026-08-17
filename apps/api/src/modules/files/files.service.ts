@@ -2,22 +2,27 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
+import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
 import { FilesRepository } from './files.repository'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
 
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name)
+
   constructor(
     private readonly filesRepository: FilesRepository,
     private readonly storageService: StorageService,
     private readonly postsService: PostsService,
     private readonly aiSummaryService: AiSummaryService,
+    private readonly ingestionService: IngestionService,
   ) {}
 
   async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
@@ -33,10 +38,34 @@ export class FilesService {
 
     const file = await this.filesRepository.create(postId, dto)
 
-    if (post.status === 'APPROVED') {
-      void this.aiSummaryService.summarizePost(postId)
-    }
+    // Ingest first, THEN summarise — not both at once.
+    //
+    // Dispatching them together meant the same S3 object was downloaded and parsed twice
+    // concurrently: once to chunk it, once because summarisation always won the race against
+    // its own chunks and fell through to extraction. Chained, summarisation reads the chunks
+    // ingestion just wrote, so a single-file upload extracts once for indexing instead of twice.
+    //
+    // ingestFile is fire-and-forget: nothing awaits it, and there is no unhandledRejection
+    // handler in this app, so an escaped rejection would take the process down. ingestFile
+    // already records FAILED for the errors it can see; this catches the ones it cannot -- a
+    // connection drop in its own findUnique or in its catch-block status write. The catch sits
+    // BEFORE the chain so a failed ingest still yields a summary, built from extraction.
+    void this.ingestionService
+      .ingestFile(file.id)
+      .catch((err: Error) => {
+        this.logger.warn(`Ingestion dispatch failed for file ${file.id}: ${err.message}`)
+      })
+      .then(() => {
+        if (post.status !== 'APPROVED') return
+        return this.aiSummaryService.summarizePostWhenIngested(postId)
+      })
+      .catch((err: Error) => {
+        this.logger.warn(`Summarisation after ingest failed for post ${postId}: ${err.message}`)
+      })
 
+    // Deliberately NOT chained. Screening is moderation: it must not wait on the embedding
+    // pipeline, which takes ~90s for a long document. It reads only the first supported file,
+    // so this is one extra extraction rather than one per file.
     void this.aiSummaryService.screenContent(postId)
 
     const { postId: _postId, ...rest } = file

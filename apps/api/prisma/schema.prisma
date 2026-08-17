@@ -124,6 +124,7 @@ model Post {
   files               File[]
   notifications       Notification[]
   author              User                     @relation("AuthorPosts", fields: [authorId], references: [id])
+  chunks              PostChunk[]
   course              Course                   @relation(fields: [courseId], references: [id])
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
   requestFulfillments PostRequestFulfillment[]
@@ -169,18 +170,52 @@ model Reaction {
 }
 
 model File {
-  id        String   @id @default(cuid())
-  key       String
-  name      String
-  size      Int
-  mimeType  String
-  postId    String
-  createdAt DateTime @default(now())
-  downloads Int      @default(0)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  key             String
+  name            String
+  size            Int
+  mimeType        String
+  postId          String
+  createdAt       DateTime     @default(now())
+  downloads       Int          @default(0)
+  ingestStatus    IngestStatus @default(PENDING)
+  ingestError     String?
+  ingestStartedAt DateTime?
+  ingestedAt      DateTime?
+  post            Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  chunks          PostChunk[]
 
   @@index([postId])
   @@map("file")
+}
+
+model PostChunk {
+  id         String                      @id @default(cuid())
+  postId     String
+  fileId     String
+  chunkIndex Int
+  content    String
+  pageNum    Int?
+  embedding  Unsupported("vector(768)")?
+  createdAt  DateTime                    @default(now())
+  file       File                        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  post       Post                        @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, chunkIndex])
+  @@index([postId])
+  @@map("post_chunk")
+
+  // `post_chunk_embedding_idx` — the HNSW index on `embedding` — exists in the database but
+  // CANNOT be represented here: Prisma models neither the `vector` type nor `USING hnsw`. It is
+  // created in raw SQL by 20260729000000_add_post_chunk_vectors.
+  //
+  // Consequence: `prisma migrate dev` diffs this schema against the database, sees an index it
+  // has no source for, and generates `DROP INDEX "post_chunk_embedding_idx"`. That has already
+  // happened once. DELETE any such migration — do not apply or commit it. Dropping the index
+  // does not break correctness, so nothing would fail loudly; retrieval would just fall back to
+  // sequential scans and quietly get slower as the corpus grows.
+  //
+  // migrations.spec.ts fails the build if such a migration is ever committed.
 }
 
 model Comment {
@@ -463,14 +498,14 @@ model ChatRoom {
 }
 
 model ChatRoomParticipant {
-  id         String   @id @default(cuid())
-  roomId     String
-  userId     String
+  id               String   @id @default(cuid())
+  roomId           String
+  userId           String
   lastReadAt       DateTime @default(now())
   joinedAt         DateTime @default(now())
   encryptedRoomKey String?
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room             ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
   @@index([userId])
@@ -615,6 +650,14 @@ enum RoomVisibility {
   OPEN
   VIEW_ONLY
   PRIVATE
+}
+
+enum IngestStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  UNSUPPORTED
 }
 
 enum PostRequestStatus {

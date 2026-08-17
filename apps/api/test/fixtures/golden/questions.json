@@ -1,0 +1,80 @@
+{
+  "_comment": [
+    "Golden set for the retrieval eval (Task 10). Page numbers are 1-based and refer to",
+    "document.pdf in this directory. If that document is ever replaced, EVERY expectedPages",
+    "value here must be re-authored -- a stale mapping makes the eval silently meaningless.",
+    "",
+    "The questions deliberately avoid reusing the page headings verbatim, so retrieval has to",
+    "match on body content rather than on a title keyword. Several of them target pages 8-11,",
+    "which are all eigen-related -- that adjacency is the point: it forces fine discrimination",
+    "between semantically close pages, which is the realistic hard case.",
+    "",
+    "OFF-TOPIC SET, WIDENED 2026-08-16. It was three probes, and the measured off-topic ceiling",
+    "of 0.641 came from ONE of them -- an instruction-shaped query that is technical and",
+    "ordering-flavoured. A ceiling drawn from a single probe cannot bound real chat traffic, so",
+    "MIN_SIMILARITY sat 0.009 above a number that had no margin behind it.",
+    "",
+    "The twelve here are chosen to be HARD rather than flattering: instruction-shaped requests",
+    "(write/implement/show me/derive), adjacent technical subjects (complexity, databases,",
+    "networking) and neighbouring mathematics (calculus, proof) that shares register and",
+    "vocabulary with linear algebra without being about it. Plain trivia is kept as a floor",
+    "reference. If this narrows or closes the gap, that is the finding -- better discovered here",
+    "than in production."
+  ],
+  "onTopic": [
+    {
+      "question": "What quantity do a matrix's eigenvalues add up to?",
+      "expectedPages": [8]
+    },
+    {
+      "question": "What is a matrix called when an eigenvalue's geometric multiplicity is smaller than its algebraic multiplicity?",
+      "expectedPages": [9]
+    },
+    {
+      "question": "Which property of a real matrix guarantees it has an orthonormal basis of eigenvectors?",
+      "expectedPages": [11]
+    },
+    {
+      "question": "Once a matrix is written as P D P inverse, how do you raise it to a large power cheaply?",
+      "expectedPages": [10]
+    },
+    {
+      "question": "Which result says a truncated factorization gives the best low-rank approximation?",
+      "expectedPages": [15]
+    },
+    {
+      "question": "Why does the classical orthogonalization procedure lose accuracy in floating point, and what is used instead?",
+      "expectedPages": [13]
+    },
+    {
+      "question": "What do rank and nullity add up to for a matrix?",
+      "expectedPages": [3]
+    },
+    {
+      "question": "Which factorization of a definite matrix costs roughly half of a general LU factorization?",
+      "expectedPages": [17]
+    },
+    {
+      "question": "When fitting by minimising squared error, what is the residual vector orthogonal to?",
+      "expectedPages": [16]
+    },
+    {
+      "question": "What determines how many blocks an eigenvalue contributes in the canonical form?",
+      "expectedPages": [18]
+    }
+  ],
+  "offTopic": [
+    "What is the capital of France?",
+    "Write me a Python script that sorts a list of integers.",
+    "Who won the 2018 football World Cup?",
+    "Explain how photosynthesis produces glucose in plant cells.",
+    "Summarise the causes of the First World War.",
+    "Implement a binary search tree with insert and delete operations.",
+    "Show me how to normalise a database schema to third normal form.",
+    "Derive the time complexity of quicksort in the average case.",
+    "What is the difference between TCP and UDP?",
+    "Explain the chain rule for differentiating composite functions.",
+    "Prove that the square root of two is irrational.",
+    "How do I set up a continuous integration pipeline for a Node project?"
+  ]
+}
