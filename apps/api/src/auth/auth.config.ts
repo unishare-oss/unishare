@@ -78,7 +78,7 @@ export const auth = betterAuth({
       ? [
           mcp({
             loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-            resource: `${process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'}/mcp`,
+            resource: `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/mcp`,
             // Better Auth 1.6 reads provider metadata from the top level at runtime.
             metadata: { scopes_supported: mcpScopes },
             oidcConfig: {

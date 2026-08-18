@@ -31,7 +31,6 @@ export class McpController {
   @All('mcp')
   async handle(@Req() req: Request, @Res() res: Response) {
     const session = await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
-
     if (!session) {
       const authURL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'
       res
@@ -64,7 +63,8 @@ export class McpController {
   }
 
   private toWebRequest(req: Request) {
-    const origin = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'
+    const origin =
+      process.env.FRONTEND_URL ?? process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'
     return new globalThis.Request(new URL(req.originalUrl, origin), {
       method: req.method,
       headers: fromNodeHeaders(req.headers),
