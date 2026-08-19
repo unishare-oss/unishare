@@ -30,7 +30,16 @@ const trustedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
-const mcpScopes = ['openid', 'profile', 'email', 'offline_access', 'boards:read', 'boards:write']
+const mcpScopes = [
+  'openid',
+  'profile',
+  'email',
+  'offline_access',
+  'boards:read',
+  'boards:write',
+  'posts:read',
+  'posts:write',
+]
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -83,7 +92,7 @@ export const auth = betterAuth({
             metadata: { scopes_supported: mcpScopes },
             oidcConfig: {
               loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-              scopes: ['boards:read', 'boards:write'],
+              scopes: ['boards:read', 'boards:write', 'posts:read', 'posts:write'],
               metadata: { scopes_supported: mcpScopes },
               allowPlainCodeChallengeMethod: false,
               allowDynamicClientRegistration: true,

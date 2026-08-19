@@ -1,10 +1,11 @@
-import { All, Controller, Get, Logger, Req, Res } from '@nestjs/common'
+import { All, Controller, Get, Logger, Req, Res, UseFilters } from '@nestjs/common'
 import { ApiExcludeController } from '@nestjs/swagger'
 import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { fromNodeHeaders } from 'better-auth/node'
 import { oAuthDiscoveryMetadata, oAuthProtectedResourceMetadata } from 'better-auth/plugins'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
+import { McpExceptionFilter } from '@/common/filters/mcp-exception.filter'
 import { McpService } from './mcp.service'
 
 const oauthDiscoveryHandler = oAuthDiscoveryMetadata(auth)
@@ -12,6 +13,7 @@ const protectedResourceHandler = oAuthProtectedResourceMetadata(auth)
 
 @ApiExcludeController()
 @OptionalAuth()
+@UseFilters(McpExceptionFilter)
 @Controller()
 export class McpController {
   private readonly logger = new Logger(McpController.name)
