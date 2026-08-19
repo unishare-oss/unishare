@@ -76,7 +76,8 @@ export function McpGuideDialog({ open, onOpenChange }: McpGuideDialogProps) {
               Connect AI Assistants (MCP)
             </DialogTitle>
             <DialogDescription className="font-mono text-xs text-text-muted">
-              Connect external AI tools to view, create, and draw on your UniShare boards.
+              Connect external AI tools to view, create, and draw on your UniShare boards and manage
+              posts.
             </DialogDescription>
           </DialogHeader>
         </div>
