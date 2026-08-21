@@ -43,13 +43,15 @@ export class ChatService {
     await this.getRoom(roomId, userId)
     const result = await this.chatRepository.findMessages(roomId, options)
     // Sanitize deleted parents so reply quotes show "Message deleted"
-    return {
-      ...result,
-      items: result.items.map((msg: any) => ({
-        ...msg,
-        parent: msg.parent ? this.sanitizeParent(msg.parent) : msg.parent,
+    const items = await Promise.all(
+      result.items.map(async (msg: any) => ({
+        ...(await this.resolveMessageMedia(msg)),
+        parent: msg.parent
+          ? await this.resolveMessageMedia(this.sanitizeParent(msg.parent))
+          : msg.parent,
       })),
-    }
+    )
+    return { ...result, items }
   }
 
   async createRoom(
@@ -70,16 +72,18 @@ export class ChatService {
       const otherUserId = allParticipantIds.find((id) => id !== creatorId)
       const existingRoom = await this.chatRepository.findDirectMessageRoom(creatorId, otherUserId!)
       if (existingRoom) {
-        return this.chatRepository.findRoomById(existingRoom.id)
+        return this.resolveRoomMedia(await this.chatRepository.findRoomById(existingRoom.id))
       }
     }
 
-    return this.chatRepository.createRoom(
-      type,
-      allParticipantIds,
-      name,
-      imageUrl,
-      encryptedRoomKeys,
+    return this.resolveRoomMedia(
+      await this.chatRepository.createRoom(
+        type,
+        allParticipantIds,
+        name,
+        imageUrl,
+        encryptedRoomKeys,
+      ),
     )
   }
 
@@ -96,11 +100,13 @@ export class ChatService {
     }
 
     // 1. Persist to database
-    const message = await this.chatRepository.createMessage({
-      roomId,
-      userId,
-      ...data,
-    })
+    const message = await this.resolveMessageMedia(
+      await this.chatRepository.createMessage({
+        roomId,
+        userId,
+        ...data,
+      }),
+    )
 
     this.eventEmitter.emit('chat.message_sent', {
       roomId,
@@ -136,7 +142,9 @@ export class ChatService {
       throw new ForbiddenException('You can only edit your own messages')
     }
 
-    const message = await this.chatRepository.updateMessage(id, data.content)
+    const message = await this.resolveMessageMedia(
+      await this.chatRepository.updateMessage(id, data.content),
+    )
     const room = await this.getRoom(message.roomId, userId)
 
     this.eventEmitter.emit('chat.message_updated', {
@@ -251,7 +259,7 @@ export class ChatService {
       })
     }
 
-    return updatedRoom
+    return this.resolveRoomMedia(updatedRoom)
   }
 
   async upgradeEncryption(
@@ -290,7 +298,9 @@ export class ChatService {
       }
     }
 
-    const result = await this.chatRepository.upgradeEncryption(roomId, encryptedRoomKeys)
+    const result = await this.resolveRoomMedia(
+      await this.chatRepository.upgradeEncryption(roomId, encryptedRoomKeys),
+    )
 
     this.eventEmitter.emit('chat.room_upgraded', {
       roomId,
@@ -306,7 +316,7 @@ export class ChatService {
       throw new ForbiddenException('Only group rooms can be updated')
     }
 
-    const updated = await this.chatRepository.updateRoom(roomId, dto)
+    const updated = await this.resolveRoomMedia(await this.chatRepository.updateRoom(roomId, dto))
 
     this.eventEmitter.emit('chat.room_updated', {
       roomId,
@@ -429,6 +439,36 @@ export class ChatService {
     } catch {
       throw new BadRequestException('Could not fetch link preview')
     }
+  }
+
+  /**
+   * The bucket has no anonymous-read mode, so the raw `imageUrl`/`fileUrl`
+   * stored on a message (built from STORAGE_PUBLIC_URL) is never directly
+   * fetchable by the browser -- swap it for a freshly presigned GET before
+   * this message reaches a client, over REST or the `receive-message` socket
+   * event. Never call this on a value you still need the raw key/URL from
+   * (e.g. for S3 cleanup) -- see deleteMessage.
+   */
+  private async resolveMessageMedia<
+    T extends { imageUrl?: string | null; fileUrl?: string | null },
+  >(message: T): Promise<T> {
+    if (!message.imageUrl && !message.fileUrl) return message
+    const [imageUrl, fileUrl] = await Promise.all([
+      this.storageService.resolveDownloadUrl(message.imageUrl),
+      this.storageService.resolveDownloadUrl(message.fileUrl),
+    ])
+    return { ...message, imageUrl, fileUrl }
+  }
+
+  /**
+   * Same as resolveMessageMedia, for a room's group avatar. Public because
+   * ChatController calls it directly on getRoom/getRooms results -- those
+   * methods stay raw internally since leaveRoom extracts the real storage key
+   * from room.imageUrl to delete the avatar when the room is torn down.
+   */
+  async resolveRoomMedia<T extends { imageUrl?: string | null } | null>(room: T): Promise<T> {
+    if (!room?.imageUrl) return room
+    return { ...room, imageUrl: await this.storageService.resolveDownloadUrl(room.imageUrl) }
   }
 
   private sanitizeParent<

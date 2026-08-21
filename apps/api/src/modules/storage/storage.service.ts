@@ -14,6 +14,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   OnModuleInit,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -84,6 +85,7 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
 
 @Injectable()
 export class StorageService implements OnModuleInit {
+  private readonly logger = new Logger(StorageService.name)
   /** Server-side operations. Uses S3_INTERNAL_ENDPOINT when configured. */
   private s3Client: S3Client
   /** Presigning only. Always the browser-reachable S3_ENDPOINT. */
@@ -164,6 +166,24 @@ export class StorageService implements OnModuleInit {
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
     // signingClient, not s3Client: the browser performs this GET.
     return getSignedUrl(this.signingClient, command, { expiresIn })
+  }
+
+  /**
+   * Turns a stored `publicUrl` (built by getPublicUrl, e.g. on a chat message or
+   * room avatar) into a fresh presigned GET so the browser can actually load it —
+   * the bucket has no anonymous-read/website mode, so the raw publicUrl alone is
+   * never fetchable. Swallows failures (e.g. a legacy value that isn't one of our
+   * keys) so one bad record can't break an entire message list.
+   */
+  async resolveDownloadUrl(url: string | null | undefined): Promise<string | null> {
+    if (!url) return null
+    try {
+      const key = this.extractKeyFromUrl(url)
+      return await this.generatePresignedDownloadUrl(key)
+    } catch (err) {
+      this.logger.warn(`Could not resolve download URL for ${url}: ${err}`)
+      return null
+    }
   }
 
   private assertSafeKey(key: string): void {
