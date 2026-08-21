@@ -2,8 +2,10 @@ import { Body, Controller, Delete, Post, UploadedFile, UseInterceptors } from '@
 import { FileInterceptor } from '@nestjs/platform-express'
 import { memoryStorage } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UserSession } from '@/auth/auth.config'
+import { CollabService } from '@/modules/collab/collab.service'
 import { StorageService } from './storage.service'
 import { getFolderForPurpose, PresignedUploadDto } from './dto/presigned-upload.dto'
 import { PresignedUploadEntity } from './entities/presigned-upload.entity'
@@ -18,13 +20,22 @@ import {
 @ApiTags('storage')
 @Controller('storage')
 export class StorageController {
-  constructor(private readonly storageService: StorageService) {}
+  constructor(
+    private readonly storageService: StorageService,
+    private readonly collabService: CollabService,
+  ) {}
 
   @Post('presigned-upload')
   @ResponseMessage('Presigned upload URL generated')
   @ApiOkResponse({ type: PresignedUploadEntity })
-  getPresignedUploadUrl(@Body() dto: PresignedUploadDto, @Session() session: UserSession) {
-    const folder = getFolderForPurpose(dto.purpose, session.user.id)
+  async getPresignedUploadUrl(@Body() dto: PresignedUploadDto, @Session() session: UserSession) {
+    if (dto.purpose === 'board-attachment') {
+      await this.collabService.assertCanEdit(dto.roomSlug!, session)
+    }
+    const folder = getFolderForPurpose(dto.purpose, {
+      userId: session.user.id,
+      roomSlug: dto.roomSlug,
+    })
     return this.storageService.generatePresignedUploadUrl(folder, dto.mimeType, dto.uploadType, {
       checksumSha256: dto.checksumSha256,
     })
@@ -34,7 +45,7 @@ export class StorageController {
   @ResponseMessage('Multipart upload created')
   @ApiOkResponse({ type: MultipartUploadEntity })
   createMultipartUpload(@Body() dto: CreateMultipartUploadDto, @Session() session: UserSession) {
-    const folder = getFolderForPurpose(dto.purpose, session.user.id)
+    const folder = getFolderForPurpose(dto.purpose, { userId: session.user.id })
     return this.storageService.createMultipartUpload(folder, dto.mimeType, dto.uploadType)
   }
 

@@ -6,16 +6,19 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { DoorClosed, KeyRound, Loader2, Lock } from 'lucide-react'
+import { DoorClosed, KeyRound, Loader2, Lock, ShieldAlert } from 'lucide-react'
 import { CanvasHeader } from '@/src/components/canvas/canvas-header'
 import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
 import { CollabProvider, useCollab, useCollabPresence } from '@/contexts/collab-context'
+import { getRoomKeyFromLocation, getRoomKeyFromHash } from '@/src/lib/board-crypto'
+import { useBoardKeysStore } from '@/lib/store'
 
 const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
   ssr: false,
 })
 
-type JoinState = 'joining' | 'joined' | 'not-found' | 'private' | 'password-required'
+type JoinState =
+  'joining' | 'joined' | 'not-found' | 'private' | 'password-required' | 'key-missing'
 
 export default function CanvasPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -24,6 +27,7 @@ export default function CanvasPage() {
   const [isViewOnly, setIsViewOnly] = useState(false)
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [roomKey, setRoomKey] = useState<CryptoKey | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
   const [shake, setShake] = useState(false)
@@ -52,6 +56,17 @@ export default function CanvasPage() {
         setOwnerId(data.data?.ownerId ?? null)
         setUserId(data.data?.userId ?? null)
         sessionStorage.setItem(`pw-verified-${slug}`, '1')
+
+        if (data.data?.encrypted) {
+          const rawKey = getRoomKeyFromHash(window.location.hash)
+          const key = await getRoomKeyFromLocation()
+          if (!key || !rawKey) {
+            setJoinState('key-missing')
+            return
+          }
+          useBoardKeysStore.getState().setKey(slug, rawKey)
+          setRoomKey(key)
+        }
         setJoinState('joined')
         return
       }
@@ -159,6 +174,24 @@ export default function CanvasPage() {
     )
   }
 
+  // This board is end-to-end encrypted and the link opened here has no decryption key in its
+  // URL fragment (e.g. typed by hand, or the fragment got stripped somewhere along the way).
+  if (joinState === 'key-missing') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
+        <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+        <h1 className="text-xl font-semibold text-foreground">This board is encrypted</h1>
+        <p className="max-w-xs text-center text-sm text-muted-foreground">
+          The link you opened is missing its decryption key. Ask whoever shared this board for the
+          full link, including everything after the <code>#</code>.
+        </p>
+        <Button asChild variant="default">
+          <Link href="/boards">Back to Boards</Link>
+        </Button>
+      </div>
+    )
+  }
+
   // Error page — Surface 3 from UI-SPEC
   if (joinState === 'not-found') {
     return (
@@ -198,6 +231,7 @@ export default function CanvasPage() {
       isViewOnly={isViewOnly}
       ownerId={ownerId}
       userId={userId}
+      roomKey={roomKey}
       onAccessRevoked={() => setJoinState('private')}
     >
       <CanvasInner />

@@ -197,13 +197,7 @@ interface SettingsStore {
 }
 
 const fontSizeOrder: (
-  | 'xsmall'
-  | 'small'
-  | 'normalsmall'
-  | 'medium'
-  | 'mediumlarge'
-  | 'large'
-  | 'xlarge'
+  'xsmall' | 'small' | 'normalsmall' | 'medium' | 'mediumlarge' | 'large' | 'xlarge'
 )[] = ['xsmall', 'small', 'normalsmall', 'medium', 'mediumlarge', 'large', 'xlarge']
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -251,6 +245,32 @@ export const useFeedStyleStore = create<FeedStyleStore>()(
       setFeedStyle: (feedStyle) => set({ feedStyle }),
     }),
     { name: 'unishare-feed-style', skipHydration: true },
+  ),
+)
+
+interface BoardKeysStore {
+  /** slug -> raw exported room key (base64url). Device-local only — never sent to the server. */
+  keysBySlug: Record<string, string>
+  setKey: (slug: string, exportedKey: string) => void
+  getKey: (slug: string) => string | undefined
+}
+
+/**
+ * A board's decryption key lives only in its URL fragment, which the boards list (room-card,
+ * share-to-chat) never sees. Caching it here — on the same device that created or visited the
+ * board — lets "Copy link" and "Share to Chat" from the list still produce a working link. A
+ * device that never opened the board has no key to offer; those flows fall back to a bare,
+ * keyless link for such rooms. See docs/board-e2e-encryption/planning.md.
+ */
+export const useBoardKeysStore = create<BoardKeysStore>()(
+  persist(
+    (set, get) => ({
+      keysBySlug: {},
+      setKey: (slug, exportedKey) =>
+        set((s) => ({ keysBySlug: { ...s.keysBySlug, [slug]: exportedKey } })),
+      getKey: (slug) => get().keysBySlug[slug],
+    }),
+    { name: 'unishare-board-keys' },
   ),
 )
 

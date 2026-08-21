@@ -12,7 +12,8 @@ import { Logger } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
 import { parse } from 'cookie'
 import { auth } from '@/auth/auth.config'
-import { CollabRoomService } from './collab.room.service'
+import { StorageService } from '@/modules/storage/storage.service'
+import { CollabRoomService, RoomFileMeta } from './collab.room.service'
 import { CollabRepository } from './collab.repository'
 
 const allowedOrigins = [
@@ -37,7 +38,18 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   constructor(
     private readonly collabRoomService: CollabRoomService,
     private readonly collabRepository: CollabRepository,
+    private readonly storageService: StorageService,
   ) {}
+
+  /** Board files are stored as opaque ciphertext keys; resolve each to a fetchable presigned GET. */
+  private async resolveFiles(files: RoomFileMeta[]): Promise<(RoomFileMeta & { url: string })[]> {
+    return Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        url: await this.storageService.generatePresignedDownloadUrl(file.key),
+      })),
+    )
+  }
 
   private hashToColorIndex(id: string): number {
     let hash = 0
@@ -115,9 +127,12 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     await client.join(slug)
     this.collabRoomService.registerSocket(client.id, slug)
 
-    const elements = await this.collabRoomService.getOrLoadElements(slug)
-    client.emit('room-joined', { slug, elements })
-    this.logger.log(`Client ${client.id} joined room ${slug} (${elements.length} elements)`)
+    const { elements, files } = await this.collabRoomService.getOrLoadRoom(slug)
+    const resolvedFiles = await this.resolveFiles(files)
+    client.emit('room-joined', { slug, elements, files: resolvedFiles })
+    this.logger.log(
+      `Client ${client.id} joined room ${slug} (${elements.length} elements, ${files.length} files)`,
+    )
 
     const roomSockets = await this.server.in(slug).fetchSockets()
     const participants = roomSockets.map((s) => ({
@@ -176,5 +191,22 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     // this.logger.log(`[COLLAB] scene-update from ${client.id}: ${elements.length} elements`)
     client.to(slug).emit('scene-update', elements)
+  }
+
+  @SubscribeMessage('file-added')
+  async handleFileAdded(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() file: RoomFileMeta,
+  ): Promise<void> {
+    if (client.data.isViewOnly) return
+    const slug = this.collabRoomService.getRoomForSocket(client.id)
+    if (!slug) return
+    if (!file?.fileId || !file.key || !file.mimeType) return
+
+    this.collabRoomService.registerFile(slug, file)
+    this.collabRoomService.resetIdleTimer(slug)
+
+    const [resolved] = await this.resolveFiles([file])
+    client.to(slug).emit('file-added', resolved)
   }
 }
