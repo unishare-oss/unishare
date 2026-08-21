@@ -18,6 +18,38 @@ export const SUPPORTED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
+/**
+ * Characters Postgres cannot store in a `text` column, whatever the extractor hands us.
+ *
+ * NUL is the one that actually bit: four production PDFs failed ingestion on
+ * `22021 invalid byte sequence for encoding "UTF8": 0x00`. A NUL rejects the WHOLE
+ * `createMany` batch, so one bad glyph loses an entire document — the file lands in FAILED,
+ * retrieval excludes it, and to a student the document simply never answers questions.
+ *
+ * Lone surrogates are included because they fail identically and for the same underlying
+ * reason: a code unit that is not, on its own, encodable as UTF-8. PDF text extraction
+ * reaches both — glyphs with no Unicode mapping and text split mid-surrogate-pair.
+ *
+ * Deliberately narrow. Other C0 controls (form feed, vertical tab) are ugly but perfectly
+ * storable, and stripping them would be quietly editing document text rather than fixing a
+ * defect. The rule here is exactly "remove what cannot be persisted", nothing more.
+ */
+// The rule below exists to catch a control character typed in by accident. Here the
+// control character IS the defect being matched, so the directive must sit directly
+// above the regex -- eslint-disable-next-line applies to the literal next line, and a
+// comment in between would silently consume it.
+// eslint-disable-next-line no-control-regex
+const UNSTORABLE = /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+/**
+ * Removes characters that would make a chunk write fail. Exported for direct testing —
+ * the interesting cases are one-character strings, and routing them through a real PDF
+ * would test pdfjs rather than this rule.
+ */
+export function stripUnstorableChars(text: string): string {
+  return text.replace(UNSTORABLE, '')
+}
+
 export interface ExtractedPage {
   num: number
   text: string
@@ -42,17 +74,27 @@ export class DocumentExtractorService {
       throw new Error(`Unsupported mime type: ${mimeType}`)
     }
 
+    // Sanitising HERE rather than at the chunk write is deliberate: this is the single
+    // point both formats pass through, and every consumer -- chunking, embedding, the
+    // map-reduce summary, quiz generation -- reads its text from this return value. A guard
+    // at the persistence layer would leave the same bytes flowing to everything else.
     if (mimeType === 'application/pdf') {
       const parser = new PDFParse({ data: new Uint8Array(buffer) })
       const result = await parser.getText()
       return {
-        pages: result.pages.map((page) => ({ num: page.num, text: page.text })),
+        pages: result.pages.map((page) => ({
+          num: page.num,
+          text: stripUnstorableChars(page.text),
+        })),
         hasPageNumbers: true,
       }
     }
 
     const result = await mammoth.extractRawText({ buffer })
-    return { pages: [{ num: 1, text: result.value }], hasPageNumbers: false }
+    return {
+      pages: [{ num: 1, text: stripUnstorableChars(result.value) }],
+      hasPageNumbers: false,
+    }
   }
 
   async extractFromKey(key: string, mimeType: string): Promise<ExtractedDocument> {

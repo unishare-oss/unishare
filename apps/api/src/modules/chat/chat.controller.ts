@@ -39,16 +39,18 @@ export class ChatController {
   @Get('rooms')
   @ApiOkResponse({ type: [ChatRoomEntity] })
   @ResponseMessage('Chat rooms fetched successfully')
-  getRooms(@Session() session: UserSession) {
-    return this.chatService.getRooms(session.user.id)
+  async getRooms(@Session() session: UserSession) {
+    const rooms = await this.chatService.getRooms(session.user.id)
+    return Promise.all(rooms.map((room: any) => this.chatService.resolveRoomMedia(room)))
   }
 
   @Get('rooms/:id')
   @UseGuards(ChatMemberGuard)
   @ApiOkResponse({ type: ChatRoomEntity })
   @ResponseMessage('Chat room fetched successfully')
-  getRoom(@Param('id') id: string, @Session() session: UserSession) {
-    return this.chatService.getRoom(id, session.user.id)
+  async getRoom(@Param('id') id: string, @Session() session: UserSession) {
+    const room = await this.chatService.getRoom(id, session.user.id)
+    return this.chatService.resolveRoomMedia(room)
   }
 
   @Get('rooms/:id/messages')
