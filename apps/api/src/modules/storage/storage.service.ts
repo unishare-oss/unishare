@@ -3,8 +3,10 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -20,7 +22,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 
-type UploadType = 'document' | 'image' | 'video'
+type UploadType = 'document' | 'image' | 'video' | 'encrypted-blob'
 
 const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize: number }> = {
   document: {
@@ -80,6 +82,12 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
       'video/x-matroska',
     ],
     maxSize: 500 * 1024 * 1024, // 500MB
+  },
+  // Client-side AES-GCM ciphertext (board images — see docs/board-e2e-encryption/planning.md).
+  // The real image MIME type is meaningless once encrypted, so only one "type" is allowed.
+  'encrypted-blob': {
+    allowedMimeTypes: ['application/octet-stream'],
+    maxSize: 10 * 1024 * 1024, // 10MB — matches the plaintext `image` cap plus GCM/base64 overhead
   },
 }
 
@@ -206,6 +214,28 @@ export class StorageService implements OnModuleInit {
     this.assertSafeKey(key)
     const command = new DeleteObjectCommand({ Bucket: this.bucket, Key: key })
     await this.s3Client.send(command)
+  }
+
+  /** Deletes every object under a folder prefix, e.g. `boards/{slug}/` on room deletion. */
+  async deleteFolder(prefix: string): Promise<void> {
+    this.assertSafeKey(prefix)
+    let continuationToken: string | undefined
+    do {
+      const listing = await this.s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: `${prefix}/`,
+          ContinuationToken: continuationToken,
+        }),
+      )
+      const keys = (listing.Contents ?? []).flatMap((obj) => (obj.Key ? [{ Key: obj.Key }] : []))
+      if (keys.length > 0) {
+        await this.s3Client.send(
+          new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys } }),
+        )
+      }
+      continuationToken = listing.IsTruncated ? listing.NextContinuationToken : undefined
+    } while (continuationToken)
   }
 
   getPublicUrl(key: string): string {

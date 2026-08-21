@@ -12,6 +12,7 @@ export class CollabRepository {
     title?: string
     visibility?: RoomVisibility
     passwordHash?: string
+    encrypted?: boolean
   }) {
     return this.prisma.room.create({ data })
   }
@@ -30,6 +31,7 @@ export class CollabRepository {
         ownerId: true,
         visibility: true,
         passwordHash: true,
+        encrypted: true,
       },
     })
   }

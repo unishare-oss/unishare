@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import { RoomVisibility } from '@/generated/prisma/client'
 import { auth, type UserSession } from '@/auth/auth.config'
+import { StorageService } from '@/modules/storage/storage.service'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
 import { CreateCollabRoomDto } from './dto/create-room.dto'
@@ -22,6 +23,7 @@ export class CollabService {
   constructor(
     private readonly collabRepository: CollabRepository,
     private readonly collabGateway: CollabGateway,
+    private readonly storageService: StorageService,
   ) {}
 
   async createRoom(dto: CreateCollabRoomDto, ownerId: string) {
@@ -33,8 +35,26 @@ export class CollabService {
       title: dto.title,
       visibility: dto.visibility,
       passwordHash,
+      encrypted: true,
     })
     return this.toRoomResponse(room)
+  }
+
+  /**
+   * Throws if `session` cannot edit the room — mirrors the isViewOnly/PRIVATE gate already
+   * enforced in collab.gateway.ts's join handler. Shared so the storage controller doesn't
+   * duplicate the visibility rules when minting a board-attachment upload URL.
+   */
+  async assertCanEdit(slug: string, session: UserSession): Promise<void> {
+    const room = await this.collabRepository.findBySlugWithVisibility(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    const isAnonymous = !!(session.user as unknown as Record<string, unknown>).isAnonymous
+    if (room.visibility === RoomVisibility.PRIVATE && isAnonymous) {
+      throw new ForbiddenException('Room is private')
+    }
+    if (room.visibility === RoomVisibility.VIEW_ONLY && isAnonymous) {
+      throw new ForbiddenException('View-only access cannot upload attachments')
+    }
   }
 
   async getRoomBySlug(slug: string) {
@@ -54,6 +74,7 @@ export class CollabService {
     if (room.ownerId !== userId)
       throw new ForbiddenException('Only the room owner can delete this room')
     await this.collabRepository.deleteBySlug(slug)
+    await this.storageService.deleteFolder(`boards/${slug}`)
   }
 
   async updateRoom(slug: string, dto: UpdateRoomDto, userId: string) {
@@ -169,6 +190,7 @@ export class CollabService {
       isAnonymous,
       isViewOnly,
       ownerId: room.ownerId,
+      encrypted: room.encrypted,
     }
   }
 

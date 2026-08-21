@@ -419,6 +419,7 @@ model Room {
   snapshot     Bytes?
   visibility   RoomVisibility @default(OPEN)
   passwordHash String?
+  encrypted    Boolean        @default(false)
   owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])

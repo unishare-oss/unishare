@@ -15,6 +15,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { generateRoomKey, exportRoomKeyRaw } from '@/src/lib/crypto'
+import { useBoardKeysStore } from '@/lib/store'
 
 type RoomVisibility = 'OPEN' | 'VIEW_ONLY' | 'PRIVATE'
 
@@ -57,7 +59,9 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
       setTitle('')
       setVisibility('OPEN')
       setPassword('')
-      router.push(`/canvas/${room.data.slug}`)
+      const exportedKey = await exportRoomKeyRaw(await generateRoomKey())
+      useBoardKeysStore.getState().setKey(room.data.slug, exportedKey)
+      router.push(`/canvas/${room.data.slug}#key=${exportedKey}`)
     } catch {
       toast.error('Failed to create board')
     } finally {

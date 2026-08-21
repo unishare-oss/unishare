@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common'
 import { IoAdapter } from '@nestjs/platform-socket.io'
 import { io, Socket as ClientSocket } from 'socket.io-client'
 import * as Y from 'yjs'
+import { StorageService } from '@/modules/storage/storage.service'
 import { CollabGateway } from './collab.gateway'
 import { CollabRoomService } from './collab.room.service'
 import { CollabRepository } from './collab.repository'
@@ -59,6 +60,12 @@ describe('CollabGateway (integration)', () => {
         CollabGateway,
         CollabRoomService,
         { provide: CollabRepository, useValue: mockRepository },
+        {
+          provide: StorageService,
+          useValue: {
+            generatePresignedDownloadUrl: jest.fn().mockResolvedValue('https://example.com/signed'),
+          },
+        },
       ],
     }).compile()
 
