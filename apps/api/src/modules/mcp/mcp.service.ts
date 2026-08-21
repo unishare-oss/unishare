@@ -5,6 +5,7 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { McpRepository, type McpAuthSession } from './mcp.repository'
 import { drawingGuide } from './mcp-drawing-guide'
+import { postGuide } from './mcp-post-guide'
 
 export type { McpAuthSession }
 
@@ -76,12 +77,17 @@ export class McpService {
       'read_me',
       {
         description:
-          'Read the UniShare Excalidraw drawing rules. Call this before the first draw_board call in a task and follow the rules for every draw.',
+          'Read the UniShare MCP rules and best practices for creating posts and drawing diagrams. Call this before the first draw_board or create_post call in a task and follow the rules.',
         inputSchema: z.object({}),
         annotations: { readOnlyHint: true },
       },
       async () => ({
-        content: [{ type: 'text' as const, text: drawingGuide.trim() }],
+        content: [
+          {
+            type: 'text' as const,
+            text: `${postGuide.trim()}\n\n---\n\n${drawingGuide.trim()}`,
+          },
+        ],
       }),
     )
 
@@ -100,25 +106,31 @@ export class McpService {
       'create_post',
       {
         description:
-          'Create a post (note, old question, or exercise) authored by the authenticated UniShare user',
-        inputSchema: z
-          .object({
-            title: z.string().min(3).max(200),
-            description: z.string().min(1).max(2000),
-            type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
-            courseId: z.string().min(1).optional(),
-            courseCode: z.string().min(1).optional(),
-            moduleNumber: z.number().int().min(1).max(20).optional(),
-            year: z.number().int().min(1).max(6).optional(),
-            semester: z.number().int().min(1).max(3).optional(),
-            tags: z.array(z.string().min(2).max(50)).max(5).optional(),
-            examYear: z.number().int().min(1900).max(2100).optional(),
-            externalUrl: z.string().url().max(500).optional(),
-            isAnonymous: z.boolean().optional(),
-          })
-          .refine((data) => data.courseId || data.courseCode, {
-            message: 'Either courseId or courseCode must be provided',
-          }),
+          'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. Call read_me before the first create_post call in a task and follow its rules: ask ONE field at a time in order (title -> type -> description -> courseId from list_courses -> optional fields with skip option), show a summary, and confirm with the user before calling this tool.',
+        inputSchema: z.object({
+          title: z.string().min(3).max(200),
+          description: z.string().min(1).max(2000),
+          type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
+          courseId: z.string().min(1),
+          moduleNumber: z.number().int().min(1).max(20).optional(),
+          year: z.number().int().min(1).max(6).optional(),
+          semester: z.number().int().min(1).max(3).optional(),
+          tags: z.array(z.string().min(2).max(50)).max(5).optional(),
+          examYear: z.number().int().min(1900).max(2100).optional(),
+          externalUrl: z.string().url().max(500).optional(),
+          isAnonymous: z.boolean().optional(),
+          files: z
+            .array(
+              z.object({
+                fileName: z.string().min(1).max(255),
+                mimeType: z.string().min(1),
+                base64Data: z.string().optional(),
+                textData: z.string().optional(),
+              }),
+            )
+            .max(5)
+            .optional(),
+        }),
       },
       async (input) => this.toToolResult(await this.mcpRepository.createPost(session, input)),
     )

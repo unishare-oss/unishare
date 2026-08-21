@@ -166,6 +166,23 @@ export class StorageService implements OnModuleInit {
     return getSignedUrl(this.signingClient, command, { expiresIn })
   }
 
+  async uploadBuffer(
+    folder: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<{ key: string; publicUrl: string }> {
+    this.assertSafeKey(folder)
+    const key = `${folder}/${this.generateFileName(mimeType)}`
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: mimeType,
+    })
+    await this.s3Client.send(command)
+    return { key, publicUrl: this.getPublicUrl(key) }
+  }
+
   private assertSafeKey(key: string): void {
     if (!/^[a-zA-Z0-9/_\-.]+$/.test(key) || key.includes('..')) {
       throw new InternalServerErrorException('Invalid storage key')

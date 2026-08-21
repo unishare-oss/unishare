@@ -4,6 +4,8 @@ import type { CollabService } from '@/modules/collab/collab.service'
 import type { PostsService } from '@/modules/posts/posts.service'
 import type { CoursesService } from '@/modules/courses/courses.service'
 import type { PrismaService } from '@/prisma/prisma.service'
+import type { FilesService } from '@/modules/files/files.service'
+import type { StorageService } from '@/modules/storage/storage.service'
 import { PostType, PostStatus } from '@/generated/prisma/client'
 import { drawingGuide } from './mcp-drawing-guide'
 
@@ -18,6 +20,12 @@ jest.mock('@/modules/courses/courses.service', () => ({
 }))
 jest.mock('@/prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
+}))
+jest.mock('@/modules/files/files.service', () => ({
+  FilesService: class FilesService {},
+}))
+jest.mock('@/modules/storage/storage.service', () => ({
+  StorageService: class StorageService {},
 }))
 
 describe('McpRepository', () => {
@@ -46,11 +54,19 @@ describe('McpRepository', () => {
       findUnique: jest.fn(),
     },
   }
+  const filesService = {
+    confirmUpload: jest.fn(),
+  }
+  const storageService = {
+    uploadBuffer: jest.fn(),
+  }
   const repository = new McpRepository(
     collabService as unknown as CollabService,
     postsService as unknown as PostsService,
     coursesService as unknown as CoursesService,
     prisma as unknown as PrismaService,
+    filesService as unknown as FilesService,
+    storageService as unknown as StorageService,
   )
 
   beforeEach(() => {
@@ -364,9 +380,8 @@ describe('McpRepository', () => {
   })
 
   describe('createPost', () => {
-    it('creates a post for the authenticated user and resolves courseCode', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1', role: 'STUDENT' })
-      prisma.course.findFirst.mockResolvedValue({ id: 'course-1' })
+    it('creates a post for the authenticated user using provided courseId', async () => {
+      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
       const createdAt = new Date('2026-08-18T10:00:00.000Z')
       postsService.create.mockResolvedValue({
         id: 'post-1',
@@ -383,18 +398,14 @@ describe('McpRepository', () => {
           title: 'Data Structures Lecture 1',
           description: 'Introduction to Big O and Arrays',
           type: 'NOTE',
-          courseCode: 'CS101',
+          courseId: 'course-1',
           tags: ['Algorithms'],
         },
       )
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { departmentId: true, role: true },
-      })
-      expect(prisma.course.findFirst).toHaveBeenCalledWith({
-        where: { code: { equals: 'CS101', mode: 'insensitive' }, departmentId: 'dept-1' },
-        select: { id: true },
+        select: { departmentId: true },
       })
       expect(postsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -418,6 +429,70 @@ describe('McpRepository', () => {
           createdAt: createdAt.toISOString(),
         },
       })
+    })
+
+    it('creates a post with attached files (base64 and text)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      const createdAt = new Date('2026-08-18T10:00:00.000Z')
+      postsService.create.mockResolvedValue({
+        id: 'post-1',
+        shortCode: 'p1234567',
+        title: 'Data Structures Lecture 1',
+        type: PostType.NOTE,
+        status: PostStatus.APPROVED,
+        createdAt,
+      })
+      storageService.uploadBuffer.mockResolvedValue({
+        key: 'posts/user-1/file-1.png',
+        publicUrl: 'http://localhost:3000/storage/posts/user-1/file-1.png',
+      })
+      filesService.confirmUpload.mockResolvedValue({
+        id: 'file-1',
+        name: 'diagram.png',
+        size: 100,
+        mimeType: 'image/png',
+      })
+
+      const result = await repository.createPost(
+        { userId: 'user-1', scopes: 'openid posts:write' },
+        {
+          title: 'Data Structures Lecture 1',
+          description: 'Introduction to Big O',
+          type: 'NOTE',
+          courseId: 'course-1',
+          files: [
+            {
+              fileName: 'diagram.png',
+              mimeType: 'image/png',
+              base64Data: Buffer.from('fake-image-bytes').toString('base64'),
+            },
+          ],
+        },
+      )
+
+      expect(storageService.uploadBuffer).toHaveBeenCalledWith(
+        'posts/user-1',
+        expect.any(Buffer),
+        'image/png',
+      )
+      expect(filesService.confirmUpload).toHaveBeenCalledWith(
+        'post-1',
+        expect.objectContaining({
+          key: 'posts/user-1/file-1.png',
+          name: 'diagram.png',
+          mimeType: 'image/png',
+        }),
+        'user-1',
+      )
+      expect(result.post.files).toEqual([
+        {
+          id: 'file-1',
+          fileName: 'diagram.png',
+          fileSize: expect.any(Number),
+          mimeType: 'image/png',
+          url: 'http://localhost:3000/storage/posts/user-1/file-1.png',
+        },
+      ])
     })
 
     it('rejects access without posts:write', async () => {

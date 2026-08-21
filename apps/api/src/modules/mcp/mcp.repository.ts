@@ -4,6 +4,8 @@ import { CollabService } from '@/modules/collab/collab.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { PrismaService } from '@/prisma/prisma.service'
+import { FilesService } from '@/modules/files/files.service'
+import { StorageService } from '@/modules/storage/storage.service'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { PostType } from '@/generated/prisma/client'
 import {
@@ -18,6 +20,13 @@ import { RequireScope } from '@/common/decorators/require-scope.decorator'
 export interface McpAuthSession {
   userId: string
   scopes: string
+}
+
+export interface McpPostFileInput {
+  fileName: string
+  mimeType: string
+  base64Data?: string
+  textData?: string
 }
 
 const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
@@ -68,6 +77,8 @@ export class McpRepository {
     private readonly postsService: PostsService,
     private readonly coursesService: CoursesService,
     private readonly prisma: PrismaService,
+    private readonly filesService: FilesService,
+    private readonly storageService: StorageService,
   ) {}
 
   @RequireScope('posts:read')
@@ -182,8 +193,7 @@ export class McpRepository {
       title: string
       description: string
       type: 'NOTE' | 'OLD_QUESTION' | 'EXERCISE'
-      courseId?: string
-      courseCode?: string
+      courseId: string
       moduleNumber?: number
       year?: number
       semester?: number
@@ -191,36 +201,16 @@ export class McpRepository {
       examYear?: number
       externalUrl?: string
       isAnonymous?: boolean
+      files?: McpPostFileInput[]
     },
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { departmentId: true, role: true },
+      select: { departmentId: true },
     })
 
     if (!user?.departmentId) {
       throw new BadRequestException('Please set your department in UniShare before creating posts')
-    }
-
-    let courseId = input.courseId
-    if (!courseId && input.courseCode) {
-      const course = await this.prisma.course.findFirst({
-        where: {
-          code: { equals: input.courseCode.trim(), mode: 'insensitive' },
-          departmentId: user.departmentId,
-        },
-        select: { id: true },
-      })
-      if (!course) {
-        throw new NotFoundException(
-          `Course with code "${input.courseCode}" not found in your department`,
-        )
-      }
-      courseId = course.id
-    }
-
-    if (!courseId) {
-      throw new BadRequestException('Either courseId or courseCode must be provided')
     }
 
     const created = await this.postsService.create(
@@ -228,7 +218,7 @@ export class McpRepository {
         title: input.title,
         description: input.description,
         type: input.type as PostType,
-        courseId,
+        courseId: input.courseId,
         moduleNumber: input.moduleNumber ?? 1,
         year: input.year ?? 1,
         semester: input.semester ?? 1,
@@ -240,6 +230,62 @@ export class McpRepository {
       session.userId,
       user.departmentId,
     )
+
+    const attachedFiles: Array<{
+      id: string
+      fileName: string
+      fileSize: number
+      mimeType: string
+      url: string
+    }> = []
+
+    if (input.files && input.files.length > 0) {
+      const folder = `posts/${session.userId}`
+      for (const file of input.files) {
+        let buffer: Buffer
+        if (file.base64Data) {
+          buffer = Buffer.from(file.base64Data, 'base64')
+        } else if (file.textData) {
+          buffer = Buffer.from(file.textData, 'utf-8')
+        } else {
+          throw new BadRequestException(
+            `File "${file.fileName}" must provide base64Data or textData`,
+          )
+        }
+
+        const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+        if (buffer.length > MAX_FILE_SIZE) {
+          throw new BadRequestException(
+            `File "${file.fileName}" exceeds maximum allowed size of 10MB`,
+          )
+        }
+
+        const { key, publicUrl } = await this.storageService.uploadBuffer(
+          folder,
+          buffer,
+          file.mimeType,
+        )
+
+        const confirmed = await this.filesService.confirmUpload(
+          created.id,
+          {
+            key,
+            name: file.fileName,
+            size: buffer.length,
+            mimeType: file.mimeType,
+          },
+          session.userId,
+        )
+
+        attachedFiles.push({
+          id: confirmed.id,
+          fileName: confirmed.name,
+          fileSize: confirmed.size,
+          mimeType: confirmed.mimeType,
+          url: publicUrl,
+        })
+      }
+    }
 
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000'
     const post = {
@@ -253,6 +299,7 @@ export class McpRepository {
         created.createdAt instanceof Date
           ? created.createdAt.toISOString()
           : new Date().toISOString(),
+      ...(attachedFiles.length > 0 && { files: attachedFiles }),
     }
 
     return { post }
