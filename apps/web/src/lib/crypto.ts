@@ -28,6 +28,17 @@ function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>
 }
 
+/** Base64url (RFC 4648 §5) — safe inside a URL fragment, unlike plain base64's `+`/`/`. */
+function bytesToBase64Url(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function base64UrlToBytes(base64url: string): Uint8Array<ArrayBuffer> {
+  const padded = base64url.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
+  return base64ToBytes(padded + padding)
+}
+
 async function derivePassphraseKey(
   passphrase: string,
   salt: Uint8Array<ArrayBuffer>,
@@ -85,6 +96,38 @@ export async function importPublicKey(jwkString: string): Promise<CryptoKey> {
 
 export async function generateRoomKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(AES_PARAMS, true, ['encrypt', 'decrypt'])
+}
+
+/** Raw AES key export/import for keys carried outside the app's own key-wrap flow — e.g. a
+ * board's room key, which lives in the URL fragment rather than being wrapped per-participant. */
+export async function exportRoomKeyRaw(key: CryptoKey): Promise<string> {
+  const raw = await crypto.subtle.exportKey('raw', key)
+  return bytesToBase64Url(new Uint8Array(raw))
+}
+
+export async function importRoomKeyRaw(base64url: string): Promise<CryptoKey> {
+  const raw = base64UrlToBytes(base64url)
+  return crypto.subtle.importKey('raw', raw, AES_PARAMS, true, ['encrypt', 'decrypt'])
+}
+
+/** Encrypts raw bytes (e.g. an image file) — wire format: IV (12 bytes) | ciphertext. */
+export async function encryptBytes(
+  data: ArrayBuffer,
+  key: CryptoKey,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data)
+  const combined = new Uint8Array(12 + ciphertext.byteLength) as Uint8Array<ArrayBuffer>
+  combined.set(iv, 0)
+  combined.set(new Uint8Array(ciphertext), 12)
+  return combined
+}
+
+export async function decryptBytes(data: ArrayBuffer, key: CryptoKey): Promise<ArrayBuffer> {
+  const bytes = new Uint8Array(data)
+  const iv = bytes.slice(0, 12)
+  const ciphertext = bytes.slice(12)
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
 }
 
 // Encrypts a room key for a recipient using ECDH + AES-GCM key wrap.

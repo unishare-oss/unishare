@@ -12,6 +12,7 @@ import { useChatControllerGetRooms } from '@/src/lib/api/generated/chat/chat'
 import { useChatMessageActions } from '@/hooks/use-chat-message-actions'
 import { useCrypto } from '@/hooks/use-crypto'
 import { useAuth } from '@/contexts/auth-context'
+import { useBoardKeysStore } from '@/lib/store'
 import { toast } from 'sonner'
 
 interface ShareToChatDialogProps {
@@ -61,7 +62,12 @@ export function ShareToChatDialog({ open, onOpenChange, room }: ShareToChatDialo
   const handleSend = async () => {
     if (selected.size === 0) return
     setSending(true)
-    const linkUrl = window.location.origin + '/canvas/' + room.slug
+    // Encrypted boards' key lives only in the URL fragment of a device that's opened them —
+    // this cache is the only way to rebuild a working link from the boards list.
+    // See docs/board-e2e-encryption/planning.md.
+    const boardKey = useBoardKeysStore.getState().getKey(room.slug)
+    const linkUrl =
+      window.location.origin + '/canvas/' + room.slug + (boardKey ? `#key=${boardKey}` : '')
     try {
       for (const roomId of selected) {
         const chatRoom = rooms.find((r) => r.id === roomId)

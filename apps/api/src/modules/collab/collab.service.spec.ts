@@ -3,8 +3,10 @@ import { NotFoundException, ForbiddenException, UnauthorizedException } from '@n
 import type { Request, Response } from 'express'
 import * as bcrypt from 'bcryptjs'
 import { auth } from '@/auth/auth.config'
+import { StorageService } from '@/modules/storage/storage.service'
 import { CollabService } from './collab.service'
 import { CollabRepository } from './collab.repository'
+import { CollabGateway } from './collab.gateway'
 
 // Mock bcryptjs
 jest.mock('bcryptjs', () => ({
@@ -79,7 +81,12 @@ describe('CollabService', () => {
     }
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CollabService, { provide: CollabRepository, useValue: repository }],
+      providers: [
+        CollabService,
+        { provide: CollabRepository, useValue: repository },
+        { provide: CollabGateway, useValue: { notifyVisibilityChanged: jest.fn() } },
+        { provide: StorageService, useValue: { deleteFolder: jest.fn() } },
+      ],
     }).compile()
 
     service = module.get<CollabService>(CollabService)
