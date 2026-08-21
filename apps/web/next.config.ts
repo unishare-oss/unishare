@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
       { protocol: 'https', hostname: '*.r2.dev' },
       { protocol: 'https', hostname: 'upload.wikimedia.org' },
+      { protocol: 'https', hostname: 's3.psstee.dev' },
     ],
   },
   async rewrites() {
