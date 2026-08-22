@@ -32,7 +32,8 @@ export function RequireScope(...requiredScopes: string[]) {
   }
 }
 
-/** Reads the scopes a `@RequireScope(...)`-decorated method requires, or `[]` if undecorated. */
-export function getRequiredScopes(method: (...args: unknown[]) => unknown): string[] {
+/** Reads the scopes a `@RequireScope(...)`-decorated method requires, or `[]` if undecorated.
+ * `never[]` params keep this assignable from any concrete method signature (variance-safe). */
+export function getRequiredScopes(method: (...args: never[]) => unknown): string[] {
   return (Reflect.getMetadata(MCP_SCOPES_KEY, method) as string[] | undefined) ?? []
 }

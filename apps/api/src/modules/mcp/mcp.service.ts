@@ -38,7 +38,7 @@ export class McpService {
   constructor(private readonly mcpRepository: McpRepository) {}
 
   /** A tool with no backing repository method (e.g. read_me) has no scope requirement. */
-  private isAllowed(session: McpAuthSession, method?: (...args: unknown[]) => unknown): boolean {
+  private isAllowed(session: McpAuthSession, method?: (...args: never[]) => unknown): boolean {
     if (!method) return true
     const required = getRequiredScopes(method)
     if (required.length === 0) return true
@@ -49,7 +49,7 @@ export class McpService {
   async handleRequest(req: Request, res: Response, session: McpAuthSession, parsedBody?: unknown) {
     const server = new McpServer({ name: 'unishare-mcp', version: '1.0.0' })
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined }) //stateless
-    const allowed = (method?: (...args: unknown[]) => unknown) => this.isAllowed(session, method)
+    const allowed = (method?: (...args: never[]) => unknown) => this.isAllowed(session, method)
 
     if (allowed(this.mcpRepository.listBoards)) {
       server.registerTool(
