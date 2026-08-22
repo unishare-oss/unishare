@@ -7,6 +7,7 @@ import { CoursesService } from '@/modules/courses/courses.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { FilesService } from '@/modules/files/files.service'
 import { StorageService } from '@/modules/storage/storage.service'
+import { getFolderForPurpose } from '@/modules/storage/dto/presigned-upload.dto'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { PostType } from '@/generated/prisma/client'
 import {
@@ -26,6 +27,9 @@ export interface McpAuthSession {
 export interface McpPostFileInput {
   fileName: string
   mimeType: string
+  /** Result of a prior `request_upload_url` call — the client already PUT the bytes to S3. */
+  key?: string
+  size?: number
   base64Data?: string
   textData?: string
 }
@@ -85,6 +89,20 @@ export class McpRepository {
 
   private frontendUrl(): string {
     return this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000'
+  }
+
+  @RequireScope('posts:write')
+  async createUploadUrl(
+    session: McpAuthSession,
+    input: { mimeType: string; uploadType: 'document' | 'image' },
+  ) {
+    const folder = getFolderForPurpose('post-attachment', { userId: session.userId })
+    const { url, key, publicUrl } = await this.storageService.generatePresignedUploadUrl(
+      folder,
+      input.mimeType,
+      input.uploadType,
+    )
+    return { url, key, publicUrl }
   }
 
   @RequireScope('courses:read')
@@ -244,52 +262,61 @@ export class McpRepository {
       mimeType: string
       url: string
     }> = []
+    const failedFiles: Array<{ fileName: string; error: string }> = []
 
     if (input.files && input.files.length > 0) {
-      const folder = `posts/${session.userId}`
+      const folder = getFolderForPurpose('post-attachment', { userId: session.userId })
       for (const file of input.files) {
-        let buffer: Buffer
-        if (file.base64Data) {
-          buffer = Buffer.from(file.base64Data, 'base64')
-        } else if (file.textData) {
-          buffer = Buffer.from(file.textData, 'utf-8')
-        } else {
-          throw new BadRequestException(
-            `File "${file.fileName}" must provide base64Data or textData`,
+        try {
+          let key: string
+          let size: number
+          let publicUrl: string
+
+          if (file.key) {
+            if (file.size === undefined) {
+              throw new BadRequestException(
+                `File "${file.fileName}" has a key but no size — pass the size returned by the upload`,
+              )
+            }
+            key = file.key
+            size = file.size
+            publicUrl = this.storageService.getPublicUrl(key)
+          } else {
+            let buffer: Buffer
+            if (file.base64Data) {
+              buffer = Buffer.from(file.base64Data, 'base64')
+            } else if (file.textData) {
+              buffer = Buffer.from(file.textData, 'utf-8')
+            } else {
+              throw new BadRequestException(
+                `File "${file.fileName}" must provide key, base64Data, or textData`,
+              )
+            }
+            const uploaded = await this.storageService.uploadBuffer(folder, buffer, file.mimeType)
+            key = uploaded.key
+            size = buffer.length
+            publicUrl = uploaded.publicUrl
+          }
+
+          const confirmed = await this.filesService.confirmUpload(
+            created.id,
+            { key, name: file.fileName, size, mimeType: file.mimeType },
+            session.userId,
           )
+
+          attachedFiles.push({
+            id: confirmed.id,
+            fileName: confirmed.name,
+            fileSize: confirmed.size,
+            mimeType: confirmed.mimeType,
+            url: publicUrl,
+          })
+        } catch (err) {
+          failedFiles.push({
+            fileName: file.fileName,
+            error: err instanceof Error ? err.message : 'Upload failed',
+          })
         }
-
-        const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-        if (buffer.length > MAX_FILE_SIZE) {
-          throw new BadRequestException(
-            `File "${file.fileName}" exceeds maximum allowed size of 10MB`,
-          )
-        }
-
-        const { key, publicUrl } = await this.storageService.uploadBuffer(
-          folder,
-          buffer,
-          file.mimeType,
-        )
-
-        const confirmed = await this.filesService.confirmUpload(
-          created.id,
-          {
-            key,
-            name: file.fileName,
-            size: buffer.length,
-            mimeType: file.mimeType,
-          },
-          session.userId,
-        )
-
-        attachedFiles.push({
-          id: confirmed.id,
-          fileName: confirmed.name,
-          fileSize: confirmed.size,
-          mimeType: confirmed.mimeType,
-          url: publicUrl,
-        })
       }
     }
 
@@ -305,6 +332,7 @@ export class McpRepository {
           ? created.createdAt.toISOString()
           : new Date().toISOString(),
       ...(attachedFiles.length > 0 && { files: attachedFiles }),
+      ...(failedFiles.length > 0 && { failedFiles }),
     }
 
     return { post }

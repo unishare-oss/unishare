@@ -60,6 +60,8 @@ describe('McpRepository', () => {
   }
   const storageService = {
     uploadBuffer: jest.fn(),
+    generatePresignedUploadUrl: jest.fn(),
+    getPublicUrl: jest.fn(),
   }
   const config = {
     get: jest.fn(),
@@ -532,6 +534,155 @@ describe('McpRepository', () => {
         new BadRequestException('Please set your department in UniShare before creating posts'),
       )
       expect(postsService.create).not.toHaveBeenCalled()
+    })
+
+    it('attaches a presigned-uploaded file by key without touching uploadBuffer', async () => {
+      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      postsService.create.mockResolvedValue({
+        id: 'post-1',
+        shortCode: 'p1234567',
+        title: 'Data Structures Lecture 1',
+        type: PostType.NOTE,
+        status: PostStatus.APPROVED,
+        createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      })
+      storageService.getPublicUrl.mockReturnValue(
+        'http://localhost:3000/storage/posts/user-1/file-1.pdf',
+      )
+      filesService.confirmUpload.mockResolvedValue({
+        id: 'file-1',
+        name: 'notes.pdf',
+        size: 2048,
+        mimeType: 'application/pdf',
+      })
+
+      const result = await repository.createPost(
+        { userId: 'user-1', scopes: 'openid posts:write' },
+        {
+          title: 'Data Structures Lecture 1',
+          description: 'Introduction to Big O',
+          type: 'NOTE',
+          courseId: 'course-1',
+          files: [
+            {
+              fileName: 'notes.pdf',
+              mimeType: 'application/pdf',
+              key: 'posts/user-1/file-1.pdf',
+              size: 2048,
+            },
+          ],
+        },
+      )
+
+      expect(storageService.uploadBuffer).not.toHaveBeenCalled()
+      expect(filesService.confirmUpload).toHaveBeenCalledWith(
+        'post-1',
+        {
+          key: 'posts/user-1/file-1.pdf',
+          name: 'notes.pdf',
+          size: 2048,
+          mimeType: 'application/pdf',
+        },
+        'user-1',
+      )
+      expect(result.post.files).toEqual([
+        {
+          id: 'file-1',
+          fileName: 'notes.pdf',
+          fileSize: 2048,
+          mimeType: 'application/pdf',
+          url: 'http://localhost:3000/storage/posts/user-1/file-1.pdf',
+        },
+      ])
+    })
+
+    it('collects a failed file instead of aborting the whole post', async () => {
+      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      postsService.create.mockResolvedValue({
+        id: 'post-1',
+        shortCode: 'p1234567',
+        title: 'Data Structures Lecture 1',
+        type: PostType.NOTE,
+        status: PostStatus.APPROVED,
+        createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      })
+      filesService.confirmUpload
+        .mockResolvedValueOnce({
+          id: 'file-1',
+          name: 'ok.pdf',
+          size: 10,
+          mimeType: 'application/pdf',
+        })
+        .mockRejectedValueOnce(new BadRequestException('File has not been uploaded yet'))
+      storageService.getPublicUrl.mockReturnValue(
+        'http://localhost:3000/storage/posts/user-1/ok.pdf',
+      )
+
+      const result = await repository.createPost(
+        { userId: 'user-1', scopes: 'openid posts:write' },
+        {
+          title: 'Data Structures Lecture 1',
+          description: 'Introduction to Big O',
+          type: 'NOTE',
+          courseId: 'course-1',
+          files: [
+            {
+              fileName: 'ok.pdf',
+              mimeType: 'application/pdf',
+              key: 'posts/user-1/ok.pdf',
+              size: 10,
+            },
+            {
+              fileName: 'not-uploaded.pdf',
+              mimeType: 'application/pdf',
+              key: 'posts/user-1/missing.pdf',
+              size: 10,
+            },
+          ],
+        },
+      )
+
+      expect(result.post.files).toHaveLength(1)
+      expect(result.post.files?.[0].fileName).toBe('ok.pdf')
+      expect(result.post.failedFiles).toEqual([
+        { fileName: 'not-uploaded.pdf', error: 'File has not been uploaded yet' },
+      ])
+    })
+  })
+
+  describe('createUploadUrl', () => {
+    it('mints a presigned url scoped to the post-attachment folder', async () => {
+      storageService.generatePresignedUploadUrl.mockResolvedValue({
+        url: 'https://s3.example.com/presigned',
+        key: 'posts/user-1/generated.pdf',
+        publicUrl: 'http://localhost:3000/storage/posts/user-1/generated.pdf',
+      })
+
+      const result = await repository.createUploadUrl(
+        { userId: 'user-1', scopes: 'openid posts:write' },
+        { mimeType: 'application/pdf', uploadType: 'document' },
+      )
+
+      expect(storageService.generatePresignedUploadUrl).toHaveBeenCalledWith(
+        'posts/user-1',
+        'application/pdf',
+        'document',
+      )
+      expect(result).toEqual({
+        url: 'https://s3.example.com/presigned',
+        key: 'posts/user-1/generated.pdf',
+        publicUrl: 'http://localhost:3000/storage/posts/user-1/generated.pdf',
+      })
+    })
+
+    it('rejects access without posts:write', async () => {
+      await expect(
+        repository.createUploadUrl(
+          { userId: 'user-1', scopes: 'openid posts:read' },
+          { mimeType: 'application/pdf', uploadType: 'document' },
+        ),
+      ).rejects.toThrow(new ForbiddenException('Missing required scope: posts:write'))
+      expect(storageService.generatePresignedUploadUrl).not.toHaveBeenCalled()
     })
   })
 

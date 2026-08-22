@@ -10,6 +10,29 @@ import { postGuide } from './mcp-post-guide'
 
 export type { McpAuthSession }
 
+const filesSchema = z
+  .array(
+    z
+      .object({
+        fileName: z.string().min(1).max(255),
+        mimeType: z.string().min(1),
+        // From a prior request_upload_url call — the client already PUT the bytes to S3.
+        key: z.string().min(1).max(500).optional(),
+        size: z.number().int().positive().optional(),
+        // Small-payload fallback only; request_upload_url + key is the path for real files.
+        base64Data: z.string().max(680_000).optional(),
+        textData: z.string().max(500_000).optional(),
+      })
+      .refine((f) => [f.key, f.base64Data, f.textData].filter(Boolean).length === 1, {
+        message: 'Provide exactly one of key, base64Data, or textData',
+      })
+      .refine((f) => !f.key || f.size !== undefined, {
+        message: 'size is required when key is provided',
+      }),
+  )
+  .max(5)
+  .optional()
+
 @Injectable()
 export class McpService {
   constructor(private readonly mcpRepository: McpRepository) {}
@@ -126,6 +149,22 @@ export class McpService {
       )
     }
 
+    if (allowed(this.mcpRepository.createUploadUrl)) {
+      server.registerTool(
+        'request_upload_url',
+        {
+          description:
+            "Get a presigned S3 upload URL for a post attachment. Use this for real files (PDFs, images, documents) instead of inlining them: PUT the file's raw bytes to the returned url yourself (e.g. via curl or an HTTP tool) with the same Content-Type, then pass the returned key plus the file's byte size into create_post's files array. Only use inline base64Data/textData in create_post for small (<500KB) text content when you have no way to make outbound HTTP requests.",
+          inputSchema: z.object({
+            mimeType: z.string().min(1),
+            uploadType: z.enum(['document', 'image']),
+          }),
+        },
+        async (input) =>
+          this.toToolResult(await this.mcpRepository.createUploadUrl(session, input)),
+      )
+    }
+
     if (allowed(this.mcpRepository.createPost)) {
       server.registerTool(
         'create_post',
@@ -144,17 +183,7 @@ export class McpService {
             examYear: z.number().int().min(1900).max(2100).optional(),
             externalUrl: z.string().url().max(500).optional(),
             isAnonymous: z.boolean().optional(),
-            files: z
-              .array(
-                z.object({
-                  fileName: z.string().min(1).max(255),
-                  mimeType: z.string().min(1),
-                  base64Data: z.string().optional(),
-                  textData: z.string().optional(),
-                }),
-              )
-              .max(5)
-              .optional(),
+            files: filesSchema,
           }),
         },
         async (input) => this.toToolResult(await this.mcpRepository.createPost(session, input)),

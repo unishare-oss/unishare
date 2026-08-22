@@ -16,6 +16,7 @@ describe('McpService', () => {
     deleteBoard: jest.fn(),
     drawBoard: jest.fn(),
     listCourses: jest.fn(),
+    createUploadUrl: jest.fn(),
     createPost: jest.fn(),
     deletePost: jest.fn(),
   }
