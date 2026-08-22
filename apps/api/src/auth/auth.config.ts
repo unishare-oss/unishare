@@ -39,6 +39,7 @@ const mcpScopes = [
   'boards:write',
   'posts:read',
   'posts:write',
+  'courses:read',
 ]
 
 export const auth = betterAuth({
@@ -87,12 +88,12 @@ export const auth = betterAuth({
       ? [
           mcp({
             loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-            resource: `${process.env.FRONTEND_URL ?? 'http://localhost:3001'}/mcp`,
+            resource: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp`,
             // Better Auth 1.6 reads provider metadata from the top level at runtime.
             metadata: { scopes_supported: mcpScopes },
             oidcConfig: {
               loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-              scopes: ['boards:read', 'boards:write', 'posts:read', 'posts:write'],
+              scopes: ['boards:read', 'boards:write', 'posts:read', 'posts:write', 'courses:read'],
               metadata: { scopes_supported: mcpScopes },
               allowPlainCodeChallengeMethod: false,
               allowDynamicClientRegistration: true,

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { z } from 'zod'
 import { CollabService } from '@/modules/collab/collab.service'
 import { PostsService } from '@/modules/posts/posts.service'
@@ -79,9 +80,14 @@ export class McpRepository {
     private readonly prisma: PrismaService,
     private readonly filesService: FilesService,
     private readonly storageService: StorageService,
+    private readonly config: ConfigService,
   ) {}
 
-  @RequireScope('posts:read')
+  private frontendUrl(): string {
+    return this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000'
+  }
+
+  @RequireScope('courses:read')
   async listCourses(session: McpAuthSession) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
@@ -134,7 +140,7 @@ export class McpRepository {
       title: room.title,
       visibility: room.visibility,
       hasPassword: room.hasPassword,
-      url: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/canvas/${room.slug}`,
+      url: `${this.frontendUrl()}/canvas/${room.slug}`,
     }
 
     return { board }
@@ -287,14 +293,13 @@ export class McpRepository {
       }
     }
 
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000'
     const post = {
       id: created.id,
       shortCode: created.shortCode,
       title: created.title,
       type: created.type,
       status: created.status,
-      url: `${frontendUrl}/posts/${created.id}`,
+      url: `${this.frontendUrl()}/posts/${created.id}`,
       createdAt:
         created.createdAt instanceof Date
           ? created.createdAt.toISOString()

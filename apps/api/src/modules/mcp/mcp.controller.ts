@@ -3,6 +3,7 @@ import { ApiExcludeController } from '@nestjs/swagger'
 import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { fromNodeHeaders } from 'better-auth/node'
 import { oAuthDiscoveryMetadata, oAuthProtectedResourceMetadata } from 'better-auth/plugins'
+import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
 import { McpExceptionFilter } from '@/common/filters/mcp-exception.filter'
@@ -18,7 +19,10 @@ const protectedResourceHandler = oAuthProtectedResourceMetadata(auth)
 export class McpController {
   private readonly logger = new Logger(McpController.name)
 
-  constructor(private readonly mcpService: McpService) {}
+  constructor(
+    private readonly mcpService: McpService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Get('.well-known/oauth-authorization-server')
   discovery(@Req() req: Request, @Res() res: Response) {
@@ -34,7 +38,7 @@ export class McpController {
   async handle(@Req() req: Request, @Res() res: Response) {
     const session = await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
     if (!session) {
-      const authURL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'
+      const authURL = this.config.get<string>('BETTER_AUTH_URL') ?? 'http://localhost:3001'
       res
         .status(401)
         .set(
@@ -66,7 +70,9 @@ export class McpController {
 
   private toWebRequest(req: Request) {
     const origin =
-      process.env.FRONTEND_URL ?? process.env.BETTER_AUTH_URL ?? 'http://localhost:3001'
+      this.config.get<string>('FRONTEND_URL') ??
+      this.config.get<string>('BETTER_AUTH_URL') ??
+      'http://localhost:3000'
     return new globalThis.Request(new URL(req.originalUrl, origin), {
       method: req.method,
       headers: fromNodeHeaders(req.headers),

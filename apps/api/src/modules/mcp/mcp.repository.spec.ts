@@ -1,4 +1,5 @@
 import { ForbiddenException, BadRequestException } from '@nestjs/common'
+import type { ConfigService } from '@nestjs/config'
 import { McpRepository, type McpAuthSession } from './mcp.repository'
 import type { CollabService } from '@/modules/collab/collab.service'
 import type { PostsService } from '@/modules/posts/posts.service'
@@ -60,6 +61,9 @@ describe('McpRepository', () => {
   const storageService = {
     uploadBuffer: jest.fn(),
   }
+  const config = {
+    get: jest.fn(),
+  }
   const repository = new McpRepository(
     collabService as unknown as CollabService,
     postsService as unknown as PostsService,
@@ -67,6 +71,7 @@ describe('McpRepository', () => {
     prisma as unknown as PrismaService,
     filesService as unknown as FilesService,
     storageService as unknown as StorageService,
+    config as unknown as ConfigService,
   )
 
   beforeEach(() => {
@@ -94,7 +99,7 @@ describe('McpRepository', () => {
 
       const result = await repository.listCourses({
         userId: 'user-1',
-        scopes: 'openid posts:read',
+        scopes: 'openid courses:read',
       })
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
@@ -118,13 +123,13 @@ describe('McpRepository', () => {
       })
     })
 
-    it('rejects access without posts:read', async () => {
+    it('rejects access without courses:read', async () => {
       await expect(
         repository.listCourses({
           userId: 'user-1',
           scopes: 'openid boards:read',
         }),
-      ).rejects.toThrow(new ForbiddenException('Missing required scope: posts:read'))
+      ).rejects.toThrow(new ForbiddenException('Missing required scope: courses:read'))
       expect(coursesService.findAll).not.toHaveBeenCalled()
     })
 
@@ -134,7 +139,7 @@ describe('McpRepository', () => {
       await expect(
         repository.listCourses({
           userId: 'user-1',
-          scopes: 'openid posts:read',
+          scopes: 'openid courses:read',
         }),
       ).rejects.toThrow(
         new BadRequestException('Please set your department in UniShare before listing courses'),
