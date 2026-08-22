@@ -20,7 +20,8 @@ async function bootstrap() {
 
   const allowedOrigins = [
     'http://localhost:3000',
-    'http://localhost:6274', //for mcp
+    // MCP Inspector — dev-only tooling, never allow it in production
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:6274'] : []),
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 

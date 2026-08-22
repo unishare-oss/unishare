@@ -202,7 +202,10 @@ export class McpRepository {
 
     const validatedElements = drawingElementsSchema.safeParse(parsedElements)
     if (!validatedElements.success) {
-      throw new BadRequestException('Invalid elements: drawing rules not satisfied')
+      const issues = validatedElements.error.issues
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('; ')
+      throw new BadRequestException(`Invalid elements: ${issues}`)
     }
 
     const elements = createExcalidrawElements(validatedElements.data as McpDrawingInput[])
