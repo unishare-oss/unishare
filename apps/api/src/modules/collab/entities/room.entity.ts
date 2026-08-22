@@ -27,4 +27,10 @@ export class RoomEntity {
 
   @ApiProperty({ description: 'Whether room has a password set (never exposes the hash)' })
   hasPassword: boolean
+
+  @ApiProperty({
+    description:
+      'Whether board content is end-to-end encrypted with a key carried in the URL fragment. False for rooms created before this existed.',
+  })
+  encrypted: boolean
 }

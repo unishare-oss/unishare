@@ -37,6 +37,7 @@ import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { Label } from '@/components/ui/label'
 import { ShareToChatDialog } from '@/components/boards/share-to-chat-popover'
+import { useBoardKeysStore } from '@/lib/store'
 
 interface RoomCardProps {
   room: {
@@ -95,13 +96,22 @@ export function RoomCard({
   const [passwordPending, setPasswordPending] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
 
+  // Encrypted boards' decryption key never leaves the URL fragment of a device that has
+  // actually opened them — this cache (populated on create/visit) is the only way this list
+  // can rebuild a working link without it. A device that's never opened the board falls back
+  // to a bare, keyless link — see docs/board-e2e-encryption/planning.md.
+  const boardPath = () => {
+    const key = useBoardKeysStore.getState().getKey(room.slug)
+    return key ? `/canvas/${room.slug}#key=${key}` : `/canvas/${room.slug}`
+  }
+
   const handleCardClick = () => {
-    router.push(`/canvas/${room.slug}`)
+    router.push(boardPath())
   }
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.origin + '/canvas/' + room.slug)
+      await navigator.clipboard.writeText(window.location.origin + boardPath())
       toast.success('Link copied')
     } catch {
       toast.error('Could not copy link')
@@ -348,7 +358,7 @@ export function RoomCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => router.push(`/canvas/${room.slug}`)}>
+                <DropdownMenuItem onClick={() => router.push(boardPath())}>
                   <ExternalLink className="size-4 mr-2" strokeWidth={1.5} />
                   Open board
                 </DropdownMenuItem>

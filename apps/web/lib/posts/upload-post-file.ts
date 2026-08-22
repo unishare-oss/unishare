@@ -50,7 +50,11 @@ function getUploadMimeType(file: File): string {
   return file.type
 }
 
-function getUploadType(mimeType: string): PresignedUploadDtoUploadType {
+// Post attachments are never 'encrypted-blob' — narrow the generated union so it stays
+// assignable to CreateMultipartUploadDtoUploadType, which doesn't include that purpose.
+type PostUploadType = Extract<PresignedUploadDtoUploadType, 'document' | 'image' | 'video'>
+
+function getUploadType(mimeType: string): PostUploadType {
   if (mimeType.startsWith('image/')) return PresignedUploadDtoUploadType.image
   if (mimeType.startsWith('video/')) return PresignedUploadDtoUploadType.video
   return PresignedUploadDtoUploadType.document

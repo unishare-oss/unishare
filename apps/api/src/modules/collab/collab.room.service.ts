@@ -1,10 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { CollabRepository } from './collab.repository'
 
+export interface RoomFileMeta {
+  fileId: string
+  key: string
+  mimeType: string
+}
+
 interface RoomEntry {
   elements: Map<string, Record<string, unknown>>
+  files: Map<string, RoomFileMeta>
   timer: ReturnType<typeof setTimeout> | null
   idleTimer: ReturnType<typeof setTimeout> | null
+}
+
+/** Legacy snapshots are a bare elements array; new ones are `{ elements, files }`. */
+function parseSnapshot(json: string): {
+  elements: Record<string, unknown>[]
+  files: RoomFileMeta[]
+} {
+  const parsed = JSON.parse(json) as unknown
+  if (Array.isArray(parsed)) return { elements: parsed as Record<string, unknown>[], files: [] }
+  const shaped = parsed as { elements?: Record<string, unknown>[]; files?: RoomFileMeta[] }
+  return { elements: shaped.elements ?? [], files: shaped.files ?? [] }
 }
 
 @Injectable()
@@ -18,29 +36,39 @@ export class CollabRoomService {
 
   constructor(private readonly collabRepository: CollabRepository) {}
 
-  async getOrLoadElements(slug: string): Promise<Record<string, unknown>[]> {
+  async getOrLoadRoom(
+    slug: string,
+  ): Promise<{ elements: Record<string, unknown>[]; files: RoomFileMeta[] }> {
     if (!this.rooms.has(slug)) {
-      const entry: RoomEntry = { elements: new Map(), timer: null, idleTimer: null }
+      const entry: RoomEntry = {
+        elements: new Map(),
+        files: new Map(),
+        timer: null,
+        idleTimer: null,
+      }
       this.rooms.set(slug, entry)
       this.logger.log(`Created room entry for ${slug}`)
 
       const snapshot = await this.collabRepository.getSnapshot(slug)
       if (snapshot) {
         try {
-          const parsed = JSON.parse(Buffer.from(snapshot).toString('utf8')) as Record<
-            string,
-            unknown
-          >[]
-          for (const el of parsed) {
+          const { elements, files } = parseSnapshot(Buffer.from(snapshot).toString('utf8'))
+          for (const el of elements) {
             if (el.id && typeof el.id === 'string') entry.elements.set(el.id, el)
           }
-          this.logger.log(`Restored ${entry.elements.size} elements for room ${slug}`)
+          for (const file of files) {
+            entry.files.set(file.fileId, file)
+          }
+          this.logger.log(
+            `Restored ${entry.elements.size} elements, ${entry.files.size} files for room ${slug}`,
+          )
         } catch {
           this.logger.warn(`Failed to parse snapshot for room ${slug}, starting empty`)
         }
       }
     }
-    return [...this.rooms.get(slug)!.elements.values()]
+    const entry = this.rooms.get(slug)!
+    return { elements: [...entry.elements.values()], files: [...entry.files.values()] }
   }
 
   mergeElements(slug: string, incoming: Record<string, unknown>[]): void {
@@ -55,6 +83,13 @@ export class CollabRoomService {
         entry.elements.set(el.id, el)
       }
     }
+  }
+
+  /** Registers a newly-uploaded file's metadata so late joiners can fetch+decrypt it too. */
+  registerFile(slug: string, file: RoomFileMeta): void {
+    const entry = this.rooms.get(slug)
+    if (!entry) return
+    entry.files.set(file.fileId, file)
   }
 
   getRoomForSocket(socketId: string): string | undefined {
@@ -115,9 +150,12 @@ export class CollabRoomService {
     if (!entry) return
     try {
       const elements = [...entry.elements.values()]
-      const json = JSON.stringify(elements)
+      const files = [...entry.files.values()]
+      const json = JSON.stringify({ elements, files })
       await this.collabRepository.saveSnapshot(slug, new Uint8Array(Buffer.from(json, 'utf8')))
-      this.logger.log(`Saved snapshot for room ${slug} (${elements.length} elements)`)
+      this.logger.log(
+        `Saved snapshot for room ${slug} (${elements.length} elements, ${files.length} files)`,
+      )
     } catch (err) {
       this.logger.warn(`Failed to save snapshot for room ${slug}`, err)
     }

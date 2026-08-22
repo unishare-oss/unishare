@@ -1,18 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
+import { IsIn, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator'
 
 export type UploadPurpose =
-  'profile-picture' | 'post-attachment' | 'chat-attachment' | 'group-picture'
+  'profile-picture' | 'post-attachment' | 'chat-attachment' | 'group-picture' | 'board-attachment'
 
-const UPLOAD_PURPOSE_FOLDER: Record<UploadPurpose, string> = {
+const UPLOAD_PURPOSE_FOLDER: Record<Exclude<UploadPurpose, 'board-attachment'>, string> = {
   'profile-picture': 'profile',
   'post-attachment': 'posts',
   'chat-attachment': 'chat',
   'group-picture': 'groups',
 }
 
-export function getFolderForPurpose(purpose: UploadPurpose, userId: string): string {
-  return `${UPLOAD_PURPOSE_FOLDER[purpose]}/${userId}`
+/** Board attachments are scoped by room, not by uploader — see docs/board-e2e-encryption/planning.md. */
+export function getFolderForPurpose(
+  purpose: UploadPurpose,
+  scope: { userId: string; roomSlug?: string },
+): string {
+  if (purpose === 'board-attachment') {
+    return `boards/${scope.roomSlug}`
+  }
+  return `${UPLOAD_PURPOSE_FOLDER[purpose]}/${scope.userId}`
 }
 
 export class PresignedUploadDto {
@@ -27,13 +34,35 @@ export class PresignedUploadDto {
   })
   mimeType: string
 
-  @ApiProperty({ enum: ['document', 'image', 'video'] })
-  @IsIn(['document', 'image', 'video'])
-  uploadType: 'document' | 'image' | 'video'
+  @ApiProperty({ enum: ['document', 'image', 'video', 'encrypted-blob'] })
+  @IsIn(['document', 'image', 'video', 'encrypted-blob'])
+  uploadType: 'document' | 'image' | 'video' | 'encrypted-blob'
 
-  @ApiProperty({ enum: ['profile-picture', 'post-attachment', 'chat-attachment', 'group-picture'] })
-  @IsIn(['profile-picture', 'post-attachment', 'chat-attachment', 'group-picture'])
+  @ApiProperty({
+    enum: [
+      'profile-picture',
+      'post-attachment',
+      'chat-attachment',
+      'group-picture',
+      'board-attachment',
+    ],
+  })
+  @IsIn([
+    'profile-picture',
+    'post-attachment',
+    'chat-attachment',
+    'group-picture',
+    'board-attachment',
+  ])
   purpose: UploadPurpose
+
+  @ApiPropertyOptional({
+    description: 'Room slug — required when purpose is board-attachment, scopes the S3 folder',
+  })
+  @ValidateIf((o) => o.purpose === 'board-attachment')
+  @IsString()
+  @MaxLength(64)
+  roomSlug?: string
 
   @ApiPropertyOptional({
     description: 'Base64-encoded SHA-256 of the file body, verified by storage on upload.',

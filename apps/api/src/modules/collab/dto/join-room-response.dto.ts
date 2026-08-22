@@ -21,4 +21,9 @@ export class JoinRoomResponseDto {
 
   @ApiProperty()
   ownerId: string
+
+  @ApiProperty({
+    description: 'Whether board content is end-to-end encrypted (key in URL fragment)',
+  })
+  encrypted: boolean
 }

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import * as Y from 'yjs'
+import { StorageService } from '@/modules/storage/storage.service'
 import { CollabGateway } from './collab.gateway'
 import { CollabRoomService } from './collab.room.service'
 import { CollabRepository } from './collab.repository'
@@ -72,6 +73,12 @@ describe('CollabGateway', () => {
         CollabGateway,
         { provide: CollabRoomService, useValue: roomService },
         { provide: CollabRepository, useValue: collabRepository },
+        {
+          provide: StorageService,
+          useValue: {
+            generatePresignedDownloadUrl: jest.fn().mockResolvedValue('https://example.com/signed'),
+          },
+        },
       ],
     }).compile()
 

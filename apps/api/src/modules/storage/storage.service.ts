@@ -3,8 +3,10 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -14,12 +16,13 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   OnModuleInit,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 
-type UploadType = 'document' | 'image' | 'video'
+type UploadType = 'document' | 'image' | 'video' | 'encrypted-blob'
 
 const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize: number }> = {
   document: {
@@ -80,10 +83,17 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
     ],
     maxSize: 500 * 1024 * 1024, // 500MB
   },
+  // Client-side AES-GCM ciphertext (board images — see docs/board-e2e-encryption/planning.md).
+  // The real image MIME type is meaningless once encrypted, so only one "type" is allowed.
+  'encrypted-blob': {
+    allowedMimeTypes: ['application/octet-stream'],
+    maxSize: 10 * 1024 * 1024, // 10MB — matches the plaintext `image` cap plus GCM/base64 overhead
+  },
 }
 
 @Injectable()
 export class StorageService implements OnModuleInit {
+  private readonly logger = new Logger(StorageService.name)
   /** Server-side operations. Uses S3_INTERNAL_ENDPOINT when configured. */
   private s3Client: S3Client
   /** Presigning only. Always the browser-reachable S3_ENDPOINT. */
@@ -183,6 +193,24 @@ export class StorageService implements OnModuleInit {
     return { key, publicUrl: this.getPublicUrl(key) }
   }
 
+  /**
+   * Turns a stored `publicUrl` (built by getPublicUrl, e.g. on a chat message or
+   * room avatar) into a fresh presigned GET so the browser can actually load it —
+   * the bucket has no anonymous-read/website mode, so the raw publicUrl alone is
+   * never fetchable. Swallows failures (e.g. a legacy value that isn't one of our
+   * keys) so one bad record can't break an entire message list.
+   */
+  async resolveDownloadUrl(url: string | null | undefined): Promise<string | null> {
+    if (!url) return null
+    try {
+      const key = this.extractKeyFromUrl(url)
+      return await this.generatePresignedDownloadUrl(key)
+    } catch (err) {
+      this.logger.warn(`Could not resolve download URL for ${url}: ${err}`)
+      return null
+    }
+  }
+
   private assertSafeKey(key: string): void {
     if (!/^[a-zA-Z0-9/_\-.]+$/.test(key) || key.includes('..')) {
       throw new InternalServerErrorException('Invalid storage key')
@@ -203,6 +231,28 @@ export class StorageService implements OnModuleInit {
     this.assertSafeKey(key)
     const command = new DeleteObjectCommand({ Bucket: this.bucket, Key: key })
     await this.s3Client.send(command)
+  }
+
+  /** Deletes every object under a folder prefix, e.g. `boards/{slug}/` on room deletion. */
+  async deleteFolder(prefix: string): Promise<void> {
+    this.assertSafeKey(prefix)
+    let continuationToken: string | undefined
+    do {
+      const listing = await this.s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: `${prefix}/`,
+          ContinuationToken: continuationToken,
+        }),
+      )
+      const keys = (listing.Contents ?? []).flatMap((obj) => (obj.Key ? [{ Key: obj.Key }] : []))
+      if (keys.length > 0) {
+        await this.s3Client.send(
+          new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys } }),
+        )
+      }
+      continuationToken = listing.IsTruncated ? listing.NextContinuationToken : undefined
+    } while (continuationToken)
   }
 
   getPublicUrl(key: string): string {

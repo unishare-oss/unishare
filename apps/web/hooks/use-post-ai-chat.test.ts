@@ -1,83 +1,168 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const mutateAsync = vi.fn()
-
-vi.mock('@/src/lib/api/generated/posts/posts', () => ({
-  usePostsControllerAiChat: () => ({ mutateAsync, isPending: false }),
-}))
-
 import { usePostAiChat } from './use-post-ai-chat'
-import { ApiError } from '@/src/lib/api/fetcher'
 
 /**
- * `customFetch` unwraps the `{ success, message, data }` envelope exactly once, so the mutation
- * resolves to `{ data: AiChatResponseDto, status, headers }`. Every mock here is shaped that way
- * on purpose: an implementation that reaches for `result.data.data` throws, lands in the catch
- * branch, and the content assertions below fail. A near-identical double unwrap shipped in
- * `use-ai-index-status.ts` because no test pinned the level.
+ * The hook drives the SSE endpoint directly — an event-stream endpoint generates nothing useful
+ * through Orval — so `fetch` is what these tests replace. That is deliberate: mocking a transport
+ * helper instead would mean the frame parsing, the citation narrowing and the refusal handling
+ * were all injected rather than exercised, and every one of them is a place this feature has
+ * already been got wrong once.
  */
-function envelope(payload: unknown) {
-  return { data: payload, status: 200, headers: new Headers() }
+
+type Frame = Record<string, unknown>
+
+/** A fetch that answers with the given SSE events, delivered one network chunk each. */
+function streams(events: Frame[], { chunks }: { chunks?: string[] } = {}) {
+  const encoder = new TextEncoder()
+  const slices = chunks ?? events.map((event) => `data: ${JSON.stringify(event)}\n\n`)
+  let index = 0
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => ({
+          read: async () =>
+            index < slices.length
+              ? { done: false, value: encoder.encode(slices[index++]) }
+              : { done: true, value: undefined },
+          cancel: async () => undefined,
+        }),
+      },
+    })),
+  )
+}
+
+/** A fetch that fails before the stream opens, the way a 403 or 503 arrives. */
+function rejects(status: number, message = 'nope') {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({
+      ok: false,
+      status,
+      json: async () => ({ success: false, message }),
+    })),
+  )
+}
+
+const citation = {
+  chunkId: 'c1',
+  pageNum: 12,
+  snippet: 'Eigenvalues…',
+  fileId: 'f1',
+  fileName: 'notes.pdf',
+}
+
+async function send(
+  hook: { current: { sendMessage: (text: string) => Promise<void> } },
+  text: string,
+) {
+  await act(async () => {
+    await hook.current.sendMessage(text)
+  })
 }
 
 describe('usePostAiChat', () => {
   beforeEach(() => {
-    mutateAsync.mockReset()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
 
-  it('attaches citations from the response to the assistant message', async () => {
-    mutateAsync.mockResolvedValue(
-      envelope({
-        reply: 'See page 12.',
-        offTopic: false,
-        citations: [
-          {
-            chunkId: 'c1',
-            pageNum: 12,
-            snippet: 'Eigenvalues…',
-            fileId: 'f1',
-            fileName: 'notes.pdf',
-          },
-        ],
-      }),
-    )
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('attaches citations from the stream to the assistant message', async () => {
+    streams([
+      { type: 'citations', citations: [citation] },
+      { type: 'delta', text: 'See page 12.' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('What is an eigenvalue?')
-    })
+    await send(result, 'What is an eigenvalue?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
-    // Pins the unwrap level: `result.data.data` would throw and yield the error copy instead.
     expect(result.current.messages[1].content).toBe('See page 12.')
     expect(result.current.messages[1].role).toBe('assistant')
     // fileId/fileName ride along: a page number without its document is ambiguous on a
     // multi-file post, and the footer groups by fileId.
-    expect(result.current.messages[1].citations).toEqual([
-      { chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…', fileId: 'f1', fileName: 'notes.pdf' },
-    ])
+    expect(result.current.messages[1].citations).toEqual([citation])
   })
 
-  it('does not fall into the error branch on a well-formed response', async () => {
-    mutateAsync.mockResolvedValue(envelope({ reply: 'Chapter 2 covers it.', offTopic: false }))
+  it('assembles a reply from its deltas in order', async () => {
+    streams([
+      { type: 'citations', citations: [] },
+      { type: 'delta', text: 'An eigenvalue ' },
+      { type: 'delta', text: 'is a ' },
+      { type: 'delta', text: 'scalar.' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('where?')
+    await send(result, 'What is an eigenvalue?')
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+    expect(result.current.messages[1].content).toBe('An eigenvalue is a scalar.')
+  })
+
+  it('updates the assistant message in place rather than appending one per delta', async () => {
+    streams([
+      { type: 'delta', text: 'one ' },
+      { type: 'delta', text: 'two ' },
+      { type: 'delta', text: 'three' },
+      { type: 'done', offTopic: false },
+    ])
+
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    await send(result, 'count')
+
+    // One user turn, one assistant turn — three bubbles would mean the message was appended
+    // per delta, which reads as three separate answers.
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+    expect(result.current.messages[1].content).toBe('one two three')
+  })
+
+  it('reassembles events split across network chunks', async () => {
+    // A frame is not guaranteed to arrive whole. Parsing per chunk drops the halves.
+    streams([], {
+      chunks: [
+        'data: {"type":"delta","text":"An eigen',
+        'value is a scalar."}\n\ndata: {"type":"done","offTopic":false}\n\n',
+      ],
     })
+
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    await send(result, 'q')
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+    expect(result.current.messages[1].content).toBe('An eigenvalue is a scalar.')
+  })
+
+  it('does not fall into the error branch on a well-formed stream', async () => {
+    streams([
+      { type: 'delta', text: 'Chapter 2 covers it.' },
+      { type: 'done', offTopic: false },
+    ])
+
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    await send(result, 'where?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].content).not.toContain('Something went wrong')
   })
 
   it('shows the friendly off-topic copy and no citations', async () => {
-    mutateAsync.mockResolvedValue(envelope({ reply: 'OFF_TOPIC', offTopic: true, citations: [] }))
+    // What the server actually sends for a refusal: no deltas at all, no citations event, and
+    // `done` carrying the verdict. The sentinel text itself never crosses the wire.
+    streams([{ type: 'done', offTopic: true }])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('Who won the World Cup?')
-    })
+    await send(result, 'Who won the World Cup?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].offTopic).toBe(true)
@@ -88,93 +173,65 @@ describe('usePostAiChat', () => {
   })
 
   it('never leaks the raw OFF_TOPIC sentinel into the message content', async () => {
-    mutateAsync.mockResolvedValue(envelope({ reply: 'OFF_TOPIC', offTopic: true, citations: [] }))
+    // A server whose gate regressed and streamed the token as ordinary text. The flag is absent,
+    // so only the content check can catch it.
+    streams([
+      { type: 'delta', text: 'OFF_TOPIC' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('Who won the World Cup?')
-    })
-
-    await waitFor(() => expect(result.current.messages).toHaveLength(2))
-    expect(result.current.messages[1].content).not.toContain('OFF_TOPIC')
-  })
-
-  it('substitutes the sentinel even if the server forgets to set the flag', async () => {
-    // A contract violation rather than a live path, but it costs one `||` to close: the sentinel
-    // is a protocol token and must never be readable as an answer.
-    mutateAsync.mockResolvedValue(
-      envelope({
-        reply: 'OFF_TOPIC',
-        offTopic: false,
-        citations: [{ chunkId: 'c1', pageNum: 3, snippet: 'x', fileId: 'f1', fileName: 'n.pdf' }],
-      }),
-    )
-
-    const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('Who won the World Cup?')
-    })
+    await send(result, 'Who won the World Cup?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].content).not.toContain('OFF_TOPIC')
     expect(result.current.messages[1].content).toContain(
       'only answer questions about this document',
     )
-    expect(result.current.messages[1].citations).toEqual([])
   })
 
   it('drops citations on an off-topic reply even if the server sends some', async () => {
-    // The server contract says citations are empty here, but the UI must not depend on that:
-    // attaching sources to a refusal reads as evidence for a statement that has none.
-    mutateAsync.mockResolvedValue(
-      envelope({
-        reply: 'OFF_TOPIC',
-        offTopic: true,
-        citations: [{ chunkId: 'c9', pageNum: 4, snippet: 'unrelated' }],
-      }),
-    )
+    // The server contract says a refusal has no citations event at all, but the UI must not
+    // depend on that: sources under a refusal read as evidence for a statement that has none.
+    streams([
+      { type: 'citations', citations: [citation] },
+      { type: 'done', offTopic: true },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('Who won the World Cup?')
-    })
+    await send(result, 'Who won the World Cup?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].citations).toEqual([])
   })
 
   it('does not carry citations over from a previous turn', async () => {
-    mutateAsync.mockResolvedValueOnce(
-      envelope({
-        reply: 'Page 12 covers it.',
-        offTopic: false,
-        citations: [{ chunkId: 'c1', pageNum: 12, snippet: 'Eigenvalues…' }],
-      }),
-    )
-    mutateAsync.mockResolvedValueOnce(
-      envelope({ reply: 'OFF_TOPIC', offTopic: true, citations: [] }),
-    )
+    streams([
+      { type: 'citations', citations: [citation] },
+      { type: 'delta', text: 'Page 12 covers it.' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('What is an eigenvalue?')
-    })
-    await act(async () => {
-      await result.current.sendMessage('Who won the World Cup?')
-    })
+    await send(result, 'What is an eigenvalue?')
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+
+    streams([{ type: 'done', offTopic: true }])
+    await send(result, 'Who won the World Cup?')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(4))
     expect(result.current.messages[1].citations).toHaveLength(1)
     expect(result.current.messages[3].citations).toEqual([])
   })
 
-  it('tolerates a response with no citations field', async () => {
-    mutateAsync.mockResolvedValue(envelope({ reply: 'Hi.', offTopic: false }))
+  it('tolerates a stream with no citations event', async () => {
+    streams([
+      { type: 'delta', text: 'Hi.' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('hi')
-    })
+    await send(result, 'hi')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].citations).toEqual([])
@@ -184,22 +241,21 @@ describe('usePostAiChat', () => {
     // `pageNum` is typed `number | null`, but the type describes the contract, not the payload
     // that actually arrives — an omitted field compiles fine and is not a page. Anything
     // non-numeric must become null rather than reaching the UI as a page label.
-    mutateAsync.mockResolvedValue(
-      envelope({
-        reply: 'From the document.',
-        offTopic: false,
+    streams([
+      {
+        type: 'citations',
         citations: [
           { chunkId: 'c1', pageNum: null, snippet: 'a' },
-          { chunkId: 'c2', pageNum: undefined, snippet: 'b' },
+          { chunkId: 'c2', snippet: 'b' },
           { chunkId: 'c3', pageNum: 7, snippet: 'c', fileId: 'f9', fileName: 'ok.pdf' },
         ],
-      }),
-    )
+      },
+      { type: 'delta', text: 'From the document.' },
+      { type: 'done', offTopic: false },
+    ])
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('summarise')
-    })
+    await send(result, 'summarise')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     // fileId/fileName are narrowed the same way and for a sharper reason: a citation grouped
@@ -212,12 +268,15 @@ describe('usePostAiChat', () => {
   })
 
   it('gives the failure message an empty citation list', async () => {
-    mutateAsync.mockRejectedValue(new Error('boom'))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('boom')
+      }),
+    )
 
     const { result } = renderHook(() => usePostAiChat('p1'))
-    await act(async () => {
-      await result.current.sendMessage('hi')
-    })
+    await send(result, 'hi')
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
     expect(result.current.messages[1].content).toContain('Something went wrong')
@@ -232,12 +291,10 @@ describe('usePostAiChat', () => {
       [503, /unavailable right now/i, 'the AI provider is not configured — an expected state'],
       [403, /published and approved/i, 'an author asking on their own unapproved draft'],
     ])('renders a specific message for %i (%s)', async (status, pattern) => {
-      mutateAsync.mockRejectedValue(new ApiError('nope', status))
+      rejects(status)
 
       const { result } = renderHook(() => usePostAiChat('p1'))
-      await act(async () => {
-        await result.current.sendMessage('hi')
-      })
+      await send(result, 'hi')
 
       await waitFor(() => expect(result.current.messages).toHaveLength(2))
       expect(result.current.messages[1].content).toMatch(pattern)
@@ -247,15 +304,91 @@ describe('usePostAiChat', () => {
     })
 
     it('falls back to the generic message for an unrecognised status', async () => {
-      mutateAsync.mockRejectedValue(new ApiError('kaboom', 500))
+      rejects(500, 'kaboom')
 
       const { result } = renderHook(() => usePostAiChat('p1'))
-      await act(async () => {
-        await result.current.sendMessage('hi')
-      })
+      await send(result, 'hi')
 
       await waitFor(() => expect(result.current.messages).toHaveLength(2))
       expect(result.current.messages[1].content).toContain('Something went wrong')
     })
+
+    it.each([
+      [503, /unavailable right now/i],
+      [403, /published and approved/i],
+      [500, /Something went wrong/],
+    ])('maps a mid-stream error event with status %i the same way', async (status, pattern) => {
+      // A failure after the first token carries its status in the event rather than the status
+      // line, and must produce identical copy — the student's situation is the same.
+      streams([
+        { type: 'delta', text: 'An eigenvalue ' },
+        { type: 'error', status, message: 'server side detail' },
+      ])
+
+      const { result } = renderHook(() => usePostAiChat('p1'))
+      await send(result, 'hi')
+
+      await waitFor(() => expect(result.current.messages).toHaveLength(2))
+      expect(result.current.messages[1].content).toMatch(pattern)
+    })
+
+    it('replaces the partial answer instead of leaving it under the error', async () => {
+      // Half an answer with an apology beneath it reads as a complete answer to anyone who does
+      // not scroll, and the half that arrived was never checked against the rest of the reply.
+      streams([
+        { type: 'citations', citations: [citation] },
+        { type: 'delta', text: 'An eigenvalue is a scalar that' },
+        { type: 'error', status: 503, message: 'busy' },
+      ])
+
+      const { result } = renderHook(() => usePostAiChat('p1'))
+      await send(result, 'hi')
+
+      await waitFor(() => expect(result.current.messages).toHaveLength(2))
+      expect(result.current.messages[1].content).not.toContain('An eigenvalue')
+      expect(result.current.messages[1].citations).toEqual([])
+    })
+  })
+
+  it('reports pending only while a turn is in flight', async () => {
+    streams([
+      { type: 'delta', text: 'done' },
+      { type: 'done', offTopic: false },
+    ])
+
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    expect(result.current.isPending).toBe(false)
+
+    await send(result, 'hi')
+
+    await waitFor(() => expect(result.current.isPending).toBe(false))
+    expect(result.current.messages).toHaveLength(2)
+  })
+
+  it('sends the whole conversation, including the new question', async () => {
+    streams([
+      { type: 'delta', text: 'first answer' },
+      { type: 'done', offTopic: false },
+    ])
+    const { result } = renderHook(() => usePostAiChat('p1'))
+    await send(result, 'first question')
+    await waitFor(() => expect(result.current.messages).toHaveLength(2))
+
+    streams([
+      { type: 'delta', text: 'second answer' },
+      { type: 'done', offTopic: false },
+    ])
+    await send(result, 'second question')
+    await waitFor(() => expect(result.current.messages).toHaveLength(4))
+
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/posts/p1/ai-chat/stream')
+    // The assistant's turn has to be in the history or the server cannot resolve "what about
+    // the second one?" — condensation is what that history is for.
+    expect(JSON.parse(request.body as string).messages).toEqual([
+      { role: 'user', content: 'first question' },
+      { role: 'assistant', content: 'first answer' },
+      { role: 'user', content: 'second question' },
+    ])
   })
 })

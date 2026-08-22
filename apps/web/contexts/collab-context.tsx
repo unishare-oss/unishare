@@ -14,6 +14,7 @@ import { io } from 'socket.io-client'
 import { toast } from 'sonner'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import { encryptElement, decryptElement, type EncryptedWireElement } from '@/src/lib/board-crypto'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -33,13 +34,24 @@ export interface CursorData {
   colorIndex: number
 }
 
+export interface RemoteFile {
+  fileId: string
+  key: string
+  mimeType: string
+  url: string
+}
+
 // ─── Core context ────────────────────────────────────────────────────────────
 
 interface CollabContextValue {
+  slug: string
   connectionStatus: ConnectionStatus
   excalidrawAPI: ExcalidrawImperativeAPI | null
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI | null) => void
   initialElements: ExcalidrawElement[] | null
+  initialFiles: RemoteFile[] | null
+  /** Room content encryption key from the URL fragment — null for legacy unencrypted rooms. */
+  roomKey: CryptoKey | null
   isAnonymous: boolean
   isViewOnly: boolean
   ownerId: string | null
@@ -47,6 +59,8 @@ interface CollabContextValue {
   broadcastedVersionsRef: React.MutableRefObject<Map<string, number>>
   emitSceneUpdate: (elements: readonly ExcalidrawElement[]) => void
   registerRemoteHandler: (handler: ((elements: ExcalidrawElement[]) => void) | null) => void
+  emitFileAdded: (file: { fileId: string; key: string; mimeType: string }) => void
+  registerRemoteFileHandler: (handler: ((file: RemoteFile) => void) | null) => void
 }
 
 // ─── Presence context ────────────────────────────────────────────────────────
@@ -89,6 +103,7 @@ interface CollabProviderProps {
   isViewOnly: boolean
   ownerId: string | null
   userId: string | null
+  roomKey: CryptoKey | null
   onAccessRevoked?: () => void
   children: ReactNode
 }
@@ -102,13 +117,22 @@ export function CollabProvider({
   isViewOnly: isViewOnlyProp,
   ownerId,
   userId,
+  roomKey,
   onAccessRevoked,
   children,
 }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const [initialElements, setInitialElements] = useState<ExcalidrawElement[] | null>(null)
+  const [initialFiles, setInitialFiles] = useState<RemoteFile[] | null>(null)
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
   const [isViewOnly, setIsViewOnly] = useState(isViewOnlyProp)
+
+  // Stable across the session — read from a ref inside the socket effect (which only
+  // depends on `slug`) so a key not changing never triggers a reconnect.
+  const roomKeyRef = useRef(roomKey)
+  useEffect(() => {
+    roomKeyRef.current = roomKey
+  }, [roomKey])
 
   const [remoteCursors, setRemoteCursors] = useState<Map<string, CursorData>>(new Map())
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -128,6 +152,7 @@ export function CollabProvider({
 
   // Registered callback from ExcalidrawWrapper to handle incoming remote elements.
   const remoteHandlerRef = useRef<((elements: ExcalidrawElement[]) => void) | null>(null)
+  const remoteFileHandlerRef = useRef<((file: RemoteFile) => void) | null>(null)
 
   // Pending elements accumulated between throttle ticks.
   const pendingElementsRef = useRef<Map<string, ExcalidrawElement>>(new Map())
@@ -140,26 +165,56 @@ export function CollabProvider({
     [],
   )
 
-  const emitSceneUpdate = useCallback((elements: readonly ExcalidrawElement[]) => {
-    const toSend = elements.filter((el) => {
-      const lastVersion = broadcastedVersionsRef.current.get(el.id) ?? -1
-      return el.version > lastVersion
-    })
-    if (toSend.length === 0) return
+  const registerRemoteFileHandler = useCallback((handler: ((file: RemoteFile) => void) | null) => {
+    remoteFileHandlerRef.current = handler
+  }, [])
 
-    for (const el of toSend) {
-      broadcastedVersionsRef.current.set(el.id, el.version)
-      pendingElementsRef.current.set(el.id, el)
-    }
+  /** Encrypts each element's payload for the wire when the room has a key; passes plain
+   * elements through unchanged for legacy (unencrypted) rooms. */
+  const encryptBatch = useCallback(async (elements: ExcalidrawElement[]) => {
+    const key = roomKeyRef.current
+    if (!key) return elements
+    return Promise.all(
+      elements.map((el) => encryptElement(el as unknown as Record<string, unknown>, key)),
+    )
+  }, [])
 
-    if (!emitTimerRef.current) {
-      emitTimerRef.current = setTimeout(() => {
-        const batch = [...pendingElementsRef.current.values()]
-        socketRef.current?.emit('scene-update', batch)
-        pendingElementsRef.current.clear()
-        emitTimerRef.current = null
-      }, SCENE_EMIT_THROTTLE_MS)
-    }
+  const decryptBatch = useCallback(async (elements: unknown[]): Promise<ExcalidrawElement[]> => {
+    const key = roomKeyRef.current
+    if (!key) return elements as ExcalidrawElement[]
+    const decrypted = await Promise.all(
+      (elements as EncryptedWireElement[]).map((el) => decryptElement(el, key)),
+    )
+    return decrypted as unknown as ExcalidrawElement[]
+  }, [])
+
+  const emitSceneUpdate = useCallback(
+    (elements: readonly ExcalidrawElement[]) => {
+      const toSend = elements.filter((el) => {
+        const lastVersion = broadcastedVersionsRef.current.get(el.id) ?? -1
+        return el.version > lastVersion
+      })
+      if (toSend.length === 0) return
+
+      for (const el of toSend) {
+        broadcastedVersionsRef.current.set(el.id, el.version)
+        pendingElementsRef.current.set(el.id, el)
+      }
+
+      if (!emitTimerRef.current) {
+        emitTimerRef.current = setTimeout(() => {
+          const batch = [...pendingElementsRef.current.values()]
+          pendingElementsRef.current.clear()
+          emitTimerRef.current = null
+          void encryptBatch(batch).then((wire) => socketRef.current?.emit('scene-update', wire))
+        }, SCENE_EMIT_THROTTLE_MS)
+      }
+    },
+    [encryptBatch],
+  )
+
+  const emitFileAdded = useCallback((file: { fileId: string; key: string; mimeType: string }) => {
+    socketRef.current?.emit('file-added', file)
   }, [])
 
   useEffect(() => {
@@ -180,20 +235,28 @@ export function CollabProvider({
       socket.emit('join-room', slug)
     })
 
-    socket.on('room-joined', ({ elements }: { slug: string; elements: ExcalidrawElement[] }) => {
-      const validElements = renderableElements(elements)
-      const isReconnect = broadcastedVersionsRef.current.size > 0
-      setInitialElements(validElements)
-      broadcastedVersionsRef.current = new Map(validElements.map((el) => [el.id, el.version]))
-      setConnectionStatus('connected')
-      if (isReconnect) {
-        toast.dismiss('collab-status')
-        toast.success('Reconnected', { duration: 2000 })
-      }
+    socket.on(
+      'room-joined',
+      async ({ elements, files }: { slug: string; elements: unknown[]; files: RemoteFile[] }) => {
+        const validElements = renderableElements(await decryptBatch(elements))
+        const isReconnect = broadcastedVersionsRef.current.size > 0
+        setInitialElements(validElements)
+        setInitialFiles(files)
+        broadcastedVersionsRef.current = new Map(validElements.map((el) => [el.id, el.version]))
+        setConnectionStatus('connected')
+        if (isReconnect) {
+          toast.dismiss('collab-status')
+          toast.success('Reconnected', { duration: 2000 })
+        }
+      },
+    )
+
+    socket.on('scene-update', async (elements: unknown[]) => {
+      remoteHandlerRef.current?.(renderableElements(await decryptBatch(elements)))
     })
 
-    socket.on('scene-update', (elements: ExcalidrawElement[]) => {
-      remoteHandlerRef.current?.(renderableElements(elements))
+    socket.on('file-added', (file: RemoteFile) => {
+      remoteFileHandlerRef.current?.(file)
     })
 
     socket.on('participant-list', (list: Participant[]) => {
@@ -260,23 +323,33 @@ export function CollabProvider({
 
     return () => {
       unmountingRef.current = true
+      const finish = () => {
+        socketRef.current = null
+        setSocketId(null)
+        setParticipants([])
+        setRemoteCursors(new Map())
+        toast.dismiss('collab-status')
+        socket.disconnect()
+      }
+
       if (emitTimerRef.current) {
         clearTimeout(emitTimerRef.current)
         const batch = [...pendingElements.values()]
-        if (batch.length > 0 && socket.connected) {
-          socket.emit('scene-update', batch)
-        }
         pendingElements.clear()
         emitTimerRef.current = null
+        if (batch.length > 0 && socket.connected) {
+          // Encryption is async — hold the disconnect until the last batch is on the wire,
+          // rather than dropping it (disconnecting first would race the encrypt+emit below).
+          void encryptBatch(batch).then((wire) => {
+            if (socket.connected) socket.emit('scene-update', wire)
+            finish()
+          })
+          return
+        }
       }
-      socketRef.current = null
-      setSocketId(null)
-      setParticipants([])
-      setRemoteCursors(new Map())
-      toast.dismiss('collab-status')
-      socket.disconnect()
+      finish()
     }
-  }, [slug])
+  }, [slug, encryptBatch, decryptBatch])
 
   const emitCursorMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
@@ -298,10 +371,13 @@ export function CollabProvider({
 
   const coreValue = useMemo<CollabContextValue>(
     () => ({
+      slug,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
       initialElements,
+      initialFiles,
+      roomKey,
       isAnonymous,
       isViewOnly,
       ownerId,
@@ -309,18 +385,25 @@ export function CollabProvider({
       broadcastedVersionsRef,
       emitSceneUpdate,
       registerRemoteHandler,
+      emitFileAdded,
+      registerRemoteFileHandler,
     }),
     [
+      slug,
       connectionStatus,
       excalidrawAPI,
       setExcalidrawAPI,
       initialElements,
+      initialFiles,
+      roomKey,
       isAnonymous,
       isViewOnly,
       ownerId,
       userId,
       emitSceneUpdate,
       registerRemoteHandler,
+      emitFileAdded,
+      registerRemoteFileHandler,
     ],
   )
 

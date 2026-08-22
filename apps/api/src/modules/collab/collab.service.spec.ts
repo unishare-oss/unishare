@@ -3,6 +3,7 @@ import { NotFoundException, ForbiddenException, UnauthorizedException } from '@n
 import type { Request, Response } from 'express'
 import * as bcrypt from 'bcryptjs'
 import { auth } from '@/auth/auth.config'
+import { StorageService } from '@/modules/storage/storage.service'
 import { CollabService } from './collab.service'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
@@ -42,7 +43,7 @@ describe('CollabService', () => {
   }
   let collabGateway: { notifyVisibilityChanged: jest.Mock; server: { to: jest.Mock } }
   let collabRoomService: {
-    getOrLoadElements: jest.Mock
+    getOrLoadRoom: jest.Mock
     mergeElements: jest.Mock
     flushSnapshot: jest.Mock
   }
@@ -90,7 +91,7 @@ describe('CollabService', () => {
       server: { to: jest.fn().mockReturnValue({ emit: jest.fn() }) },
     }
     collabRoomService = {
-      getOrLoadElements: jest.fn(),
+      getOrLoadRoom: jest.fn(),
       mergeElements: jest.fn(),
       flushSnapshot: jest.fn(),
     }
@@ -101,6 +102,7 @@ describe('CollabService', () => {
         { provide: CollabRepository, useValue: repository },
         { provide: CollabGateway, useValue: collabGateway },
         { provide: CollabRoomService, useValue: collabRoomService },
+        { provide: StorageService, useValue: { deleteFolder: jest.fn() } },
       ],
     }).compile()
 
@@ -561,17 +563,17 @@ describe('CollabService', () => {
       await expect(service.getRoomElements('abc1234567', 'user-999')).rejects.toThrow(
         ForbiddenException,
       )
-      expect(collabRoomService.getOrLoadElements).not.toHaveBeenCalled()
+      expect(collabRoomService.getOrLoadRoom).not.toHaveBeenCalled()
     })
 
     it('should return room metadata and elements for the owner', async () => {
       repository.findBySlug.mockResolvedValue(mockRoom)
       const mockElements = [{ id: 'el-1', type: 'rectangle' }]
-      collabRoomService.getOrLoadElements.mockResolvedValue(mockElements)
+      collabRoomService.getOrLoadRoom.mockResolvedValue({ elements: mockElements, files: [] })
 
       const result = await service.getRoomElements('abc1234567', 'user-1')
 
-      expect(collabRoomService.getOrLoadElements).toHaveBeenCalledWith('abc1234567')
+      expect(collabRoomService.getOrLoadRoom).toHaveBeenCalledWith('abc1234567')
       expect(result).toEqual({
         room: expect.objectContaining({ slug: 'abc1234567', ownerId: 'user-1' }),
         elements: mockElements,
@@ -601,12 +603,12 @@ describe('CollabService', () => {
 
     it('should merge, persist, and notify connected clients for the owner', async () => {
       repository.findBySlug.mockResolvedValue(mockRoom)
-      collabRoomService.getOrLoadElements.mockResolvedValue([])
+      collabRoomService.getOrLoadRoom.mockResolvedValue({ elements: [], files: [] })
       collabRoomService.flushSnapshot.mockResolvedValue(undefined)
 
       await service.drawRoom('abc1234567', elements, 'user-1')
 
-      expect(collabRoomService.getOrLoadElements).toHaveBeenCalledWith('abc1234567')
+      expect(collabRoomService.getOrLoadRoom).toHaveBeenCalledWith('abc1234567')
       expect(collabRoomService.mergeElements).toHaveBeenCalledWith('abc1234567', elements)
       expect(collabRoomService.flushSnapshot).toHaveBeenCalledWith('abc1234567')
       expect(collabGateway.server.to).toHaveBeenCalledWith('abc1234567')
