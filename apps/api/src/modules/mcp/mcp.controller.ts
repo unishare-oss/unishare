@@ -1,12 +1,15 @@
-import { All, Controller, Get, Logger, Req, Res, UseFilters } from '@nestjs/common'
+import { All, Controller, Get, Logger, Req, Res, UseFilters, UseGuards } from '@nestjs/common'
 import { ApiExcludeController } from '@nestjs/swagger'
 import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { fromNodeHeaders } from 'better-auth/node'
 import { oAuthDiscoveryMetadata, oAuthProtectedResourceMetadata } from 'better-auth/plugins'
+import { Throttle } from '@nestjs/throttler'
 import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
 import { McpExceptionFilter } from '@/common/filters/mcp-exception.filter'
+import { McpAuthGuard, type RequestWithMcpSession } from '@/common/guards/mcp-auth.guard'
+import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { McpService } from './mcp.service'
 
 const oauthDiscoveryHandler = oAuthDiscoveryMetadata(auth)
@@ -35,27 +38,11 @@ export class McpController {
   }
 
   @All('mcp')
-  async handle(@Req() req: Request, @Res() res: Response) {
-    const session = await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
-    if (!session) {
-      const authURL = this.config.get<string>('BETTER_AUTH_URL') ?? 'http://localhost:3001'
-      res
-        .status(401)
-        .set(
-          'WWW-Authenticate',
-          `Bearer resource_metadata="${authURL}/.well-known/oauth-protected-resource"`,
-        )
-        .set('Access-Control-Expose-Headers', 'WWW-Authenticate')
-        .json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Authentication required' },
-          id: null,
-        })
-      return
-    }
-
+  @UseGuards(McpAuthGuard, UserThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async handle(@Req() req: RequestWithMcpSession, @Res() res: Response) {
     try {
-      await this.mcpService.handleRequest(req, res, session, req.body)
+      await this.mcpService.handleRequest(req, res, req.mcpSession!, req.body)
     } catch (error) {
       this.logger.error(error instanceof Error ? error.message : 'MCP request failed')
       if (!res.headersSent) {

@@ -12,7 +12,12 @@ export const THROTTLE_BUCKET = 'throttle:bucket'
 @Injectable()
 export class UserThrottlerGuard extends ThrottlerGuard {
   protected async getTracker(req: Record<string, any>): Promise<string> {
-    return (req.session?.user?.id as string | undefined) ?? req.ip ?? 'anonymous'
+    return (
+      (req.session?.user?.id as string | undefined) ??
+      (req.mcpSession?.userId as string | undefined) ??
+      req.ip ??
+      'anonymous'
+    )
   }
 
   /**
