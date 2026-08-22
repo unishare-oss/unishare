@@ -152,7 +152,7 @@ export class McpRepository {
     session: McpAuthSession,
     input: { title?: string; visibility?: 'OPEN' | 'VIEW_ONLY' | 'PRIVATE' },
   ) {
-    const room = await this.collabService.createRoom(input, session.userId)
+    const room = await this.collabService.createRoom(input, session.userId, false)
     const board = {
       slug: room.slug,
       title: room.title,

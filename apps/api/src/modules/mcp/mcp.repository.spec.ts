@@ -219,6 +219,7 @@ describe('McpRepository', () => {
       expect(collabService.createRoom).toHaveBeenCalledWith(
         { title: 'Architecture', visibility: 'PRIVATE' },
         'user-1',
+        false,
       )
       expect(result).toEqual({
         board: {

@@ -28,7 +28,14 @@ export class CollabService {
     private readonly storageService: StorageService,
   ) {}
 
-  async createRoom(dto: CreateCollabRoomDto, ownerId: string) {
+  /**
+   * `encrypted: true` only makes sense for rooms whose content originates in a browser, which
+   * generates the AES key client-side and never sends it to the server (see
+   * docs/board-e2e-encryption/planning.md). MCP-created rooms have no browser involved — the
+   * server sees the plaintext elements directly in the tool call — so callers there must pass
+   * `encrypted: false`.
+   */
+  async createRoom(dto: CreateCollabRoomDto, ownerId: string, encrypted = true) {
     const slug = nanoid(10)
     const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : undefined
     const room = await this.collabRepository.create({
@@ -37,7 +44,7 @@ export class CollabService {
       title: dto.title,
       visibility: dto.visibility,
       passwordHash,
-      encrypted: true,
+      encrypted,
     })
     return this.toRoomResponse(room)
   }
