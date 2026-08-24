@@ -23,6 +23,7 @@ const NOTIFICATION_META: Record<string, { label: string; color: string }> = {
   NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
   POST_COMMENT: { label: 'Comment', color: 'text-text-muted' },
   CHAT_MESSAGE: { label: 'Message', color: 'text-info' },
+  EXAM_REMINDER: { label: 'Exam', color: 'text-red-400' },
 }
 
 export default function NotificationsPage() {
@@ -67,6 +68,7 @@ export default function NotificationsPage() {
     if (n.requestId) router.push(`/requests/${n.requestId}`)
     else if (n.postId) router.push(`/posts/${n.postId}`)
     else if (n.chatRoomId) router.push(`/chat/${n.chatRoomId}`)
+    else if (n.examId) router.push('/calendar')
   }
 
   return (
@@ -125,7 +127,9 @@ export default function NotificationsPage() {
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
                     !n.read && 'bg-amber/[0.04]',
-                    n.postId || n.requestId || n.chatRoomId ? 'cursor-pointer' : 'cursor-default',
+                    n.postId || n.requestId || n.chatRoomId || n.examId
+                      ? 'cursor-pointer'
+                      : 'cursor-default',
                   )}
                 >
                   <span

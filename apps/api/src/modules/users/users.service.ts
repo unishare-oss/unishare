@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '@/prisma/prisma.service'
+import { computeYearLevel } from '@/common/utils/academic-year'
 import { FollowsService } from '../follows/follows.service'
 import { ChatService } from '../chat/chat.service'
 import { UsersRepository } from './users.repository'
@@ -141,10 +142,7 @@ export class UsersService {
     }
 
     const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
-    const now = new Date()
-    const currentAcademicYear =
-      now.getMonth() + 1 >= academicStartMonth ? now.getFullYear() : now.getFullYear() - 1
-    const yearLevel = Math.max(1, currentAcademicYear - user.enrollmentYear + 1)
+    const yearLevel = computeYearLevel(user.enrollmentYear, new Date(), academicStartMonth)
 
     return { ...base, yearLevel }
   }

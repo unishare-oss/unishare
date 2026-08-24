@@ -154,6 +154,30 @@ export class NotificationsService {
     )
   }
 
+  async notifyExamReminder(
+    examId: string,
+    courseCode: string,
+    examTitle: string,
+    startsAt: Date,
+    recipientIds: string[],
+  ) {
+    if (recipientIds.length === 0) return
+
+    const message = `${courseCode} ${examTitle} is coming up on ${startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+
+    await Promise.all(
+      recipientIds.map(async (userId) => {
+        const notification = await this.notificationsRepository.create({
+          userId,
+          type: NotificationType.EXAM_REMINDER,
+          message,
+          examId,
+        })
+        this.events$.next({ userId, data: notification })
+      }),
+    )
+  }
+
   findByUser(userId: string) {
     return this.notificationsRepository.findByUser(userId)
   }
