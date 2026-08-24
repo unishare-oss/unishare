@@ -73,6 +73,36 @@ interface CollabPresenceContextValue {
   emitCursorMove: (e: React.PointerEvent<HTMLElement>) => void
 }
 
+function isNumericPoint(point: unknown): boolean {
+  return Array.isArray(point) && point.length === 2 && point.every((n) => typeof n === 'number')
+}
+
+function isRenderableElement(element: unknown): element is ExcalidrawElement {
+  if (!element || typeof element !== 'object') return false
+  const candidate = element as Record<string, unknown>
+  if (
+    typeof candidate.id !== 'string' ||
+    typeof candidate.type !== 'string' ||
+    typeof candidate.x !== 'number' ||
+    typeof candidate.y !== 'number' ||
+    typeof candidate.width !== 'number' ||
+    typeof candidate.height !== 'number' ||
+    typeof candidate.version !== 'number' ||
+    !Array.isArray(candidate.groupIds)
+  ) {
+    return false
+  }
+  if (candidate.type === 'text' && typeof candidate.text !== 'string') return false
+  if (candidate.type === 'arrow' || candidate.type === 'line') {
+    return Array.isArray(candidate.points) && candidate.points.every(isNumericPoint)
+  }
+  return true
+}
+
+function renderableElements(elements: unknown[]): ExcalidrawElement[] {
+  return elements.filter(isRenderableElement)
+}
+
 interface CollabProviderProps {
   slug: string
   isAnonymous: boolean
@@ -214,11 +244,11 @@ export function CollabProvider({
     socket.on(
       'room-joined',
       async ({ elements, files }: { slug: string; elements: unknown[]; files: RemoteFile[] }) => {
+        const validElements = renderableElements(await decryptBatch(elements))
         const isReconnect = broadcastedVersionsRef.current.size > 0
-        const decrypted = await decryptBatch(elements)
-        setInitialElements(decrypted)
+        setInitialElements(validElements)
         setInitialFiles(files)
-        broadcastedVersionsRef.current = new Map(decrypted.map((el) => [el.id, el.version]))
+        broadcastedVersionsRef.current = new Map(validElements.map((el) => [el.id, el.version]))
         setConnectionStatus('connected')
         if (isReconnect) {
           toast.dismiss('collab-status')
@@ -228,7 +258,7 @@ export function CollabProvider({
     )
 
     socket.on('scene-update', async (elements: unknown[]) => {
-      remoteHandlerRef.current?.(await decryptBatch(elements))
+      remoteHandlerRef.current?.(renderableElements(await decryptBatch(elements)))
     })
 
     socket.on('file-added', (file: RemoteFile) => {

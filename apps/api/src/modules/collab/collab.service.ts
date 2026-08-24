@@ -13,6 +13,7 @@ import { auth, type UserSession } from '@/auth/auth.config'
 import { StorageService } from '@/modules/storage/storage.service'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
+import { CollabRoomService } from './collab.room.service'
 import { CreateCollabRoomDto } from './dto/create-room.dto'
 import { UpdateRoomDto } from './dto/update-room.dto'
 import { JoinRoomBodyDto } from './dto/join-room-body.dto'
@@ -23,10 +24,18 @@ export class CollabService {
   constructor(
     private readonly collabRepository: CollabRepository,
     private readonly collabGateway: CollabGateway,
+    private readonly collabRoomService: CollabRoomService,
     private readonly storageService: StorageService,
   ) {}
 
-  async createRoom(dto: CreateCollabRoomDto, ownerId: string) {
+  /**
+   * `encrypted: true` only makes sense for rooms whose content originates in a browser, which
+   * generates the AES key client-side and never sends it to the server (see
+   * docs/board-e2e-encryption/planning.md). MCP-created rooms have no browser involved — the
+   * server sees the plaintext elements directly in the tool call — so callers there must pass
+   * `encrypted: false`.
+   */
+  async createRoom(dto: CreateCollabRoomDto, ownerId: string, encrypted = true) {
     const slug = nanoid(10)
     const passwordHash = dto.password ? await bcrypt.hash(dto.password, 10) : undefined
     const room = await this.collabRepository.create({
@@ -35,7 +44,7 @@ export class CollabService {
       title: dto.title,
       visibility: dto.visibility,
       passwordHash,
-      encrypted: true,
+      encrypted,
     })
     return this.toRoomResponse(room)
   }
@@ -75,6 +84,33 @@ export class CollabService {
       throw new ForbiddenException('Only the room owner can delete this room')
     await this.collabRepository.deleteBySlug(slug)
     await this.storageService.deleteFolder(`boards/${slug}`)
+  }
+
+  //for mcp only
+  async getRoomElements(slug: string, userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can view this room through MCP')
+
+    const { elements } = await this.collabRoomService.getOrLoadRoom(slug)
+    return {
+      room: this.toRoomResponse(room),
+      elements,
+    }
+  }
+
+  //for mcp only
+  async drawRoom(slug: string, elements: Record<string, unknown>[], userId: string) {
+    const room = await this.collabRepository.findBySlug(slug)
+    if (!room) throw new NotFoundException('Room not found')
+    if (room.ownerId !== userId)
+      throw new ForbiddenException('Only the room owner can edit this room through MCP')
+
+    await this.collabRoomService.getOrLoadRoom(slug)
+    this.collabRoomService.mergeElements(slug, elements)
+    await this.collabRoomService.flushSnapshot(slug)
+    this.collabGateway.server.to(slug).emit('scene-update', elements)
   }
 
   async updateRoom(slug: string, dto: UpdateRoomDto, userId: string) {

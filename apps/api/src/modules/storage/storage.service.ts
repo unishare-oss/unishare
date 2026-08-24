@@ -176,6 +176,30 @@ export class StorageService implements OnModuleInit {
     return getSignedUrl(this.signingClient, command, { expiresIn })
   }
 
+  async uploadBuffer(
+    folder: string,
+    buffer: Buffer,
+    mimeType: string,
+    uploadType: UploadType = 'document',
+  ): Promise<{ key: string; publicUrl: string }> {
+    this.assertSafeKey(folder)
+    const typeConfig = FILE_TYPE_CONFIG[uploadType]
+    if (!typeConfig.allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed: ${typeConfig.allowedMimeTypes.join(', ')}`,
+      )
+    }
+    const key = `${folder}/${this.generateFileName(mimeType)}`
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: mimeType,
+    })
+    await this.s3Client.send(command)
+    return { key, publicUrl: this.getPublicUrl(key) }
+  }
+
   /**
    * Turns a stored `publicUrl` (built by getPublicUrl, e.g. on a chat message or
    * room avatar) into a fresh presigned GET so the browser can actually load it —

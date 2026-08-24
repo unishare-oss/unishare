@@ -4,11 +4,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { RoomCard } from '@/components/boards/room-card'
 import { RoomCardSkeleton } from '@/components/boards/room-card-skeleton'
 import { CreateRoomDialog } from '@/components/boards/create-room-dialog'
 import { BoardsEmptyState } from '@/components/boards/boards-empty-state'
+import { McpGuideDialog } from '@/components/boards/mcp-guide-dialog'
 import {
   useCollabControllerFindByOwner,
   getCollabControllerFindByOwnerQueryKey,
@@ -17,6 +18,7 @@ import {
 export default function BoardsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
+  const [mcpGuideOpen, setMcpGuideOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: rooms, isLoading } = useCollabControllerFindByOwner({
@@ -76,14 +78,25 @@ export default function BoardsPage() {
             : undefined
         }
         action={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4 mr-1.5" strokeWidth={1.5} />
-            New Board
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMcpGuideOpen(true)}
+              className="border-border text-foreground"
+            >
+              <Sparkles className="size-3.5 mr-1.5 text-primary" strokeWidth={1.5} />
+              Connect AI (MCP)
+            </Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4 mr-1.5" strokeWidth={1.5} />
+              New Board
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 bg-card">
-        <div className="p-6">
+        <div className="p-6 space-y-6">
           {showSkeleton && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <RoomCardSkeleton />
@@ -123,6 +136,7 @@ export default function BoardsPage() {
         </div>
       </div>
       <CreateRoomDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <McpGuideDialog open={mcpGuideOpen} onOpenChange={setMcpGuideOpen} />
     </div>
   )
 }
