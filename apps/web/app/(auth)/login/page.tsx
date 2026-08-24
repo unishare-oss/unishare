@@ -118,7 +118,7 @@ export default function LoginPage() {
     const continuation = oauthAuthorizeUrl()
     authClient.signIn.social({
       provider,
-      callbackURL: continuation ?? `${window.location.origin}/`,
+      callbackURL: continuation ?? `${window.location.origin}/feed`,
     })
   }
 
@@ -134,7 +134,7 @@ export default function LoginPage() {
     else {
       const continuation = oauthAuthorizeUrl()
       if (continuation) window.location.assign(continuation)
-      else router.replace('/')
+      else router.replace('/feed')
     }
   }
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
       universityId: values.universityId || undefined,
     })
     if (error) setServerError(error.message ?? 'Failed to create account')
-    else router.replace('/')
+    else router.replace('/feed')
   }
 
   return (
@@ -379,7 +379,7 @@ export default function LoginPage() {
 
           <div className="flex justify-center mt-4">
             <Link
-              href="/"
+              href="/feed"
               className="text-sm text-text-muted hover:text-foreground transition-colors duration-150"
             >
               Continue as guest

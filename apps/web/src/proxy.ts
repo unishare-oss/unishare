@@ -18,7 +18,11 @@ export function proxy(request: NextRequest) {
   }
 
   if (hasSession && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/feed', request.url))
+  }
+
+  if (hasSession && pathname === '/') {
+    return NextResponse.redirect(new URL('/feed', request.url))
   }
 
   return NextResponse.next()
