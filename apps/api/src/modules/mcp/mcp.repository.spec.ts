@@ -1,6 +1,7 @@
 import { ForbiddenException, BadRequestException } from '@nestjs/common'
 import type { ConfigService } from '@nestjs/config'
-import { McpRepository, type McpAuthSession } from './mcp.repository'
+import { McpRepository } from './mcp.repository'
+import type { McpAuthSession } from './dto/mcp-auth-session.dto'
 import type { CollabService } from '@/modules/collab/collab.service'
 import type { PostsService } from '@/modules/posts/posts.service'
 import type { CoursesService } from '@/modules/courses/courses.service'

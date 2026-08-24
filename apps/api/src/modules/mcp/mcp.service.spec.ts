@@ -1,6 +1,7 @@
 import { RequireScope } from '@/common/decorators/require-scope.decorator'
 import { McpService } from './mcp.service'
-import type { McpAuthSession, McpRepository } from './mcp.repository'
+import type { McpRepository } from './mcp.repository'
+import type { McpAuthSession } from './dto/mcp-auth-session.dto'
 import { drawingGuide } from './mcp-drawing-guide'
 import { postGuide } from './mcp-post-guide'
 

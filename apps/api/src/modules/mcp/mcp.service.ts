@@ -4,34 +4,15 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { getRequiredScopes } from '@/common/decorators/require-scope.decorator'
-import { McpRepository, type McpAuthSession } from './mcp.repository'
+import type { McpAuthSession } from './dto/mcp-auth-session.dto'
+import { createBoardSchema, boardSlugSchema } from './dto/board.dto'
+import { drawBoardSchema } from './dto/draw-board.dto'
+import { requestUploadUrlSchema } from './dto/request-upload-url.dto'
+import { createPostSchema } from './dto/create-post.dto'
+import { deletePostSchema } from './dto/delete-post.dto'
+import { McpRepository } from './mcp.repository'
 import { drawingGuide } from './mcp-drawing-guide'
 import { postGuide } from './mcp-post-guide'
-
-export type { McpAuthSession }
-
-const filesSchema = z
-  .array(
-    z
-      .object({
-        fileName: z.string().min(1).max(255),
-        mimeType: z.string().min(1),
-        // From a prior request_upload_url call — the client already PUT the bytes to S3.
-        key: z.string().min(1).max(500).optional(),
-        size: z.number().int().positive().optional(),
-        // Small-payload fallback only; request_upload_url + key is the path for real files.
-        base64Data: z.string().max(680_000).optional(),
-        textData: z.string().max(500_000).optional(),
-      })
-      .refine((f) => [f.key, f.base64Data, f.textData].filter(Boolean).length === 1, {
-        message: 'Provide exactly one of key, base64Data, or textData',
-      })
-      .refine((f) => !f.key || f.size !== undefined, {
-        message: 'size is required when key is provided',
-      }),
-  )
-  .max(5)
-  .optional()
 
 @Injectable()
 export class McpService {
@@ -68,10 +49,7 @@ export class McpService {
         'create_board',
         {
           description: 'Create a board owned by the authenticated UniShare user',
-          inputSchema: z.object({
-            title: z.string().min(1).max(120).optional(),
-            visibility: z.enum(['OPEN', 'VIEW_ONLY', 'PRIVATE']).optional(),
-          }),
+          inputSchema: createBoardSchema,
         },
         async (input) => this.toToolResult(await this.mcpRepository.createBoard(session, input)),
       )
@@ -82,7 +60,7 @@ export class McpService {
         'delete_board',
         {
           description: 'Permanently delete a board owned by the authenticated UniShare user',
-          inputSchema: z.object({ slug: z.string().min(1) }),
+          inputSchema: boardSlugSchema,
           annotations: { destructiveHint: true },
         },
         async (input) => this.toToolResult(await this.mcpRepository.deleteBoard(session, input)),
@@ -95,7 +73,7 @@ export class McpService {
         {
           description:
             'Get existing elements, occupied canvas bounds, and suggested placement anchors for a board. Call this before adding elements to an existing board to avoid overlapping.',
-          inputSchema: z.object({ slug: z.string().min(1) }),
+          inputSchema: boardSlugSchema,
           annotations: { readOnlyHint: true },
         },
         async (input) => this.toToolResult(await this.mcpRepository.getBoard(session, input)),
@@ -108,10 +86,7 @@ export class McpService {
         {
           description:
             'Draw a clear, labeled diagram. Before the first draw_board call in a task, you MUST call read_me and apply its rules. For existing boards, call get_board to check occupied space before adding more elements. Pass elements as a JSON-stringified array. Arrows accept points as relative [x, y] waypoints for orthogonal or bent routes; use endX/endY only for a straight arrow.',
-          inputSchema: z.object({
-            slug: z.string().min(1),
-            elements: z.string().min(2),
-          }),
+          inputSchema: drawBoardSchema,
         },
         async (input) => this.toToolResult(await this.mcpRepository.drawBoard(session, input)),
       )
@@ -155,10 +130,7 @@ export class McpService {
         {
           description:
             "Get a presigned S3 upload URL for a post attachment. Use this for real files (PDFs, images, documents) instead of inlining them: PUT the file's raw bytes to the returned url yourself (e.g. via curl or an HTTP tool) with the same Content-Type, then pass the returned key plus the file's byte size into create_post's files array. Only use inline base64Data/textData in create_post for small (<500KB) text content when you have no way to make outbound HTTP requests.",
-          inputSchema: z.object({
-            mimeType: z.string().min(1),
-            uploadType: z.enum(['document', 'image']),
-          }),
+          inputSchema: requestUploadUrlSchema,
         },
         async (input) =>
           this.toToolResult(await this.mcpRepository.createUploadUrl(session, input)),
@@ -171,20 +143,7 @@ export class McpService {
         {
           description:
             'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. Call read_me before the first create_post call in a task and follow its rules: ask ONE field at a time in order (title -> type -> description -> courseId from list_courses -> optional fields with skip option), show a summary, and confirm with the user before calling this tool.',
-          inputSchema: z.object({
-            title: z.string().min(3).max(200),
-            description: z.string().min(1).max(2000),
-            type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
-            courseId: z.string().min(1),
-            moduleNumber: z.number().int().min(1).max(20).optional(),
-            year: z.number().int().min(1).max(6).optional(),
-            semester: z.number().int().min(1).max(3).optional(),
-            tags: z.array(z.string().min(2).max(50)).max(5).optional(),
-            examYear: z.number().int().min(1900).max(2100).optional(),
-            externalUrl: z.string().url().max(500).optional(),
-            isAnonymous: z.boolean().optional(),
-            files: filesSchema,
-          }),
+          inputSchema: createPostSchema,
         },
         async (input) => this.toToolResult(await this.mcpRepository.createPost(session, input)),
       )
@@ -195,7 +154,7 @@ export class McpService {
         'delete_post',
         {
           description: 'Delete a post authored by the authenticated UniShare user',
-          inputSchema: z.object({ id: z.string().min(1) }),
+          inputSchema: deletePostSchema,
           annotations: { destructiveHint: true },
         },
         async (input) => this.toToolResult(await this.mcpRepository.deletePost(session, input)),

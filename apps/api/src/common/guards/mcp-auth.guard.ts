@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
-import type { McpAuthSession } from '@/modules/mcp/mcp.repository'
+import type { McpAuthSession } from '@/modules/mcp/dto/mcp-auth-session.dto'
 
 export interface RequestWithMcpSession extends Request {
   mcpSession?: McpAuthSession

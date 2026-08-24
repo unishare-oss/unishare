@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { z } from 'zod'
 import { CollabService } from '@/modules/collab/collab.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { CoursesService } from '@/modules/courses/courses.service'
@@ -15,65 +14,15 @@ import {
   createExcalidrawElements,
   getSuggestedPlacements,
   summarizeElements,
-  type McpDrawingInput,
 } from './mcp-drawing'
 import { RequireScope } from '@/common/decorators/require-scope.decorator'
-
-export interface McpAuthSession {
-  userId: string
-  scopes: string
-}
-
-export interface McpPostFileInput {
-  fileName: string
-  mimeType: string
-  /** Result of a prior `request_upload_url` call — the client already PUT the bytes to S3. */
-  key?: string
-  size?: number
-  base64Data?: string
-  textData?: string
-}
-
-const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
-const drawingStyleSchema = {
-  strokeColor: hexColorSchema.optional(),
-  backgroundColor: z.union([z.literal('transparent'), hexColorSchema]).optional(),
-}
-
-const drawingPointSchema = z.tuple([z.number(), z.number()])
-
-const drawingElementSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.enum(['rectangle', 'ellipse', 'diamond']),
-    x: z.number(),
-    y: z.number(),
-    width: z.number().positive(),
-    height: z.number().positive(),
-    ...drawingStyleSchema,
-  }),
-  z.object({
-    type: z.literal('text'),
-    x: z.number(),
-    y: z.number(),
-    text: z.string().min(1),
-    ...drawingStyleSchema,
-  }),
-  z
-    .object({
-      type: z.literal('arrow'),
-      x: z.number(),
-      y: z.number(),
-      endX: z.number().optional(),
-      endY: z.number().optional(),
-      points: z.array(drawingPointSchema).min(2).optional(),
-      ...drawingStyleSchema,
-    })
-    .refine((input) => input.points || (input.endX !== undefined && input.endY !== undefined), {
-      message: 'Arrows need points or both endX and endY',
-    }),
-])
-
-const drawingElementsSchema = z.array(drawingElementSchema).min(1).max(100)
+import type { McpAuthSession } from './dto/mcp-auth-session.dto'
+import type { RequestUploadUrlDto } from './dto/request-upload-url.dto'
+import type { CreateBoardDto, BoardSlugDto } from './dto/board.dto'
+import { drawingElementsSchema } from './dto/draw-board.dto'
+import type { DrawBoardDto } from './dto/draw-board.dto'
+import type { CreatePostDto, PostFileDto } from './dto/create-post.dto'
+import type { DeletePostDto } from './dto/delete-post.dto'
 
 @Injectable()
 export class McpRepository {
@@ -92,10 +41,7 @@ export class McpRepository {
   }
 
   @RequireScope('posts:write')
-  async createUploadUrl(
-    session: McpAuthSession,
-    input: { mimeType: string; uploadType: 'document' | 'image' },
-  ) {
+  async createUploadUrl(session: McpAuthSession, input: RequestUploadUrlDto) {
     const folder = getFolderForPurpose('post-attachment', { userId: session.userId })
     const { url, key, publicUrl } = await this.storageService.generatePresignedUploadUrl(
       folder,
@@ -148,10 +94,7 @@ export class McpRepository {
   }
 
   @RequireScope('boards:write')
-  async createBoard(
-    session: McpAuthSession,
-    input: { title?: string; visibility?: 'OPEN' | 'VIEW_ONLY' | 'PRIVATE' },
-  ) {
+  async createBoard(session: McpAuthSession, input: CreateBoardDto) {
     const room = await this.collabService.createRoom(input, session.userId, false)
     const board = {
       slug: room.slug,
@@ -165,7 +108,7 @@ export class McpRepository {
   }
 
   @RequireScope('boards:read')
-  async getBoard(session: McpAuthSession, input: { slug: string }) {
+  async getBoard(session: McpAuthSession, input: BoardSlugDto) {
     const { room, elements } = await this.collabService.getRoomElements(input.slug, session.userId)
     const bounds = calculateOccupiedBounds(elements)
     const suggestedPlacements = getSuggestedPlacements(bounds)
@@ -186,13 +129,13 @@ export class McpRepository {
   }
 
   @RequireScope('boards:write')
-  async deleteBoard(session: McpAuthSession, input: { slug: string }) {
+  async deleteBoard(session: McpAuthSession, input: BoardSlugDto) {
     await this.collabService.deleteRoom(input.slug, session.userId)
     return { slug: input.slug, deleted: true }
   }
 
   @RequireScope('boards:write')
-  async drawBoard(session: McpAuthSession, input: { slug: string; elements: string }) {
+  async drawBoard(session: McpAuthSession, input: DrawBoardDto) {
     let parsedElements: unknown
     try {
       parsedElements = JSON.parse(input.elements)
@@ -208,29 +151,13 @@ export class McpRepository {
       throw new BadRequestException(`Invalid elements: ${issues}`)
     }
 
-    const elements = createExcalidrawElements(validatedElements.data as McpDrawingInput[])
+    const elements = createExcalidrawElements(validatedElements.data)
     await this.collabService.drawRoom(input.slug, elements, session.userId)
     return { slug: input.slug, updatedElements: elements.length }
   }
 
   @RequireScope('posts:write')
-  async createPost(
-    session: McpAuthSession,
-    input: {
-      title: string
-      description: string
-      type: 'NOTE' | 'OLD_QUESTION' | 'EXERCISE'
-      courseId: string
-      moduleNumber?: number
-      year?: number
-      semester?: number
-      tags?: string[]
-      examYear?: number
-      externalUrl?: string
-      isAnonymous?: boolean
-      files?: McpPostFileInput[]
-    },
-  ) {
+  async createPost(session: McpAuthSession, input: CreatePostDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
       select: { departmentId: true },
@@ -271,35 +198,7 @@ export class McpRepository {
       const folder = getFolderForPurpose('post-attachment', { userId: session.userId })
       for (const file of input.files) {
         try {
-          let key: string
-          let size: number
-          let publicUrl: string
-
-          if (file.key) {
-            if (file.size === undefined) {
-              throw new BadRequestException(
-                `File "${file.fileName}" has a key but no size — pass the size returned by the upload`,
-              )
-            }
-            key = file.key
-            size = file.size
-            publicUrl = this.storageService.getPublicUrl(key)
-          } else {
-            let buffer: Buffer
-            if (file.base64Data) {
-              buffer = Buffer.from(file.base64Data, 'base64')
-            } else if (file.textData) {
-              buffer = Buffer.from(file.textData, 'utf-8')
-            } else {
-              throw new BadRequestException(
-                `File "${file.fileName}" must provide key, base64Data, or textData`,
-              )
-            }
-            const uploaded = await this.storageService.uploadBuffer(folder, buffer, file.mimeType)
-            key = uploaded.key
-            size = buffer.length
-            publicUrl = uploaded.publicUrl
-          }
+          const { key, size, publicUrl } = await this.resolveFile(file, folder)
 
           const confirmed = await this.filesService.confirmUpload(
             created.id,
@@ -341,8 +240,40 @@ export class McpRepository {
     return { post }
   }
 
+  /** Turns one attachment into a stored object — either an already-uploaded key or inline content. */
+  private async resolveFile(
+    file: PostFileDto,
+    folder: string,
+  ): Promise<{ key: string; size: number; publicUrl: string }> {
+    if (file.key) {
+      if (file.size === undefined) {
+        throw new BadRequestException(
+          `File "${file.fileName}" has a key but no size — pass the size returned by the upload`,
+        )
+      }
+      return {
+        key: file.key,
+        size: file.size,
+        publicUrl: this.storageService.getPublicUrl(file.key),
+      }
+    }
+
+    let buffer: Buffer
+    if (file.base64Data) {
+      buffer = Buffer.from(file.base64Data, 'base64')
+    } else if (file.textData) {
+      buffer = Buffer.from(file.textData, 'utf-8')
+    } else {
+      throw new BadRequestException(
+        `File "${file.fileName}" must provide key, base64Data, or textData`,
+      )
+    }
+    const uploaded = await this.storageService.uploadBuffer(folder, buffer, file.mimeType)
+    return { key: uploaded.key, size: buffer.length, publicUrl: uploaded.publicUrl }
+  }
+
   @RequireScope('posts:write')
-  async deletePost(session: McpAuthSession, input: { id: string }) {
+  async deletePost(session: McpAuthSession, input: DeletePostDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
       select: { role: true },
