@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import helmet from 'helmet'
+import { json } from 'express'
 import { NestFactory, Reflector } from '@nestjs/core'
 import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
@@ -19,11 +20,14 @@ async function bootstrap() {
 
   const allowedOrigins = [
     'http://localhost:3000',
+    // MCP Inspector — dev-only tooling, never allow it in production
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:6274'] : []),
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
   app.use(helmet({ contentSecurityPolicy: false }))
   app.enableCors({ origin: allowedOrigins, credentials: true })
+  app.use('/mcp', json({ type: 'application/json', limit: '1mb' }))
   const loggerMiddleware = new LoggerMiddleware()
   app.use(loggerMiddleware.use.bind(loggerMiddleware))
 
@@ -34,6 +38,8 @@ async function bootstrap() {
     exclude: [
       { path: 'health', method: RequestMethod.GET },
       { path: 'metrics', method: RequestMethod.GET },
+      { path: 'mcp', method: RequestMethod.ALL },
+      { path: '.well-known/(.*)', method: RequestMethod.GET },
       { path: 'api/(.*)', method: RequestMethod.ALL },
     ],
   })

@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { openAPI, admin, anonymous } from 'better-auth/plugins'
+import { openAPI, admin, anonymous, mcp } from 'better-auth/plugins'
 import { generateGuestDisplayName } from './guest-display-name'
 import { ac, roles } from '../lib/permissions'
 import { UserRole } from '../generated/prisma/client'
@@ -8,6 +8,7 @@ import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 const isProduction = process.env.NODE_ENV === 'production'
+export const isMcpEnabled = process.env.MCP_ENABLED === 'true'
 
 if (isProduction) {
   const required = ['DATABASE_URL', 'BETTER_AUTH_SECRET', 'BETTER_AUTH_URL', 'FRONTEND_URL']
@@ -27,6 +28,18 @@ const prisma = new PrismaClient({ adapter })
 const trustedOrigins = [
   'http://localhost:3000',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]
+
+const mcpScopes = [
+  'openid',
+  'profile',
+  'email',
+  'offline_access',
+  'boards:read',
+  'boards:write',
+  'posts:read',
+  'posts:write',
+  'courses:read',
 ]
 
 export const auth = betterAuth({
@@ -71,6 +84,23 @@ export const auth = betterAuth({
       emailDomainName: 'guest.unishare.app',
       generateName: () => generateGuestDisplayName(),
     }),
+    ...(isMcpEnabled
+      ? [
+          mcp({
+            loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
+            resource: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp`,
+            // Better Auth 1.6 reads provider metadata from the top level at runtime.
+            metadata: { scopes_supported: mcpScopes },
+            oidcConfig: {
+              loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
+              scopes: ['boards:read', 'boards:write', 'posts:read', 'posts:write', 'courses:read'],
+              metadata: { scopes_supported: mcpScopes },
+              allowPlainCodeChallengeMethod: false,
+              allowDynamicClientRegistration: true,
+            },
+          } as Parameters<typeof mcp>[0] & { metadata: { scopes_supported: string[] } }),
+        ]
+      : []),
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,

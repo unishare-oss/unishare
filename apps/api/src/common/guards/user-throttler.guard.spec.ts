@@ -15,6 +15,11 @@ class TestGuard extends UserThrottlerGuard {
   publicKey(context: ExecutionContext, suffix: string, name: string): string {
     return this.generateKey(context, suffix, name)
   }
+
+  // `getTracker` is protected too.
+  publicTracker(req: Record<string, any>): Promise<string> {
+    return this.getTracker(req)
+  }
 }
 
 function contextFor(handler: () => void): ExecutionContext {
@@ -101,5 +106,48 @@ describe('UserThrottlerGuard shared buckets', () => {
     }
 
     expect(Reflect.getMetadata(THROTTLE_BUCKET, new Controller().chat)).toBe('ai-chat')
+  })
+})
+
+describe('UserThrottlerGuard getTracker', () => {
+  let guard: TestGuard
+
+  beforeEach(() => {
+    guard = new TestGuard(
+      { throttlers: [] } as never,
+      {} as never,
+      { get: () => undefined } as never,
+    )
+  })
+
+  it('keys by cookie-session user id when present', async () => {
+    await expect(
+      guard.publicTracker({ session: { user: { id: 'user-1' } }, ip: '1.2.3.4' }),
+    ).resolves.toBe('user-1')
+  })
+
+  it('falls back to the mcp session user id — McpController has no req.session', async () => {
+    await expect(
+      guard.publicTracker({ mcpSession: { userId: 'user-2' }, ip: '1.2.3.4' }),
+    ).resolves.toBe('user-2')
+  })
+
+  it('prefers the mcp session over a cookie session when both are somehow present', async () => {
+    // A stray session cookie must not let /mcp throttling key off — and be bypassed via — a
+    // different, unrelated account.
+    await expect(
+      guard.publicTracker({
+        session: { user: { id: 'user-1' } },
+        mcpSession: { userId: 'user-2' },
+      }),
+    ).resolves.toBe('user-2')
+  })
+
+  it('falls back to the request ip when neither session is present', async () => {
+    await expect(guard.publicTracker({ ip: '1.2.3.4' })).resolves.toBe('1.2.3.4')
+  })
+
+  it('falls back to "anonymous" when nothing identifies the caller', async () => {
+    await expect(guard.publicTracker({})).resolves.toBe('anonymous')
   })
 })

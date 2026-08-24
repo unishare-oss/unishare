@@ -36,6 +36,7 @@ import { RedisThrottlerStorageService } from './common/redis-throttler-storage.s
 import { PrometheusModule } from '@willsoto/nestjs-prometheus'
 import { MetricsController } from './metrics/metrics.controller'
 import { MetricsModule } from './metrics/metrics.module'
+import { McpModule } from './modules/mcp/mcp.module'
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { MetricsModule } from './metrics/metrics.module'
     FeedbackModule,
     QuizzesModule,
     UniversitiesModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
