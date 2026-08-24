@@ -268,7 +268,12 @@ export class McpRepository {
         `File "${file.fileName}" must provide key, base64Data, or textData`,
       )
     }
-    const uploaded = await this.storageService.uploadBuffer(folder, buffer, file.mimeType)
+    const uploaded = await this.storageService.uploadBuffer(
+      folder,
+      buffer,
+      file.mimeType,
+      'document',
+    )
     return { key: uploaded.key, size: buffer.length, publicUrl: uploaded.publicUrl }
   }
 

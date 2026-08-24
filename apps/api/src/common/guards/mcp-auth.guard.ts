@@ -13,9 +13,10 @@ export interface RequestWithMcpSession extends Request {
  * Fetches the MCP OAuth session and attaches it to the request.
  *
  * McpController uses @OptionalAuth() and manages its own auth — Better Auth's MCP plugin is
- * a separate OAuth token flow from the cookie session every other route relies on, so
- * `req.session` is never populated here. Runs before UserThrottlerGuard so it can key rate
- * limits by user instead of falling back to IP.
+ * a separate OAuth token flow from the cookie session every other route relies on. A request
+ * can still carry a valid session cookie alongside its bearer token, so `req.session` is not
+ * guaranteed to be empty here; UserThrottlerGuard, which runs after this guard, must prefer
+ * `req.mcpSession` over `req.session` for that reason.
  */
 @Injectable()
 export class McpAuthGuard implements CanActivate {

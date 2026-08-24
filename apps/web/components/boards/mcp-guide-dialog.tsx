@@ -95,6 +95,7 @@ export function McpGuideDialog({ open, onOpenChange }: McpGuideDialogProps) {
                 onClick={handleCopyEndpoint}
                 className="text-text-muted hover:text-foreground ml-2 shrink-0 transition-colors p-1 rounded-[4px] hover:bg-card border border-transparent hover:border-border"
                 title="Copy Endpoint"
+                aria-label="Copy Endpoint"
               >
                 {copiedEndpoint ? (
                   <Check className="size-3.5 text-success" />

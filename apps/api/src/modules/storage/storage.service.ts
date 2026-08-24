@@ -180,8 +180,15 @@ export class StorageService implements OnModuleInit {
     folder: string,
     buffer: Buffer,
     mimeType: string,
+    uploadType: UploadType = 'document',
   ): Promise<{ key: string; publicUrl: string }> {
     this.assertSafeKey(folder)
+    const typeConfig = FILE_TYPE_CONFIG[uploadType]
+    if (!typeConfig.allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed: ${typeConfig.allowedMimeTypes.join(', ')}`,
+      )
+    }
     const key = `${folder}/${this.generateFileName(mimeType)}`
     const command = new PutObjectCommand({
       Bucket: this.bucket,

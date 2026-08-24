@@ -12,9 +12,13 @@ export const THROTTLE_BUCKET = 'throttle:bucket'
 @Injectable()
 export class UserThrottlerGuard extends ThrottlerGuard {
   protected async getTracker(req: Record<string, any>): Promise<string> {
+    // mcpSession first: it is the identity the request was actually authenticated as on
+    // /mcp routes. A cookie session can be present alongside a bearer token (e.g. a
+    // browser-based MCP client sending credentials), and keying off that instead would
+    // throttle the wrong account and let per-user MCP limits be bypassed.
     return (
-      (req.session?.user?.id as string | undefined) ??
       (req.mcpSession?.userId as string | undefined) ??
+      (req.session?.user?.id as string | undefined) ??
       req.ip ??
       'anonymous'
     )

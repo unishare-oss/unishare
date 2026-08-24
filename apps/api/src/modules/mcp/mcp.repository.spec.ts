@@ -483,6 +483,7 @@ describe('McpRepository', () => {
         'posts/user-1',
         expect.any(Buffer),
         'image/png',
+        'document',
       )
       expect(filesService.confirmUpload).toHaveBeenCalledWith(
         'post-1',

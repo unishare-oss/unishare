@@ -73,6 +73,10 @@ interface CollabPresenceContextValue {
   emitCursorMove: (e: React.PointerEvent<HTMLElement>) => void
 }
 
+function isNumericPoint(point: unknown): boolean {
+  return Array.isArray(point) && point.length === 2 && point.every((n) => typeof n === 'number')
+}
+
 function isRenderableElement(element: unknown): element is ExcalidrawElement {
   if (!element || typeof element !== 'object') return false
   const candidate = element as Record<string, unknown>
@@ -88,9 +92,11 @@ function isRenderableElement(element: unknown): element is ExcalidrawElement {
   ) {
     return false
   }
-  return (
-    (candidate.type !== 'arrow' && candidate.type !== 'line') || Array.isArray(candidate.points)
-  )
+  if (candidate.type === 'text' && typeof candidate.text !== 'string') return false
+  if (candidate.type === 'arrow' || candidate.type === 'line') {
+    return Array.isArray(candidate.points) && candidate.points.every(isNumericPoint)
+  }
+  return true
 }
 
 function renderableElements(elements: unknown[]): ExcalidrawElement[] {

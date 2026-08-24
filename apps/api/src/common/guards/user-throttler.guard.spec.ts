@@ -132,13 +132,15 @@ describe('UserThrottlerGuard getTracker', () => {
     ).resolves.toBe('user-2')
   })
 
-  it('prefers the cookie session over the mcp session when both are somehow present', async () => {
+  it('prefers the mcp session over a cookie session when both are somehow present', async () => {
+    // A stray session cookie must not let /mcp throttling key off — and be bypassed via — a
+    // different, unrelated account.
     await expect(
       guard.publicTracker({
         session: { user: { id: 'user-1' } },
         mcpSession: { userId: 'user-2' },
       }),
-    ).resolves.toBe('user-1')
+    ).resolves.toBe('user-2')
   })
 
   it('falls back to the request ip when neither session is present', async () => {

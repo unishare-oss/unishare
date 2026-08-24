@@ -57,6 +57,7 @@ export function FilePathBox({ path }: { path: string }) {
         onClick={handleCopy}
         className="text-text-muted hover:text-foreground ml-2 shrink-0 transition-colors p-1 rounded-[4px] hover:bg-card border border-transparent hover:border-border"
         title="Copy path"
+        aria-label="Copy path"
       >
         {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
       </button>
