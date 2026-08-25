@@ -149,7 +149,7 @@ export function SearchSelect({
           spellCheck={false}
           autoComplete="off"
           disabled={disabled}
-          className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
           placeholder={disabled ? disabledPlaceholder : open ? '' : placeholder}
           value={open ? search : (selected?.label ?? '')}
           onChange={(e) => {
