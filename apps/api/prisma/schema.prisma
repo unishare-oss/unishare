@@ -81,13 +81,14 @@ model University {
 }
 
 model Course {
-  id             String          @id @default(cuid())
+  id             String                @id @default(cuid())
   code           String
   name           String
   departmentId   String
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime              @default(now())
   yearLevel      Int?
-  department     Department      @relation(fields: [departmentId], references: [id])
+  department     Department            @relation(fields: [departmentId], references: [id])
+  moduleOutlines CourseModuleOutline[]
   posts          Post[]
   postRequests   PostRequest[]
   quizzes        Quiz[]
@@ -96,6 +97,19 @@ model Course {
   @@unique([code, departmentId])
   @@index([departmentId])
   @@map("course")
+}
+
+model CourseModuleOutline {
+  id           String   @id @default(cuid())
+  courseId     String
+  moduleNumber Int
+  topics       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, moduleNumber])
+  @@map("course_module_outline")
 }
 
 model Post {
@@ -204,10 +218,6 @@ model PostChunk {
   file       File                        @relation(fields: [fileId], references: [id], onDelete: Cascade)
   post       Post                        @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@unique([fileId, chunkIndex])
-  @@index([postId])
-  @@map("post_chunk")
-
   // `post_chunk_embedding_idx` — the HNSW index on `embedding` — exists in the database but
   // CANNOT be represented here: Prisma models neither the `vector` type nor `USING hnsw`. It is
   // created in raw SQL by 20260729000000_add_post_chunk_vectors.
@@ -219,6 +229,10 @@ model PostChunk {
   // sequential scans and quietly get slower as the corpus grows.
   //
   // migrations.spec.ts fails the build if such a migration is ever committed.
+
+  @@unique([fileId, chunkIndex])
+  @@index([postId])
+  @@map("post_chunk")
 }
 
 model Comment {
@@ -635,6 +649,7 @@ model Quiz {
   id              String         @id @default(cuid())
   courseId        String
   studyMaterialId String?
+  moduleNumber    Int?
   title           String
   description     String?
   isPublished     Boolean        @default(false)
