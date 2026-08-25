@@ -219,8 +219,8 @@ export default function CalendarPage() {
                       className="flex items-start gap-3 p-3 border border-border rounded-[6px] group"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-[11px] text-amber font-medium">
-                          {exam.course.code}
+                        <p className="font-mono text-[11px] text-amber font-medium truncate">
+                          {exam.course.code} — {exam.course.name}
                         </p>
                         <p className="text-sm text-foreground font-medium truncate">{exam.title}</p>
                         <p className="text-xs text-text-muted mt-1">
