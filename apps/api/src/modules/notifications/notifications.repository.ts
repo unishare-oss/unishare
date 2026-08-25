@@ -13,6 +13,7 @@ export class NotificationsRepository {
     postId?: string
     requestId?: string
     chatRoomId?: string
+    examId?: string
   }) {
     return this.prisma.notification.create({ data })
   }
@@ -30,6 +31,7 @@ export class NotificationsRepository {
         postId: true,
         requestId: true,
         chatRoomId: true,
+        examId: true,
         createdAt: true,
       },
     })

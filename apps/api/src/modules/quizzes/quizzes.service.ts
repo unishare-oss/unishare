@@ -7,8 +7,15 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
+import { SUPPORTED_MIME_TYPES } from '@/modules/ai/extraction/document-extractor.service'
+import { CoursesService } from '@/modules/courses/courses.service'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { QuizzesRepository } from './quizzes.repository'
+
+/** Keeps a thin outline entry from padding into a bloated quiz or a token-wasting one-question quiz. */
+const MIN_MODULE_QUESTIONS = 5
+const MAX_MODULE_QUESTIONS = 30
+const QUESTIONS_PER_TOPIC = 3
 
 interface QuizQuestion {
   content: string
@@ -18,12 +25,6 @@ interface QuizQuestion {
   difficulty: 'easy' | 'medium' | 'hard'
 }
 
-const SUPPORTED_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
-
 @Injectable()
 export class QuizzesService {
   private readonly logger = new Logger(QuizzesService.name)
@@ -31,6 +32,7 @@ export class QuizzesService {
   constructor(
     private readonly quizzesRepository: QuizzesRepository,
     private readonly aiSummary: AiSummaryService,
+    private readonly coursesService: CoursesService,
   ) {}
 
   async listQuizzes(params: {
@@ -176,6 +178,69 @@ export class QuizzesService {
     )
 
     return { quizId: quiz.id, questions }
+  }
+
+  /**
+   * One quiz per module that has an outline entry — modules with no entry are simply not in
+   * the outline, so there is nothing to "skip"; the outline itself IS the set of modules to
+   * generate for. A failure generating one module's quiz doesn't abort the rest of the batch.
+   */
+  async generateQuizzesFromOutline(courseId: string, generatedBy: string) {
+    const course = await this.coursesService.findOne(courseId)
+    const outline = await this.coursesService.getOutline(courseId)
+
+    if (outline.length === 0) {
+      throw new BadRequestException('This course has no outline yet')
+    }
+
+    const created: { moduleNumber: number; quizId: string; questionsCount: number }[] = []
+    const failed: { moduleNumber: number; error: string }[] = []
+
+    for (const module of outline) {
+      try {
+        const questionCount = Math.min(
+          MAX_MODULE_QUESTIONS,
+          Math.max(MIN_MODULE_QUESTIONS, module.topics.length * QUESTIONS_PER_TOPIC),
+        )
+        const text = `Course: ${course.code} — ${course.name}\nModule ${module.moduleNumber} topics:\n${module.topics.map((t) => `- ${t}`).join('\n')}`
+
+        const questions = await this.aiSummary.generateQuizQuestions(text, questionCount)
+
+        const quiz = await this.quizzesRepository.createQuiz({
+          courseId,
+          moduleNumber: module.moduleNumber,
+          title: `${course.code} — Module ${module.moduleNumber} Quiz (${questions.length} Q)`,
+          description: `Auto-generated from the course outline for Module ${module.moduleNumber}`,
+          isPublished: true,
+          createdBy: generatedBy,
+          questionsCount: questions.length,
+        })
+
+        await this.quizzesRepository.createQuestions(
+          questions.map((q) => ({
+            quizId: quiz.id,
+            content: q.content,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            difficulty: q.difficulty,
+          })),
+        )
+
+        created.push({
+          moduleNumber: module.moduleNumber,
+          quizId: quiz.id,
+          questionsCount: questions.length,
+        })
+      } catch (err) {
+        this.logger.error(
+          `Bulk quiz generation failed for module ${module.moduleNumber}: ${(err as Error).message}`,
+        )
+        failed.push({ moduleNumber: module.moduleNumber, error: (err as Error).message })
+      }
+    }
+
+    return { created, failed }
   }
 
   async getQuiz(quizId: string, publishedOnly?: boolean) {

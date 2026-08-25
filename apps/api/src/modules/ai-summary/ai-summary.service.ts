@@ -175,6 +175,12 @@ IMPORTANT RULES:
 - Options should be plausible and educational
 - Include brief explanations for why the answer is correct
 - Questions should cover different difficulty levels (easy, medium, hard)
+- If the material below describes a non-academic activity (e.g. a presentation, exam, or
+  deadline) rather than teachable subject matter, generate general questions about the course's
+  overall subject instead of the activity itself
+- Never use a literal double-quote character inside a question, option, or explanation string —
+  if you need to quote a term, symbol, or short expression, use single quotes ('...') instead, so
+  the JSON stays valid
 - Output ONLY valid JSON, nothing else
 
 Study Material:
@@ -192,6 +198,42 @@ Output format:
 ]
 
 Generate the questions now:`
+}
+
+function buildCourseOutlineExtractionPrompt(): string {
+  return `You are helping structure a university course outline (syllabus) into per-module topics.
+
+Read the course outline below and split it into modules. A module is a chunk of consecutive
+weeks/lectures bounded by an exam, midterm, or final — universities typically run 2-4 such
+modules per semester (e.g. everything up to Exam 1 is module 1, Exam 1 to Exam 2 is module 2,
+and so on to the final). If the source already labels its own sections "Module", "Unit", or
+"Chapter", use those boundaries instead of inferring from exams. Do NOT create one module per
+week/lecture unless the source has no exam markers at all to group by.
+
+Number modules sequentially starting at 1 in the order they appear.
+
+IMPORTANT RULES:
+- Each module must have a moduleNumber (integer, starting at 1) and a list of concise topic
+  strings covering what that module teaches
+- Skip front-matter that is not module content (grading policy, course logistics, textbook list, etc.)
+- Skip calendar/administrative rows that are not taught subject matter — exam days, project
+  presentation days, review sessions, holidays. These still belong to whichever module they fall
+  within by date, they just do not get their own topic line or their own module.
+- A module must end up with at least one real topic. If every row in a date range is
+  administrative (e.g. two straight weeks of project presentations with no new lecture content),
+  fold that date range into the preceding module instead of emitting an empty module.
+- Output ONLY valid JSON, nothing else
+
+Course Outline:
+{TEXT}
+
+Output format:
+[
+  { "moduleNumber": 1, "topics": ["Topic A", "Topic B", "Topic C"] },
+  { "moduleNumber": 2, "topics": ["Topic D", "Topic E"] }
+]
+
+Extract the module outline now:`
 }
 
 /**
@@ -981,46 +1023,112 @@ export class AiSummaryService {
       throw new Error('Question count must be between 1 and 100')
     }
 
+    // The model occasionally mangles JSON escaping around a quoted term or symbol in a question
+    // (observed: a logic question quoting "P ∧ ¬P" came back with an unbalanced backslash).
+    // Content-shaped failures like this are usually NOT reproducible from a bad prompt — a fresh
+    // generation attempt often just doesn't repeat the same slip — so this retries the whole
+    // generation rather than trying to patch the broken JSON text.
+    const MAX_ATTEMPTS = 2
+    let lastError: Error = new Error('Failed to generate questions')
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await this.llm.chat(
+          [
+            {
+              role: 'system',
+              content: buildQuestionGenerationPrompt(questionCount).replace(
+                '{TEXT}',
+                text.slice(0, 4000),
+              ),
+            },
+            { role: 'user', content: '' },
+          ],
+          { maxTokens: questionCount * 300, temperature: 0 },
+        )
+
+        if (!response) {
+          throw new Error('Failed to generate questions')
+        }
+
+        // Parse JSON from response
+        const jsonMatch = response.match(/\[[\s\S]*\]/)
+        if (!jsonMatch) {
+          throw new Error('Invalid response format from AI')
+        }
+
+        const questions = JSON.parse(jsonMatch[0])
+
+        // Validate questions
+        questions.forEach((q: any, idx: number) => {
+          if (!q.content || !q.options || q.options.length !== 4) {
+            throw new Error(`Question ${idx + 1} has invalid format`)
+          }
+          if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) {
+            throw new Error(`Question ${idx + 1} has invalid correct answer`)
+          }
+        })
+
+        return questions
+      } catch (err) {
+        lastError = err as Error
+        this.logger.warn(
+          `Question generation attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError.message}`,
+        )
+      }
+    }
+
+    this.logger.error(`Question generation failed: ${lastError.message}`)
+    throw lastError
+  }
+
+  /**
+   * A syllabus can run to many pages covering months of content, unlike generateQuizQuestions'
+   * single-document-summary use case — 4000 chars would cut off before later modules ever
+   * reached the prompt, so this gets a much larger budget.
+   */
+  async extractCourseOutline(
+    text: string,
+  ): Promise<Array<{ moduleNumber: number; topics: string[] }>> {
+    if (!this.llm.enabled) {
+      throw new ServiceUnavailableException('AI service not configured')
+    }
+
     try {
       const response = await this.llm.chat(
         [
           {
             role: 'system',
-            content: buildQuestionGenerationPrompt(questionCount).replace(
-              '{TEXT}',
-              text.slice(0, 4000),
-            ),
+            content: buildCourseOutlineExtractionPrompt().replace('{TEXT}', text.slice(0, 12000)),
           },
           { role: 'user', content: '' },
         ],
-        { maxTokens: questionCount * 300, temperature: 0 },
+        { maxTokens: 4000, temperature: 0 },
       )
 
       if (!response) {
-        throw new Error('Failed to generate questions')
+        throw new Error('Failed to extract course outline')
       }
 
-      // Parse JSON from response
       const jsonMatch = response.match(/\[[\s\S]*\]/)
       if (!jsonMatch) {
         throw new Error('Invalid response format from AI')
       }
 
-      const questions = JSON.parse(jsonMatch[0])
+      const modules = JSON.parse(jsonMatch[0])
 
-      // Validate questions
-      questions.forEach((q: any, idx: number) => {
-        if (!q.content || !q.options || q.options.length !== 4) {
-          throw new Error(`Question ${idx + 1} has invalid format`)
+      modules.forEach((m: any, idx: number) => {
+        if (typeof m.moduleNumber !== 'number' || m.moduleNumber < 1) {
+          throw new Error(`Module ${idx + 1} has an invalid moduleNumber`)
         }
-        if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) {
-          throw new Error(`Question ${idx + 1} has invalid correct answer`)
+        if (!Array.isArray(m.topics) || m.topics.some((t: unknown) => typeof t !== 'string')) {
+          throw new Error(`Module ${idx + 1} has invalid topics`)
         }
       })
 
-      return questions
+      return modules
     } catch (err) {
-      this.logger.error(`Question generation failed: ${(err as Error).message}`)
+      this.logger.error(`Course outline extraction failed: ${(err as Error).message}`)
       throw err
     }
   }

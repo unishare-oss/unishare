@@ -7,7 +7,7 @@ export class GroqProvider implements LlmProvider {
   async chat(messages: LlmMessage[], options: LlmChatOptions): Promise<string | null> {
     const { default: Groq } = await import('groq-sdk')
     const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
+    const model = this.config.get('AI_SUMMARY_MODEL') || 'openai/gpt-oss-120b'
 
     const response = await client.chat.completions.create({
       model,
@@ -30,7 +30,7 @@ export class GroqProvider implements LlmProvider {
   async *chatStream(messages: LlmMessage[], options: LlmChatOptions): AsyncIterable<string> {
     const { default: Groq } = await import('groq-sdk')
     const client = new Groq({ apiKey: this.config.getOrThrow('AI_SUMMARY_API_KEY') })
-    const model = this.config.get('AI_SUMMARY_MODEL') || 'llama-3.3-70b-versatile'
+    const model = this.config.get('AI_SUMMARY_MODEL') || 'openai/gpt-oss-120b'
 
     const stream = await client.chat.completions.create({
       model,

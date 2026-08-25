@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Post, UploadedFile, UseInterceptors } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { memoryStorage } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
@@ -31,6 +39,9 @@ export class StorageController {
   async getPresignedUploadUrl(@Body() dto: PresignedUploadDto, @Session() session: UserSession) {
     if (dto.purpose === 'board-attachment') {
       await this.collabService.assertCanEdit(dto.roomSlug!, session)
+    }
+    if (dto.purpose === 'course-outline' && !['ADMIN', 'MODERATOR'].includes(session.user.role)) {
+      throw new ForbiddenException('Only admins and moderators can upload a course outline')
     }
     const folder = getFolderForPurpose(dto.purpose, {
       userId: session.user.id,

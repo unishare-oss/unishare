@@ -30,12 +30,14 @@ import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
 import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
+import { ExamsModule } from './modules/exams/exams.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
 import { PrometheusModule } from '@willsoto/nestjs-prometheus'
 import { MetricsController } from './metrics/metrics.controller'
 import { MetricsModule } from './metrics/metrics.module'
+import { McpModule } from './modules/mcp/mcp.module'
 
 @Module({
   imports: [
@@ -85,7 +87,9 @@ import { MetricsModule } from './metrics/metrics.module'
     ReadingListsModule,
     FeedbackModule,
     QuizzesModule,
+    ExamsModule,
     UniversitiesModule,
+    McpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
