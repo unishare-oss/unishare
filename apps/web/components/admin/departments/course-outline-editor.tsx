@@ -27,6 +27,10 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
   // Tracks which fetched outline is already reflected in `modules`, so a fresh load (or a
   // different course) resets the editable copy without doing it in a useEffect.
   const [loadedOutline, setLoadedOutline] = useState<unknown>(undefined)
+  const [loadedCourseId, setLoadedCourseId] = useState<string | undefined>(undefined)
+  // True while `modules` holds an unsaved AI-extracted preview — suppresses the server-sync
+  // below so a background refetch can't silently overwrite it before the admin saves.
+  const [previewing, setPreviewing] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -34,7 +38,12 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
     query: { select: (r) => r.data },
   })
 
-  if (outline && outline !== loadedOutline) {
+  if (courseId !== loadedCourseId) {
+    setModules(outline ? toModuleState(outline) : [])
+    setLoadedOutline(outline)
+    setLoadedCourseId(courseId)
+    setPreviewing(false)
+  } else if (!previewing && outline && outline !== loadedOutline) {
     setModules(toModuleState(outline))
     setLoadedOutline(outline)
   }
@@ -43,6 +52,7 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
     mutation: {
       onSuccess: (res) => {
         setModules(toModuleState(res.data))
+        setPreviewing(true)
         toast.success('Outline extracted — review and save below')
       },
       onError: (err: unknown) => {
@@ -54,7 +64,10 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
 
   const { mutate: saveOutline, isPending: saving } = useCoursesControllerReplaceOutline({
     mutation: {
-      onSuccess: () => toast.success('Outline saved'),
+      onSuccess: () => {
+        setPreviewing(false)
+        toast.success('Outline saved')
+      },
       onError: (err: unknown) => {
         toast.error(err instanceof Error ? err.message : 'Failed to save outline')
       },
