@@ -178,6 +178,9 @@ IMPORTANT RULES:
 - If the material below describes a non-academic activity (e.g. a presentation, exam, or
   deadline) rather than teachable subject matter, generate general questions about the course's
   overall subject instead of the activity itself
+- Never use a literal double-quote character inside a question, option, or explanation string —
+  if you need to quote a term, symbol, or short expression, use single quotes ('...') instead, so
+  the JSON stays valid
 - Output ONLY valid JSON, nothing else
 
 Study Material:
@@ -1020,48 +1023,63 @@ export class AiSummaryService {
       throw new Error('Question count must be between 1 and 100')
     }
 
-    try {
-      const response = await this.llm.chat(
-        [
-          {
-            role: 'system',
-            content: buildQuestionGenerationPrompt(questionCount).replace(
-              '{TEXT}',
-              text.slice(0, 4000),
-            ),
-          },
-          { role: 'user', content: '' },
-        ],
-        { maxTokens: questionCount * 300, temperature: 0 },
-      )
+    // The model occasionally mangles JSON escaping around a quoted term or symbol in a question
+    // (observed: a logic question quoting "P ∧ ¬P" came back with an unbalanced backslash).
+    // Content-shaped failures like this are usually NOT reproducible from a bad prompt — a fresh
+    // generation attempt often just doesn't repeat the same slip — so this retries the whole
+    // generation rather than trying to patch the broken JSON text.
+    const MAX_ATTEMPTS = 2
+    let lastError: Error = new Error('Failed to generate questions')
 
-      if (!response) {
-        throw new Error('Failed to generate questions')
-      }
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await this.llm.chat(
+          [
+            {
+              role: 'system',
+              content: buildQuestionGenerationPrompt(questionCount).replace(
+                '{TEXT}',
+                text.slice(0, 4000),
+              ),
+            },
+            { role: 'user', content: '' },
+          ],
+          { maxTokens: questionCount * 300, temperature: 0 },
+        )
 
-      // Parse JSON from response
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) {
-        throw new Error('Invalid response format from AI')
-      }
-
-      const questions = JSON.parse(jsonMatch[0])
-
-      // Validate questions
-      questions.forEach((q: any, idx: number) => {
-        if (!q.content || !q.options || q.options.length !== 4) {
-          throw new Error(`Question ${idx + 1} has invalid format`)
+        if (!response) {
+          throw new Error('Failed to generate questions')
         }
-        if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) {
-          throw new Error(`Question ${idx + 1} has invalid correct answer`)
-        }
-      })
 
-      return questions
-    } catch (err) {
-      this.logger.error(`Question generation failed: ${(err as Error).message}`)
-      throw err
+        // Parse JSON from response
+        const jsonMatch = response.match(/\[[\s\S]*\]/)
+        if (!jsonMatch) {
+          throw new Error('Invalid response format from AI')
+        }
+
+        const questions = JSON.parse(jsonMatch[0])
+
+        // Validate questions
+        questions.forEach((q: any, idx: number) => {
+          if (!q.content || !q.options || q.options.length !== 4) {
+            throw new Error(`Question ${idx + 1} has invalid format`)
+          }
+          if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) {
+            throw new Error(`Question ${idx + 1} has invalid correct answer`)
+          }
+        })
+
+        return questions
+      } catch (err) {
+        lastError = err as Error
+        this.logger.warn(
+          `Question generation attempt ${attempt}/${MAX_ATTEMPTS} failed: ${lastError.message}`,
+        )
+      }
     }
+
+    this.logger.error(`Question generation failed: ${lastError.message}`)
+    throw lastError
   }
 
   /**
