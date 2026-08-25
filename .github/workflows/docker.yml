@@ -76,6 +76,7 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          base: ${{ github.event_name == 'push' && github.event.before || github.event.repository.default_branch }}
           filters: |
             api:
               - 'apps/api/**'
