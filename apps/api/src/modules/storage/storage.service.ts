@@ -176,6 +176,16 @@ export class StorageService implements OnModuleInit {
     return getSignedUrl(this.signingClient, command, { expiresIn })
   }
 
+  /** Fetches an object's bytes directly (e.g. to run text extraction server-side). */
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    this.assertSafeKey(key)
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
+    const response = await this.s3Client.send(command)
+    const bytes = await response.Body?.transformToByteArray()
+    if (!bytes) throw new InternalServerErrorException(`Empty object body for key ${key}`)
+    return Buffer.from(bytes)
+  }
+
   async uploadBuffer(
     folder: string,
     buffer: Buffer,
