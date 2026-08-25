@@ -1,15 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { startOfMonth, endOfMonth, format, isSameDay } from 'date-fns'
-import { Plus, Pencil, Trash2, CalendarDays, MapPin } from 'lucide-react'
+import { startOfMonth, endOfMonth, format, isSameDay, differenceInCalendarDays } from 'date-fns'
+import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { SearchSelect } from '@/components/ui/search-select'
-import { Calendar } from '@/components/ui/calendar'
-import { ExamDayButton } from '@/components/calendar/exam-day-button'
+import { ClassicExamCalendar } from '@/components/calendar/classic-exam-calendar'
+import { ArcadeExamCalendar } from '@/components/calendar/arcade-exam-calendar'
+import { DeskExamCalendar } from '@/components/calendar/desk-exam-calendar'
 import {
   AddExamModal,
   EMPTY_EXAM_FORM,
@@ -17,6 +18,7 @@ import {
   type ExamFormState,
 } from '@/components/calendar/add-exam-modal'
 import { useAuth } from '@/contexts/auth-context'
+import { useFeedStyleStore } from '@/lib/store'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import {
   useExamsControllerFindAll,
@@ -42,9 +44,27 @@ function toFormState(exam: ExamEntity): ExamFormState {
   }
 }
 
+/** "3 exams this month · next in 5 days" — gives the page a sense of what's coming, not just a static grid. */
+function statusLine(exams: ExamEntity[]): string {
+  if (exams.length === 0) return 'No exams this month'
+
+  const now = new Date()
+  const next = exams
+    .filter((e) => new Date(e.startsAt) >= now)
+    .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt))[0]
+
+  const count = `${exams.length} exam${exams.length === 1 ? '' : 's'} this month`
+  if (!next) return count
+
+  const days = differenceInCalendarDays(new Date(next.startsAt), now)
+  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`
+  return `${count} · next ${when}`
+}
+
 export default function CalendarPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const feedStyle = useFeedStyleStore((s) => s.feedStyle)
   const canManage = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
 
   const [month, setMonth] = useState(new Date())
@@ -74,7 +94,15 @@ export default function CalendarPage() {
     { query: { select: (r) => r.data } },
   )
 
-  const examDayDates = useMemo(() => exams.map((e) => new Date(e.startsAt)), [exams])
+  const examsByDay = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const exam of exams) {
+      const key = format(new Date(exam.startsAt), 'yyyy-MM-dd')
+      map.set(key, [...(map.get(key) ?? []), exam.course.code])
+    }
+    return map
+  }, [exams])
+
   const selectedDayExams = useMemo(
     () => (selectedDay ? exams.filter((e) => isSameDay(new Date(e.startsAt), selectedDay)) : []),
     [exams, selectedDay],
@@ -177,9 +205,10 @@ export default function CalendarPage() {
       />
 
       <div className="flex-1 bg-card">
-        <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-56">
+        <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-mono text-[13px] text-text-muted">{statusLine(exams)}</p>
+            <div className="w-48 shrink-0">
               <SearchSelect
                 options={deptOptions}
                 value={departmentId}
@@ -192,82 +221,27 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6">
-            <Calendar
-              mode="single"
-              captionLayout="dropdown"
-              month={month}
-              onMonthChange={setMonth}
-              selected={selectedDay}
-              onSelect={setSelectedDay}
-              modifiers={{ hasExam: examDayDates }}
-              components={{ DayButton: ExamDayButton }}
-              className="border border-border rounded-[6px]"
-            />
-
-            <div className="flex-1 border border-border rounded-[6px] p-4 min-w-0">
-              <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
-                {selectedDay ? format(selectedDay, 'EEEE, MMMM d') : 'Select a day'}
-              </h3>
-
-              {selectedDayExams.length === 0 ? (
-                <div className="py-8 text-center">
-                  <CalendarDays className="size-8 text-text-muted mx-auto mb-2" strokeWidth={1} />
-                  <p className="text-sm text-text-muted">No exams on this day.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {selectedDayExams.map((exam) => (
-                    <div
-                      key={exam.id}
-                      className="flex items-start gap-3 p-3 border border-border rounded-[6px] group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono text-[11px] text-amber font-medium truncate">
-                          {exam.course.code} — {exam.course.name}
-                        </p>
-                        <p className="text-sm text-foreground font-medium truncate">{exam.title}</p>
-                        <p className="text-xs text-text-muted mt-1">
-                          {format(new Date(exam.startsAt), 'p')}
-                          {exam.endsAt && ` – ${format(new Date(exam.endsAt), 'p')}`}
-                        </p>
-                        {exam.examRoom && (
-                          <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
-                            <MapPin className="size-3" strokeWidth={1.5} />
-                            {exam.examRoom}
-                          </p>
-                        )}
-                        {exam.notes && (
-                          <p className="text-xs text-text-secondary mt-1.5">{exam.notes}</p>
-                        )}
-                      </div>
-                      {canManage && (
-                        <div className="invisible group-hover:visible flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label="Edit exam"
-                            onClick={() => openEditModal(exam)}
-                          >
-                            <Pencil className="size-3.5" strokeWidth={1.5} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label="Delete exam"
-                            onClick={() => removeExam({ id: exam.id })}
-                            className="hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="size-3.5" strokeWidth={1.5} />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          {(() => {
+            const ExamCalendarView =
+              feedStyle === 'arcade'
+                ? ArcadeExamCalendar
+                : feedStyle === 'desk'
+                  ? DeskExamCalendar
+                  : ClassicExamCalendar
+            return (
+              <ExamCalendarView
+                month={month}
+                onMonthChange={setMonth}
+                selectedDay={selectedDay}
+                onSelectDay={setSelectedDay}
+                examsByDay={examsByDay}
+                selectedDayExams={selectedDayExams}
+                canManage={canManage}
+                onEdit={openEditModal}
+                onDelete={(examId) => removeExam({ id: examId })}
+              />
+            )
+          })()}
         </div>
       </div>
 
