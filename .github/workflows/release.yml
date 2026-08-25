@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - release
+      - main
 
 jobs:
   release:
@@ -46,9 +46,5 @@ jobs:
         uses: cycjimmy/semantic-release-action@v6
         with:
           semantic_version: 25
-          branches: |
-            [
-              'release'
-            ]
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
