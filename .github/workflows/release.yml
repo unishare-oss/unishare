@@ -1,18 +1,21 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['Build & Push Docker Images']
+    types: [completed]
+    branches: [main]
 
 jobs:
   release:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
       pull-requests: write
       id-token: write
+      packages: write
 
     steps:
       - name: Generate GitHub App token
@@ -25,6 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
@@ -43,8 +47,28 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Release
+        id: semantic
         uses: cycjimmy/semantic-release-action@v6
         with:
           semantic_version: 25
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Tag images with the release version
+        if: steps.semantic.outputs.new_release_published == 'true'
+        env:
+          VERSION: ${{ steps.semantic.outputs.new_release_version }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          for IMAGE in unishare-api unishare-web; do
+            SRC="ghcr.io/${OWNER}/${IMAGE}:sha-${SHA}"
+            if docker buildx imagetools inspect "$SRC" >/dev/null 2>&1; then
+              docker buildx imagetools create "$SRC" --tag "ghcr.io/${OWNER}/${IMAGE}:v${VERSION}"
+              echo "tagged ${IMAGE} v${VERSION} -> ${SRC}"
+            else
+              echo "no image at ${SRC} (this release didn't touch ${IMAGE}), skipping"
+            fi
+          done
