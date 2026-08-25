@@ -175,6 +175,9 @@ IMPORTANT RULES:
 - Options should be plausible and educational
 - Include brief explanations for why the answer is correct
 - Questions should cover different difficulty levels (easy, medium, hard)
+- If the material below describes a non-academic activity (e.g. a presentation, exam, or
+  deadline) rather than teachable subject matter, generate general questions about the course's
+  overall subject instead of the activity itself
 - Output ONLY valid JSON, nothing else
 
 Study Material:
@@ -197,15 +200,25 @@ Generate the questions now:`
 function buildCourseOutlineExtractionPrompt(): string {
   return `You are helping structure a university course outline (syllabus) into per-module topics.
 
-Read the course outline below and split it into modules (these may be labeled "Module",
-"Week", "Unit", "Chapter", or similar in the source — infer sensible module boundaries even if
-the document doesn't use the word "module"). Number modules sequentially starting at 1 in the
-order they appear.
+Read the course outline below and split it into modules. A module is a chunk of consecutive
+weeks/lectures bounded by an exam, midterm, or final — universities typically run 2-4 such
+modules per semester (e.g. everything up to Exam 1 is module 1, Exam 1 to Exam 2 is module 2,
+and so on to the final). If the source already labels its own sections "Module", "Unit", or
+"Chapter", use those boundaries instead of inferring from exams. Do NOT create one module per
+week/lecture unless the source has no exam markers at all to group by.
+
+Number modules sequentially starting at 1 in the order they appear.
 
 IMPORTANT RULES:
 - Each module must have a moduleNumber (integer, starting at 1) and a list of concise topic
   strings covering what that module teaches
-- Skip front-matter that isn't module content (grading policy, course logistics, etc.)
+- Skip front-matter that is not module content (grading policy, course logistics, textbook list, etc.)
+- Skip calendar/administrative rows that are not taught subject matter — exam days, project
+  presentation days, review sessions, holidays. These still belong to whichever module they fall
+  within by date, they just do not get their own topic line or their own module.
+- A module must end up with at least one real topic. If every row in a date range is
+  administrative (e.g. two straight weeks of project presentations with no new lecture content),
+  fold that date range into the preceding module instead of emitting an empty module.
 - Output ONLY valid JSON, nothing else
 
 Course Outline:
