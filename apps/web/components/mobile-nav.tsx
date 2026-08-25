@@ -25,6 +25,7 @@ import {
   Users,
   Plus,
   Palette,
+  CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -56,6 +57,7 @@ const moreAuthItems = [
   { href: '/boards', label: 'Boards', icon: LayoutGrid },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/departments', label: 'Departments', icon: Building2 },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/quizzes', label: 'Quizzes', icon: Puzzle },

@@ -34,6 +34,7 @@ model User {
   chatMessages            ChatMessage[]
   chatParticipants        ChatRoomParticipant[]
   comments                Comment[]
+  examsCreated            Exam[]                   @relation("ExamsCreated")
   feedbacks               Feedback[]
   following               Follow[]                 @relation("Followers")
   followers               Follow[]                 @relation("Following")
@@ -88,6 +89,7 @@ model Course {
   createdAt      DateTime        @default(now())
   yearLevel      Int?
   department     Department      @relation(fields: [departmentId], references: [id])
+  exams          Exam[]
   posts          Post[]
   postRequests   PostRequest[]
   quizzes        Quiz[]
@@ -96,6 +98,27 @@ model Course {
   @@unique([code, departmentId])
   @@index([departmentId])
   @@map("course")
+}
+
+model Exam {
+  id             String         @id @default(cuid())
+  courseId       String
+  title          String
+  examRoom       String?
+  notes          String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  createdBy      String
+  reminderSentAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  course         Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdByUser  User           @relation("ExamsCreated", fields: [createdBy], references: [id])
+  notifications  Notification[]
+
+  @@index([courseId])
+  @@index([startsAt])
+  @@map("exam")
 }
 
 model Post {
@@ -204,10 +227,6 @@ model PostChunk {
   file       File                        @relation(fields: [fileId], references: [id], onDelete: Cascade)
   post       Post                        @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@unique([fileId, chunkIndex])
-  @@index([postId])
-  @@map("post_chunk")
-
   // `post_chunk_embedding_idx` — the HNSW index on `embedding` — exists in the database but
   // CANNOT be represented here: Prisma models neither the `vector` type nor `USING hnsw`. It is
   // created in raw SQL by 20260729000000_add_post_chunk_vectors.
@@ -219,6 +238,10 @@ model PostChunk {
   // sequential scans and quietly get slower as the corpus grows.
   //
   // migrations.spec.ts fails the build if such a migration is ever committed.
+
+  @@unique([fileId, chunkIndex])
+  @@index([postId])
+  @@map("post_chunk")
 }
 
 model Comment {
@@ -397,9 +420,11 @@ model Notification {
   createdAt  DateTime         @default(now())
   requestId  String?
   chatRoomId String?
+  examId     String?
   post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   request    PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   chatRoom   ChatRoom?        @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  exam       Exam?            @relation(fields: [examId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -733,6 +758,7 @@ enum NotificationType {
   REQUEST_FULFILLED
   NEW_POST_FROM_FOLLOWED
   CHAT_MESSAGE
+  EXAM_REMINDER
 }
 
 enum UserRole {

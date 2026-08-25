@@ -30,6 +30,7 @@ import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
 import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
+import { ExamsModule } from './modules/exams/exams.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
@@ -86,6 +87,7 @@ import { McpModule } from './modules/mcp/mcp.module'
     ReadingListsModule,
     FeedbackModule,
     QuizzesModule,
+    ExamsModule,
     UniversitiesModule,
     McpModule,
   ],

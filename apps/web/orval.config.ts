@@ -34,6 +34,9 @@ export default defineConfig({
           TagsController_autocomplete: {
             query: { useInfinite: false },
           },
+          ExamsController_findAll: {
+            query: { useInfinite: false },
+          },
         },
       },
     },
