@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useQuizGame } from '@/hooks/useQuizGame'
 import { QuizCard } from '@/components/quiz/QuizCard'
+import { QuizProgressPanel } from '@/components/quiz/QuizProgressPanel'
 import { QuizProgressNav } from '@/components/quiz/QuizProgressNav'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -116,6 +117,9 @@ export function QuizGame({ quiz }: { quiz: QuizEntity }) {
           </div>
         </Card>
 
+        {/* Question Progress */}
+        <QuizProgressPanel game={game} correctAnswers={correctAnswers} />
+
         {/* Main Quiz Content */}
         <Card className="p-8">
           <QuizCard
@@ -130,12 +134,7 @@ export function QuizGame({ quiz }: { quiz: QuizEntity }) {
         </Card>
 
         {/* Navigation & Controls */}
-        <QuizProgressNav
-          game={game}
-          correctAnswers={correctAnswers}
-          isSubmitting={isSubmitting}
-          onSubmit={handleSubmit}
-        />
+        <QuizProgressNav game={game} isSubmitting={isSubmitting} onSubmit={handleSubmit} />
       </div>
     </div>
   )
