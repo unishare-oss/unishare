@@ -129,9 +129,14 @@ describe('LlmService', () => {
     beforeEach(() => {
       configValues.AI_SUMMARY_PROVIDER = 'ollama'
       configValues.AI_SUMMARY_ENDPOINT = 'http://ollama.test:11434'
+      jest.useFakeTimers()
     })
 
-    /** Fails the provider call with an SDK-shaped error carrying an HTTP status. */
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    /** Fails every provider call with an SDK-shaped error carrying an HTTP status. */
     function providerFailsWith(status: number) {
       jest.spyOn(global, 'fetch' as never).mockImplementation((() => {
         const err = new Error(`provider said ${status}`) as Error & { status: number }
@@ -146,27 +151,68 @@ describe('LlmService', () => {
       providerFailsWith(status)
       service = await build()
 
-      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toBeInstanceOf(
-        ServiceUnavailableException,
-      )
+      const assertion = expect(
+        service.chat([{ role: 'user', content: 'hi' }]),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException)
+      await jest.runAllTimersAsync()
+      await assertion
     })
 
     it('leaves a genuine client error alone', async () => {
       // The mapping must be narrow. A 400 means the request really was malformed, and hiding it
       // behind "the AI service is busy" would send someone looking in the wrong place.
+      const fetchMock = jest.spyOn(global, 'fetch' as never)
       providerFailsWith(400)
       service = await build()
 
       await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.not.toBeInstanceOf(
         ServiceUnavailableException,
       )
+      // Not transient, so it must fail on the first attempt rather than burning retries.
+      expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 
     it('says the service is busy rather than leaking the provider message', async () => {
       providerFailsWith(429)
       service = await build()
 
-      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow(/busy/i)
+      const assertion = expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow(
+        /busy/i,
+      )
+      await jest.runAllTimersAsync()
+      await assertion
+    })
+
+    it('retries a transient failure and returns the result once the provider recovers', async () => {
+      const fetchMock = jest.spyOn(global, 'fetch')
+      fetchMock.mockRejectedValueOnce(
+        Object.assign(new Error('provider said 429'), { status: 429 }),
+      )
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: { content: 'recovered' } }),
+      } as Response)
+      service = await build()
+
+      const promise = service.chat([{ role: 'user', content: 'hi' }])
+      await jest.runAllTimersAsync()
+
+      await expect(promise).resolves.toBe('recovered')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('gives up after exhausting all attempts against a provider that never recovers', async () => {
+      const fetchMock = jest.spyOn(global, 'fetch' as never)
+      providerFailsWith(429)
+      service = await build()
+
+      const assertion = expect(
+        service.chat([{ role: 'user', content: 'hi' }]),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException)
+      await jest.runAllTimersAsync()
+      await assertion
+
+      expect(fetchMock).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -256,12 +302,70 @@ describe('LlmService', () => {
       })
 
       it('maps a rate-limited stream to ServiceUnavailableException', async () => {
+        jest.useFakeTimers()
         ollamaStreams([], 429)
         service = await build()
 
-        await expect(
+        const assertion = expect(
           drain(service.chatStream([{ role: 'user', content: 'hi' }])),
         ).rejects.toBeInstanceOf(ServiceUnavailableException)
+        await jest.runAllTimersAsync()
+        await assertion
+        jest.useRealTimers()
+      })
+
+      it('retries a stream that fails before yielding anything, then succeeds', async () => {
+        jest.useFakeTimers()
+        const fetchMock = jest.spyOn(global, 'fetch')
+        fetchMock.mockResolvedValueOnce({ ok: false, status: 429 } as Response)
+        ollamaStreams(['{"message":{"content":"recovered"}}\n'])
+        service = await build()
+
+        const promise = drain(service.chatStream([{ role: 'user', content: 'hi' }]))
+        await jest.runAllTimersAsync()
+
+        await expect(promise).resolves.toEqual(['recovered'])
+        expect(fetchMock).toHaveBeenCalledTimes(2)
+        jest.useRealTimers()
+      })
+
+      it('does not retry once a delta has already reached the caller', async () => {
+        // A retry here would replay content the caller already received. Once a chunk of the
+        // reply has gone out, a transient error must fail immediately instead of restarting.
+        const encoder = new TextEncoder()
+        let reads = 0
+        const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+          ok: true,
+          status: 200,
+          body: {
+            getReader: () => ({
+              read: async () => {
+                reads++
+                if (reads === 1) {
+                  return {
+                    done: false,
+                    value: encoder.encode('{"message":{"content":"partial"}}\n'),
+                  }
+                }
+                throw Object.assign(new Error('dropped mid-stream'), { status: 429 })
+              },
+              cancel: async () => undefined,
+            }),
+          },
+        } as unknown as Response)
+        service = await build()
+
+        const deltas: string[] = []
+        await expect(
+          (async () => {
+            for await (const delta of service.chatStream([{ role: 'user', content: 'hi' }])) {
+              deltas.push(delta)
+            }
+          })(),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException)
+
+        expect(deltas).toEqual(['partial'])
+        expect(fetchMock).toHaveBeenCalledTimes(1)
       })
     })
 
@@ -283,12 +387,16 @@ describe('LlmService', () => {
       })
 
       it('maps a transient failure the same way the streaming providers do', async () => {
+        jest.useFakeTimers()
         mockSendMessage.mockRejectedValue(Object.assign(new Error('rate limited'), { status: 429 }))
         service = await build()
 
-        await expect(
+        const assertion = expect(
           drain(service.chatStream([{ role: 'user', content: 'hi' }])),
         ).rejects.toBeInstanceOf(ServiceUnavailableException)
+        await jest.runAllTimersAsync()
+        await assertion
+        jest.useRealTimers()
       })
     })
 

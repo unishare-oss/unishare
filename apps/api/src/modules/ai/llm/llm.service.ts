@@ -10,6 +10,9 @@ export type LlmProviderName = 'groq' | 'gemini' | 'ollama'
 const DEFAULT_MAX_TOKENS = 600
 const DEFAULT_TEMPERATURE = 0
 
+const MAX_ATTEMPTS = 3
+const RETRY_BASE_DELAY_MS = 500
+
 /**
  * Provider statuses that mean "ask again later", not "your request was wrong".
  *
@@ -20,6 +23,10 @@ const DEFAULT_TEMPERATURE = 0
 function isTransientProviderError(err: unknown): boolean {
   const status = (err as { status?: number })?.status
   return status === 429 || status === 413 || (typeof status === 'number' && status >= 500)
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 @Injectable()
@@ -38,23 +45,35 @@ export class LlmService {
 
   async chat(messages: LlmMessage[], options: LlmChatOptions = {}): Promise<string | null> {
     if (!this.provider) return null
-    try {
-      return await this.provider.chat(messages, {
-        maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
-        temperature: options.temperature ?? DEFAULT_TEMPERATURE,
-      })
-    } catch (err) {
-      // A rate-limited provider used to escape as the raw SDK error, which the global filter
-      // turned into a 500 "Internal server error" and the UI rendered as "Something went wrong".
-      // It is neither a server fault nor a bad request — it is a budget that refills. Observed on
-      // dev: one large upload exhausted a Groq free-tier minute and every chat 500'd until it
-      // rolled over, with nothing telling the student to simply wait.
-      if (isTransientProviderError(err)) {
-        this.logger.warn(`AI provider is rate limited or unavailable: ${(err as Error).message}`)
-        throw new ServiceUnavailableException('The AI service is busy. Please try again shortly.')
-      }
-      throw err
+    const resolved = {
+      maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
+      temperature: options.temperature ?? DEFAULT_TEMPERATURE,
     }
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.provider.chat(messages, resolved)
+      } catch (err) {
+        if (!isTransientProviderError(err)) throw err
+
+        // A rate-limited provider used to escape as the raw SDK error, which the global filter
+        // turned into a 500 "Internal server error" and the UI rendered as "Something went wrong".
+        // It is neither a server fault nor a bad request — it is a budget that refills. Observed
+        // on dev: one large upload exhausted a Groq free-tier minute and every chat 500'd until
+        // it rolled over, with nothing telling the student to simply wait. A short exponential
+        // backoff absorbs the common case (a burst that clears within a second or two) instead of
+        // failing the very first request that lands on an exhausted budget.
+        if (attempt === MAX_ATTEMPTS) {
+          this.logger.warn(`AI provider is rate limited or unavailable: ${(err as Error).message}`)
+          throw new ServiceUnavailableException('The AI service is busy. Please try again shortly.')
+        }
+        this.logger.warn(
+          `AI provider transient error (attempt ${attempt}/${MAX_ATTEMPTS}), retrying: ${(err as Error).message}`,
+        )
+        await delay(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1))
+      }
+    }
+    return null
   }
 
   /**
@@ -68,6 +87,10 @@ export class LlmService {
    * the difference this method exists to get right: a 429 arriving after fifty tokens is exactly
    * as transient as one arriving before the first, and left unmapped it would reach the student
    * as a half-written answer that simply stopped.
+   *
+   * Retries only kick in before the first delta is yielded — once content has reached the caller,
+   * restarting the generator would replay or duplicate output it already emitted, so a transient
+   * error past that point still fails immediately.
    */
   async *chatStream(
     messages: LlmMessage[],
@@ -80,22 +103,32 @@ export class LlmService {
       temperature: options.temperature ?? DEFAULT_TEMPERATURE,
     }
 
-    try {
-      if (!this.provider.chatStream) {
-        const reply = await this.provider.chat(messages, resolved)
-        if (reply) yield reply
-        return
-      }
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let yieldedAny = false
+      try {
+        if (!this.provider.chatStream) {
+          const reply = await this.provider.chat(messages, resolved)
+          if (reply) yield reply
+          return
+        }
 
-      for await (const delta of this.provider.chatStream(messages, resolved)) {
-        yield delta
+        for await (const delta of this.provider.chatStream(messages, resolved)) {
+          yieldedAny = true
+          yield delta
+        }
+        return
+      } catch (err) {
+        if (!isTransientProviderError(err)) throw err
+
+        if (yieldedAny || attempt === MAX_ATTEMPTS) {
+          this.logger.warn(`AI provider is rate limited or unavailable: ${(err as Error).message}`)
+          throw new ServiceUnavailableException('The AI service is busy. Please try again shortly.')
+        }
+        this.logger.warn(
+          `AI provider transient error before any output (attempt ${attempt}/${MAX_ATTEMPTS}), retrying: ${(err as Error).message}`,
+        )
+        await delay(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1))
       }
-    } catch (err) {
-      if (isTransientProviderError(err)) {
-        this.logger.warn(`AI provider is rate limited or unavailable: ${(err as Error).message}`)
-        throw new ServiceUnavailableException('The AI service is busy. Please try again shortly.')
-      }
-      throw err
     }
   }
 
