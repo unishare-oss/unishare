@@ -158,6 +158,7 @@ export default function AdminDepartmentsPage() {
         name={courseName}
         yearLevel={courseYear}
         editMode={!!courseModal.course}
+        courseId={courseModal.course?.id}
         onCodeChange={setCourseCode}
         onNameChange={setCourseName}
         onYearChange={setCourseYear}

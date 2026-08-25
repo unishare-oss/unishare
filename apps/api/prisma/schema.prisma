@@ -82,13 +82,14 @@ model University {
 }
 
 model Course {
-  id             String          @id @default(cuid())
+  id             String                @id @default(cuid())
   code           String
   name           String
   departmentId   String
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime              @default(now())
   yearLevel      Int?
-  department     Department      @relation(fields: [departmentId], references: [id])
+  department     Department            @relation(fields: [departmentId], references: [id])
+  moduleOutlines CourseModuleOutline[]
   exams          Exam[]
   posts          Post[]
   postRequests   PostRequest[]
@@ -98,6 +99,19 @@ model Course {
   @@unique([code, departmentId])
   @@index([departmentId])
   @@map("course")
+}
+
+model CourseModuleOutline {
+  id           String   @id @default(cuid())
+  courseId     String
+  moduleNumber Int
+  topics       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, moduleNumber])
+  @@map("course_module_outline")
 }
 
 model Exam {
@@ -660,6 +674,7 @@ model Quiz {
   id              String         @id @default(cuid())
   courseId        String
   studyMaterialId String?
+  moduleNumber    Int?
   title           String
   description     String?
   isPublished     Boolean        @default(false)

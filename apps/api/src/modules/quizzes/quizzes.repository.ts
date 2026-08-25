@@ -39,6 +39,7 @@ export class QuizzesRepository {
   createQuiz(data: {
     courseId: string
     studyMaterialId?: string
+    moduleNumber?: number
     title: string
     description: string
     isPublished: boolean

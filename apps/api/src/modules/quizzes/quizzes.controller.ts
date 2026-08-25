@@ -24,6 +24,7 @@ import { QuizzesService } from './quizzes.service'
 import {
   GenerateQuestionsDto,
   GenerateFromPostDto,
+  GenerateBulkDto,
   ListQuizzesDto,
   SubmitQuizDto,
   UpdateQuestionDto,
@@ -33,6 +34,7 @@ import {
   QuizSessionEntity,
   StudentProgressEntity,
   GenerateQuizResponseEntity,
+  GenerateBulkResponseEntity,
   QuizEntity,
   SubmitQuizResponseEntity,
   QuizQuestionEntity,
@@ -110,6 +112,14 @@ export class QuizzesController {
       session.user.id,
       dto.questionCount ?? 20,
     )
+  }
+
+  @Post('generate-bulk')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @ApiOkResponse({ type: GenerateBulkResponseEntity })
+  @ResponseMessage('Bulk quiz generation complete')
+  generateBulk(@Body() dto: GenerateBulkDto, @Session() session: UserSession) {
+    return this.quizzesService.generateQuizzesFromOutline(dto.courseId, session.user.id)
   }
 
   @Put('questions/:id')

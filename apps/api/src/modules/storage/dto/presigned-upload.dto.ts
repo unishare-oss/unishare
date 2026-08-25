@@ -2,13 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { IsIn, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator'
 
 export type UploadPurpose =
-  'profile-picture' | 'post-attachment' | 'chat-attachment' | 'group-picture' | 'board-attachment'
+  | 'profile-picture'
+  | 'post-attachment'
+  | 'chat-attachment'
+  | 'group-picture'
+  | 'board-attachment'
+  | 'course-outline'
 
 const UPLOAD_PURPOSE_FOLDER: Record<Exclude<UploadPurpose, 'board-attachment'>, string> = {
   'profile-picture': 'profile',
   'post-attachment': 'posts',
   'chat-attachment': 'chat',
   'group-picture': 'groups',
+  'course-outline': 'course-outlines',
 }
 
 /** Board attachments are scoped by room, not by uploader — see docs/board-e2e-encryption/planning.md. */
@@ -45,6 +51,7 @@ export class PresignedUploadDto {
       'chat-attachment',
       'group-picture',
       'board-attachment',
+      'course-outline',
     ],
   })
   @IsIn([
@@ -53,6 +60,7 @@ export class PresignedUploadDto {
     'chat-attachment',
     'group-picture',
     'board-attachment',
+    'course-outline',
   ])
   purpose: UploadPurpose
 

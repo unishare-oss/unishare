@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
@@ -6,7 +6,10 @@ import { CoursesService } from './courses.service'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { ListCoursesDto } from './dto/list-courses.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
+import { ReplaceCourseOutlineDto } from './dto/replace-course-outline.dto'
+import { ExtractCourseOutlineDto } from './dto/extract-course-outline.dto'
 import { CourseEntity, PaginatedCourseEntity } from './entities/course.entity'
+import { CourseModuleOutlineEntity } from './entities/course-module-outline.entity'
 
 @ApiTags('courses')
 @Controller('courses')
@@ -51,5 +54,29 @@ export class CoursesController {
   @ResponseMessage('Course deleted successfully')
   remove(@Param('id') id: string) {
     return this.coursesService.remove(id)
+  }
+
+  @Get(':id/outline')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @ApiOkResponse({ type: [CourseModuleOutlineEntity] })
+  @ResponseMessage('Course outline fetched successfully')
+  getOutline(@Param('id') id: string) {
+    return this.coursesService.getOutline(id)
+  }
+
+  @Put(':id/outline')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @ApiOkResponse({ type: [CourseModuleOutlineEntity] })
+  @ResponseMessage('Course outline saved successfully')
+  replaceOutline(@Param('id') id: string, @Body() dto: ReplaceCourseOutlineDto) {
+    return this.coursesService.replaceOutline(id, dto.modules)
+  }
+
+  @Post(':id/outline/extract')
+  @Roles(['ADMIN', 'MODERATOR'])
+  @ApiOkResponse({ type: [CourseModuleOutlineEntity] })
+  @ResponseMessage('Course outline extracted successfully')
+  extractOutline(@Param('id') id: string, @Body() dto: ExtractCourseOutlineDto) {
+    return this.coursesService.extractOutlineFromFile(id, dto.key, dto.mimeType)
   }
 }

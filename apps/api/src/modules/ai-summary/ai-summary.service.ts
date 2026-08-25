@@ -194,6 +194,32 @@ Output format:
 Generate the questions now:`
 }
 
+function buildCourseOutlineExtractionPrompt(): string {
+  return `You are helping structure a university course outline (syllabus) into per-module topics.
+
+Read the course outline below and split it into modules (these may be labeled "Module",
+"Week", "Unit", "Chapter", or similar in the source — infer sensible module boundaries even if
+the document doesn't use the word "module"). Number modules sequentially starting at 1 in the
+order they appear.
+
+IMPORTANT RULES:
+- Each module must have a moduleNumber (integer, starting at 1) and a list of concise topic
+  strings covering what that module teaches
+- Skip front-matter that isn't module content (grading policy, course logistics, etc.)
+- Output ONLY valid JSON, nothing else
+
+Course Outline:
+{TEXT}
+
+Output format:
+[
+  { "moduleNumber": 1, "topics": ["Topic A", "Topic B", "Topic C"] },
+  { "moduleNumber": 2, "topics": ["Topic D", "Topic E"] }
+]
+
+Extract the module outline now:`
+}
+
 /**
  * v2, validated live against llama-3.3-70b-versatile at temperature 0.3 — the temperature
  * chatWithPost actually sends — 9/9 probes. The exact wording below is what that evidence
@@ -1021,6 +1047,57 @@ export class AiSummaryService {
       return questions
     } catch (err) {
       this.logger.error(`Question generation failed: ${(err as Error).message}`)
+      throw err
+    }
+  }
+
+  /**
+   * A syllabus can run to many pages covering months of content, unlike generateQuizQuestions'
+   * single-document-summary use case — 4000 chars would cut off before later modules ever
+   * reached the prompt, so this gets a much larger budget.
+   */
+  async extractCourseOutline(
+    text: string,
+  ): Promise<Array<{ moduleNumber: number; topics: string[] }>> {
+    if (!this.llm.enabled) {
+      throw new ServiceUnavailableException('AI service not configured')
+    }
+
+    try {
+      const response = await this.llm.chat(
+        [
+          {
+            role: 'system',
+            content: buildCourseOutlineExtractionPrompt().replace('{TEXT}', text.slice(0, 12000)),
+          },
+          { role: 'user', content: '' },
+        ],
+        { maxTokens: 4000, temperature: 0 },
+      )
+
+      if (!response) {
+        throw new Error('Failed to extract course outline')
+      }
+
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      if (!jsonMatch) {
+        throw new Error('Invalid response format from AI')
+      }
+
+      const modules = JSON.parse(jsonMatch[0])
+
+      modules.forEach((m: any, idx: number) => {
+        if (typeof m.moduleNumber !== 'number' || m.moduleNumber < 1) {
+          throw new Error(`Module ${idx + 1} has an invalid moduleNumber`)
+        }
+        if (!Array.isArray(m.topics) || m.topics.some((t: unknown) => typeof t !== 'string')) {
+          throw new Error(`Module ${idx + 1} has invalid topics`)
+        }
+      })
+
+      return modules
+    } catch (err) {
+      this.logger.error(`Course outline extraction failed: ${(err as Error).message}`)
       throw err
     }
   }
