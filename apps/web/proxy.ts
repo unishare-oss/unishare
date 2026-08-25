@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-const SESSION_COOKIE = 'better-auth.session_token'
+import { getSessionCookie } from 'better-auth/cookies'
 
 const PROTECTED_PATHS = ['/my-posts', '/profile', '/posts/new', '/admin']
 
@@ -11,7 +10,7 @@ function isProtected(pathname: string) {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const hasSession = request.cookies.has(SESSION_COOKIE)
+  const hasSession = getSessionCookie(request)
 
   if (!hasSession && isProtected(pathname)) {
     return NextResponse.redirect(new URL('/login', request.url))

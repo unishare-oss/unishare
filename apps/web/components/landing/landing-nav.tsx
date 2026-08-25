@@ -5,6 +5,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Menu, X, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { UserAvatar } from '@/components/shared/user-avatar'
+import { useAuth } from '@/contexts/auth-context'
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -23,6 +25,10 @@ const navLinks = [
 
 export function LandingNav() {
   const [open, setOpen] = useState(false)
+  const { user, session, isAuthenticated } = useAuth()
+
+  const displayUser =
+    user ?? (session?.user as { name?: string | null; image?: string | null } | null) ?? null
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
@@ -70,9 +76,24 @@ export function LandingNav() {
 
         {/* Right */}
         <div className="hidden items-center gap-2 lg:flex">
-          <Button asChild variant="ghost" size="sm" className="rounded-full font-bold">
-            <Link href="/login">Sign in</Link>
-          </Button>
+          {isAuthenticated && displayUser ? (
+            <Link
+              href="/profile"
+              aria-label={`Go to profile — ${displayUser.name ?? 'User'}`}
+              className="rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              <UserAvatar
+                name={displayUser.name ?? 'User'}
+                image={displayUser.image}
+                size="md"
+                priority
+              />
+            </Link>
+          ) : (
+            <Button asChild variant="ghost" size="sm" className="rounded-full font-bold">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          )}
           <Button
             asChild
             size="sm"
@@ -120,11 +141,28 @@ export function LandingNav() {
                 <GithubIcon className="size-4" /> GitHub
               </a>
               <div className="mt-3 flex gap-2 border-t border-border pt-4">
-                <Button asChild variant="outline" className="flex-1 rounded-full">
-                  <Link href="/login" onClick={() => setOpen(false)}>
-                    Sign in
+                {isAuthenticated && displayUser ? (
+                  <Link
+                    href="/profile"
+                    onClick={() => setOpen(false)}
+                    aria-label={`Go to profile — ${displayUser.name ?? 'User'}`}
+                    className="flex flex-1 items-center gap-2 rounded-full border-2 border-border bg-card px-3 py-2 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    <UserAvatar
+                      name={displayUser.name ?? 'User'}
+                      image={displayUser.image}
+                      size="md"
+                      priority
+                    />
+                    <span className="truncate text-sm">{displayUser.name ?? 'Profile'}</span>
                   </Link>
-                </Button>
+                ) : (
+                  <Button asChild variant="outline" className="flex-1 rounded-full">
+                    <Link href="/login" onClick={() => setOpen(false)}>
+                      Sign in
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild className="flex-1 rounded-full">
                   <Link href="/feed" onClick={() => setOpen(false)}>
                     Browse feed

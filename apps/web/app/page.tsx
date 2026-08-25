@@ -31,6 +31,7 @@ function GithubIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
 import { Button } from '@/components/ui/button'
 import { LandingNav } from '@/components/landing/landing-nav'
 
