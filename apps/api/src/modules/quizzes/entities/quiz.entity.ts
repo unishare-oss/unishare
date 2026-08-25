@@ -146,6 +146,33 @@ export class GenerateQuizResponseEntity {
   questions: QuizQuestionEntity[]
 }
 
+export class GenerateBulkCreatedEntity {
+  @ApiProperty()
+  moduleNumber: number
+
+  @ApiProperty()
+  quizId: string
+
+  @ApiProperty()
+  questionsCount: number
+}
+
+export class GenerateBulkFailedEntity {
+  @ApiProperty()
+  moduleNumber: number
+
+  @ApiProperty()
+  error: string
+}
+
+export class GenerateBulkResponseEntity {
+  @ApiProperty({ type: [GenerateBulkCreatedEntity] })
+  created: GenerateBulkCreatedEntity[]
+
+  @ApiProperty({ type: [GenerateBulkFailedEntity] })
+  failed: GenerateBulkFailedEntity[]
+}
+
 export class QuestionAttemptEntity {
   @ApiProperty()
   id: string
