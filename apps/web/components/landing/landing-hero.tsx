@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { ArrowRight, Check, Play, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { BadgePill } from './badge-pill'
-import { DepartmentPill } from './department-pill'
 import { GithubIcon } from './github-icon'
 import { HeroIllustration } from './hero-illustration'
+import { BadgePill, DepartmentPill } from './pills'
 
 export function LandingHero() {
   return (
