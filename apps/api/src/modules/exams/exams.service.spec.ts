@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
-import { NotFoundException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ExamsService } from './exams.service'
 import { ExamsRepository } from './exams.repository'
 import { CoursesService } from '@/modules/courses/courses.service'
@@ -67,6 +67,23 @@ describe('ExamsService', () => {
       ).rejects.toThrow(NotFoundException)
       expect(repo.create).not.toHaveBeenCalled()
     })
+
+    it('rejects an end time that is not after the start time', async () => {
+      coursesService.findOne.mockResolvedValue({ id: 'c1' })
+
+      await expect(
+        service.create(
+          {
+            courseId: 'c1',
+            title: 'Midterm',
+            startsAt: '2026-10-01T14:00:00Z',
+            endsAt: '2026-10-01T13:00:00Z',
+          },
+          'u1',
+        ),
+      ).rejects.toThrow(BadRequestException)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
   })
 
   describe('update / remove', () => {
@@ -74,6 +91,34 @@ describe('ExamsService', () => {
       repo.findById.mockResolvedValue(null)
       await expect(service.update('missing', { title: 'x' })).rejects.toThrow(NotFoundException)
       await expect(service.remove('missing')).rejects.toThrow(NotFoundException)
+    })
+
+    it('validates the new end time against the existing start time when only endsAt changes', async () => {
+      repo.findById.mockResolvedValue({
+        id: 'e1',
+        startsAt: new Date('2026-10-01T09:00:00Z'),
+        endsAt: null,
+        course: { id: 'c1', departmentId: 'd1' },
+      })
+
+      await expect(service.update('e1', { endsAt: '2026-10-01T08:00:00Z' })).rejects.toThrow(
+        BadRequestException,
+      )
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('allows an update that keeps the existing valid time range', async () => {
+      repo.findById.mockResolvedValue({
+        id: 'e1',
+        startsAt: new Date('2026-10-01T09:00:00Z'),
+        endsAt: new Date('2026-10-01T11:00:00Z'),
+        course: { id: 'c1', departmentId: 'd1' },
+      })
+      repo.update.mockResolvedValue({ id: 'e1' })
+
+      await service.update('e1', { title: 'Renamed' })
+
+      expect(repo.update).toHaveBeenCalledWith('e1', { title: 'Renamed' })
     })
   })
 

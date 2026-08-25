@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
@@ -23,6 +23,7 @@ export class ExamsService {
 
   async create(dto: CreateExamDto, createdBy: string) {
     await this.coursesService.findOne(dto.courseId)
+    this.assertValidTimeRange(dto.startsAt, dto.endsAt)
     return this.examsRepository.create(dto, createdBy)
   }
 
@@ -37,14 +38,26 @@ export class ExamsService {
   }
 
   async update(id: string, dto: UpdateExamDto) {
-    await this.findOne(id)
+    const existing = await this.findOne(id)
     if (dto.courseId !== undefined) await this.coursesService.findOne(dto.courseId)
+
+    const startsAt = dto.startsAt ?? existing.startsAt.toISOString()
+    const endsAt = dto.endsAt !== undefined ? dto.endsAt : (existing.endsAt?.toISOString() ?? null)
+    this.assertValidTimeRange(startsAt, endsAt)
+
     return this.examsRepository.update(id, dto)
   }
 
   async remove(id: string) {
     await this.findOne(id)
     await this.examsRepository.remove(id)
+  }
+
+  private assertValidTimeRange(startsAt: string, endsAt?: string | null): void {
+    if (!endsAt) return
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      throw new BadRequestException('End time must be after the start time')
+    }
   }
 
   /**

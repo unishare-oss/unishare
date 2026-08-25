@@ -36,7 +36,6 @@ function toFormState(exam: ExamEntity): ExamFormState {
     courseId: exam.course.id,
     startDate: format(starts, 'yyyy-MM-dd'),
     startTime: format(starts, 'HH:mm'),
-    endDate: ends ? format(ends, 'yyyy-MM-dd') : '',
     endTime: ends ? format(ends, 'HH:mm') : '',
     examRoom: exam.examRoom ?? '',
     notes: exam.notes ?? '',
@@ -142,11 +141,16 @@ export default function CalendarPage() {
   function handleSubmit() {
     const startsAt = toIsoOrNull(form.startDate, form.startTime)
     if (!startsAt) return
+    const endsAt = form.endTime ? toIsoOrNull(form.startDate, form.endTime) : null
+    if (endsAt && endsAt <= startsAt) {
+      toast.error('End time must be after the start time')
+      return
+    }
     const payload = {
       title: form.title.trim(),
       courseId: form.courseId,
       startsAt,
-      endsAt: toIsoOrNull(form.endDate, form.endTime),
+      endsAt,
       examRoom: form.examRoom.trim() || undefined,
       notes: form.notes.trim() || undefined,
     }

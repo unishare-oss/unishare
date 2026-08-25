@@ -15,7 +15,6 @@ export interface ExamFormState {
   courseId: string
   startDate: string
   startTime: string
-  endDate: string
   endTime: string
   examRoom: string
   notes: string
@@ -27,7 +26,6 @@ export const EMPTY_EXAM_FORM: ExamFormState = {
   courseId: '',
   startDate: '',
   startTime: '',
-  endDate: '',
   endTime: '',
   examRoom: '',
   notes: '',
@@ -155,29 +153,16 @@ export function AddExamModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-                  End date <span className="normal-case tracking-normal">(optional)</span>
-                </label>
-                <Input
-                  type="date"
-                  value={value.endDate}
-                  onChange={(e) => onChange({ ...value, endDate: e.target.value })}
-                  className="h-[42px]"
-                />
-              </div>
-              <div>
-                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-                  End time
-                </label>
-                <Input
-                  type="time"
-                  value={value.endTime}
-                  onChange={(e) => onChange({ ...value, endTime: e.target.value })}
-                  className="h-[42px]"
-                />
-              </div>
+            <div>
+              <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                End time <span className="normal-case tracking-normal">(optional)</span>
+              </label>
+              <Input
+                type="time"
+                value={value.endTime}
+                onChange={(e) => onChange({ ...value, endTime: e.target.value })}
+                className="h-[42px]"
+              />
             </div>
 
             <div>
