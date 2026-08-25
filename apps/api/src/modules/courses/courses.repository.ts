@@ -19,11 +19,14 @@ export class CoursesRepository {
     return mapCourse(course)
   }
 
-  async findAll(pagination: PaginationDto, departmentId?: string) {
+  async findAll(pagination: PaginationDto, departmentId?: string, hasOutline?: boolean) {
     const result = await paginate(
       this.prisma.course,
       {
-        where: departmentId ? { departmentId } : undefined,
+        where: {
+          ...(departmentId ? { departmentId } : {}),
+          ...(hasOutline ? { moduleOutlines: { some: {} } } : {}),
+        },
         orderBy: { code: 'asc' },
         include: { department: true },
       },

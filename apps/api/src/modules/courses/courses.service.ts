@@ -27,8 +27,8 @@ export class CoursesService {
     return this.coursesRepository.create(dto)
   }
 
-  findAll(pagination: PaginationDto, departmentId?: string) {
-    return this.coursesRepository.findAll(pagination, departmentId)
+  findAll(pagination: PaginationDto, departmentId?: string, hasOutline?: boolean) {
+    return this.coursesRepository.findAll(pagination, departmentId, hasOutline)
   }
 
   async findOne(id: string) {

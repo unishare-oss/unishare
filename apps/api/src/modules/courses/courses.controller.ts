@@ -29,8 +29,8 @@ export class CoursesController {
   @ApiOkResponse({ type: PaginatedCourseEntity })
   @ResponseMessage('Courses fetched successfully')
   findAll(@Query() query: ListCoursesDto) {
-    const { departmentId, ...pagination } = query
-    return this.coursesService.findAll(pagination, departmentId)
+    const { departmentId, hasOutline, ...pagination } = query
+    return this.coursesService.findAll(pagination, departmentId, hasOutline)
   }
 
   @Get(':id')

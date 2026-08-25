@@ -13,6 +13,8 @@ interface CourseSelectorProps {
   onYearChange: (v: string) => void
   onCourseChange: (v: string) => void
   disabled: boolean
+  /** Restrict the course list to courses that already have a saved module outline. */
+  onlyWithOutline?: boolean
 }
 
 const yearOptions = [1, 2, 3, 4, 5, 6].map((y) => ({
@@ -28,13 +30,18 @@ export function CourseSelector({
   onYearChange,
   onCourseChange,
   disabled,
+  onlyWithOutline,
 }: CourseSelectorProps) {
   const { data: departments } = useDepartmentsControllerFindAll({
     query: { select: (r) => r.data },
   })
 
   const { data: coursesData } = useCoursesControllerFindAll(
-    { limit: 100, ...(deptId ? { departmentId: deptId } : {}) },
+    {
+      limit: 100,
+      ...(deptId ? { departmentId: deptId } : {}),
+      ...(onlyWithOutline ? { hasOutline: true } : {}),
+    },
     { query: { select: (r) => r.data } },
   )
 

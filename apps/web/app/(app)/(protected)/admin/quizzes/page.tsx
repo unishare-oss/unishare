@@ -175,6 +175,7 @@ export default function AdminGenerateQuizPage() {
                 onYearChange={setYearLevel}
                 onCourseChange={setCourseId}
                 disabled={submitting}
+                onlyWithOutline
               />
             </>
           )}
