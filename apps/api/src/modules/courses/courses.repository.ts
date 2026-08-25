@@ -61,4 +61,22 @@ export class CoursesRepository {
   remove(id: string) {
     return this.prisma.course.delete({ where: { id } })
   }
+
+  findOutline(courseId: string) {
+    return this.prisma.courseModuleOutline.findMany({
+      where: { courseId },
+      orderBy: { moduleNumber: 'asc' },
+      select: { moduleNumber: true, topics: true },
+    })
+  }
+
+  /** Full replace: the confirmed set from the editor (manual or post-extraction) is the new truth. */
+  replaceOutline(courseId: string, modules: { moduleNumber: number; topics: string[] }[]) {
+    return this.prisma.$transaction([
+      this.prisma.courseModuleOutline.deleteMany({ where: { courseId } }),
+      this.prisma.courseModuleOutline.createMany({
+        data: modules.map((m) => ({ courseId, moduleNumber: m.moduleNumber, topics: m.topics })),
+      }),
+    ])
+  }
 }
