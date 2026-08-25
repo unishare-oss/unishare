@@ -4,6 +4,7 @@ import {
   Bookmark,
   BrainCircuit,
   Building2,
+  CalendarDays,
   FileText,
   Flag,
   LayoutGrid,
@@ -60,6 +61,7 @@ const authenticatedGroups: NavigationGroup[] = [
     id: 'discover',
     label: 'Discover',
     items: [
+      { href: '/calendar', label: 'Calendar', icon: CalendarDays },
       { href: '/departments', label: 'Departments', icon: Building2 },
       { href: '/analytics', label: 'Analytics', icon: BarChart2 },
       { href: '/quizzes', label: 'Quizzes', icon: Puzzle },

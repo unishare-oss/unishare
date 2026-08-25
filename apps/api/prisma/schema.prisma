@@ -34,6 +34,7 @@ model User {
   chatMessages            ChatMessage[]
   chatParticipants        ChatRoomParticipant[]
   comments                Comment[]
+  examsCreated            Exam[]                   @relation("ExamsCreated")
   feedbacks               Feedback[]
   following               Follow[]                 @relation("Followers")
   followers               Follow[]                 @relation("Following")
@@ -89,6 +90,7 @@ model Course {
   yearLevel      Int?
   department     Department            @relation(fields: [departmentId], references: [id])
   moduleOutlines CourseModuleOutline[]
+  exams          Exam[]
   posts          Post[]
   postRequests   PostRequest[]
   quizzes        Quiz[]
@@ -110,6 +112,27 @@ model CourseModuleOutline {
 
   @@unique([courseId, moduleNumber])
   @@map("course_module_outline")
+}
+
+model Exam {
+  id             String         @id @default(cuid())
+  courseId       String
+  title          String
+  examRoom       String?
+  notes          String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  createdBy      String
+  reminderSentAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  course         Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdByUser  User           @relation("ExamsCreated", fields: [createdBy], references: [id])
+  notifications  Notification[]
+
+  @@index([courseId])
+  @@index([startsAt])
+  @@map("exam")
 }
 
 model Post {
@@ -411,9 +434,11 @@ model Notification {
   createdAt  DateTime         @default(now())
   requestId  String?
   chatRoomId String?
+  examId     String?
   post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   request    PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   chatRoom   ChatRoom?        @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  exam       Exam?            @relation(fields: [examId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -748,6 +773,7 @@ enum NotificationType {
   REQUEST_FULFILLED
   NEW_POST_FROM_FOLLOWED
   CHAT_MESSAGE
+  EXAM_REMINDER
 }
 
 enum UserRole {
