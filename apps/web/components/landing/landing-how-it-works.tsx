@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -50,41 +51,22 @@ export function LandingHowItWorks() {
               </Link>
             </Button>
           </div>
-          <div className="order-2 rounded-[20px] border-2 border-border-strong bg-card p-3 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-4">
-            <div className="rounded-xl border border-border bg-muted p-3">
-              <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-destructive" />
-                <span className="size-2 rounded-full bg-amber" />
-                <span className="size-2 rounded-full bg-success" />
-                <span className="ml-auto font-mono text-[10px] font-bold uppercase text-text-muted">
-                  Bio 201 • Midterm map
-                </span>
-              </div>
-              <div className="relative mt-3 h-[220px] overflow-hidden rounded-xl border border-border bg-card p-3">
-                <div className="absolute left-3 top-3 w-[42%] rounded-xl border-2 border-border-strong bg-amber-subtle p-3 shadow-[2px_2px_0_0_var(--shadow-color)]">
-                  <p className="font-mono text-[10px] font-bold uppercase">Cell cycle</p>
-                  <p className="mt-1 text-xs font-bold leading-tight">G1 → S → G2 → M</p>
-                </div>
-                <div className="absolute right-4 top-8 w-[45%] rotate-1 rounded-xl border-2 border-border-strong bg-card p-3 shadow-[2px_2px_0_0_var(--shadow-color)]">
-                  <p className="font-mono text-[10px] font-bold uppercase text-type-exam">
-                    Checkpoints
-                  </p>
-                  <p className="mt-1 text-xs leading-tight">p53, cyclins, CDKs...</p>
-                </div>
-                <div className="absolute bottom-4 left-6 w-[56%] -rotate-1 rounded-xl border-2 border-border-strong bg-success/15 p-3 shadow-[2px_2px_0_0_var(--shadow-color)]">
-                  <p className="text-xs font-bold">“Exam Q 2022 — draw mitosis”</p>
-                  <p className="font-mono text-[10px] text-text-muted">→ add diagram tomorrow</p>
-                </div>
-                <div className="absolute bottom-10 right-10 flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 font-mono text-[10px] font-bold shadow-sm">
-                  <span className="size-2 rounded-full bg-amber" /> Maya is drawing
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-text-muted">
-                <span>3 collaborators • autosaved</span>
-                <span className="flex items-center gap-1">
-                  <span className="size-1.5 rounded-full bg-success" /> Live
-                </span>
-              </div>
+          <div className="order-2 overflow-hidden rounded-[20px] border-2 border-border-strong bg-card p-3 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-4">
+            <div className="overflow-hidden rounded-xl border border-border bg-white">
+              <Image
+                src="/board.png"
+                alt="Unishare board - collaborative canvas"
+                width={1200}
+                height={750}
+                className="h-auto w-full object-contain"
+                priority
+              />
+            </div>
+            <div className="mt-3 flex items-center justify-between px-1 font-mono text-[11px] text-text-muted">
+              <span>Feed System • Fan-out Architecture</span>
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-success" /> Live
+              </span>
             </div>
           </div>
         </div>
