@@ -61,7 +61,7 @@ export function HeroIllustration() {
               <div className="h-1.5 flex-1 self-center rounded bg-foreground/10" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-amber-subtle px-3 py-2">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-amber-subtle px-3 py-2 hidden md:block">
             <div className="flex size-7 items-center justify-center rounded-full bg-amber text-white">
               <Sparkles className="size-3.5" />
             </div>
@@ -82,9 +82,6 @@ export function HeroIllustration() {
               CS-101 • L12
             </span>
           </div>
-          <span className="flex items-center gap-1 rounded-full border border-border bg-success/10 px-2 py-1 font-mono text-[10px] font-bold text-success">
-            <span className="size-1.5 rounded-full bg-success" /> Verified
-          </span>
         </div>
         <h4 className="mt-3 text-sm font-black leading-tight">
           Data Structures — Trees & Traversals
@@ -96,7 +93,7 @@ export function HeroIllustration() {
           <div className="h-2 w-full rounded-full bg-foreground/10" />
           <div className="h-2 w-[92%] rounded-full bg-foreground/[0.07]" />
           <div className="h-2 w-[84%] rounded-full bg-foreground/[0.07]" />
-          <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/60 p-2.5">
+          <div className="mt-3 rounded-xl border border-dashed border-border bg-muted/60 p-2.5 hidden md:block">
             <div className="flex items-center gap-2">
               <FileText className="size-4 text-text-muted" />
               <div className="h-1.5 flex-1 rounded bg-foreground/10" />
@@ -111,17 +108,19 @@ export function HeroIllustration() {
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
-              <Heart className="size-3 fill-amber text-amber" /> 86
-            </span>
-            <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
-              <MessageCircle className="size-3" /> 12
+          <div className='hidden md:block'>
+            <div className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
+                <Heart className="size-3 fill-amber text-amber" /> 86
+              </span>
+              <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
+                <MessageCircle className="size-3" /> 12
+              </span>
+              </div>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-text-muted">
+              18 saves
             </span>
           </div>
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-text-muted">
-            18 saves
-          </span>
         </div>
         <div className="desk-tape bg-amber" style={{ ['--tape-tilt' as string]: '-2deg' }} />
       </div>
