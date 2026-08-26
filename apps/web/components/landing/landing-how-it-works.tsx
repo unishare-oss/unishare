@@ -52,7 +52,7 @@ export function LandingHowItWorks() {
             </Button>
           </div>
           <div className="order-2 overflow-hidden rounded-[20px] border-2 border-border-strong bg-card p-3 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-4">
-            <div className="overflow-hidden rounded-xl border border-border bg-white">
+            <div className="overflow-hidden border border-border bg-white">
               <Image
                 src="/board.png"
                 alt="Unishare board - collaborative canvas"
