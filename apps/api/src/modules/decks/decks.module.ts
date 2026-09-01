@@ -1,0 +1,32 @@
+import { Module, OnModuleInit } from '@nestjs/common'
+import { BullModule, InjectQueue } from '@nestjs/bullmq'
+import { Queue } from 'bullmq'
+import { DECK_CONCURRENCY, DECK_QUEUE } from './decks.constants'
+import { DECK_GENERATOR } from './deck-generator.port'
+import { PresentonClient } from './presenton/presenton.client'
+import { DecksController } from './decks.controller'
+import { DecksProcessor } from './decks.processor'
+import { DecksService } from './decks.service'
+
+@Module({
+  imports: [BullModule.registerQueue({ name: DECK_QUEUE })],
+  controllers: [DecksController],
+  providers: [
+    DecksService,
+    DecksProcessor,
+    // The ONLY line that names a vendor. Swapping generators is a change here and nowhere else.
+    { provide: DECK_GENERATOR, useClass: PresentonClient },
+  ],
+  exports: [DecksService],
+})
+export class DecksModule implements OnModuleInit {
+  constructor(@InjectQueue(DECK_QUEUE) private readonly queue: Queue) {}
+
+  /**
+   * Global, not per-worker: the cap has to hold across every replica, otherwise scaling the
+   * API to two pods silently doubles concurrent model spend.
+   */
+  async onModuleInit() {
+    await this.queue.setGlobalConcurrency(DECK_CONCURRENCY)
+  }
+}

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { ScheduleModule } from '@nestjs/schedule'
+import { BullModule } from '@nestjs/bullmq'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { AuthModule } from '@thallesp/nestjs-better-auth'
 import KeyvRedis from '@keyv/redis'
@@ -38,10 +39,31 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'
 import { MetricsController } from './metrics/metrics.controller'
 import { MetricsModule } from './metrics/metrics.module'
 import { McpModule } from './modules/mcp/mcp.module'
+import { DecksModule } from './modules/decks/decks.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        // Parsed rather than passed through: ioredis takes a URL in its constructor, but
+        // BullMQ's `connection` is an options object, so the URL has to be unpacked.
+        const url = new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379'))
+        return {
+          connection: {
+            host: url.hostname,
+            port: Number(url.port || 6379),
+            username: url.username || undefined,
+            password: url.password || undefined,
+            db: url.pathname && url.pathname !== '/' ? Number(url.pathname.slice(1)) : 0,
+            // Required by BullMQ: blocking commands must not be retried out from under it.
+            maxRetriesPerRequest: null,
+            ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
+          },
+        }
+      },
+    }),
     ThrottlerModule.forRootAsync({
       imports: [RedisThrottlerStorageModule],
       inject: [RedisThrottlerStorageService],
@@ -87,6 +109,7 @@ import { McpModule } from './modules/mcp/mcp.module'
     ReadingListsModule,
     FeedbackModule,
     QuizzesModule,
+    DecksModule,
     ExamsModule,
     UniversitiesModule,
     McpModule,

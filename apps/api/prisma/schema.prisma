@@ -44,6 +44,7 @@ model User {
   postRequestFulfillments PostRequestFulfillment[]
   postRequestUpvotes      PostRequestUpvote[]
   postViews               PostView[]
+  decksCreated            Deck[]                   @relation("DecksCreated")
   quizzesCreated          Quiz[]                   @relation("QuizzesCreated")
   quizSessions            QuizSession[]            @relation("QuizSessions")
   reactions               Reaction[]
@@ -167,6 +168,7 @@ model Post {
   chunks              PostChunk[]
   course              Course                   @relation(fields: [courseId], references: [id])
   fulfilledRequests   PostRequest[]            @relation("FulfilledRequests")
+  decks               Deck[]
   requestFulfillments PostRequestFulfillment[]
   tags                PostTag[]
   postViews           PostView[]
@@ -744,6 +746,48 @@ model QuestionAttempt {
   @@index([sessionId])
   @@index([questionId])
   @@map("question_attempt")
+}
+
+/// A slide deck generated from a free-form prompt by the external deck service.
+///
+/// `sourcePostId` is nullable on purpose: decks are free-form today, but grounding one in an
+/// existing post is the same row with the field set — no migration when that lands.
+///
+/// `jobId` is the queue job id, kept so a waiting deck can report how many are ahead of it.
+/// It is NOT a foreign key to anything: the queue is Redis, jobs are evicted once complete,
+/// and a null here simply means the deck is no longer waiting.
+model Deck {
+  id           String     @id @default(cuid())
+  ownerId      String
+  prompt       String
+  title        String?
+  slideCount   Int
+  language     String     @default("English")
+  template     String     @default("general")
+  sourcePostId String?
+  status       DeckStatus @default(QUEUED)
+  error        String?
+  jobId        String?
+  /// Object-store key in the same bucket as every other file, under a decks/ prefix.
+  key          String?
+  sizeBytes    Int?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  startedAt    DateTime?
+  completedAt  DateTime?
+  owner        User       @relation("DecksCreated", fields: [ownerId], references: [id], onDelete: Cascade)
+  sourcePost   Post?      @relation(fields: [sourcePostId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, createdAt])
+  @@index([status])
+  @@map("deck")
+}
+
+enum DeckStatus {
+  QUEUED
+  GENERATING
+  READY
+  FAILED
 }
 
 enum RoomVisibility {
