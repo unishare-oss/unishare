@@ -757,26 +757,40 @@ model QuestionAttempt {
 /// It is NOT a foreign key to anything: the queue is Redis, jobs are evicted once complete,
 /// and a null here simply means the deck is no longer waiting.
 model Deck {
-  id           String     @id @default(cuid())
-  ownerId      String
-  prompt       String
-  title        String?
-  slideCount   Int
-  language     String     @default("English")
-  template     String     @default("general")
-  sourcePostId String?
-  status       DeckStatus @default(QUEUED)
-  error        String?
-  jobId        String?
-  /// Object-store key in the same bucket as every other file, under a decks/ prefix.
-  key          String?
-  sizeBytes    Int?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  startedAt    DateTime?
-  completedAt  DateTime?
-  owner        User       @relation("DecksCreated", fields: [ownerId], references: [id], onDelete: Cascade)
-  sourcePost   Post?      @relation(fields: [sourcePostId], references: [id], onDelete: SetNull)
+  id                     String     @id @default(cuid())
+  ownerId                String
+  prompt                 String
+  title                  String?
+  slideCount             Int
+  language               String     @default("English")
+  template               String     @default("general")
+  sourcePostId           String?
+  status                 DeckStatus @default(QUEUED)
+  error                  String?
+  jobId                  String?
+  /// The generator's own presentation id. Required to edit or re-export an existing deck —
+  /// every edit endpoint is keyed on it, so discarding it would make decks write-once.
+  externalId             String?
+  /// Generation options, kept so "tweak and regenerate" and the editor can reopen a deck
+  /// with the settings it was made under rather than defaults.
+  tone                   String     @default("default")
+  verbosity              String     @default("standard")
+  instructions           String?
+  includeTitleSlide      Boolean    @default(true)
+  includeTableOfContents Boolean    @default(false)
+  webSearch              Boolean    @default(false)
+  /// Object-store keys in the same bucket as every other file, under a decks/ prefix.
+  /// The PDF is a re-render of the same deck, not a second generation, and exists so the
+  /// deck can be previewed in-app without downloading it.
+  key                    String?
+  pdfKey                 String?
+  sizeBytes              Int?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+  startedAt              DateTime?
+  completedAt            DateTime?
+  owner                  User       @relation("DecksCreated", fields: [ownerId], references: [id], onDelete: Cascade)
+  sourcePost             Post?      @relation(fields: [sourcePostId], references: [id], onDelete: SetNull)
 
   @@index([ownerId, createdAt])
   @@index([status])

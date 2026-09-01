@@ -4,6 +4,7 @@ import { getQueueToken } from '@nestjs/bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DecksService } from './decks.service'
+import { DECK_EDITOR } from './deck-generator.port'
 import { DAILY_DECK_QUOTA, DECK_QUEUE, WAITING_SCAN_LIMIT } from './decks.constants'
 
 /**
@@ -20,6 +21,13 @@ describe('DecksService', () => {
     deck: { create: jest.Mock; update: jest.Mock; count: jest.Mock; findFirst: jest.Mock }
   }
   let queue: { add: jest.Mock; getWaiting: jest.Mock }
+  let editor: {
+    listTemplates: jest.Mock
+    getSlides: jest.Mock
+    updateSlide: jest.Mock
+    aiEditSlide: jest.Mock
+    reexport: jest.Mock
+  }
 
   beforeEach(async () => {
     prisma = {
@@ -43,6 +51,14 @@ describe('DecksService', () => {
       },
     }
     queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }), getWaiting: jest.fn() }
+    // The fake the port exists for: the whole editing surface, with no generator running.
+    editor = {
+      listTemplates: jest.fn().mockResolvedValue([]),
+      getSlides: jest.fn().mockResolvedValue([]),
+      updateSlide: jest.fn().mockResolvedValue(undefined),
+      aiEditSlide: jest.fn().mockResolvedValue(undefined),
+      reexport: jest.fn(),
+    }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,6 +66,7 @@ describe('DecksService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: {} },
         { provide: getQueueToken(DECK_QUEUE), useValue: queue },
+        { provide: DECK_EDITOR, useValue: editor },
       ],
     }).compile()
 
@@ -134,6 +151,61 @@ describe('DecksService', () => {
       const deck = await service.getDeck('deck-1', 'user-1')
       expect(deck.status).toBe('QUEUED')
       expect(deck.queueAheadIsApproximate).toBe(true)
+    })
+  })
+
+  describe('editing', () => {
+    const ready = {
+      id: 'deck-1',
+      ownerId: 'user-1',
+      externalId: 'ext-1',
+      status: 'READY',
+    }
+
+    beforeEach(() => {
+      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique = jest
+        .fn()
+        .mockResolvedValue(ready)
+    })
+
+    it('sends the whole slide back, not just the edited content', async () => {
+      // slide_update replaces the slide. Posting only the fields the editor showed would
+      // silently drop speaker_note, properties and ui.
+      editor.getSlides.mockResolvedValue([
+        {
+          id: 's1',
+          index: 0,
+          layout: 'title_intro',
+          content: { a: 1 },
+          raw: { id: 's1', speaker_note: 'keep me' },
+        },
+      ])
+      await service.updateSlide('deck-1', 'user-1', 's1', { a: 2 })
+      expect(editor.updateSlide).toHaveBeenCalledWith(
+        expect.objectContaining({ raw: { id: 's1', speaker_note: 'keep me' }, content: { a: 2 } }),
+      )
+    })
+
+    it('refuses to edit a deck the caller does not own', async () => {
+      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+        ...ready,
+        ownerId: 'someone-else',
+      })
+      await expect(service.getSlides('deck-1', 'user-1')).rejects.toThrow()
+      expect(editor.getSlides).not.toHaveBeenCalled()
+    })
+
+    it('refuses to edit a deck with no external id', async () => {
+      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+        ...ready,
+        externalId: null,
+      })
+      await expect(service.getSlides('deck-1', 'user-1')).rejects.toThrow()
+    })
+
+    it('queues a re-export rather than rendering inline', async () => {
+      await service.requestReexport('deck-1', 'user-1')
+      expect(queue.add).toHaveBeenCalledWith('reexport', { deckId: 'deck-1' })
     })
   })
 })

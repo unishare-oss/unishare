@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -12,6 +14,8 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, type Deck } from '@/generated/prisma/client'
 import type { CreateDeckDto, ListDecksDto } from './dto'
+import { DECK_EDITOR, type DeckEditor, type DeckSlide } from './deck-generator.port'
+import { GENERATE_JOB, REEXPORT_JOB } from './decks.constants'
 import {
   AVG_SECONDS_PER_SLIDE,
   DAILY_DECK_QUOTA,
@@ -39,6 +43,7 @@ export class DecksService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     @InjectQueue(DECK_QUEUE) private readonly queue: Queue,
+    @Inject(DECK_EDITOR) private readonly editor: DeckEditor,
   ) {}
 
   async createDeck(userId: string, dto: CreateDeckDto): Promise<DeckEntity> {
@@ -62,11 +67,17 @@ export class DecksService {
         slideCount: dto.slideCount ?? DEFAULT_SLIDES,
         language: dto.language ?? 'English',
         template: dto.template ?? 'general',
+        tone: dto.tone ?? 'default',
+        verbosity: dto.verbosity ?? 'standard',
+        instructions: dto.instructions ?? null,
+        includeTitleSlide: dto.includeTitleSlide ?? true,
+        includeTableOfContents: dto.includeTableOfContents ?? false,
+        webSearch: dto.webSearch ?? false,
         status: DeckStatus.QUEUED,
       },
     })
 
-    const job = await this.queue.add('generate', { deckId: deck.id })
+    const job = await this.queue.add(GENERATE_JOB, { deckId: deck.id })
     // The row exists before the job does, so a crash between the two leaves a deck stuck in
     // QUEUED with no jobId rather than an orphaned job with nothing to write results to.
     const withJob = await this.prisma.deck.update({
@@ -103,15 +114,21 @@ export class DecksService {
     return { data: rows.map((d) => this.toEntity(d, null, null)), total, page, limit }
   }
 
-  async getDownloadUrl(id: string, userId: string) {
+  async getDownloadUrl(id: string, userId: string, format: 'pptx' | 'pdf' = 'pptx') {
     const deck = await this.prisma.deck.findUnique({ where: { id } })
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
-    if (deck.status !== DeckStatus.READY || !deck.key) {
-      throw new NotFoundException('Deck is not ready yet')
+
+    const key = format === 'pdf' ? deck.pdfKey : deck.key
+    if (!key) {
+      // A missing PDF is not the same as a missing deck: the PPTX may be fine while the
+      // preview render failed, and the message should say which.
+      throw new NotFoundException(
+        format === 'pdf' ? 'No preview available for this deck' : 'Deck is not ready yet',
+      )
     }
     const expiresIn = 3600
-    return { url: await this.storage.generatePresignedDownloadUrl(deck.key, expiresIn), expiresIn }
+    return { url: await this.storage.generatePresignedDownloadUrl(key, expiresIn), expiresIn }
   }
 
   async getQuota(userId: string) {
@@ -142,14 +159,21 @@ export class DecksService {
     })
   }
 
-  markReady(deckId: string, key: string, sizeBytes: number, title: string) {
+  markReady(
+    deckId: string,
+    data: {
+      key: string
+      pdfKey: string | null
+      sizeBytes: number
+      title: string
+      externalId: string
+    },
+  ) {
     return this.prisma.deck.update({
       where: { id: deckId },
       data: {
         status: DeckStatus.READY,
-        key,
-        sizeBytes,
-        title,
+        ...data,
         jobId: null,
         error: null,
         completedAt: new Date(),
@@ -171,6 +195,73 @@ export class DecksService {
 
   findForJob(deckId: string) {
     return this.prisma.deck.findUnique({ where: { id: deckId } })
+  }
+
+  // --- editing -----------------------------------------------------------------------------
+
+  listTemplates() {
+    return this.editor.listTemplates()
+  }
+
+  async getSlides(deckId: string, userId: string): Promise<DeckSlide[]> {
+    const deck = await this.ownedEditableDeck(deckId, userId)
+    return this.editor.getSlides(deck.externalId)
+  }
+
+  async updateSlide(deckId: string, userId: string, slideId: string, content: unknown) {
+    const deck = await this.ownedEditableDeck(deckId, userId)
+    const slides = await this.editor.getSlides(deck.externalId)
+    const slide = slides.find((s) => s.id === slideId)
+    if (!slide) throw new NotFoundException('Slide not found')
+
+    // Re-fetched rather than trusted from the client: the update sends the WHOLE slide back,
+    // so accepting a client-supplied `raw` would let a stale or crafted payload overwrite
+    // fields the editor never showed.
+    await this.editor.updateSlide({ ...slide, content })
+  }
+
+  async aiEditSlide(deckId: string, userId: string, slideId: string, prompt: string) {
+    const deck = await this.ownedEditableDeck(deckId, userId)
+    const slides = await this.editor.getSlides(deck.externalId)
+    if (!slides.some((s) => s.id === slideId)) throw new NotFoundException('Slide not found')
+    await this.editor.aiEditSlide(slideId, prompt)
+  }
+
+  /**
+   * Queues a re-render so the stored PPTX/PDF catch up with edited slides.
+   *
+   * Explicit rather than automatic on every edit: a re-render per keystroke-batch would be
+   * wasteful, and the student is better served by deciding when they are done.
+   */
+  async requestReexport(deckId: string, userId: string) {
+    const deck = await this.ownedEditableDeck(deckId, userId)
+    const job = await this.queue.add(REEXPORT_JOB, { deckId })
+    return this.prisma.deck.update({
+      where: { id: deck.id },
+      data: { status: DeckStatus.GENERATING, jobId: job.id ?? null, error: null },
+    })
+  }
+
+  async markReexported(
+    deckId: string,
+    data: { key: string; pdfKey: string | null; sizeBytes: number },
+  ) {
+    return this.prisma.deck.update({
+      where: { id: deckId },
+      data: { status: DeckStatus.READY, ...data, jobId: null, completedAt: new Date() },
+    })
+  }
+
+  /** A deck the caller owns which the generator can still act on. */
+  private async ownedEditableDeck(deckId: string, userId: string) {
+    const deck = await this.prisma.deck.findUnique({ where: { id: deckId } })
+    if (!deck) throw new NotFoundException('Deck not found')
+    if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
+    if (!deck.externalId) {
+      // Decks generated before externalId was stored, or one that never finished.
+      throw new BadRequestException('This deck cannot be edited')
+    }
+    return { ...deck, externalId: deck.externalId }
   }
 
   // --- internals ---------------------------------------------------------------------------
@@ -224,6 +315,10 @@ export class DecksService {
       queueAhead: ahead,
       etaSeconds,
       queueAheadIsApproximate: approximate,
+      hasPdf: Boolean(deck.pdfKey),
+      canEdit: Boolean(deck.externalId),
+      tone: deck.tone,
+      verbosity: deck.verbosity,
     }
   }
 }

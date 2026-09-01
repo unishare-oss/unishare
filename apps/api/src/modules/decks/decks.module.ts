@@ -2,7 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common'
 import { BullModule, InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { DECK_CONCURRENCY, DECK_QUEUE } from './decks.constants'
-import { DECK_GENERATOR } from './deck-generator.port'
+import { DECK_EDITOR, DECK_GENERATOR } from './deck-generator.port'
 import { PresentonClient } from './presenton/presenton.client'
 import { DecksController } from './decks.controller'
 import { DecksProcessor } from './decks.processor'
@@ -14,8 +14,12 @@ import { DecksService } from './decks.service'
   providers: [
     DecksService,
     DecksProcessor,
-    // The ONLY line that names a vendor. Swapping generators is a change here and nowhere else.
-    { provide: DECK_GENERATOR, useClass: PresentonClient },
+    // The ONLY lines that name a vendor. Swapping generators is a change here and nowhere else.
+    // One class satisfies both ports; they stay separate so a backend that can generate but
+    // not edit is still usable.
+    PresentonClient,
+    { provide: DECK_GENERATOR, useExisting: PresentonClient },
+    { provide: DECK_EDITOR, useExisting: PresentonClient },
   ],
   exports: [DecksService],
 })

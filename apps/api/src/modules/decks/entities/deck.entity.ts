@@ -25,6 +25,33 @@ export class DeckEntity {
     description: 'True when the exact position is beyond the scan limit',
   })
   queueAheadIsApproximate: boolean | null
+
+  @ApiProperty({ description: 'A PDF render exists, so the deck can be previewed in-app' })
+  hasPdf: boolean
+
+  @ApiProperty({ description: 'The generator can still act on this deck' })
+  canEdit: boolean
+
+  @ApiProperty() tone: string
+  @ApiProperty() verbosity: string
+}
+
+export class DeckTemplateEntity {
+  @ApiProperty() id: string
+  @ApiProperty() name: string
+  @ApiPropertyOptional({ type: String, nullable: true }) description: string | null
+}
+
+export class DeckSlideEntity {
+  @ApiProperty() id: string
+  @ApiProperty() index: number
+  @ApiProperty() layout: string
+  @ApiProperty({
+    description: 'Layout-defined content object. Walked generically by the editor.',
+    type: 'object',
+    additionalProperties: true,
+  })
+  content: unknown
 }
 
 export class PaginatedDecksEntity {

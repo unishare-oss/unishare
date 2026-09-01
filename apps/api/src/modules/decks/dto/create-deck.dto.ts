@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator'
-import { DEFAULT_SLIDES, MAX_SLIDES, MIN_SLIDES } from '../decks.constants'
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator'
+import { DEFAULT_SLIDES, MAX_SLIDES, MIN_SLIDES, TONES, VERBOSITIES } from '../decks.constants'
 
 export class CreateDeckDto {
   @ApiProperty({
@@ -30,4 +40,35 @@ export class CreateDeckDto {
   @IsString()
   @MaxLength(40)
   template?: string
+
+  @ApiPropertyOptional({ enum: TONES, default: 'default' })
+  @IsOptional()
+  @IsIn(TONES)
+  tone?: string
+
+  @ApiPropertyOptional({ enum: VERBOSITIES, default: 'standard' })
+  @IsOptional()
+  @IsIn(VERBOSITIES)
+  verbosity?: string
+
+  @ApiPropertyOptional({ description: 'Extra guidance for the generator' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  instructions?: string
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  includeTitleSlide?: boolean
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  includeTableOfContents?: boolean
+
+  @ApiPropertyOptional({ description: 'Let the generator search the web', default: false })
+  @IsOptional()
+  @IsBoolean()
+  webSearch?: boolean
 }

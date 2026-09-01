@@ -1,7 +1,15 @@
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { DeckGenerator, DeckGenerationRequest, GeneratedDeck } from '../deck-generator.port'
-import { PPTX_MIME } from '../decks.constants'
+import type {
+  DeckEditor,
+  DeckExport,
+  DeckGenerator,
+  DeckGenerationRequest,
+  DeckSlide,
+  DeckTemplate,
+  GeneratedDeck,
+} from '../deck-generator.port'
+import { PDF_MIME, PPTX_MIME } from '../decks.constants'
 
 /**
  * Generation is a single blocking request that returns only once the deck is finished —
@@ -20,7 +28,7 @@ interface GenerateResponse {
 }
 
 @Injectable()
-export class PresentonClient implements DeckGenerator {
+export class PresentonClient implements DeckGenerator, DeckEditor {
   private readonly logger = new Logger(PresentonClient.name)
   constructor(private readonly config: ConfigService) {}
 
@@ -55,6 +63,12 @@ export class PresentonClient implements DeckGenerator {
         n_slides: request.slideCount,
         language: request.language,
         template: request.template,
+        tone: request.tone,
+        verbosity: request.verbosity,
+        web_search: request.webSearch,
+        include_title_slide: request.includeTitleSlide,
+        include_table_of_contents: request.includeTableOfContents,
+        ...(request.instructions ? { instructions: request.instructions } : {}),
         export_as: 'pptx',
       }),
       signal: AbortSignal.timeout(GENERATE_TIMEOUT_MS),
@@ -87,17 +101,142 @@ export class PresentonClient implements DeckGenerator {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
+
+    // A second export of the SAME presentation. This is a re-render, not another model run,
+    // so it costs a few seconds and no tokens — cheap enough to do for every deck so the
+    // preview is always ready. Failing to produce it must not fail the generation.
+    const pdf = await this.tryExport(baseUrl, apiKey, body.presentation_id, 'pdf')
+
     this.logger.log(
       `Generated deck ${body.presentation_id}: ${request.slideCount} slides, ` +
-        `${buffer.byteLength} bytes, ${((Date.now() - started) / 1000).toFixed(1)}s`,
+        `${buffer.byteLength} bytes, ${((Date.now() - started) / 1000).toFixed(1)}s` +
+        `${pdf ? '' : ' (pdf export failed)'}`,
     )
 
     return {
       externalId: body.presentation_id,
-      buffer,
       // Trust our own export request over a Content-Type header we did not set.
-      mimeType: PPTX_MIME,
+      pptx: { buffer, mimeType: PPTX_MIME },
+      pdf,
       filename: decodeURIComponent(body.path.split('/').pop() ?? 'deck.pptx'),
     }
+  }
+
+  // --- DeckEditor ---------------------------------------------------------------------------
+
+  async listTemplates(): Promise<DeckTemplate[]> {
+    const rows = await this.request<unknown>('/api/v1/ppt/template/all?page_size=50&default=true')
+    const items = Array.isArray(rows) ? rows : []
+    return items
+      .filter((t): t is Record<string, unknown> => typeof t === 'object' && t !== null)
+      .map((t) => ({
+        id: String(t.id ?? ''),
+        name: String(t.name ?? t.id ?? ''),
+        // The generator returns the string "None" for a missing description, not null.
+        description:
+          typeof t.description === 'string' && t.description !== 'None' ? t.description : null,
+      }))
+      .filter((t) => t.id.length > 0)
+  }
+
+  async getSlides(externalId: string): Promise<DeckSlide[]> {
+    const deck = await this.request<{ slides?: Record<string, unknown>[] }>(
+      `/api/v1/ppt/presentation/${externalId}`,
+    )
+    return (deck.slides ?? []).map((raw) => ({
+      id: String(raw.id ?? ''),
+      index: Number(raw.index ?? 0),
+      layout: String(raw.layout ?? ''),
+      content: raw.content,
+      raw,
+    }))
+  }
+
+  async updateSlide(slide: DeckSlide): Promise<void> {
+    // The whole slide goes back, with only `content` swapped — see DeckSlide.raw.
+    await this.request('/api/v1/ppt/presentation/slide_update', {
+      method: 'PATCH',
+      body: { slide: { ...slide.raw, content: slide.content } },
+    })
+  }
+
+  async aiEditSlide(slideId: string, prompt: string): Promise<void> {
+    await this.request('/api/v1/ppt/slide/edit', {
+      method: 'POST',
+      body: { id: slideId, prompt },
+      timeoutMs: GENERATE_TIMEOUT_MS,
+    })
+  }
+
+  async reexport(externalId: string): Promise<{ pptx: DeckExport; pdf: DeckExport | null }> {
+    const { baseUrl, apiKey } = this.credentials()
+    const pptx = await this.tryExport(baseUrl, apiKey, externalId, 'pptx')
+    if (!pptx) {
+      throw new InternalServerErrorException('Deck could not be re-exported')
+    }
+    const pdf = await this.tryExport(baseUrl, apiKey, externalId, 'pdf')
+    return { pptx, pdf }
+  }
+
+  // --- internals ----------------------------------------------------------------------------
+
+  /**
+   * Export is best-effort for the PDF: a deck with a working PPTX and no preview is a far
+   * better outcome than a failed generation, so callers decide whether null is fatal.
+   */
+  private async tryExport(
+    baseUrl: string,
+    apiKey: string,
+    externalId: string,
+    format: 'pptx' | 'pdf',
+  ): Promise<DeckExport | null> {
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/${externalId}/export`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ export_as: format }),
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+      })
+      if (!res.ok) return null
+      const body = (await res.json()) as GenerateResponse
+      if (!body?.path) return null
+
+      const file = await fetch(`${baseUrl}${body.path}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+      })
+      if (!file.ok) return null
+
+      return {
+        buffer: Buffer.from(await file.arrayBuffer()),
+        mimeType: format === 'pdf' ? PDF_MIME : PPTX_MIME,
+      }
+    } catch (err) {
+      this.logger.warn(`Export ${format} failed for ${externalId}: ${String(err)}`)
+      return null
+    }
+  }
+
+  private async request<T>(
+    path: string,
+    opts: { method?: string; body?: unknown; timeoutMs?: number } = {},
+  ): Promise<T> {
+    const { baseUrl, apiKey } = this.credentials()
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: opts.method ?? 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? DOWNLOAD_TIMEOUT_MS),
+    })
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => '')).slice(0, 300)
+      throw new InternalServerErrorException(
+        `Deck service call failed (${res.status} ${path}): ${detail || 'no body'}`,
+      )
+    }
+    return (await res.json()) as T
   }
 }

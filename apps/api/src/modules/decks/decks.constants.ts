@@ -1,6 +1,10 @@
 /** Queue name. Also the Redis key prefix BullMQ derives its lists from. */
 export const DECK_QUEUE = 'decks'
 
+/** Job names on the shared queue. Re-export is a render, generate is a model run. */
+export const GENERATE_JOB = 'generate'
+export const REEXPORT_JOB = 'reexport'
+
 /**
  * Total concurrent generations across every worker, set via `setGlobalConcurrency`.
  *
@@ -29,5 +33,19 @@ export const AVG_SECONDS_PER_SLIDE = 18
  * every poll.
  */
 export const WAITING_SCAN_LIMIT = 200
+
+/** Mirrors the generator's accepted values; validated at the DTO so a typo fails fast. */
+export const TONES = [
+  'default',
+  'casual',
+  'professional',
+  'funny',
+  'educational',
+  'sales_pitch',
+] as const
+
+export const VERBOSITIES = ['concise', 'standard', 'text-heavy'] as const
+
+export const PDF_MIME = 'application/pdf'
 
 export const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
