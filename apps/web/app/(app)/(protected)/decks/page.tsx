@@ -1,9 +1,11 @@
 'use client'
 
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { PageHeader } from '@/components/shared/page-header'
+import { Button } from '@/components/ui/button'
 import { DeckCard } from '@/components/decks/deck-card'
-import { DeckCreateForm } from '@/components/decks/deck-create-form'
 import {
   useDecksControllerGetQuota,
   useDecksControllerListDecks,
@@ -12,17 +14,14 @@ import {
 const LIST_POLL_MS = 8000
 
 export default function DecksPage() {
-  const { data: quota } = useDecksControllerGetQuota({
-    query: { select: (r) => r.data },
-  })
-
+  const { data: quota } = useDecksControllerGetQuota({ query: { select: (r) => r.data } })
   const { data: decks } = useDecksControllerListDecks(
-    { page: 1, limit: 20 },
+    { page: 1, limit: 30 },
     {
       query: {
         select: (r) => r.data,
-        // The cards poll themselves for status; this refetch is only so a deck that finished
-        // in another tab (or before this page mounted) appears without a manual reload.
+        // The cards poll themselves for status; this is only so a deck that finished in
+        // another tab appears without a manual reload.
         refetchInterval: LIST_POLL_MS,
       },
     },
@@ -40,6 +39,14 @@ export default function DecksPage() {
       <PageHeader
         title="Decks"
         subtitle="Generate a slide deck on any topic. It runs in the background — you can leave this page."
+        action={
+          <Button asChild disabled={exhausted}>
+            <Link href="/decks/new">
+              <Plus className="mr-2 size-4" />
+              New deck
+            </Link>
+          </Button>
+        }
       />
 
       {quota && (
@@ -49,25 +56,20 @@ export default function DecksPage() {
         </p>
       )}
 
-      <DeckCreateForm
-        disabled={exhausted}
-        disabledReason={
-          resetsIn
-            ? `You have used all ${limit} decks for today. Your allowance resets ${resetsIn}.`
-            : undefined
-        }
-      />
-
-      <div className="space-y-3">
-        {decks?.data.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No decks yet. Generate your first one above.
-          </p>
-        )}
+      <div className="grid gap-3 sm:grid-cols-2">
         {decks?.data.map((deck) => (
           <DeckCard key={deck.id} deck={deck} />
         ))}
       </div>
+
+      {decks?.data.length === 0 && (
+        <div className="rounded-lg border border-dashed border-border py-12 text-center">
+          <p className="text-sm text-muted-foreground">No decks yet.</p>
+          <Button asChild variant="secondary" className="mt-4">
+            <Link href="/decks/new">Generate your first deck</Link>
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

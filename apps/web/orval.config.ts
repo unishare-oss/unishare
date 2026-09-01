@@ -37,6 +37,11 @@ export default defineConfig({
           ExamsController_findAll: {
             query: { useInfinite: false },
           },
+          // Takes a `format` param but is not a list: the generated infinite variant
+          // assumes a `page` param and does not compile without this.
+          DecksController_getDownloadUrl: {
+            query: { useInfinite: false },
+          },
         },
       },
     },

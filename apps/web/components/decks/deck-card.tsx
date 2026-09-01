@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Download, FileText, Loader2, TriangleAlert, Users } from 'lucide-react'
+import Link from 'next/link'
+import { Download, FileText, Loader2, Pencil, TriangleAlert, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -65,14 +66,24 @@ export function DeckCard({ deck: initial }: { deck: DeckEntity }) {
         </div>
 
         {deck.status === 'READY' && (
-          <Button size="sm" onClick={handleDownload} disabled={downloading}>
-            {downloading ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 size-4" />
+          <div className="flex shrink-0 gap-2">
+            {deck.canEdit && (
+              <Button size="sm" variant="secondary" asChild>
+                <Link href={`/decks/${deck.id}`}>
+                  <Pencil className="mr-2 size-4" />
+                  Open
+                </Link>
+              </Button>
             )}
-            Download
-          </Button>
+            <Button size="sm" onClick={handleDownload} disabled={downloading}>
+              {downloading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 size-4" />
+              )}
+              Download
+            </Button>
+          </div>
         )}
       </div>
 
