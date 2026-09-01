@@ -768,6 +768,13 @@ model Deck {
   status                 DeckStatus @default(QUEUED)
   error                  String?
   jobId                  String?
+  /// When a deck is held because the owner's allowance is spent, roughly when it will start.
+  /// Null means it is waiting on a free worker instead — the two waits are different and the
+  /// UI must say which, because only one of them clears by waiting a few minutes.
+  scheduledFor           DateTime?
+  /// Attempts made so far. A deck becomes FAILED only once retries are exhausted, so a
+  /// transient provider error does not present as a dead deck while it is still being retried.
+  attempts               Int        @default(0)
   /// The generator's own presentation id. Required to edit or re-export an existing deck —
   /// every edit endpoint is keyed on it, so discarding it would make decks write-once.
   externalId             String?

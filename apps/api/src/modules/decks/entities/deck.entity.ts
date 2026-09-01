@@ -34,6 +34,16 @@ export class DeckEntity {
 
   @ApiProperty() tone: string
   @ApiProperty() verbosity: string
+
+  @ApiPropertyOptional({
+    type: Date,
+    nullable: true,
+    description: "Set when the deck is held until the owner's allowance frees up",
+  })
+  scheduledFor: Date | null
+
+  @ApiProperty({ description: 'Attempts made so far' }) attempts: number
+  @ApiProperty({ description: 'Attempts before the deck is given up on' }) maxAttempts: number
 }
 
 export class DeckTemplateEntity {
@@ -64,7 +74,14 @@ export class PaginatedDecksEntity {
 export class DeckQuotaEntity {
   @ApiProperty() used: number
   @ApiProperty() limit: number
-  @ApiProperty({ description: 'When the daily allowance resets' }) resetsAt: Date
+  @ApiProperty({ description: 'When the oldest slot in the window frees' }) resetsAt: Date
+
+  @ApiPropertyOptional({
+    type: Date,
+    nullable: true,
+    description: 'When a deck submitted now would start. Null while under quota.',
+  })
+  nextSlotAt: Date | null
 }
 
 export class DeckDownloadEntity {

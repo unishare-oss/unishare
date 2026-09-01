@@ -22,6 +22,8 @@ import {
   DECK_CONCURRENCY,
   DECK_QUEUE,
   DEFAULT_SLIDES,
+  MAX_ATTEMPTS,
+  RETRY_BACKOFF_MS,
   WAITING_SCAN_LIMIT,
 } from './decks.constants'
 import type { DeckEntity } from './entities/deck.entity'
@@ -48,17 +50,11 @@ export class DecksService {
 
   async createDeck(userId: string, dto: CreateDeckDto): Promise<DeckEntity> {
     const quota = await this.getQuota(userId)
-    if (quota.used >= quota.limit) {
-      // 429 rather than 403: the caller is not forbidden, only early. The frontend
-      // distinguishes this from a queue wait, because waiting does not clear it.
-      throw new HttpException(
-        {
-          message: `You have used all ${quota.limit} decks for today. Your allowance resets shortly.`,
-          resetsAt: quota.resetsAt,
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      )
-    }
+
+    // Over quota does NOT mean refused. The deck is accepted and held until the student's
+    // allowance frees up, because losing the request is worse than waiting for it: they have
+    // already written the prompt, and a 429 makes them come back and retype it.
+    const scheduledFor = quota.used >= quota.limit ? quota.nextSlotAt : null
 
     const deck = await this.prisma.deck.create({
       data: {
@@ -74,10 +70,19 @@ export class DecksService {
         includeTableOfContents: dto.includeTableOfContents ?? false,
         webSearch: dto.webSearch ?? false,
         status: DeckStatus.QUEUED,
+        scheduledFor,
       },
     })
 
-    const job = await this.queue.add(GENERATE_JOB, { deckId: deck.id })
+    const job = await this.queue.add(
+      GENERATE_JOB,
+      { deckId: deck.id },
+      {
+        attempts: MAX_ATTEMPTS,
+        backoff: { type: 'exponential', delay: RETRY_BACKOFF_MS },
+        ...(scheduledFor ? { delay: Math.max(0, scheduledFor.getTime() - Date.now()) } : {}),
+      },
+    )
     // The row exists before the job does, so a crash between the two leaves a deck stuck in
     // QUEUED with no jobId rather than an orphaned job with nothing to write results to.
     const withJob = await this.prisma.deck.update({
@@ -85,7 +90,7 @@ export class DecksService {
       data: { jobId: job.id ?? null },
     })
 
-    return this.toEntity(withJob, 0, false)
+    return this.toEntity(withJob, scheduledFor ? null : 0, false)
   }
 
   async getDeck(id: string, userId: string): Promise<DeckEntity> {
@@ -93,9 +98,11 @@ export class DecksService {
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
 
-    if (deck.status !== DeckStatus.QUEUED) return this.toEntity(deck, null, null)
-
-    const { ahead, approximate } = await this.queuePosition(deck.jobId)
+    const needsPosition =
+      deck.status === DeckStatus.QUEUED &&
+      !(deck.scheduledFor && deck.scheduledFor.getTime() > Date.now())
+    const snapshot = needsPosition ? await this.waitingSnapshot() : null
+    const { ahead, approximate } = this.positionFor(deck, snapshot)
     return this.toEntity(deck, ahead, approximate)
   }
 
@@ -111,7 +118,24 @@ export class DecksService {
       }),
       this.prisma.deck.count({ where: { ownerId: userId } }),
     ])
-    return { data: rows.map((d) => this.toEntity(d, null, null)), total, page, limit }
+    // One queue read for the page. Without this the library could only say "waiting",
+    // while the deck page said "3 ahead" — the same deck describing itself two ways.
+    const anyQueued = rows.some(
+      (d) =>
+        d.status === DeckStatus.QUEUED &&
+        !(d.scheduledFor && d.scheduledFor.getTime() > Date.now()),
+    )
+    const snapshot = anyQueued ? await this.waitingSnapshot() : null
+
+    return {
+      data: rows.map((d) => {
+        const { ahead, approximate } = this.positionFor(d, snapshot)
+        return this.toEntity(d, ahead, approximate)
+      }),
+      total,
+      page,
+      limit,
+    }
   }
 
   async getDownloadUrl(id: string, userId: string, format: 'pptx' | 'pdf' = 'pptx') {
@@ -133,29 +157,63 @@ export class DecksService {
 
   async getQuota(userId: string) {
     const since = new Date(Date.now() - QUOTA_WINDOW_MS)
-    // Counts ATTEMPTS, including failures. A failed generation still spent model tokens most
-    // of the time, and counting only successes would make retry-on-failure a free loop.
-    const [used, oldest] = await Promise.all([
-      this.prisma.deck.count({ where: { ownerId: userId, createdAt: { gte: since } } }),
-      this.prisma.deck.findFirst({
-        where: { ownerId: userId, createdAt: { gte: since } },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true },
-      }),
-    ])
+
+    // Failures are excluded on purpose. A deck that errored produced nothing, and with
+    // retries in place a genuine failure means all attempts were exhausted — that is our
+    // problem, not the student's allowance.
+    const inWindow = await this.prisma.deck.findMany({
+      where: {
+        ownerId: userId,
+        status: { not: DeckStatus.FAILED },
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    })
+
+    const used = inWindow.length
+    const limit = DAILY_DECK_QUOTA
+
+    // When the next slot frees for the request being made right now. With `used` decks in
+    // the window and a limit of `limit`, the next request waits for the (used - limit)th
+    // oldest to age out — which correctly stacks when several are already held.
+    const index = used - limit
+    const nextSlotAt =
+      index >= 0 && inWindow[index]
+        ? new Date(inWindow[index].createdAt.getTime() + QUOTA_WINDOW_MS)
+        : null
+
     return {
       used,
-      limit: DAILY_DECK_QUOTA,
-      resetsAt: new Date((oldest?.createdAt.getTime() ?? Date.now()) + QUOTA_WINDOW_MS),
+      limit,
+      nextSlotAt,
+      resetsAt: new Date((inWindow[0]?.createdAt.getTime() ?? Date.now()) + QUOTA_WINDOW_MS),
     }
   }
 
   // --- transitions called by the processor ------------------------------------------------
 
-  markGenerating(deckId: string) {
+  markGenerating(deckId: string, attempt: number) {
     return this.prisma.deck.update({
       where: { id: deckId },
-      data: { status: DeckStatus.GENERATING, startedAt: new Date() },
+      data: {
+        status: DeckStatus.GENERATING,
+        startedAt: new Date(),
+        attempts: attempt,
+        scheduledFor: null,
+      },
+    })
+  }
+
+  /**
+   * An attempt failed but more remain. Status goes back to QUEUED rather than FAILED so the
+   * deck reads as "still trying" — the error is kept so the UI can say what went wrong
+   * without claiming the deck is dead.
+   */
+  markRetrying(deckId: string, attempts: number, error: string) {
+    return this.prisma.deck.update({
+      where: { id: deckId },
+      data: { status: DeckStatus.QUEUED, attempts, error: error.slice(0, 500) },
     })
   }
 
@@ -267,31 +325,54 @@ export class DecksService {
   // --- internals ---------------------------------------------------------------------------
 
   /**
-   * Where this job sits in the waiting list.
+   * One read of the waiting list, answering for many jobs.
    *
-   * `getWaiting` returns FIFO order, so the index IS the number ahead — which holds only
-   * while the queue stays FIFO. Adding job priorities would let a position climb while a
+   * `getWaiting` returns FIFO order, so a job's index IS the number ahead of it — which holds
+   * only while the queue stays FIFO. Adding job priorities would let a position climb while a
    * student watches it, which reads as broken even when it is correct.
+   *
+   * Taken once per request rather than once per deck: a 30-deck library page would otherwise
+   * make 30 identical Redis round-trips to build one screen.
    */
-  private async queuePosition(
-    jobId: string | null,
-  ): Promise<{ ahead: number; approximate: boolean }> {
-    if (!jobId) return { ahead: 0, approximate: false }
+  private async waitingSnapshot(): Promise<{
+    index: Map<string, number>
+    truncated: boolean
+  } | null> {
     try {
       const waiting = await this.queue.getWaiting(0, WAITING_SCAN_LIMIT - 1)
-      const idx = waiting.findIndex((j) => j.id === jobId)
-      if (idx >= 0) return { ahead: idx, approximate: false }
-      // Not in the scanned window: either it just became active (nothing ahead), or the
-      // queue is deeper than we are willing to scan.
-      if (waiting.length >= WAITING_SCAN_LIMIT) {
-        return { ahead: WAITING_SCAN_LIMIT, approximate: true }
-      }
-      return { ahead: 0, approximate: false }
+      const index = new Map<string, number>()
+      waiting.forEach((job, i) => {
+        if (job.id) index.set(job.id, i)
+      })
+      return { index, truncated: waiting.length >= WAITING_SCAN_LIMIT }
     } catch (err) {
-      // A queue lookup failing must not take the status endpoint down with it.
-      this.logger.warn(`Queue position lookup failed for job ${jobId}: ${String(err)}`)
-      return { ahead: 0, approximate: true }
+      // A queue lookup failing must not take the deck endpoints down with it.
+      this.logger.warn(`Queue position lookup failed: ${String(err)}`)
+      return null
     }
+  }
+
+  /**
+   * Position for one deck, given a snapshot. Returns nulls when the deck is not in a
+   * countable line — finished, or held on quota, where the wait is a clock and any number
+   * would be a fiction.
+   */
+  private positionFor(
+    deck: Deck,
+    snapshot: { index: Map<string, number>; truncated: boolean } | null,
+  ): { ahead: number | null; approximate: boolean | null } {
+    if (deck.status !== DeckStatus.QUEUED) return { ahead: null, approximate: null }
+    if (deck.scheduledFor && deck.scheduledFor.getTime() > Date.now()) {
+      return { ahead: null, approximate: null }
+    }
+    if (!snapshot) return { ahead: 0, approximate: true }
+
+    const idx = deck.jobId ? snapshot.index.get(deck.jobId) : undefined
+    if (idx !== undefined) return { ahead: idx, approximate: false }
+    // Not in the scanned window: either it just became active (nothing ahead), or the queue
+    // is deeper than we are willing to scan.
+    if (snapshot.truncated) return { ahead: WAITING_SCAN_LIMIT, approximate: true }
+    return { ahead: 0, approximate: false }
   }
 
   private toEntity(deck: Deck, ahead: number | null, approximate: boolean | null): DeckEntity {
@@ -319,6 +400,11 @@ export class DecksService {
       canEdit: Boolean(deck.externalId),
       tone: deck.tone,
       verbosity: deck.verbosity,
+      // Distinguishes "waiting for your allowance" (a clock) from "waiting for a worker"
+      // (a line). Conflating them is what made the old 429 feel like a dead end.
+      scheduledFor: deck.scheduledFor,
+      attempts: deck.attempts,
+      maxAttempts: MAX_ATTEMPTS,
     }
   }
 }

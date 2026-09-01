@@ -14,8 +14,22 @@ export const REEXPORT_JOB = 'reexport'
  */
 export const DECK_CONCURRENCY = 2
 
-/** Per-user generations per calendar day. Counts attempts, not successes — see DecksService. */
+/**
+ * Per-user generations per rolling 24h. Counts decks that are queued, running or finished —
+ * NOT failures. A deck that errored gave the student nothing, and charging them for our
+ * provider's flakiness is indefensible when they cannot even retry for free.
+ */
 export const DAILY_DECK_QUOTA = 3
+
+/**
+ * Retries per deck. Generation reaches out to a model provider over a multi-minute request,
+ * so transient failures are expected rather than exceptional; without retries a single blip
+ * kills a deck permanently.
+ */
+export const MAX_ATTEMPTS = 3
+
+/** Exponential base. 30s, 60s — long enough for a provider hiccup to pass. */
+export const RETRY_BACKOFF_MS = 30_000
 
 export const MIN_SLIDES = 3
 export const MAX_SLIDES = 15

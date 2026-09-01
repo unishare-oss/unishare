@@ -48,7 +48,8 @@ export class DecksProcessor extends WorkerHost {
       return
     }
 
-    await this.decks.markGenerating(deckId)
+    const attempt = job.attemptsMade + 1
+    await this.decks.markGenerating(deckId, attempt)
 
     try {
       const generated = await this.generator.generate({
@@ -77,8 +78,20 @@ export class DecksProcessor extends WorkerHost {
       this.logger.log(`Deck ${deckId} ready at ${key}${pdfKey ? ' (+pdf)' : ''}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      await this.decks.markFailed(deckId, message)
-      this.logger.error(`Deck ${deckId} failed: ${message}`)
+      const maxAttempts = job.opts.attempts ?? 1
+
+      // Only the LAST attempt marks the deck failed. Marking it on every attempt made a deck
+      // that BullMQ was still retrying look permanently dead, which is how a transient
+      // provider error turned into a wasted quota slot.
+      if (attempt >= maxAttempts) {
+        await this.decks.markFailed(deckId, message)
+        this.logger.error(`Deck ${deckId} failed after ${attempt} attempts: ${message}`)
+      } else {
+        await this.decks.markRetrying(deckId, attempt, message)
+        this.logger.warn(
+          `Deck ${deckId} attempt ${attempt}/${maxAttempts} failed, will retry: ${message}`,
+        )
+      }
       throw err
     }
   }

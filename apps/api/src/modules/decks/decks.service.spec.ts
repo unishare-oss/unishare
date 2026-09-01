@@ -1,11 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { HttpException, HttpStatus } from '@nestjs/common'
 import { getQueueToken } from '@nestjs/bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DecksService } from './decks.service'
 import { DECK_EDITOR } from './deck-generator.port'
-import { DAILY_DECK_QUOTA, DECK_QUEUE, WAITING_SCAN_LIMIT } from './decks.constants'
+import { DAILY_DECK_QUOTA, DECK_QUEUE, MAX_ATTEMPTS, WAITING_SCAN_LIMIT } from './decks.constants'
 
 /**
  * Covers the two behaviours that are easy to get subtly wrong and expensive when they are:
@@ -18,7 +17,13 @@ import { DAILY_DECK_QUOTA, DECK_QUEUE, WAITING_SCAN_LIMIT } from './decks.consta
 describe('DecksService', () => {
   let service: DecksService
   let prisma: {
-    deck: { create: jest.Mock; update: jest.Mock; count: jest.Mock; findFirst: jest.Mock }
+    deck: {
+      create: jest.Mock
+      update: jest.Mock
+      count: jest.Mock
+      findFirst: jest.Mock
+      findMany: jest.Mock
+    }
   }
   let queue: { add: jest.Mock; getWaiting: jest.Mock }
   let editor: {
@@ -48,6 +53,7 @@ describe('DecksService', () => {
         })),
         count: jest.fn().mockResolvedValue(0),
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
       },
     }
     queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }), getWaiting: jest.fn() }
@@ -74,31 +80,52 @@ describe('DecksService', () => {
   })
 
   describe('quota', () => {
-    it('queues a deck when the user is under quota', async () => {
-      prisma.deck.count.mockResolvedValue(DAILY_DECK_QUOTA - 1)
+    /** n decks in the window, oldest first, each an hour apart ending `hoursAgo` back. */
+    const window = (n: number, oldestHoursAgo = 20) =>
+      Array.from({ length: n }, (_, i) => ({
+        createdAt: new Date(Date.now() - (oldestHoursAgo - i) * 60 * 60 * 1000),
+      }))
+
+    it('queues immediately when under quota', async () => {
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA - 1))
+      await service.createDeck('user-1', { prompt: 'a topic worth covering' })
+      const [, , opts] = queue.add.mock.calls[0]
+      expect(opts.delay).toBeUndefined()
+    })
+
+    it('accepts and delays the deck instead of refusing when quota is spent', async () => {
+      // The old behaviour was a 429. Losing the request is worse than making it wait: the
+      // student already wrote the prompt.
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA))
       await service.createDeck('user-1', { prompt: 'a topic worth covering' })
       expect(queue.add).toHaveBeenCalledTimes(1)
+      const [, , opts] = queue.add.mock.calls[0]
+      expect(opts.delay).toBeGreaterThan(0)
+      expect(prisma.deck.create.mock.calls[0][0].data.scheduledFor).toBeInstanceOf(Date)
     })
 
-    it('refuses with 429, not 403, once the allowance is spent', async () => {
-      prisma.deck.count.mockResolvedValue(DAILY_DECK_QUOTA)
-      // 429 specifically: the frontend uses it to tell "come back later" apart from a queue
-      // wait, and waiting does not clear a spent quota.
-      await expect(service.createDeck('user-1', { prompt: 'a topic' })).rejects.toMatchObject({
-        status: HttpStatus.TOO_MANY_REQUESTS,
-      })
-      expect(queue.add).not.toHaveBeenCalled()
+    it('stacks the delay so a second held deck waits for the second slot', async () => {
+      // used = limit + 1 -> waits for the SECOND oldest to age out, not the first.
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA + 1))
+      const quota = await service.getQuota('user-1')
+      const rows = prisma.deck.findMany.mock.results[0].value as Promise<{ createdAt: Date }[]>
+      const list = await rows
+      expect(quota.nextSlotAt?.getTime()).toBe(list[1].createdAt.getTime() + 24 * 60 * 60 * 1000)
     })
 
-    it('counts failed attempts against the quota', async () => {
-      // Counting only successes would make retry-on-failure a free loop, and a late failure
-      // has usually already spent the tokens.
-      prisma.deck.count.mockResolvedValue(DAILY_DECK_QUOTA)
-      await expect(service.createDeck('user-1', { prompt: 'a topic' })).rejects.toBeInstanceOf(
-        HttpException,
-      )
-      const where = prisma.deck.count.mock.calls[0][0].where
-      expect(where).not.toHaveProperty('status')
+    it('excludes failed decks from the quota', async () => {
+      // A deck that errored produced nothing. Charging a slot for it, with no free retry,
+      // was the bug.
+      await service.getQuota('user-1')
+      expect(prisma.deck.findMany.mock.calls[0][0].where.status).toEqual({ not: 'FAILED' })
+    })
+
+    it('configures retries with backoff', async () => {
+      prisma.deck.findMany.mockResolvedValue([])
+      await service.createDeck('user-1', { prompt: 'a topic worth covering' })
+      const [, , opts] = queue.add.mock.calls[0]
+      expect(opts.attempts).toBe(MAX_ATTEMPTS)
+      expect(opts.backoff).toMatchObject({ type: 'exponential' })
     })
   })
 
@@ -144,6 +171,34 @@ describe('DecksService', () => {
       const deck = await service.getDeck('deck-1', 'user-1')
       expect(deck.queueAhead).toBe(WAITING_SCAN_LIMIT)
       expect(deck.queueAheadIsApproximate).toBe(true)
+    })
+
+    it('computes positions for a list with one queue read, not one per deck', async () => {
+      // A 30-deck page must not make 30 identical Redis round-trips, and the list must not
+      // say "waiting" while the deck page says "3 ahead" for the same deck.
+      queue.getWaiting.mockResolvedValue([{ id: 'job-a' }, { id: 'job-b' }, { id: 'job-c' }])
+      prisma.deck.findMany.mockResolvedValue([
+        { ...queued, id: 'd1', jobId: 'job-c' },
+        { ...queued, id: 'd2', jobId: 'job-a' },
+        { ...queued, id: 'd3', status: 'READY', jobId: null },
+      ])
+      ;(prisma.deck as unknown as { count: jest.Mock }).count.mockResolvedValue(3)
+
+      const res = await service.listDecks('user-1', {})
+      expect(queue.getWaiting).toHaveBeenCalledTimes(1)
+      expect(res.data.map((d) => d.queueAhead)).toEqual([2, 0, null])
+    })
+
+    it('reports no position for a deck held on quota', async () => {
+      // It sits in the DELAYED set, not the waiting list, so a position lookup would find
+      // nothing and wrongly say "starting shortly". Its wait is a clock, not a line.
+      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+        ...queued,
+        scheduledFor: new Date(Date.now() + 60 * 60 * 1000),
+      })
+      const deck = await service.getDeck('deck-1', 'user-1')
+      expect(deck.queueAhead).toBeNull()
+      expect(queue.getWaiting).not.toHaveBeenCalled()
     })
 
     it('survives a queue lookup failure rather than failing the status request', async () => {
