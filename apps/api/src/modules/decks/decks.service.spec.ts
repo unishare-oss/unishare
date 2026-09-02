@@ -21,20 +21,25 @@ describe('DecksService', () => {
       create: jest.Mock
       update: jest.Mock
       count: jest.Mock
+      updateMany: jest.Mock
       findFirst: jest.Mock
       findMany: jest.Mock
     }
   }
-  let queue: { add: jest.Mock; getWaiting: jest.Mock }
+  let queue: { add: jest.Mock; getWaiting: jest.Mock; getJob: jest.Mock }
   let editor: {
     listTemplates: jest.Mock
     getSlides: jest.Mock
     updateSlide: jest.Mock
     aiEditSlide: jest.Mock
     reexport: jest.Mock
+    deletePresentation: jest.Mock
   }
 
+  let storage: { deleteFile: jest.Mock }
+
   beforeEach(async () => {
+    storage = { deleteFile: jest.fn().mockResolvedValue(undefined) }
     prisma = {
       deck: {
         create: jest.fn().mockResolvedValue({ id: 'deck-1' }),
@@ -52,11 +57,16 @@ describe('DecksService', () => {
           ...data,
         })),
         count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
       },
     }
-    queue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }), getWaiting: jest.fn() }
+    queue = {
+      add: jest.fn().mockResolvedValue({ id: 'job-1' }),
+      getWaiting: jest.fn(),
+      getJob: jest.fn().mockResolvedValue(null),
+    }
     // The fake the port exists for: the whole editing surface, with no generator running.
     editor = {
       listTemplates: jest.fn().mockResolvedValue([]),
@@ -64,13 +74,14 @@ describe('DecksService', () => {
       updateSlide: jest.fn().mockResolvedValue(undefined),
       aiEditSlide: jest.fn().mockResolvedValue(undefined),
       reexport: jest.fn(),
+      deletePresentation: jest.fn().mockResolvedValue(undefined),
     }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DecksService,
         { provide: PrismaService, useValue: prisma },
-        { provide: StorageService, useValue: {} },
+        { provide: StorageService, useValue: storage },
         { provide: getQueueToken(DECK_QUEUE), useValue: queue },
         { provide: DECK_EDITOR, useValue: editor },
       ],
@@ -113,6 +124,14 @@ describe('DecksService', () => {
       expect(quota.nextSlotAt?.getTime()).toBe(list[1].createdAt.getTime() + 24 * 60 * 60 * 1000)
     })
 
+    it('counts deleted decks against the quota', async () => {
+      // The point of a soft delete. If deletion refunded the slot, "delete and regenerate"
+      // would be an unlimited allowance — so this query, alone in the service, must NOT
+      // filter on deletedAt.
+      await service.getQuota('user-1')
+      expect(prisma.deck.findMany.mock.calls[0][0].where).not.toHaveProperty('deletedAt')
+    })
+
     it('excludes failed decks from the quota', async () => {
       // A deck that errored produced nothing. Charging a slot for it, with no free retry,
       // was the bug.
@@ -146,9 +165,7 @@ describe('DecksService', () => {
     }
 
     beforeEach(() => {
-      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique = jest
-        .fn()
-        .mockResolvedValue(queued)
+      prisma.deck.findFirst.mockResolvedValue(queued)
     })
 
     it('reports the FIFO index as the number ahead', async () => {
@@ -192,7 +209,7 @@ describe('DecksService', () => {
     it('reports no position for a deck held on quota', async () => {
       // It sits in the DELAYED set, not the waiting list, so a position lookup would find
       // nothing and wrongly say "starting shortly". Its wait is a clock, not a line.
-      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+      prisma.deck.findFirst.mockResolvedValue({
         ...queued,
         scheduledFor: new Date(Date.now() + 60 * 60 * 1000),
       })
@@ -209,6 +226,98 @@ describe('DecksService', () => {
     })
   })
 
+  describe('deleting', () => {
+    const ready = {
+      id: 'deck-1',
+      ownerId: 'user-1',
+      externalId: 'ext-1',
+      status: 'READY',
+      key: 'decks/a.pptx',
+      pdfKey: 'decks/a.pdf',
+      jobId: null,
+    }
+
+    beforeEach(() => {
+      prisma.deck.findFirst.mockResolvedValue(ready)
+    })
+
+    it('marks the row deleted rather than removing it', async () => {
+      await service.deleteDeck('deck-1', 'user-1')
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-1' },
+        data: { deletedAt: expect.any(Date) },
+      })
+    })
+
+    it('removes both stored files and the generator copy', async () => {
+      await service.deleteDeck('deck-1', 'user-1')
+      expect(storage.deleteFile).toHaveBeenCalledWith('decks/a.pptx')
+      expect(storage.deleteFile).toHaveBeenCalledWith('decks/a.pdf')
+      expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1')
+    })
+
+    it('succeeds even when the object store is unreachable', async () => {
+      // The delete is already recorded by then. Failing here would tell the student their
+      // deck is still there when it is not.
+      storage.deleteFile.mockRejectedValue(new Error('garage is down'))
+      await expect(service.deleteDeck('deck-1', 'user-1')).resolves.toBeUndefined()
+    })
+
+    it('drops a queued job so a deleted deck never generates', async () => {
+      const remove = jest.fn().mockResolvedValue(undefined)
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, status: 'QUEUED', jobId: 'job-1' })
+      queue.getJob.mockResolvedValue({ remove })
+      await service.deleteDeck('deck-1', 'user-1')
+      expect(remove).toHaveBeenCalled()
+    })
+
+    it('still deletes when the job cannot be removed', async () => {
+      // A job the worker already holds a lock on throws here, and cannot be cancelled at all.
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, status: 'GENERATING', jobId: 'job-1' })
+      queue.getJob.mockRejectedValue(new Error('job is locked'))
+      await expect(service.deleteDeck('deck-1', 'user-1')).resolves.toBeUndefined()
+      expect(prisma.deck.update).toHaveBeenCalled()
+    })
+
+    it('refuses to delete a deck the caller does not own', async () => {
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, ownerId: 'someone-else' })
+      await expect(service.deleteDeck('deck-1', 'user-1')).rejects.toThrow()
+      expect(prisma.deck.update).not.toHaveBeenCalled()
+      expect(storage.deleteFile).not.toHaveBeenCalled()
+    })
+
+    it('hides an already-deleted deck instead of deleting it twice', async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.deleteDeck('deck-1', 'user-1')).rejects.toThrow()
+    })
+
+    it('keeps deleted decks out of the library and its count', async () => {
+      await service.listDecks('user-1', {})
+      expect(prisma.deck.findMany.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
+      expect(prisma.deck.count.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
+    })
+
+    it('stops the worker picking up a deleted deck', async () => {
+      await service.findForJob('deck-1')
+      expect(prisma.deck.findFirst).toHaveBeenCalledWith({
+        where: { id: 'deck-1', deletedAt: null },
+      })
+    })
+
+    it('will not publish a result onto a deck deleted mid-generation', async () => {
+      prisma.deck.updateMany.mockResolvedValue({ count: 0 })
+      const published = await service.markReady('deck-1', {
+        key: 'k',
+        pdfKey: null,
+        sizeBytes: 1,
+        title: 't',
+        externalId: 'ext-1',
+      })
+      expect(published).toBe(false)
+      expect(prisma.deck.updateMany.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
+    })
+  })
+
   describe('editing', () => {
     const ready = {
       id: 'deck-1',
@@ -218,9 +327,7 @@ describe('DecksService', () => {
     }
 
     beforeEach(() => {
-      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique = jest
-        .fn()
-        .mockResolvedValue(ready)
+      prisma.deck.findFirst.mockResolvedValue(ready)
     })
 
     it('sends the whole slide back, not just the edited content', async () => {
@@ -242,7 +349,7 @@ describe('DecksService', () => {
     })
 
     it('refuses to edit a deck the caller does not own', async () => {
-      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+      prisma.deck.findFirst.mockResolvedValue({
         ...ready,
         ownerId: 'someone-else',
       })
@@ -251,7 +358,7 @@ describe('DecksService', () => {
     })
 
     it('refuses to edit a deck with no external id', async () => {
-      ;(prisma.deck as unknown as { findUnique: jest.Mock }).findUnique.mockResolvedValue({
+      prisma.deck.findFirst.mockResolvedValue({
         ...ready,
         externalId: null,
       })

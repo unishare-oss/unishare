@@ -93,7 +93,7 @@ export class DecksService {
   }
 
   async getDeck(id: string, userId: string): Promise<DeckEntity> {
-    const deck = await this.prisma.deck.findUnique({ where: { id } })
+    const deck = await this.prisma.deck.findFirst({ where: { id, deletedAt: null } })
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
 
@@ -110,12 +110,12 @@ export class DecksService {
     const limit = query.limit ?? 20
     const [rows, total] = await Promise.all([
       this.prisma.deck.findMany({
-        where: { ownerId: userId },
+        where: { ownerId: userId, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.deck.count({ where: { ownerId: userId } }),
+      this.prisma.deck.count({ where: { ownerId: userId, deletedAt: null } }),
     ])
     // One queue read for the page. Without this the library could only say "waiting",
     // while the deck page said "3 ahead" — the same deck describing itself two ways.
@@ -138,7 +138,7 @@ export class DecksService {
   }
 
   async getDownloadUrl(id: string, userId: string, format: 'pptx' | 'pdf' = 'pptx') {
-    const deck = await this.prisma.deck.findUnique({ where: { id } })
+    const deck = await this.prisma.deck.findFirst({ where: { id, deletedAt: null } })
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
 
@@ -154,12 +154,72 @@ export class DecksService {
     return { url: await this.storage.generatePresignedDownloadUrl(key, expiresIn), expiresIn }
   }
 
+  /**
+   * Soft delete: the row stays, the deck goes.
+   *
+   * Hard-deleting would hand the allowance back, and "delete and regenerate" is then an
+   * unlimited quota. Keeping the row costs a few hundred bytes and makes the limit mean what
+   * it says. The trade the student sees is that deleting a deck does not buy them another —
+   * which is why the UI says so before they confirm.
+   */
+  async deleteDeck(id: string, userId: string): Promise<void> {
+    const deck = await this.prisma.deck.findFirst({ where: { id, deletedAt: null } })
+    if (!deck) throw new NotFoundException('Deck not found')
+    if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
+
+    // Recorded first, on its own. The list has to update now, and neither a slow generator
+    // nor an unreachable object store is allowed to fail a student's delete.
+    await this.prisma.deck.update({ where: { id }, data: { deletedAt: new Date() } })
+
+    // Everything below reclaims space and cannot undo the line above, so each part is
+    // best-effort and logged. A failure leaves key/pdfKey in place, which is the record of
+    // what was orphaned — losing the reference would make the leak unfindable.
+    if (deck.jobId) await this.discardJob(deck.jobId, id)
+    await this.purgeArtifacts(deck)
+    this.logger.log(`Deck ${id} deleted by ${userId}`)
+  }
+
+  /**
+   * Drops a queued job so a deleted deck never starts generating.
+   *
+   * Not the real guard, and not able to be: a job the worker already holds cannot be
+   * cancelled, and one inside a ten-minute generate call least of all. findForJob and the
+   * deletedAt-scoped result writes are what actually make deletion stick — this only avoids
+   * spending a provider call on work whose result has nowhere to go.
+   */
+  private async discardJob(jobId: string, deckId: string) {
+    try {
+      const job = await this.queue.getJob(jobId)
+      await job?.remove()
+    } catch (err) {
+      this.logger.warn(`Could not remove job ${jobId} for deleted deck ${deckId}: ${String(err)}`)
+    }
+  }
+
+  /** The stored files and the generator's own copy. Failures are leaks, not errors. */
+  private async purgeArtifacts(deck: Pick<Deck, 'id' | 'key' | 'pdfKey' | 'externalId'>) {
+    const keys = [deck.key, deck.pdfKey].filter((k): k is string => Boolean(k))
+    await Promise.all(
+      keys.map((key) =>
+        this.storage
+          .deleteFile(key)
+          .catch((err) => this.logger.warn(`Orphaned object ${key}: ${String(err)}`)),
+      ),
+    )
+    // Contractually never throws — see DeckEditor.deletePresentation.
+    if (deck.externalId) await this.editor.deletePresentation(deck.externalId)
+  }
+
   async getQuota(userId: string) {
     const since = new Date(Date.now() - QUOTA_WINDOW_MS)
 
     // Failures are excluded on purpose. A deck that errored produced nothing, and with
     // retries in place a genuine failure means all attempts were exhausted — that is our
     // problem, not the student's allowance.
+    //
+    // Deleted decks are NOT excluded, and this is the one query in the file that ignores
+    // deletedAt. A deck that was generated was paid for; letting a delete refund it turns
+    // the daily limit into a suggestion. Do not "fix" this by adding the filter.
     const inWindow = await this.prisma.deck.findMany({
       where: {
         ownerId: userId,
@@ -216,7 +276,15 @@ export class DecksService {
     })
   }
 
-  markReady(
+  /**
+   * Publishes a finished deck, unless it was deleted while it was being made.
+   *
+   * Scoped on deletedAt and returning whether it applied, because generation takes minutes
+   * and a student can delete a deck in the middle of one. Writing the result unconditionally
+   * would resurrect the row with a key pointing at files nobody can ever reach — the caller
+   * uses the false to clean those up instead.
+   */
+  async markReady(
     deckId: string,
     data: {
       key: string
@@ -225,9 +293,9 @@ export class DecksService {
       title: string
       externalId: string
     },
-  ) {
-    return this.prisma.deck.update({
-      where: { id: deckId },
+  ): Promise<boolean> {
+    const { count } = await this.prisma.deck.updateMany({
+      where: { id: deckId, deletedAt: null },
       data: {
         status: DeckStatus.READY,
         ...data,
@@ -236,6 +304,7 @@ export class DecksService {
         completedAt: new Date(),
       },
     })
+    return count > 0
   }
 
   markFailed(deckId: string, error: string) {
@@ -250,8 +319,13 @@ export class DecksService {
     })
   }
 
+  /**
+   * The worker's view of a deck. Filtered on deletedAt because deleting a deck mid-flight
+   * must stop the work: the processor treats a missing row as "drop this job", so a deck
+   * deleted while queued never starts.
+   */
   findForJob(deckId: string) {
-    return this.prisma.deck.findUnique({ where: { id: deckId } })
+    return this.prisma.deck.findFirst({ where: { id: deckId, deletedAt: null } })
   }
 
   // --- editing -----------------------------------------------------------------------------
@@ -299,19 +373,21 @@ export class DecksService {
     })
   }
 
+  /** As markReady: a re-render that finishes after a delete must not republish the deck. */
   async markReexported(
     deckId: string,
     data: { key: string; pdfKey: string | null; sizeBytes: number },
-  ) {
-    return this.prisma.deck.update({
-      where: { id: deckId },
+  ): Promise<boolean> {
+    const { count } = await this.prisma.deck.updateMany({
+      where: { id: deckId, deletedAt: null },
       data: { status: DeckStatus.READY, ...data, jobId: null, completedAt: new Date() },
     })
+    return count > 0
   }
 
   /** A deck the caller owns which the generator can still act on. */
   private async ownedEditableDeck(deckId: string, userId: string) {
-    const deck = await this.prisma.deck.findUnique({ where: { id: deckId } })
+    const deck = await this.prisma.deck.findFirst({ where: { id: deckId, deletedAt: null } })
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
     if (!deck.externalId) {

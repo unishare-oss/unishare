@@ -24,7 +24,8 @@ describe('DecksProcessor — retry boundary', () => {
     markReexported: jest.Mock
   }
   let generator: { generate: jest.Mock }
-  let editor: { reexport: jest.Mock }
+  let editor: { reexport: jest.Mock; deletePresentation: jest.Mock }
+  let storage: { uploadBuffer: jest.Mock; deleteFile: jest.Mock }
 
   const deck = {
     id: 'deck-1',
@@ -54,10 +55,11 @@ describe('DecksProcessor — retry boundary', () => {
     decks = {
       findForJob: jest.fn().mockResolvedValue(deck),
       markGenerating: jest.fn(),
-      markReady: jest.fn(),
+      // Both return whether the write landed: false means the deck was deleted mid-flight.
+      markReady: jest.fn().mockResolvedValue(true),
       markFailed: jest.fn(),
       markRetrying: jest.fn(),
-      markReexported: jest.fn(),
+      markReexported: jest.fn().mockResolvedValue(true),
     }
     generator = { generate: jest.fn().mockRejectedValue(new Error('provider timeout')) }
     editor = {
@@ -65,16 +67,18 @@ describe('DecksProcessor — retry boundary', () => {
         pptx: { buffer: Buffer.from('x'), mimeType: 'application/vnd.ms-powerpoint' },
         pdf: null,
       }),
+      deletePresentation: jest.fn().mockResolvedValue(undefined),
+    }
+    storage = {
+      uploadBuffer: jest.fn().mockResolvedValue({ key: 'decks/x.pptx' }),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
     }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DecksProcessor,
         { provide: DecksService, useValue: decks },
-        {
-          provide: StorageService,
-          useValue: { uploadBuffer: jest.fn().mockResolvedValue({ key: 'decks/x.pptx' }) },
-        },
+        { provide: StorageService, useValue: storage },
         { provide: DECK_GENERATOR, useValue: generator },
         { provide: DECK_EDITOR, useValue: editor },
       ],
@@ -109,6 +113,33 @@ describe('DecksProcessor — retry boundary', () => {
     decks.findForJob.mockResolvedValue(null)
     await expect(processor.process(job(0))).resolves.toBeUndefined()
     expect(generator.generate).not.toHaveBeenCalled()
+    expect(decks.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('cleans up its own output when the deck is deleted mid-generation', async () => {
+    // findForJob only catches a delete that happened BEFORE the job started. Generation runs
+    // for minutes, so a deck can go away while the provider is still working — and the files
+    // uploaded a moment later would then belong to a row nobody can reach.
+    generator.generate.mockResolvedValue({
+      externalId: 'ext-1',
+      pptx: { buffer: Buffer.from('x'), mimeType: 'application/x-pptx' },
+      pdf: null,
+      filename: 'deck.pptx',
+    })
+    decks.markReady.mockResolvedValue(false)
+
+    await expect(processor.process(job(0))).resolves.toBeUndefined()
+    expect(storage.deleteFile).toHaveBeenCalledWith('decks/x.pptx')
+    expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1')
+    // Not a failure: the job did its work and the student got what they asked for.
+    expect(decks.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('cleans up a re-export whose deck was deleted while it rendered', async () => {
+    decks.markReexported.mockResolvedValue(false)
+    const reexportJob = { ...job(0), name: REEXPORT_JOB } as unknown as Job<DeckJobData>
+    await processor.process(reexportJob)
+    expect(storage.deleteFile).toHaveBeenCalledWith('decks/x.pptx')
     expect(decks.markFailed).not.toHaveBeenCalled()
   })
 

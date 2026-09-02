@@ -79,4 +79,12 @@ export interface DeckEditor {
   aiEditSlide(slideId: string, prompt: string): Promise<void>
   /** Re-renders an existing deck. No model call, so far cheaper than regenerating. */
   reexport(externalId: string): Promise<{ pptx: DeckExport; pdf: DeckExport | null }>
+  /**
+   * Discards the generator's own copy of a deck.
+   *
+   * Best-effort by contract: a student deleting a deck must succeed whether or not the
+   * generator is reachable, so implementations report failure by resolving, not throwing.
+   * The cost of a miss is a stale presentation on the generator's disk, not a broken delete.
+   */
+  deletePresentation(externalId: string): Promise<void>
 }

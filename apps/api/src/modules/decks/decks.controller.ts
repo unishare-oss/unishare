@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
@@ -54,6 +54,12 @@ export class DecksController {
   @ResponseMessage('Deck fetched successfully')
   getDeck(@Param('id') id: string, @Session() session: UserSession) {
     return this.decksService.getDeck(id, session.user.id)
+  }
+
+  @Delete(':id')
+  @ResponseMessage('Deck deleted successfully')
+  deleteDeck(@Param('id') id: string, @Session() session: UserSession) {
+    return this.decksService.deleteDeck(id, session.user.id)
   }
 
   @Get(':id/download')

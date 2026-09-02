@@ -19,6 +19,8 @@ import { PDF_MIME, PPTX_MIME } from '../decks.constants'
  */
 const GENERATE_TIMEOUT_MS = 10 * 60 * 1000
 const DOWNLOAD_TIMEOUT_MS = 2 * 60 * 1000
+/** Deletion is a row and a few files on the generator's disk — it is fast or it is broken. */
+const DELETE_TIMEOUT_MS = 15 * 1000
 
 /**
  * Provider failures, in words a student can read.
@@ -212,6 +214,27 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     }
     const pdf = await this.tryExport(baseUrl, apiKey, externalId, 'pdf')
     return { pptx, pdf }
+  }
+
+  /**
+   * Never throws. See DeckEditor.deletePresentation: the student's delete has already been
+   * recorded by the time this runs, so a failure here can only be logged. A 404 is a success
+   * in every way that matters — the generator does not have the deck, which is the goal.
+   */
+  async deletePresentation(externalId: string): Promise<void> {
+    try {
+      const { baseUrl, apiKey } = this.credentials()
+      const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/${externalId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(DELETE_TIMEOUT_MS),
+      })
+      if (!res.ok && res.status !== 404) {
+        this.logger.warn(`Generator delete failed ${res.status} for ${externalId}`)
+      }
+    } catch (err) {
+      this.logger.warn(`Generator delete errored for ${externalId}: ${String(err)}`)
+    }
   }
 
   // --- internals ----------------------------------------------------------------------------

@@ -1,4 +1,5 @@
-import { describeProviderFailure } from './presenton.client'
+import type { ConfigService } from '@nestjs/config'
+import { PresentonClient, describeProviderFailure } from './presenton.client'
 
 /**
  * The error text on a deck is rendered to the student verbatim, so it is part of the UI.
@@ -49,5 +50,52 @@ describe('describeProviderFailure', () => {
 
   it('survives a non-JSON body', () => {
     expect(describeProviderFailure(599, '<html>gateway</html>')).toMatch(/unexpected error/i)
+  })
+})
+
+/**
+ * deletePresentation is the one call in this client that reports failure by resolving.
+ * Everything that depends on it — a student's delete — has already been committed to the
+ * database by the time it runs, so a throw here would report "could not delete" for a deck
+ * that is definitively gone, and a retry would then say "Deck not found".
+ */
+describe('PresentonClient.deletePresentation', () => {
+  const config = {
+    get: (key: string) =>
+      ({ PRESENTON_BASE_URL: 'http://presenton', PRESENTON_API_KEY: 'sk-test' })[key],
+  } as unknown as ConfigService
+
+  const client = () => new PresentonClient(config)
+  const fetchMock = () => globalThis.fetch as unknown as jest.Mock
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('sends a DELETE for the presentation with our credentials', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as never
+    await client().deletePresentation('ext-1')
+
+    const [url, init] = fetchMock().mock.calls[0]
+    expect(url).toBe('http://presenton/api/v1/ppt/presentation/ext-1')
+    expect(init.method).toBe('DELETE')
+    expect(init.headers.Authorization).toBe('Bearer sk-test')
+  })
+
+  it('resolves when the generator is unreachable', async () => {
+    globalThis.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED')) as never
+    await expect(client().deletePresentation('ext-1')).resolves.toBeUndefined()
+  })
+
+  it('resolves when the generator rejects the request', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 }) as never
+    await expect(client().deletePresentation('ext-1')).resolves.toBeUndefined()
+  })
+
+  it('resolves when the client is not configured at all', async () => {
+    // credentials() throws for a missing base URL. Local development runs without a reachable
+    // generator, and a delete must still work there.
+    const unconfigured = new PresentonClient({ get: () => undefined } as unknown as ConfigService)
+    await expect(unconfigured.deletePresentation('ext-1')).resolves.toBeUndefined()
   })
 })

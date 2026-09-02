@@ -68,13 +68,21 @@ export class DecksProcessor extends WorkerHost {
       const key = await this.store(generated.pptx)
       const pdfKey = generated.pdf ? await this.store(generated.pdf) : null
 
-      await this.decks.markReady(deckId, {
+      const published = await this.decks.markReady(deckId, {
         key,
         pdfKey,
         sizeBytes: generated.pptx.buffer.byteLength,
         title: this.titleFor(deck.prompt),
         externalId: generated.externalId,
       })
+
+      // Deleted while it was generating. The files were uploaded a moment ago and now belong
+      // to nothing, so they are cleaned up here rather than left for a sweep — this is the
+      // only place that still knows their keys.
+      if (!published) {
+        await this.discardOrphans(deckId, [key, pdfKey], generated.externalId)
+        return
+      }
       this.logger.log(`Deck ${deckId} ready at ${key}${pdfKey ? ' (+pdf)' : ''}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -109,11 +117,17 @@ export class DecksProcessor extends WorkerHost {
 
     try {
       const { pptx, pdf } = await this.editor.reexport(deck.externalId)
-      await this.decks.markReexported(deckId, {
-        key: await this.store(pptx),
-        pdfKey: pdf ? await this.store(pdf) : null,
+      const key = await this.store(pptx)
+      const pdfKey = pdf ? await this.store(pdf) : null
+      const published = await this.decks.markReexported(deckId, {
+        key,
+        pdfKey,
         sizeBytes: pptx.buffer.byteLength,
       })
+      if (!published) {
+        await this.discardOrphans(deckId, [key, pdfKey], deck.externalId)
+        return
+      }
       this.logger.log(`Deck ${deckId} re-exported`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -121,6 +135,30 @@ export class DecksProcessor extends WorkerHost {
       this.logger.error(`Deck ${deckId} re-export failed: ${message}`)
       throw err
     }
+  }
+
+  /**
+   * Files produced for a deck that was deleted before they could be recorded.
+   *
+   * Best-effort and never rethrown: the job did its work and the deck is gone either way, so
+   * failing here would only retry a generation whose result is already unwanted.
+   */
+  private async discardOrphans(
+    deckId: string,
+    keys: (string | null)[],
+    externalId: string,
+  ): Promise<void> {
+    this.logger.warn(`Deck ${deckId} was deleted mid-flight; discarding its output`)
+    await Promise.all(
+      keys
+        .filter((k): k is string => Boolean(k))
+        .map((key) =>
+          this.storage
+            .deleteFile(key)
+            .catch((err) => this.logger.warn(`Orphaned object ${key}: ${String(err)}`)),
+        ),
+    )
+    await this.editor.deletePresentation(externalId)
   }
 
   /**
