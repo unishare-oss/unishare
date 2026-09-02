@@ -8,11 +8,18 @@ export const REEXPORT_JOB = 'reexport'
 /**
  * Total concurrent generations across every worker, set via `setGlobalConcurrency`.
  *
- * This is the cost control AND the reason a queue position is meaningful: without a cap,
- * ten students clicking at once means ten concurrent model runs and ten times the spend,
- * and nobody is ever "waiting" for anything you could count.
+ * ONE, not two, and the reason is measured rather than cautious: the model provider's free
+ * tier allows 8000 tokens per minute, and it bills the RESERVATION (prompt +
+ * max_completion_tokens), not actual usage. At ~1500 per call that is about five calls a
+ * minute, and a single deck needs one call for the outline plus one per slide. Two decks
+ * running at once cannot both fit, so the second does not merely run slowly — it takes the
+ * first one down with it, because a mid-generation 429 fails the whole deck rather than the
+ * slide.
+ *
+ * Raise this only alongside a paid provider tier. It is a throughput knob that looks free
+ * and is not.
  */
-export const DECK_CONCURRENCY = 2
+export const DECK_CONCURRENCY = 1
 
 /**
  * Per-user generations per rolling 24h. Counts decks that are queued, running or finished —

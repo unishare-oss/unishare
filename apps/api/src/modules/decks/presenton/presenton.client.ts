@@ -20,6 +20,43 @@ import { PDF_MIME, PPTX_MIME } from '../decks.constants'
 const GENERATE_TIMEOUT_MS = 10 * 60 * 1000
 const DOWNLOAD_TIMEOUT_MS = 2 * 60 * 1000
 
+/**
+ * Provider failures, in words a student can read.
+ *
+ * The raw body is JSON (`{"detail":"..."}`) and the status is an HTTP code — neither belongs
+ * on screen. This text is stored on the deck and rendered directly, so it must not contain
+ * braces, status codes, or instructions that contradict what the UI says: the generator's own
+ * 429 detail ends with "Please wait and try again", which is wrong when we are already
+ * retrying automatically on the student's behalf.
+ *
+ * The full body is logged at the call site, so nothing is lost for debugging.
+ */
+export function describeProviderFailure(status: number, body: string): string {
+  // Deliberately not "rate limited, try shortly": the generator collapses per-minute and
+  // per-DAY limits into the same 429, and on a free tier the daily cap is the likely one —
+  // which no amount of waiting or retrying clears today. Saying "usage limit" is true of both
+  // and promises nothing.
+  if (status === 429) return 'The AI service has reached its usage limit.'
+  if (status === 503 || status === 502 || status === 504) {
+    return 'The AI service is temporarily unavailable.'
+  }
+  if (status === 401 || status === 403) {
+    return 'The deck service rejected our credentials — an administrator needs to look at this.'
+  }
+  if (status === 400) return 'The AI service could not work with this request.'
+
+  // Unknown status: fall back to the provider's own words if they are usable, since a vague
+  // message on an unrecognised failure is worse than a specific one.
+  try {
+    const parsed = JSON.parse(body) as { detail?: unknown; message?: unknown }
+    const detail = typeof parsed.detail === 'string' ? parsed.detail : parsed.message
+    if (typeof detail === 'string' && detail.trim().length > 0) return detail.trim().slice(0, 200)
+  } catch {
+    // Not JSON — fall through.
+  }
+  return 'The AI service returned an unexpected error.'
+}
+
 interface GenerateResponse {
   presentation_id: string
   /** Server-absolute path to the exported file. Fetched by prepending the base URL verbatim. */
@@ -75,10 +112,10 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     })
 
     if (!res.ok) {
-      const detail = (await res.text().catch(() => '')).slice(0, 500)
-      throw new InternalServerErrorException(
-        `Deck generation failed (${res.status}): ${detail || 'no response body'}`,
-      )
+      const body = (await res.text().catch(() => '')).slice(0, 500)
+      // Status and raw body to the log; a human sentence to the caller.
+      this.logger.warn(`generate failed ${res.status}: ${body || 'no response body'}`)
+      throw new InternalServerErrorException(describeProviderFailure(res.status, body))
     }
 
     const body = (await res.json()) as GenerateResponse
@@ -95,9 +132,8 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     })
 
     if (!file.ok) {
-      throw new InternalServerErrorException(
-        `Deck generated but could not be downloaded (${file.status})`,
-      )
+      this.logger.warn(`deck download failed ${file.status} for ${body.presentation_id}`)
+      throw new InternalServerErrorException('The deck was generated but could not be retrieved.')
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
@@ -232,10 +268,9 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
       signal: AbortSignal.timeout(opts.timeoutMs ?? DOWNLOAD_TIMEOUT_MS),
     })
     if (!res.ok) {
-      const detail = (await res.text().catch(() => '')).slice(0, 300)
-      throw new InternalServerErrorException(
-        `Deck service call failed (${res.status} ${path}): ${detail || 'no body'}`,
-      )
+      const body = (await res.text().catch(() => '')).slice(0, 300)
+      this.logger.warn(`deck service ${path} failed ${res.status}: ${body || 'no body'}`)
+      throw new InternalServerErrorException(describeProviderFailure(res.status, body))
     }
     return (await res.json()) as T
   }
