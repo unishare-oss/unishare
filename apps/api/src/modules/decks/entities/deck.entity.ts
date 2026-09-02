@@ -32,6 +32,13 @@ export class DeckEntity {
   @ApiProperty({ description: 'The generator can still act on this deck' })
   canEdit: boolean
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Where to point the editor frame. Null when no editor host is configured.',
+  })
+  editorUrl: string | null
+
   @ApiProperty() tone: string
   @ApiProperty() verbosity: string
 
@@ -50,18 +57,6 @@ export class DeckTemplateEntity {
   @ApiProperty() id: string
   @ApiProperty() name: string
   @ApiPropertyOptional({ type: String, nullable: true }) description: string | null
-}
-
-export class DeckSlideEntity {
-  @ApiProperty() id: string
-  @ApiProperty() index: number
-  @ApiProperty() layout: string
-  @ApiProperty({
-    description: 'Layout-defined content object. Walked generically by the editor.',
-    type: 'object',
-    additionalProperties: true,
-  })
-  content: unknown
 }
 
 export class PaginatedDecksEntity {

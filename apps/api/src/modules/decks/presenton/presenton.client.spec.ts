@@ -1,5 +1,6 @@
 import type { ConfigService } from '@nestjs/config'
 import { PresentonClient, describeProviderFailure } from './presenton.client'
+import type { PresentonAccountsService } from './presenton-accounts.service'
 
 /**
  * The error text on a deck is rendered to the student verbatim, so it is part of the UI.
@@ -65,7 +66,14 @@ describe('PresentonClient.deletePresentation', () => {
       ({ PRESENTON_BASE_URL: 'http://presenton', PRESENTON_API_KEY: 'sk-test' })[key],
   } as unknown as ConfigService
 
-  const client = () => new PresentonClient(config)
+  // The client brokers a per-student session for every deck-scoped call; the fake returns a
+  // fixed cookie so the assertions below are about what reaches the generator.
+  const accounts = {
+    sessionFor: jest.fn().mockResolvedValue('presenton_session=abc'),
+    invalidate: jest.fn().mockResolvedValue(undefined),
+  } as unknown as PresentonAccountsService
+
+  const client = () => new PresentonClient(config, accounts)
   const fetchMock = () => globalThis.fetch as unknown as jest.Mock
 
   afterEach(() => {
@@ -74,28 +82,33 @@ describe('PresentonClient.deletePresentation', () => {
 
   it('sends a DELETE for the presentation with our credentials', async () => {
     globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as never
-    await client().deletePresentation('ext-1')
+    await client().deletePresentation('ext-1', 'user-1')
 
     const [url, init] = fetchMock().mock.calls[0]
     expect(url).toBe('http://presenton/api/v1/ppt/presentation/ext-1')
     expect(init.method).toBe('DELETE')
-    expect(init.headers.Authorization).toBe('Bearer sk-test')
+    // Acts as the owner, not as the admin key: the generator 404s a deck the caller does not own.
+    expect(init.headers.Cookie).toBe('presenton_session=abc')
+    expect(init.headers.Authorization).toBeUndefined()
   })
 
   it('resolves when the generator is unreachable', async () => {
     globalThis.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED')) as never
-    await expect(client().deletePresentation('ext-1')).resolves.toBeUndefined()
+    await expect(client().deletePresentation('ext-1', 'user-1')).resolves.toBeUndefined()
   })
 
   it('resolves when the generator rejects the request', async () => {
     globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 }) as never
-    await expect(client().deletePresentation('ext-1')).resolves.toBeUndefined()
+    await expect(client().deletePresentation('ext-1', 'user-1')).resolves.toBeUndefined()
   })
 
   it('resolves when the client is not configured at all', async () => {
     // credentials() throws for a missing base URL. Local development runs without a reachable
     // generator, and a delete must still work there.
-    const unconfigured = new PresentonClient({ get: () => undefined } as unknown as ConfigService)
-    await expect(unconfigured.deletePresentation('ext-1')).resolves.toBeUndefined()
+    const unconfigured = new PresentonClient(
+      { get: () => undefined } as unknown as ConfigService,
+      accounts,
+    )
+    await expect(unconfigured.deletePresentation('ext-1', 'user-1')).resolves.toBeUndefined()
   })
 })

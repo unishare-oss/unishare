@@ -29,6 +29,25 @@ export const DECK_CONCURRENCY = 1
 export const DAILY_DECK_QUOTA = 3
 
 /**
+ * The rolling window both allowances are measured over.
+ *
+ * A rolling 24 hours rather than a calendar day, for two reasons: it sidesteps the question of
+ * whose midnight (the users are not in UTC), and it cannot be gamed by spending the whole
+ * allowance at 23:59 and the next one at 00:01.
+ */
+export const QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Per-user AI slide edits per rolling 24h, enforced on the embedded editor's own model calls.
+ *
+ * Higher than DAILY_DECK_QUOTA because an edit rewrites one slide rather than authoring a deck,
+ * so it is a fraction of the tokens — but capped all the same: these calls bypass the queue
+ * entirely, and the provider's per-minute token budget is shared with every deck waiting to
+ * generate. One student looping a rewrite would fail everyone else's decks.
+ */
+export const AI_EDIT_DAILY_CAP = 20
+
+/**
  * Retries per deck. Generation reaches out to a model provider over a multi-minute request,
  * so transient failures are expected rather than exceptional; without retries a single blip
  * kills a deck permanently.

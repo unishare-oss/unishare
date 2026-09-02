@@ -53,6 +53,9 @@ export class DecksProcessor extends WorkerHost {
 
     try {
       const generated = await this.generator.generate({
+        // The generator is multi-tenant: without this the deck is created under the shared
+        // administrator account and never appears in the student's editor.
+        ownerId: deck.ownerId,
         prompt: deck.prompt,
         slideCount: deck.slideCount,
         language: deck.language,
@@ -80,7 +83,7 @@ export class DecksProcessor extends WorkerHost {
       // to nothing, so they are cleaned up here rather than left for a sweep — this is the
       // only place that still knows their keys.
       if (!published) {
-        await this.discardOrphans(deckId, [key, pdfKey], generated.externalId)
+        await this.discardOrphans(deckId, [key, pdfKey], generated.externalId, deck.ownerId)
         return
       }
       this.logger.log(`Deck ${deckId} ready at ${key}${pdfKey ? ' (+pdf)' : ''}`)
@@ -116,7 +119,7 @@ export class DecksProcessor extends WorkerHost {
     }
 
     try {
-      const { pptx, pdf } = await this.editor.reexport(deck.externalId)
+      const { pptx, pdf } = await this.editor.reexport(deck.externalId, deck.ownerId)
       const key = await this.store(pptx)
       const pdfKey = pdf ? await this.store(pdf) : null
       const published = await this.decks.markReexported(deckId, {
@@ -125,7 +128,7 @@ export class DecksProcessor extends WorkerHost {
         sizeBytes: pptx.buffer.byteLength,
       })
       if (!published) {
-        await this.discardOrphans(deckId, [key, pdfKey], deck.externalId)
+        await this.discardOrphans(deckId, [key, pdfKey], deck.externalId, deck.ownerId)
         return
       }
       this.logger.log(`Deck ${deckId} re-exported`)
@@ -147,6 +150,7 @@ export class DecksProcessor extends WorkerHost {
     deckId: string,
     keys: (string | null)[],
     externalId: string,
+    ownerId: string,
   ): Promise<void> {
     this.logger.warn(`Deck ${deckId} was deleted mid-flight; discarding its output`)
     await Promise.all(
@@ -158,7 +162,7 @@ export class DecksProcessor extends WorkerHost {
             .catch((err) => this.logger.warn(`Orphaned object ${key}: ${String(err)}`)),
         ),
     )
-    await this.editor.deletePresentation(externalId)
+    await this.editor.deletePresentation(externalId, ownerId)
   }
 
   /**

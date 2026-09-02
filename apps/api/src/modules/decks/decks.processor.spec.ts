@@ -29,6 +29,7 @@ describe('DecksProcessor — retry boundary', () => {
 
   const deck = {
     id: 'deck-1',
+    ownerId: 'user-1',
     prompt: 'p',
     slideCount: 8,
     language: 'English',
@@ -116,6 +117,19 @@ describe('DecksProcessor — retry boundary', () => {
     expect(decks.markFailed).not.toHaveBeenCalled()
   })
 
+  it('generates as the deck owner, not as the shared admin account', async () => {
+    // A deck generated under the administrator's credentials is invisible to the student in
+    // the embedded editor and visible to everyone else — the whole reason accounts are brokered.
+    generator.generate.mockResolvedValue({
+      externalId: 'ext-1',
+      pptx: { buffer: Buffer.from('x'), mimeType: 'application/x-pptx' },
+      pdf: null,
+      filename: 'deck.pptx',
+    })
+    await processor.process(job(0))
+    expect(generator.generate).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'user-1' }))
+  })
+
   it('cleans up its own output when the deck is deleted mid-generation', async () => {
     // findForJob only catches a delete that happened BEFORE the job started. Generation runs
     // for minutes, so a deck can go away while the provider is still working — and the files
@@ -130,7 +144,7 @@ describe('DecksProcessor — retry boundary', () => {
 
     await expect(processor.process(job(0))).resolves.toBeUndefined()
     expect(storage.deleteFile).toHaveBeenCalledWith('decks/x.pptx')
-    expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1')
+    expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1', 'user-1')
     // Not a failure: the job did its work and the student got what they asked for.
     expect(decks.markFailed).not.toHaveBeenCalled()
   })
@@ -147,7 +161,7 @@ describe('DecksProcessor — retry boundary', () => {
     const reexportJob = { ...job(0), name: REEXPORT_JOB } as unknown as Job<DeckJobData>
     await processor.process(reexportJob)
     expect(generator.generate).not.toHaveBeenCalled()
-    expect(editor.reexport).toHaveBeenCalledWith('ext-1')
+    expect(editor.reexport).toHaveBeenCalledWith('ext-1', 'user-1')
     expect(decks.markReexported).toHaveBeenCalled()
   })
 })

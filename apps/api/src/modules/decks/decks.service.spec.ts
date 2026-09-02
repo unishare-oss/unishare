@@ -29,9 +29,6 @@ describe('DecksService', () => {
   let queue: { add: jest.Mock; getWaiting: jest.Mock; getJob: jest.Mock }
   let editor: {
     listTemplates: jest.Mock
-    getSlides: jest.Mock
-    updateSlide: jest.Mock
-    aiEditSlide: jest.Mock
     reexport: jest.Mock
     deletePresentation: jest.Mock
   }
@@ -70,9 +67,6 @@ describe('DecksService', () => {
     // The fake the port exists for: the whole editing surface, with no generator running.
     editor = {
       listTemplates: jest.fn().mockResolvedValue([]),
-      getSlides: jest.fn().mockResolvedValue([]),
-      updateSlide: jest.fn().mockResolvedValue(undefined),
-      aiEditSlide: jest.fn().mockResolvedValue(undefined),
       reexport: jest.fn(),
       deletePresentation: jest.fn().mockResolvedValue(undefined),
     }
@@ -253,7 +247,7 @@ describe('DecksService', () => {
       await service.deleteDeck('deck-1', 'user-1')
       expect(storage.deleteFile).toHaveBeenCalledWith('decks/a.pptx')
       expect(storage.deleteFile).toHaveBeenCalledWith('decks/a.pdf')
-      expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1')
+      expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1', 'user-1')
     })
 
     it('succeeds even when the object store is unreachable', async () => {
@@ -318,56 +312,26 @@ describe('DecksService', () => {
     })
   })
 
-  describe('editing', () => {
-    const ready = {
-      id: 'deck-1',
-      ownerId: 'user-1',
-      externalId: 'ext-1',
-      status: 'READY',
-    }
-
-    beforeEach(() => {
-      prisma.deck.findFirst.mockResolvedValue(ready)
-    })
-
-    it('sends the whole slide back, not just the edited content', async () => {
-      // slide_update replaces the slide. Posting only the fields the editor showed would
-      // silently drop speaker_note, properties and ui.
-      editor.getSlides.mockResolvedValue([
-        {
-          id: 's1',
-          index: 0,
-          layout: 'title_intro',
-          content: { a: 1 },
-          raw: { id: 's1', speaker_note: 'keep me' },
-        },
-      ])
-      await service.updateSlide('deck-1', 'user-1', 's1', { a: 2 })
-      expect(editor.updateSlide).toHaveBeenCalledWith(
-        expect.objectContaining({ raw: { id: 's1', speaker_note: 'keep me' }, content: { a: 2 } }),
-      )
-    })
-
-    it('refuses to edit a deck the caller does not own', async () => {
+  describe('re-export', () => {
+    it('queues a re-render rather than rendering inline', async () => {
       prisma.deck.findFirst.mockResolvedValue({
-        ...ready,
-        ownerId: 'someone-else',
+        id: 'deck-1',
+        ownerId: 'user-1',
+        externalId: 'ext-1',
+        status: 'READY',
       })
-      await expect(service.getSlides('deck-1', 'user-1')).rejects.toThrow()
-      expect(editor.getSlides).not.toHaveBeenCalled()
-    })
-
-    it('refuses to edit a deck with no external id', async () => {
-      prisma.deck.findFirst.mockResolvedValue({
-        ...ready,
-        externalId: null,
-      })
-      await expect(service.getSlides('deck-1', 'user-1')).rejects.toThrow()
-    })
-
-    it('queues a re-export rather than rendering inline', async () => {
       await service.requestReexport('deck-1', 'user-1')
       expect(queue.add).toHaveBeenCalledWith('reexport', { deckId: 'deck-1' })
+    })
+
+    it('refuses a deck the caller does not own', async () => {
+      prisma.deck.findFirst.mockResolvedValue({
+        id: 'deck-1',
+        ownerId: 'someone-else',
+        externalId: 'ext-1',
+      })
+      await expect(service.requestReexport('deck-1', 'user-1')).rejects.toThrow()
+      expect(queue.add).not.toHaveBeenCalled()
     })
   })
 })

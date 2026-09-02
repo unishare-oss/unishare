@@ -1,23 +1,68 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
-import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger'
-import { Session } from '@thallesp/nestjs-better-auth'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Headers,
+  Param,
+  Post,
+  Query,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common'
+import type { Response } from 'express'
+import { ApiExcludeEndpoint, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { DecksService } from './decks.service'
-import { AiEditSlideDto, CreateDeckDto, ListDecksDto, UpdateSlideDto } from './dto'
+import { CreateDeckDto, ListDecksDto } from './dto'
 import {
   DeckDownloadEntity,
   DeckEntity,
   DeckQuotaEntity,
-  DeckSlideEntity,
   DeckTemplateEntity,
   PaginatedDecksEntity,
 } from './entities/deck.entity'
+import { DecksFrameAuthService } from './decks.frame-auth.service'
 
 @ApiTags('decks')
 @Controller('decks')
 export class DecksController {
-  constructor(private readonly decksService: DecksService) {}
+  constructor(
+    private readonly decksService: DecksService,
+    private readonly frameAuth: DecksFrameAuthService,
+  ) {}
+
+  /**
+   * Traefik's forwardAuth target for the embedded editor's hostname.
+   *
+   * Not part of the public API and deliberately absent from the OpenAPI document: the only
+   * caller is the ingress, and generating a client hook for it would invite someone to call it
+   * from the browser, where the returned cookie must never be exposed.
+   *
+   * A non-2xx makes Traefik refuse the request. On success the `Cookie` header replaces the
+   * one the browser sent, which is how the student's generator session is attached upstream
+   * without the browser ever holding it — see the middleware in the k8s repo.
+   */
+  @Get('frame-auth')
+  @OptionalAuth()
+  @ApiExcludeEndpoint()
+  @Header('Cache-Control', 'no-store')
+  async frameAuthorize(
+    @Session() session: UserSession | null,
+    @Res({ passthrough: true }) res: Response,
+    @Headers('x-forwarded-uri') forwardedUri?: string,
+  ): Promise<{ ok: true }> {
+    const userId = session?.user?.id
+    // 401 rather than a redirect: the caller is a proxy, and a redirect body inside the frame
+    // would render the generator's own login page.
+    if (!userId) throw new UnauthorizedException('Sign in to open the deck editor')
+
+    res.setHeader('Cookie', await this.frameAuth.authorize(userId, forwardedUri ?? '/'))
+    return { ok: true }
+  }
 
   // Static routes BEFORE parameterized routes
 
@@ -72,41 +117,6 @@ export class DecksController {
     @Query('format') format?: 'pptx' | 'pdf',
   ) {
     return this.decksService.getDownloadUrl(id, session.user.id, format === 'pdf' ? 'pdf' : 'pptx')
-  }
-
-  @Get(':id/slides')
-  @ApiOkResponse({ type: [DeckSlideEntity] })
-  @ResponseMessage('Slides fetched successfully')
-  getSlides(@Param('id') id: string, @Session() session: UserSession) {
-    return this.decksService.getSlides(id, session.user.id)
-  }
-
-  @Patch(':id/slides/:slideId')
-  @ApiOkResponse({ type: DeckEntity })
-  @ResponseMessage('Slide updated successfully')
-  async updateSlide(
-    @Param('id') id: string,
-    @Param('slideId') slideId: string,
-    @Body() dto: UpdateSlideDto,
-    @Session() session: UserSession,
-  ) {
-    await this.decksService.updateSlide(id, session.user.id, slideId, dto.content)
-    return this.decksService.getDeck(id, session.user.id)
-  }
-
-  @Post(':id/slides/:slideId/ai-edit')
-  @ApiOkResponse({ type: [DeckSlideEntity] })
-  @ResponseMessage('Slide edited successfully')
-  async aiEditSlide(
-    @Param('id') id: string,
-    @Param('slideId') slideId: string,
-    @Body() dto: AiEditSlideDto,
-    @Session() session: UserSession,
-  ) {
-    await this.decksService.aiEditSlide(id, session.user.id, slideId, dto.prompt)
-    // Returns the whole deck's slides: an AI edit can restructure the slide, so the client
-    // cannot patch its local copy from the request it sent.
-    return this.decksService.getSlides(id, session.user.id)
   }
 
   @Post(':id/reexport')

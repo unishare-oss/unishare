@@ -5,11 +5,11 @@ import type {
   DeckExport,
   DeckGenerator,
   DeckGenerationRequest,
-  DeckSlide,
   DeckTemplate,
   GeneratedDeck,
 } from '../deck-generator.port'
 import { PDF_MIME, PPTX_MIME } from '../decks.constants'
+import { PresentonAccountsService } from './presenton-accounts.service'
 
 /**
  * Generation is a single blocking request that returns only once the deck is finished —
@@ -69,7 +69,11 @@ interface GenerateResponse {
 @Injectable()
 export class PresentonClient implements DeckGenerator, DeckEditor {
   private readonly logger = new Logger(PresentonClient.name)
-  constructor(private readonly config: ConfigService) {}
+
+  constructor(
+    private readonly config: ConfigService,
+    private readonly accounts: PresentonAccountsService,
+  ) {}
 
   /**
    * Resolved per call rather than in the constructor on purpose: a missing key should fail the
@@ -87,16 +91,25 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     return { baseUrl: baseUrl.replace(/\/+$/, ''), apiKey }
   }
 
+  /**
+   * Headers that act as the deck's owner rather than as the administrator.
+   *
+   * Needed by every deck-scoped call, not only generation. The generator scopes decks per
+   * user, so a re-export or a delete issued with our administrator API key 404s on a
+   * student's deck — verified against the running instance.
+   */
+  private async asOwner(ownerId: string): Promise<Record<string, string>> {
+    return { Cookie: await this.accounts.sessionFor(ownerId) }
+  }
+
   async generate(request: DeckGenerationRequest): Promise<GeneratedDeck> {
-    const { baseUrl, apiKey } = this.credentials()
+    const { baseUrl } = this.credentials()
     const started = Date.now()
+    const auth = await this.asOwner(request.ownerId)
 
     const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/generate`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...auth, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: request.prompt,
         n_slides: request.slideCount,
@@ -117,6 +130,9 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
       const body = (await res.text().catch(() => '')).slice(0, 500)
       // Status and raw body to the log; a human sentence to the caller.
       this.logger.warn(`generate failed ${res.status}: ${body || 'no response body'}`)
+      // A rejected session is the one failure worth clearing: the retry then logs in again
+      // instead of replaying the same dead cookie for all three attempts.
+      if (res.status === 401) await this.accounts.invalidate(request.ownerId)
       throw new InternalServerErrorException(describeProviderFailure(res.status, body))
     }
 
@@ -127,9 +143,8 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
 
     // The path is server-absolute and is served as-is; the /static and prefix-stripped
     // variants both 404, so do not be tempted to normalise it.
-    const fileUrl = `${baseUrl}${body.path}`
-    const file = await fetch(fileUrl, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    const file = await fetch(`${baseUrl}${body.path}`, {
+      headers: auth,
       signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     })
 
@@ -143,7 +158,7 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     // A second export of the SAME presentation. This is a re-render, not another model run,
     // so it costs a few seconds and no tokens — cheap enough to do for every deck so the
     // preview is always ready. Failing to produce it must not fail the generation.
-    const pdf = await this.tryExport(baseUrl, apiKey, body.presentation_id, 'pdf')
+    const pdf = await this.tryExport(baseUrl, auth, body.presentation_id, 'pdf')
 
     this.logger.log(
       `Generated deck ${body.presentation_id}: ${request.slideCount} slides, ` +
@@ -162,8 +177,18 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
 
   // --- DeckEditor ---------------------------------------------------------------------------
 
+  /**
+   * The one call with no owner. Templates are instance-wide rather than per-student, so the
+   * administrator API key is both sufficient and cheaper than brokering a session to fill a
+   * dropdown on the create form.
+   */
   async listTemplates(): Promise<DeckTemplate[]> {
-    const rows = await this.request<unknown>('/api/v1/ppt/template/all?page_size=50&default=true')
+    const { baseUrl, apiKey } = this.credentials()
+    const rows = await this.getJson<unknown>(
+      baseUrl,
+      { Authorization: `Bearer ${apiKey}` },
+      '/api/v1/ppt/template/all?page_size=50&default=true',
+    )
     const items = Array.isArray(rows) ? rows : []
     return items
       .filter((t): t is Record<string, unknown> => typeof t === 'object' && t !== null)
@@ -177,42 +202,27 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
       .filter((t) => t.id.length > 0)
   }
 
-  async getSlides(externalId: string): Promise<DeckSlide[]> {
-    const deck = await this.request<{ slides?: Record<string, unknown>[] }>(
-      `/api/v1/ppt/presentation/${externalId}`,
-    )
-    return (deck.slides ?? []).map((raw) => ({
-      id: String(raw.id ?? ''),
-      index: Number(raw.index ?? 0),
-      layout: String(raw.layout ?? ''),
-      content: raw.content,
-      raw,
-    }))
+  /**
+   * Built from a browser-reachable base URL, not PRESENTON_BASE_URL: that one is the in-cluster
+   * service address, which resolves for the API and nowhere else.
+   */
+  editorUrlFor(externalId: string): string | null {
+    const base = this.config.get<string>('DECK_EDITOR_URL')
+    if (!base) return null
+    return `${base.replace(/\/+$/, '')}/presentation?id=${encodeURIComponent(externalId)}`
   }
 
-  async updateSlide(slide: DeckSlide): Promise<void> {
-    // The whole slide goes back, with only `content` swapped — see DeckSlide.raw.
-    await this.request('/api/v1/ppt/presentation/slide_update', {
-      method: 'PATCH',
-      body: { slide: { ...slide.raw, content: slide.content } },
-    })
-  }
-
-  async aiEditSlide(slideId: string, prompt: string): Promise<void> {
-    await this.request('/api/v1/ppt/slide/edit', {
-      method: 'POST',
-      body: { id: slideId, prompt },
-      timeoutMs: GENERATE_TIMEOUT_MS,
-    })
-  }
-
-  async reexport(externalId: string): Promise<{ pptx: DeckExport; pdf: DeckExport | null }> {
-    const { baseUrl, apiKey } = this.credentials()
-    const pptx = await this.tryExport(baseUrl, apiKey, externalId, 'pptx')
+  async reexport(
+    externalId: string,
+    ownerId: string,
+  ): Promise<{ pptx: DeckExport; pdf: DeckExport | null }> {
+    const { baseUrl } = this.credentials()
+    const auth = await this.asOwner(ownerId)
+    const pptx = await this.tryExport(baseUrl, auth, externalId, 'pptx')
     if (!pptx) {
       throw new InternalServerErrorException('Deck could not be re-exported')
     }
-    const pdf = await this.tryExport(baseUrl, apiKey, externalId, 'pdf')
+    const pdf = await this.tryExport(baseUrl, auth, externalId, 'pdf')
     return { pptx, pdf }
   }
 
@@ -221,12 +231,13 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
    * recorded by the time this runs, so a failure here can only be logged. A 404 is a success
    * in every way that matters — the generator does not have the deck, which is the goal.
    */
-  async deletePresentation(externalId: string): Promise<void> {
+  async deletePresentation(externalId: string, ownerId: string): Promise<void> {
     try {
-      const { baseUrl, apiKey } = this.credentials()
+      const { baseUrl } = this.credentials()
+      const auth = await this.asOwner(ownerId)
       const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/${externalId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: auth,
         signal: AbortSignal.timeout(DELETE_TIMEOUT_MS),
       })
       if (!res.ok && res.status !== 404) {
@@ -245,14 +256,14 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
    */
   private async tryExport(
     baseUrl: string,
-    apiKey: string,
+    auth: Record<string, string>,
     externalId: string,
     format: 'pptx' | 'pdf',
   ): Promise<DeckExport | null> {
     try {
       const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/${externalId}/export`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: { ...auth, 'Content-Type': 'application/json' },
         body: JSON.stringify({ export_as: format }),
         signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
       })
@@ -261,7 +272,7 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
       if (!body?.path) return null
 
       const file = await fetch(`${baseUrl}${body.path}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: auth,
         signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
       })
       if (!file.ok) return null
@@ -276,19 +287,14 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     }
   }
 
-  private async request<T>(
+  private async getJson<T>(
+    baseUrl: string,
+    auth: Record<string, string>,
     path: string,
-    opts: { method?: string; body?: unknown; timeoutMs?: number } = {},
   ): Promise<T> {
-    const { baseUrl, apiKey } = this.credentials()
     const res = await fetch(`${baseUrl}${path}`, {
-      method: opts.method ?? 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(opts.body ? { body: JSON.stringify(opts.body) } : {}),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? DOWNLOAD_TIMEOUT_MS),
+      headers: auth,
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     })
     if (!res.ok) {
       const body = (await res.text().catch(() => '')).slice(0, 300)

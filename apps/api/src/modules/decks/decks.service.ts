@@ -12,7 +12,7 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, type Deck } from '@/generated/prisma/client'
 import type { CreateDeckDto, ListDecksDto } from './dto'
-import { DECK_EDITOR, type DeckEditor, type DeckSlide } from './deck-generator.port'
+import { DECK_EDITOR, type DeckEditor } from './deck-generator.port'
 import {
   AVG_SECONDS_PER_SLIDE,
   DAILY_DECK_QUOTA,
@@ -21,20 +21,12 @@ import {
   DEFAULT_SLIDES,
   GENERATE_JOB,
   MAX_ATTEMPTS,
+  QUOTA_WINDOW_MS,
   REEXPORT_JOB,
   RETRY_BACKOFF_MS,
   WAITING_SCAN_LIMIT,
 } from './decks.constants'
 import type { DeckEntity } from './entities/deck.entity'
-
-/**
- * Quota window.
- *
- * A rolling 24 hours rather than a calendar day, for two reasons: it sidesteps the question of
- * whose midnight (the users are not in UTC), and it cannot be gamed by spending the whole
- * allowance at 23:59 and the next one at 00:01.
- */
-const QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000
 
 @Injectable()
 export class DecksService {
@@ -197,7 +189,9 @@ export class DecksService {
   }
 
   /** The stored files and the generator's own copy. Failures are leaks, not errors. */
-  private async purgeArtifacts(deck: Pick<Deck, 'id' | 'key' | 'pdfKey' | 'externalId'>) {
+  private async purgeArtifacts(
+    deck: Pick<Deck, 'id' | 'ownerId' | 'key' | 'pdfKey' | 'externalId'>,
+  ) {
     const keys = [deck.key, deck.pdfKey].filter((k): k is string => Boolean(k))
     await Promise.all(
       keys.map((key) =>
@@ -207,7 +201,7 @@ export class DecksService {
       ),
     )
     // Contractually never throws — see DeckEditor.deletePresentation.
-    if (deck.externalId) await this.editor.deletePresentation(deck.externalId)
+    if (deck.externalId) await this.editor.deletePresentation(deck.externalId, deck.ownerId)
   }
 
   async getQuota(userId: string) {
@@ -334,30 +328,6 @@ export class DecksService {
     return this.editor.listTemplates()
   }
 
-  async getSlides(deckId: string, userId: string): Promise<DeckSlide[]> {
-    const deck = await this.ownedEditableDeck(deckId, userId)
-    return this.editor.getSlides(deck.externalId)
-  }
-
-  async updateSlide(deckId: string, userId: string, slideId: string, content: unknown) {
-    const deck = await this.ownedEditableDeck(deckId, userId)
-    const slides = await this.editor.getSlides(deck.externalId)
-    const slide = slides.find((s) => s.id === slideId)
-    if (!slide) throw new NotFoundException('Slide not found')
-
-    // Re-fetched rather than trusted from the client: the update sends the WHOLE slide back,
-    // so accepting a client-supplied `raw` would let a stale or crafted payload overwrite
-    // fields the editor never showed.
-    await this.editor.updateSlide({ ...slide, content })
-  }
-
-  async aiEditSlide(deckId: string, userId: string, slideId: string, prompt: string) {
-    const deck = await this.ownedEditableDeck(deckId, userId)
-    const slides = await this.editor.getSlides(deck.externalId)
-    if (!slides.some((s) => s.id === slideId)) throw new NotFoundException('Slide not found')
-    await this.editor.aiEditSlide(slideId, prompt)
-  }
-
   /**
    * Queues a re-render so the stored PPTX/PDF catch up with edited slides.
    *
@@ -473,6 +443,7 @@ export class DecksService {
       queueAheadIsApproximate: approximate,
       hasPdf: Boolean(deck.pdfKey),
       canEdit: Boolean(deck.externalId),
+      editorUrl: deck.externalId ? this.editor.editorUrlFor(deck.externalId) : null,
       tone: deck.tone,
       verbosity: deck.verbosity,
       // Distinguishes "waiting for your allowance" (a clock) from "waiting for a worker"

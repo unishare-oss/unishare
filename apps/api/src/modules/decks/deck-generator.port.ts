@@ -10,6 +10,14 @@ export const DECK_GENERATOR = Symbol('DECK_GENERATOR')
 export const DECK_EDITOR = Symbol('DECK_EDITOR')
 
 export interface DeckGenerationRequest {
+  /**
+   * The Unishare user the deck belongs to.
+   *
+   * Present because the generator is multi-tenant and every deck must be owned by the student
+   * who asked for it — a deck generated under a shared administrator account is invisible to
+   * the student in the editor, and visible to everyone else.
+   */
+  ownerId: string
   prompt: string
   slideCount: number
   language: string
@@ -48,37 +56,28 @@ export interface DeckTemplate {
 }
 
 /**
- * One slide as the generator models it.
+ * What Unishare still asks the generator for once slide editing lives in its own embedded
+ * editor: the template list for the create form, and rendering or discarding a deck we own a
+ * database row for.
  *
- * `content` is deliberately `unknown`: its shape is defined by `layout`, differs per layout,
- * and the same field is called `headline_text` in one and `slide_headline` in another. The
- * editor walks it generically rather than knowing any layout, which is what keeps it working
- * when the generator ships a layout we have never seen.
+ * Every deck-scoped call takes an `ownerId`. The generator scopes decks per user, so a call
+ * made as anyone else — including the administrator whose API key we hold — gets a 404.
  */
-export interface DeckSlide {
-  id: string
-  index: number
-  layout: string
-  content: unknown
-  /**
-   * The slide exactly as the generator returned it.
-   *
-   * `slide_update` takes a whole slide, not a patch, so an update has to send every field
-   * back — including ones we never model (`speaker_note`, `properties`, `ui`). Editing only
-   * the fields we know about and posting that would silently drop the rest.
-   */
-  raw: Record<string, unknown>
-}
-
 export interface DeckEditor {
   listTemplates(): Promise<DeckTemplate[]>
-  getSlides(externalId: string): Promise<DeckSlide[]>
-  /** Writes edited content back verbatim. */
-  updateSlide(slide: DeckSlide): Promise<void>
-  /** Natural-language edit: the generator rewrites the slide from an instruction. */
-  aiEditSlide(slideId: string, prompt: string): Promise<void>
+  /**
+   * Where the browser should point an editor frame for this deck, or null when no editor host
+   * is configured.
+   *
+   * Behind the port so the vendor's URL shape stays inside its own directory: the frontend
+   * receives a finished URL on the deck and never composes one.
+   */
+  editorUrlFor(externalId: string): string | null
   /** Re-renders an existing deck. No model call, so far cheaper than regenerating. */
-  reexport(externalId: string): Promise<{ pptx: DeckExport; pdf: DeckExport | null }>
+  reexport(
+    externalId: string,
+    ownerId: string,
+  ): Promise<{ pptx: DeckExport; pdf: DeckExport | null }>
   /**
    * Discards the generator's own copy of a deck.
    *
@@ -86,5 +85,5 @@ export interface DeckEditor {
    * generator is reachable, so implementations report failure by resolving, not throwing.
    * The cost of a miss is a stale presentation on the generator's disk, not a broken delete.
    */
-  deletePresentation(externalId: string): Promise<void>
+  deletePresentation(externalId: string, ownerId: string): Promise<void>
 }
