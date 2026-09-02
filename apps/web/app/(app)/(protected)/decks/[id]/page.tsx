@@ -3,18 +3,7 @@
 import { use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  AlertCircle,
-  ArrowLeft,
-  Download,
-  FileDown,
-  Loader2,
-  Presentation,
-  RefreshCw,
-  Trash2,
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, ArrowLeft, Presentation, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -24,14 +13,10 @@ import { DeckPreview, DeckPreviewUnavailable } from '@/components/decks/deck-pre
 import { DeckStatusNote } from '@/components/decks/deck-status-note'
 import { DeckDeleteDialog } from '@/components/decks/deck-delete-dialog'
 import { DeckEditorFrame } from '@/components/decks/deck-editor-frame'
-import { deckWaitState, hasRenderedFiles, isDeckRerendering } from '@/lib/decks/waiting-state'
-import { isRerenderFailure } from '@/lib/decks/waiting-state'
-import {
-  decksControllerGetDownloadUrl,
-  getDecksControllerGetDeckQueryKey,
-  useDecksControllerGetDeck,
-  useDecksControllerReexport,
-} from '@/src/lib/api/generated/decks/decks'
+import { DeckTitleEditor } from '@/components/decks/deck-title-editor'
+import { DeckDownloadMenu } from '@/components/decks/deck-download-menu'
+import { deckWaitState, hasRenderedFiles, isRerenderFailure } from '@/lib/decks/waiting-state'
+import { useDecksControllerGetDeck } from '@/src/lib/api/generated/decks/decks'
 
 const POLL_MS = 4000
 
@@ -47,7 +32,6 @@ function DeckDetailSkeleton() {
 export default function DeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const queryClient = useQueryClient()
 
   const {
     data: deck,
@@ -67,39 +51,16 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
 
   // A re-render flips the deck back to GENERATING even though its previous files are all still
   // there — so "has something to show" is not "READY".
-  const rerendering = Boolean(deck && isDeckRerendering(deck))
   const rendered = Boolean(deck && hasRenderedFiles(deck))
   const editable = Boolean(rendered && deck?.canEdit && deck?.editorUrl)
 
-  const { mutate: reexport, isPending: reexporting } = useDecksControllerReexport({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getDecksControllerGetDeckQueryKey(id) })
-        toast.success('Saving to Unishare — this takes a few seconds')
-      },
-      onError: () => toast.error('Could not start the re-render'),
-    },
-  })
-
   const wait = deck ? deckWaitState(deck) : null
-
-  async function download(format: 'pptx' | 'pdf') {
-    try {
-      const res = await decksControllerGetDownloadUrl(id, { format })
-      window.open(res.data.url, '_blank', 'noopener,noreferrer')
-    } catch {
-      toast.error(
-        format === 'pdf'
-          ? 'No PDF preview was rendered for this deck'
-          : 'The PowerPoint file is not ready yet',
-      )
-    }
-  }
 
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeader
         title={deck?.title ?? 'Deck'}
+        titleSlot={deck ? <DeckTitleEditor deck={deck} /> : undefined}
         subtitle={
           deck
             ? `${deck.slideCount} slides · ${deck.template} · ${deck.tone}`
@@ -122,36 +83,9 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   <span className="hidden sm:inline">Delete</span>
                 </Button>
               </DeckDeleteDialog>
-              {rendered && deck.canEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => reexport({ id })}
-                  disabled={reexporting || rerendering}
-                  aria-label="Save your edits to the Unishare copy of this deck"
-                >
-                  {reexporting || rerendering ? (
-                    <Loader2 className="size-3.5 sm:mr-1.5 animate-spin" strokeWidth={1.5} />
-                  ) : (
-                    <RefreshCw
-                      className="size-3.5 sm:mr-1.5"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span className="hidden sm:inline">Save to Unishare</span>
-                </Button>
-              )}
-              {rendered && (
-                <Button
-                  size="sm"
-                  onClick={() => download('pptx')}
-                  aria-label="Download the PowerPoint file"
-                >
-                  <Download className="size-4 sm:mr-1.5" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">PowerPoint</span>
-                </Button>
-              )}
+              {/* One control for both formats, and it re-renders first so what arrives is the
+                  deck as it is now. Replaces PowerPoint / Download PDF / Save to Unishare. */}
+              {rendered && <DeckDownloadMenu deck={deck} />}
             </div>
           ) : undefined
         }
@@ -222,7 +156,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                           slides and its previous files are untouched, so telling the student
                           the deck is gone would be wrong. */}
                       {isRerenderFailure(deck)
-                        ? 'Saving to Unishare failed. Your slides are safe in the editor and the previous version is still downloadable — try Save to Unishare again.'
+                        ? 'The last render failed. Your slides are safe in the editor and the previous version is still downloadable — try the download again.'
                         : `Every one of the ${deck.maxAttempts} attempts was used, so this deck will not start again on its own — and it does not count against your daily allowance.`}
                     </AlertDescription>
                   </Alert>
@@ -245,10 +179,8 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     aria-hidden="true"
                   />
                   <span>
-                    Edits save as you make them, and the editor&apos;s own Export always gives you
-                    the current deck. The Unishare copy — what your library shows and what the
-                    PowerPoint button downloads — updates when you choose{' '}
-                    <span className="font-extrabold text-foreground">Save to Unishare</span>.
+                    Edits save as you make them. Downloading re-renders the deck first, so the file
+                    you get is always the version you can see here.
                   </span>
                 </div>
               )}
@@ -276,22 +208,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   ) : (
                     <DeckPreviewUnavailable />
                   )}
-                  {deck.hasPdf && (
-                    <Button variant="outline" size="sm" onClick={() => download('pdf')}>
-                      <FileDown className="size-3.5 mr-1.5" strokeWidth={1.5} aria-hidden="true" />
-                      Download PDF
-                    </Button>
-                  )}
                 </div>
-              )}
-
-              {/* Available for every rendered deck, editable or not — the PDF is the render the
-                  student will actually hand in. */}
-              {editable && deck.hasPdf && (
-                <Button variant="outline" size="sm" onClick={() => download('pdf')}>
-                  <FileDown className="size-3.5 mr-1.5" strokeWidth={1.5} aria-hidden="true" />
-                  Download PDF
-                </Button>
               )}
             </>
           )}

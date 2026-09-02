@@ -1,17 +1,15 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, Download, FileText, Loader2, Presentation, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { AlertCircle, FileText, Presentation, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeckStatusNote } from '@/components/decks/deck-status-note'
 import { DeckDeleteDialog } from '@/components/decks/deck-delete-dialog'
+import { DeckDownloadMenu } from '@/components/decks/deck-download-menu'
 import { deckWaitState, hasRenderedFiles, isRerenderFailure } from '@/lib/decks/waiting-state'
-import { decksControllerGetDownloadUrl } from '@/src/lib/api/generated/decks/decks'
 import type { DeckEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 /**
@@ -20,24 +18,11 @@ import type { DeckEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
  * that could disagree with the list it was rendered from.
  */
 export function DeckCard({ deck }: { deck: DeckEntity }) {
-  const [downloading, setDownloading] = useState(false)
   const wait = deckWaitState(deck)
   const ready = deck.status === 'READY'
   // A failed re-render still leaves the previous PowerPoint downloadable, so the download
   // stays on the card even though the deck's status reads FAILED.
   const downloadable = hasRenderedFiles(deck)
-
-  async function handleDownload() {
-    setDownloading(true)
-    try {
-      const res = await decksControllerGetDownloadUrl(deck.id, { format: 'pptx' })
-      window.open(res.data.url, '_blank', 'noopener,noreferrer')
-    } catch {
-      toast.error('Could not get a download link. Try again in a moment.')
-    } finally {
-      setDownloading(false)
-    }
-  }
 
   return (
     <article className="card-pop card-pop-hover rounded-xl bg-card flex flex-col overflow-hidden">
@@ -105,16 +90,9 @@ export function DeckCard({ deck }: { deck: DeckEntity }) {
           </Button>
         </DeckDeleteDialog>
 
-        {downloadable && (
-          <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
-            {downloading ? (
-              <Loader2 className="size-3.5 mr-1.5 animate-spin" strokeWidth={1.5} />
-            ) : (
-              <Download className="size-3.5 mr-1.5" strokeWidth={1.5} aria-hidden="true" />
-            )}
-            PowerPoint
-          </Button>
-        )}
+        {/* Same control as the deck page, so a download from the library cannot be a
+            different freshness from one taken inside the deck. */}
+        {downloadable && <DeckDownloadMenu deck={deck} variant="outline" />}
       </div>
     </article>
   )
