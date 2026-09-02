@@ -321,6 +321,44 @@ describe('DecksService', () => {
     })
   })
 
+  describe('renaming', () => {
+    const owned = { id: 'deck-1', ownerId: 'user-1', status: 'READY', slideCount: 3 }
+
+    it('saves a trimmed title', async () => {
+      prisma.deck.findFirst.mockResolvedValue(owned)
+      await service.updateDeck('deck-1', 'user-1', { title: '  Beethoven  ' })
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-1' },
+        data: { title: 'Beethoven' },
+      })
+    })
+
+    it('refuses a title that is only whitespace', async () => {
+      // Would leave a blank heading and a file called "deck.pptx".
+      prisma.deck.findFirst.mockResolvedValue(owned)
+      await expect(service.updateDeck('deck-1', 'user-1', { title: '   ' })).rejects.toThrow()
+      expect(prisma.deck.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses a deck the caller does not own', async () => {
+      prisma.deck.findFirst.mockResolvedValue({ ...owned, ownerId: 'someone-else' })
+      await expect(service.updateDeck('deck-1', 'user-1', { title: 'x' })).rejects.toThrow()
+      expect(prisma.deck.update).not.toHaveBeenCalled()
+    })
+
+    it('will not rename a deleted deck', async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.updateDeck('deck-1', 'user-1', { title: 'x' })).rejects.toThrow()
+    })
+
+    it('does not read the queue to rename', async () => {
+      // Called from a text field; a Redis round trip per keystroke-batch reads as input lag.
+      prisma.deck.findFirst.mockResolvedValue(owned)
+      await service.updateDeck('deck-1', 'user-1', { title: 'Beethoven' })
+      expect(queue.getWaiting).not.toHaveBeenCalled()
+    })
+  })
+
   describe('re-export', () => {
     it('queues a re-render on the render queue, never behind a generation', async () => {
       prisma.deck.findFirst.mockResolvedValue({

@@ -11,7 +11,7 @@ import { Queue } from 'bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, type Deck } from '@/generated/prisma/client'
-import type { CreateDeckDto, ListDecksDto } from './dto'
+import type { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import { DECK_EDITOR, type DeckEditor } from './deck-generator.port'
 import {
   AVG_SECONDS_PER_SLIDE,
@@ -155,6 +155,34 @@ export class DecksService {
       url: await this.storage.generatePresignedDownloadUrl(key, expiresIn, filename),
       expiresIn,
     }
+  }
+
+  /**
+   * Renames a deck.
+   *
+   * Titles start as the first line of the student's prompt, so they arrive lowercase and
+   * shaped like a search query. The title is the page heading, the library card label AND the
+   * name of the downloaded file, so a rename changes what a student hands in — which is the
+   * point.
+   */
+  async updateDeck(id: string, userId: string, dto: UpdateDeckDto): Promise<DeckEntity> {
+    const deck = await this.prisma.deck.findFirst({ where: { id, deletedAt: null } })
+    if (!deck) throw new NotFoundException('Deck not found')
+    if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
+
+    const title = dto.title?.trim()
+    if (title !== undefined && title.length === 0) {
+      // An empty title would leave the heading blank and the download named "deck.pptx".
+      throw new BadRequestException('A deck needs a title')
+    }
+
+    const updated = await this.prisma.deck.update({
+      where: { id },
+      data: { ...(title !== undefined ? { title } : {}) },
+    })
+    // No queue read: a rename cannot change a deck's place in line, and this is called from a
+    // text field where a spurious Redis round trip would show up as input lag.
+    return this.toEntity(updated, null, null)
   }
 
   /**

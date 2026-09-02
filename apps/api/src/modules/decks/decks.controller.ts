@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Header,
+  Patch,
   Headers,
   Param,
   Post,
@@ -17,7 +18,7 @@ import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { DecksService } from './decks.service'
-import { CreateDeckDto, ListDecksDto } from './dto'
+import { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import {
   DeckDownloadEntity,
   DeckEntity,
@@ -99,6 +100,13 @@ export class DecksController {
   @ResponseMessage('Deck fetched successfully')
   getDeck(@Param('id') id: string, @Session() session: UserSession) {
     return this.decksService.getDeck(id, session.user.id)
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ type: DeckEntity })
+  @ResponseMessage('Deck updated successfully')
+  updateDeck(@Param('id') id: string, @Body() dto: UpdateDeckDto, @Session() session: UserSession) {
+    return this.decksService.updateDeck(id, session.user.id, dto)
   }
 
   @Delete(':id')
