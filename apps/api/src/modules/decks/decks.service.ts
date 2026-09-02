@@ -1,8 +1,6 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Inject,
   Injectable,
   Logger,
@@ -15,14 +13,15 @@ import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, type Deck } from '@/generated/prisma/client'
 import type { CreateDeckDto, ListDecksDto } from './dto'
 import { DECK_EDITOR, type DeckEditor, type DeckSlide } from './deck-generator.port'
-import { GENERATE_JOB, REEXPORT_JOB } from './decks.constants'
 import {
   AVG_SECONDS_PER_SLIDE,
   DAILY_DECK_QUOTA,
   DECK_CONCURRENCY,
   DECK_QUEUE,
   DEFAULT_SLIDES,
+  GENERATE_JOB,
   MAX_ATTEMPTS,
+  REEXPORT_JOB,
   RETRY_BACKOFF_MS,
   WAITING_SCAN_LIMIT,
 } from './decks.constants'
