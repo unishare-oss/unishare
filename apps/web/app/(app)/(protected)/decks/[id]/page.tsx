@@ -2,6 +2,7 @@
 
 import { use, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   AlertCircle,
   ArrowLeft,
@@ -10,6 +11,7 @@ import {
   Loader2,
   Presentation,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeckPreview, DeckPreviewUnavailable } from '@/components/decks/deck-preview'
 import { DeckStatusNote } from '@/components/decks/deck-status-note'
+import { DeckDeleteDialog } from '@/components/decks/deck-delete-dialog'
 import { SlideEditor } from '@/components/decks/slide-editor'
 import {
   deckWaitState,
@@ -59,6 +62,7 @@ function DeckDetailSkeleton() {
 
 export default function DeckDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [selectedInput, setSelected] = useState(0)
   const [pane, setPane] = useState<'preview' | 'edit'>('preview')
@@ -174,9 +178,21 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
               : undefined
         }
         action={
-          rendered ? (
+          deck ? (
             <div className="flex items-center gap-2">
-              {deck?.canEdit && (
+              <DeckDeleteDialog
+                deck={deck}
+                // Away before the list refetches: this page polls the deck it is showing, so
+                // staying put would fire the next poll at a deck that is gone and flip the
+                // screen to an error the student did not cause.
+                onDeleted={() => router.replace('/decks')}
+              >
+                <Button variant="ghost" size="sm" aria-label="Delete this deck">
+                  <Trash2 className="size-4 sm:mr-1.5" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              </DeckDeleteDialog>
+              {rendered && deck.canEdit && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -196,14 +212,16 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   <span className="hidden sm:inline">Update preview</span>
                 </Button>
               )}
-              <Button
-                size="sm"
-                onClick={() => download('pptx')}
-                aria-label="Download the PowerPoint file"
-              >
-                <Download className="size-4 sm:mr-1.5" strokeWidth={1.5} aria-hidden="true" />
-                <span className="hidden sm:inline">PowerPoint</span>
-              </Button>
+              {rendered && (
+                <Button
+                  size="sm"
+                  onClick={() => download('pptx')}
+                  aria-label="Download the PowerPoint file"
+                >
+                  <Download className="size-4 sm:mr-1.5" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="hidden sm:inline">PowerPoint</span>
+                </Button>
+              )}
             </div>
           ) : undefined
         }

@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertCircle, Download, FileText, Loader2, Presentation } from 'lucide-react'
+import { AlertCircle, Download, FileText, Loader2, Presentation, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DeckStatusNote } from '@/components/decks/deck-status-note'
+import { DeckDeleteDialog } from '@/components/decks/deck-delete-dialog'
 import { deckWaitState, hasRenderedFiles, isRerenderFailure } from '@/lib/decks/waiting-state'
 import { decksControllerGetDownloadUrl } from '@/src/lib/api/generated/decks/decks'
 import type { DeckEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -89,8 +90,22 @@ export function DeckCard({ deck }: { deck: DeckEntity }) {
         </div>
       </Link>
 
-      {downloadable && (
-        <div className="border-t border-border px-4 py-2.5 flex items-center justify-end">
+      {/* Always rendered now: delete has to reach a queued or failed deck too, and those are
+          exactly the ones a student most wants rid of. */}
+      <div className="border-t border-border px-4 py-2.5 flex items-center justify-between gap-2">
+        <DeckDeleteDialog deck={deck}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-text-muted hover:text-destructive"
+            aria-label={`Delete ${deck.title ?? 'this deck'}`}
+          >
+            <Trash2 className="size-3.5 mr-1.5" strokeWidth={1.5} aria-hidden="true" />
+            Delete
+          </Button>
+        </DeckDeleteDialog>
+
+        {downloadable && (
           <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
             {downloading ? (
               <Loader2 className="size-3.5 mr-1.5 animate-spin" strokeWidth={1.5} />
@@ -99,8 +114,8 @@ export function DeckCard({ deck }: { deck: DeckEntity }) {
             )}
             PowerPoint
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </article>
   )
 }
