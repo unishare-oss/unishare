@@ -92,9 +92,16 @@ export function DeckEditorFrame({ url, title }: DeckEditorFrameProps) {
         onLoad={() => settle('ready')}
         onError={() => settle('failed')}
         className="w-full min-h-[70vh] h-full border-0 block"
-        // Same-site but a separate origin, so it needs its own permissions. No allow-downloads:
-        // exports come back through Unishare's own presigned URLs.
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+        // allow-downloads is required for the editor's own Export button: without it the
+        // browser silently refuses the save, and the student sees a download that never
+        // arrives even though the file was produced.
+        //
+        // The rest is deliberate but modest. This frame is CROSS-origin, so the browser's own
+        // origin isolation already does the real work and the sandbox adds little beyond what
+        // it takes away. Note that the editor's Export serves straight off the generator's
+        // disk, so it is always current -- Unishare's own download button serves the copy in
+        // object storage, which is only current after "Update downloads".
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
         allow="clipboard-write"
       />
     </div>

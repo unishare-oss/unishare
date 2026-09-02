@@ -75,7 +75,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getDecksControllerGetDeckQueryKey(id) })
-        toast.success('Re-rendering — the downloads update when it finishes')
+        toast.success('Saving to Unishare — this takes a few seconds')
       },
       onError: () => toast.error('Could not start the re-render'),
     },
@@ -128,7 +128,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   size="sm"
                   onClick={() => reexport({ id })}
                   disabled={reexporting || rerendering}
-                  aria-label="Update the downloadable files from your edits"
+                  aria-label="Save your edits to the Unishare copy of this deck"
                 >
                   {reexporting || rerendering ? (
                     <Loader2 className="size-3.5 sm:mr-1.5 animate-spin" strokeWidth={1.5} />
@@ -139,7 +139,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                       aria-hidden="true"
                     />
                   )}
-                  <span className="hidden sm:inline">Update downloads</span>
+                  <span className="hidden sm:inline">Save to Unishare</span>
                 </Button>
               )}
               {rendered && (
@@ -222,7 +222,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                           slides and its previous files are untouched, so telling the student
                           the deck is gone would be wrong. */}
                       {isRerenderFailure(deck)
-                        ? 'The re-render failed. Your slides are still saved, and the last successful render is still downloadable — try updating the downloads again.'
+                        ? 'Saving to Unishare failed. Your slides are safe in the editor and the previous version is still downloadable — try Save to Unishare again.'
                         : `Every one of the ${deck.maxAttempts} attempts was used, so this deck will not start again on its own — and it does not count against your daily allowance.`}
                     </AlertDescription>
                   </Alert>
@@ -245,9 +245,10 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                     aria-hidden="true"
                   />
                   <span>
-                    Edits save as you make them. The PowerPoint and PDF downloads are rebuilt when
-                    you choose{' '}
-                    <span className="font-extrabold text-foreground">Update downloads</span>.
+                    Edits save as you make them, and the editor&apos;s own Export always gives you
+                    the current deck. The Unishare copy — what your library shows and what the
+                    PowerPoint button downloads — updates when you choose{' '}
+                    <span className="font-extrabold text-foreground">Save to Unishare</span>.
                   </span>
                 </div>
               )}
