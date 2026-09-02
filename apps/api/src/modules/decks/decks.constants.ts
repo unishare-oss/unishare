@@ -1,6 +1,23 @@
 /** Queue name. Also the Redis key prefix BullMQ derives its lists from. */
 export const DECK_QUEUE = 'decks'
 
+/**
+ * Re-rendering has its own queue.
+ *
+ * Every download re-renders first, so a render is on the critical path of a student waiting
+ * for a file. On the generate queue it would wait behind a model call measured in minutes and
+ * deliberately limited to one at a time. A render costs no tokens, so it needs the isolation
+ * rather than the restraint.
+ */
+export const DECK_RENDER_QUEUE = 'decks-render'
+
+/**
+ * Higher than DECK_CONCURRENCY because nothing here is billed. The ceiling is the generator's
+ * own CPU on a small box, not a provider's token budget, so a couple at once is plenty and
+ * many at once would just make every render slower.
+ */
+export const RENDER_CONCURRENCY = 2
+
 /** Job names on the shared queue. Re-export is a render, generate is a model run. */
 export const GENERATE_JOB = 'generate'
 export const REEXPORT_JOB = 'reexport'

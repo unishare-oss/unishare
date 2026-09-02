@@ -4,7 +4,13 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DecksService } from './decks.service'
 import { DECK_EDITOR } from './deck-generator.port'
-import { DAILY_DECK_QUOTA, DECK_QUEUE, MAX_ATTEMPTS, WAITING_SCAN_LIMIT } from './decks.constants'
+import {
+  DAILY_DECK_QUOTA,
+  DECK_QUEUE,
+  DECK_RENDER_QUEUE,
+  MAX_ATTEMPTS,
+  WAITING_SCAN_LIMIT,
+} from './decks.constants'
 
 /**
  * Covers the two behaviours that are easy to get subtly wrong and expensive when they are:
@@ -27,6 +33,7 @@ describe('DecksService', () => {
     }
   }
   let queue: { add: jest.Mock; getWaiting: jest.Mock; getJob: jest.Mock }
+  let renderQueue: { add: jest.Mock }
   let editor: {
     listTemplates: jest.Mock
     reexport: jest.Mock
@@ -64,6 +71,7 @@ describe('DecksService', () => {
       getWaiting: jest.fn(),
       getJob: jest.fn().mockResolvedValue(null),
     }
+    renderQueue = { add: jest.fn().mockResolvedValue({ id: 'render-1' }) }
     // The fake the port exists for: the whole editing surface, with no generator running.
     editor = {
       listTemplates: jest.fn().mockResolvedValue([]),
@@ -77,6 +85,7 @@ describe('DecksService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: storage },
         { provide: getQueueToken(DECK_QUEUE), useValue: queue },
+        { provide: getQueueToken(DECK_RENDER_QUEUE), useValue: renderQueue },
         { provide: DECK_EDITOR, useValue: editor },
       ],
     }).compile()
@@ -313,7 +322,7 @@ describe('DecksService', () => {
   })
 
   describe('re-export', () => {
-    it('queues a re-render rather than rendering inline', async () => {
+    it('queues a re-render on the render queue, never behind a generation', async () => {
       prisma.deck.findFirst.mockResolvedValue({
         id: 'deck-1',
         ownerId: 'user-1',
@@ -321,7 +330,10 @@ describe('DecksService', () => {
         status: 'READY',
       })
       await service.requestReexport('deck-1', 'user-1')
-      expect(queue.add).toHaveBeenCalledWith('reexport', { deckId: 'deck-1' })
+      // Every download re-renders first, so waiting behind a multi-minute model call is the
+      // difference between a download taking seconds and taking minutes.
+      expect(renderQueue.add).toHaveBeenCalledWith('reexport', { deckId: 'deck-1' })
+      expect(queue.add).not.toHaveBeenCalled()
     })
 
     it('refuses a deck the caller does not own', async () => {

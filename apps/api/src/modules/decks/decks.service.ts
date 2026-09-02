@@ -18,6 +18,7 @@ import {
   DAILY_DECK_QUOTA,
   DECK_CONCURRENCY,
   DECK_QUEUE,
+  DECK_RENDER_QUEUE,
   DEFAULT_SLIDES,
   GENERATE_JOB,
   MAX_ATTEMPTS,
@@ -36,6 +37,9 @@ export class DecksService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     @InjectQueue(DECK_QUEUE) private readonly queue: Queue,
+    // Separate queue on purpose: a render is on the critical path of a download and must not
+    // wait behind a multi-minute generation. See DECK_RENDER_QUEUE.
+    @InjectQueue(DECK_RENDER_QUEUE) private readonly renderQueue: Queue,
     @Inject(DECK_EDITOR) private readonly editor: DeckEditor,
   ) {}
 
@@ -343,7 +347,7 @@ export class DecksService {
    */
   async requestReexport(deckId: string, userId: string) {
     const deck = await this.ownedEditableDeck(deckId, userId)
-    const job = await this.queue.add(REEXPORT_JOB, { deckId })
+    const job = await this.renderQueue.add(REEXPORT_JOB, { deckId })
     return this.prisma.deck.update({
       where: { id: deck.id },
       data: { status: DeckStatus.GENERATING, jobId: job.id ?? null, error: null },

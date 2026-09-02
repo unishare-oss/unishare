@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import type { Job } from 'bullmq'
-import { StorageService } from '@/modules/storage/storage.service'
 import { DecksProcessor, type DeckJobData } from './decks.processor'
 import { DecksService } from './decks.service'
-import { DECK_EDITOR, DECK_GENERATOR } from './deck-generator.port'
-import { MAX_ATTEMPTS, REEXPORT_JOB } from './decks.constants'
+import { DeckArtifactsService } from './deck-artifacts.service'
+import { DECK_GENERATOR } from './deck-generator.port'
+import { MAX_ATTEMPTS } from './decks.constants'
 
 /**
  * Covers the retry boundary specifically.
@@ -24,8 +24,7 @@ describe('DecksProcessor — retry boundary', () => {
     markReexported: jest.Mock
   }
   let generator: { generate: jest.Mock }
-  let editor: { reexport: jest.Mock; deletePresentation: jest.Mock }
-  let storage: { uploadBuffer: jest.Mock; deleteFile: jest.Mock }
+  let artifacts: { store: jest.Mock; discardOrphans: jest.Mock }
 
   const deck = {
     id: 'deck-1',
@@ -63,25 +62,17 @@ describe('DecksProcessor — retry boundary', () => {
       markReexported: jest.fn().mockResolvedValue(true),
     }
     generator = { generate: jest.fn().mockRejectedValue(new Error('provider timeout')) }
-    editor = {
-      reexport: jest.fn().mockResolvedValue({
-        pptx: { buffer: Buffer.from('x'), mimeType: 'application/vnd.ms-powerpoint' },
-        pdf: null,
-      }),
-      deletePresentation: jest.fn().mockResolvedValue(undefined),
-    }
-    storage = {
-      uploadBuffer: jest.fn().mockResolvedValue({ key: 'decks/x.pptx' }),
-      deleteFile: jest.fn().mockResolvedValue(undefined),
+    artifacts = {
+      store: jest.fn().mockResolvedValue('decks/x.pptx'),
+      discardOrphans: jest.fn().mockResolvedValue(undefined),
     }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DecksProcessor,
         { provide: DecksService, useValue: decks },
-        { provide: StorageService, useValue: storage },
+        { provide: DeckArtifactsService, useValue: artifacts },
         { provide: DECK_GENERATOR, useValue: generator },
-        { provide: DECK_EDITOR, useValue: editor },
       ],
     }).compile()
 
@@ -143,25 +134,13 @@ describe('DecksProcessor — retry boundary', () => {
     decks.markReady.mockResolvedValue(false)
 
     await expect(processor.process(job(0))).resolves.toBeUndefined()
-    expect(storage.deleteFile).toHaveBeenCalledWith('decks/x.pptx')
-    expect(editor.deletePresentation).toHaveBeenCalledWith('ext-1', 'user-1')
+    expect(artifacts.discardOrphans).toHaveBeenCalledWith(
+      'deck-1',
+      ['decks/x.pptx', null],
+      'ext-1',
+      'user-1',
+    )
     // Not a failure: the job did its work and the student got what they asked for.
     expect(decks.markFailed).not.toHaveBeenCalled()
-  })
-
-  it('cleans up a re-export whose deck was deleted while it rendered', async () => {
-    decks.markReexported.mockResolvedValue(false)
-    const reexportJob = { ...job(0), name: REEXPORT_JOB } as unknown as Job<DeckJobData>
-    await processor.process(reexportJob)
-    expect(storage.deleteFile).toHaveBeenCalledWith('decks/x.pptx')
-    expect(decks.markFailed).not.toHaveBeenCalled()
-  })
-
-  it('routes re-export jobs away from generation', async () => {
-    const reexportJob = { ...job(0), name: REEXPORT_JOB } as unknown as Job<DeckJobData>
-    await processor.process(reexportJob)
-    expect(generator.generate).not.toHaveBeenCalled()
-    expect(editor.reexport).toHaveBeenCalledWith('ext-1', 'user-1')
-    expect(decks.markReexported).toHaveBeenCalled()
   })
 })
