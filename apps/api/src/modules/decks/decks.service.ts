@@ -143,7 +143,14 @@ export class DecksService {
       )
     }
     const expiresIn = 3600
-    return { url: await this.storage.generatePresignedDownloadUrl(key, expiresIn), expiresIn }
+    // A real filename, not the generated object key. Without it the browser saves
+    // `1788334762320-50b9c4b64ecc3706.pptx`, which is both unhelpful to a student handing
+    // work in and enough to make PowerPoint reject an otherwise valid package.
+    const filename = `${deck.title ?? 'deck'}.${format}`
+    return {
+      url: await this.storage.generatePresignedDownloadUrl(key, expiresIn, filename),
+      expiresIn,
+    }
   }
 
   /**

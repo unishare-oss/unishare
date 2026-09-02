@@ -91,6 +91,26 @@ const FILE_TYPE_CONFIG: Record<UploadType, { allowedMimeTypes: string[]; maxSize
   },
 }
 
+/**
+ * Makes a caller-supplied name safe to put inside a Content-Disposition header.
+ *
+ * Deck titles come from a student's prompt by way of a model, so they can contain quotes,
+ * newlines, semicolons and non-ASCII -- any of which either breaks the header or lets a
+ * crafted title inject header content. Everything outside a conservative set is replaced,
+ * and the result is length-capped because some filesystems reject very long names.
+ */
+export function sanitizeFilename(name: string): string {
+  const cleaned = name
+    .normalize('NFKD')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
+    .replace(/[^A-Za-z0-9 ._-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-. ]+|[-. ]+$/g, '')
+    .slice(0, 120)
+  return cleaned.length > 0 ? cleaned : 'download'
+}
+
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name)
@@ -169,9 +189,28 @@ export class StorageService implements OnModuleInit {
     return { url, key, publicUrl: this.getPublicUrl(key) }
   }
 
-  async generatePresignedDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
+  /**
+   * A time-limited URL the browser can GET directly.
+   *
+   * `filename` is worth passing for anything a user saves and then opens in a desktop
+   * application. Without it the object store sends no Content-Disposition, so the browser
+   * derives a name from the key -- which is a generated hash like
+   * `1788334762320-50b9c4b64ecc3706.pptx`. Some browsers then save it awkwardly enough that
+   * PowerPoint refuses the result even though the bytes are a valid package.
+   */
+  async generatePresignedDownloadUrl(
+    key: string,
+    expiresIn = 3600,
+    filename?: string,
+  ): Promise<string> {
     this.assertSafeKey(key)
-    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key })
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ...(filename
+        ? { ResponseContentDisposition: `attachment; filename="${sanitizeFilename(filename)}"` }
+        : {}),
+    })
     // signingClient, not s3Client: the browser performs this GET.
     return getSignedUrl(this.signingClient, command, { expiresIn })
   }
