@@ -9,6 +9,14 @@ export class DeckEntity {
   @ApiProperty() slideCount: number
   @ApiProperty() language: string
   @ApiProperty() template: string
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'The deck share token, or null when it is not shared. Owner-only.',
+  })
+  shareToken: string | null
+
   @ApiPropertyOptional({ type: String, nullable: true }) error: string | null
   @ApiProperty() createdAt: Date
   @ApiPropertyOptional({ type: Date, nullable: true }) completedAt: Date | null

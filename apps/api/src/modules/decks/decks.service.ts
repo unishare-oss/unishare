@@ -621,6 +621,10 @@ export class DecksService {
       progressPhase: deck.progressPhase,
       progressDone: deck.progressDone,
       progressTotal: deck.progressTotal,
+      // Present so the owner's own UI can tell "shared" from "not shared" without POSTing to
+      // find out — createShareLink is idempotent, but a dialog that mints a link merely by
+      // being opened is not something a student asked for. This endpoint is owner-only.
+      shareToken: deck.shareToken,
     }
   }
 }
