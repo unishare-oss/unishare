@@ -31,8 +31,12 @@ import {
 const LABEL = 'font-mono text-[11px] uppercase tracking-wider text-text-muted'
 
 /**
- * Tone and detail are always visible because they change every slide. Everything else is
- * behind a disclosure: they are answers to questions most students do not have.
+ * Tone, detail and extra instructions are always visible because they change every slide.
+ * Instructions was behind the disclosure and went unused in 1 of 13 decks, which matters
+ * because it is the only option that steers the prose rather than the template.
+ *
+ * Everything else stays behind a disclosure: they are answers to questions most students do
+ * not have.
  */
 export function DeckOptions({ disabled }: { disabled?: boolean }) {
   const form = useFormContext<DeckFormValues>()
@@ -92,6 +96,32 @@ export function DeckOptions({ disabled }: { disabled?: boolean }) {
         />
       </div>
 
+      <FormField
+        control={form.control}
+        name="instructions"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className={LABEL}>Extra instructions</FormLabel>
+            <FormControl>
+              <Textarea
+                rows={2}
+                maxLength={MAX_INSTRUCTIONS}
+                disabled={disabled}
+                placeholder="Focus on the practical steps rather than the history"
+                {...field}
+              />
+            </FormControl>
+            <FormDescription className="text-xs">
+              The only option that reaches the writing itself rather than the look.
+            </FormDescription>
+            <p className="text-xs text-text-muted mt-1.5">
+              {instructions?.length ?? 0}/{MAX_INSTRUCTIONS}
+            </p>
+            <FormMessage className="text-xs" />
+          </FormItem>
+        )}
+      />
+
       <Collapsible>
         <CollapsibleTrigger className="group flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-text-muted hover:text-foreground transition-colors motion-reduce:transition-none">
           More options
@@ -123,29 +153,6 @@ export function DeckOptions({ disabled }: { disabled?: boolean }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="instructions"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={LABEL}>Extra instructions</FormLabel>
-                <FormControl>
-                  <Textarea
-                    rows={2}
-                    maxLength={MAX_INSTRUCTIONS}
-                    disabled={disabled}
-                    placeholder="Focus on the practical steps rather than the history"
-                    {...field}
-                  />
-                </FormControl>
-                <p className="text-xs text-text-muted mt-1.5">
-                  {instructions?.length ?? 0}/{MAX_INSTRUCTIONS}
-                </p>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
