@@ -66,6 +66,20 @@ export function TemplatePicker({ disabled }: { disabled?: boolean }) {
             </Alert>
           )}
 
+          {/*
+            Loaded, no error, nothing offered. Worth its own branch: an empty list used to
+            fall through to the "nothing picked" hint below, which reads as a normal
+            unselected state, so a picker that offered no templates at all looked deliberate.
+          */}
+          {!isLoading && !isError && templates?.length === 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                The deck service offered no templates. Your deck will use the default look.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!isLoading && !isError && templates && templates.length > 0 && (
             <FormControl>
               <div
