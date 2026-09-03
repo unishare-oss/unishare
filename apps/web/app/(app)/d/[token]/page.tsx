@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Presentation } from 'lucide-react'
 import { SharedDeckDownload } from '@/components/decks/shared-deck-download'
+import { SharedDeckPreview } from '@/components/decks/shared-deck-preview'
+import { DeckPreviewUnavailable } from '@/components/decks/deck-preview'
 
 /**
  * A deck opened from a share link, by someone who may have no account.
@@ -48,26 +50,39 @@ export default async function SharedDeckPage({ params }: { params: Promise<{ tok
   const deck = ((await res.json()) as ApiEnvelope<SharedDeck>).data
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
       <div className="flex flex-col gap-3">
         <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
           Shared deck
         </span>
-        <h1 className="text-2xl font-semibold text-foreground">{deck.title ?? 'Untitled deck'}</h1>
+        {/*
+          Clamped to two lines. A deck keeps the prompt as its title until the owner renames
+          it, and a prompt is a paragraph -- unclamped it becomes a heading that pushes the
+          deck itself off the screen.
+        */}
+        <h1 className="line-clamp-2 text-xl font-semibold text-balance text-foreground sm:text-2xl">
+          {deck.title ?? 'Untitled deck'}
+        </h1>
         <p className="text-sm text-text-muted">
           {deck.slideCount} slides · {deck.template} ·{' '}
           {new Date(deck.createdAt).toLocaleDateString()}
         </p>
       </div>
 
-      <div className="flex items-center gap-3 rounded-xl bg-card p-4">
-        <Presentation className="size-5 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-sm text-text-muted">
-          This is the deck as of its last render. The owner may have edited it since.
+      {/* The deck first. Everything else on this page is about the deck. */}
+      {deck.formats.includes('pdf') ? (
+        <SharedDeckPreview token={token} />
+      ) : (
+        <DeckPreviewUnavailable />
+      )}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <SharedDeckDownload token={token} formats={deck.formats} />
+        <p className="flex items-start gap-2 text-xs text-text-muted sm:max-w-sm">
+          <Presentation className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          <span>This is the deck as of its last render. The owner may have edited it since.</span>
         </p>
       </div>
-
-      <SharedDeckDownload token={token} formats={deck.formats} />
     </div>
   )
 }
