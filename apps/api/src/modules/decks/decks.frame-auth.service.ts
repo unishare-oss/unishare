@@ -76,9 +76,98 @@ const METERED: readonly string[] = [
   '/api/v1/ppt/slide/edit-html',
   '/api/v1/ppt/presentation/edit',
   '/api/v1/ppt/images/generate',
-  '/api/v1/ppt/chat',
+  // `/chat/message`, not `/chat`. The prefix charged an AI edit for GET /chat/conversations
+  // and GET /chat/history, which only read rows the student already paid for.
+  '/api/v1/ppt/chat/message',
   '/api/v1/ppt/theme/generate',
   '/api/v1/ppt/template/layouts/generate',
+]
+
+/**
+ * Every API call the embedded editor is allowed to make, by method.
+ *
+ * An ALLOW-list, and the inversion is the entire point. The deny-list above names the routes
+ * we knew were dangerous, which meant each generator upgrade could add a new one in silence --
+ * and one already had. `GET /api/v1/ppt/outlines/stream/{id}` calls
+ * `utils.llm_calls.generate_presentation_outlines` and streams model output; it was neither
+ * blocked nor metered, so a student with devtools could spend tokens against the shared
+ * per-minute budget without ever touching AI_EDIT_DAILY_CAP. `GET /presentation/stream/{id}`
+ * sat in the same gap.
+ *
+ * `*` matches exactly ONE segment. That is what separates `/presentation/{id}` -- the deck
+ * being edited, allowed -- from `/presentation/stream/{id}`, which is model output and is not.
+ *
+ * Methods matter because paths collide: the editor needs `GET /template/{id}`, while
+ * `DELETE /template/{id}` removes a template that is INSTANCE-WIDE, so it would vandalise
+ * every other student's deck options. Path alone cannot tell those apart.
+ *
+ * Built from the generator's observed traffic plus its editor's feature surface. Anything
+ * missing fails closed, so the cost of an omission is one editor feature visibly not working
+ * -- which someone reports -- rather than an unmetered model call nobody notices until the
+ * provider bill.
+ */
+interface AllowRule {
+  readonly methods: readonly string[]
+  readonly pattern: string
+}
+
+const ALLOWED: readonly AllowRule[] = [
+  // Session state. The editor polls /auth/status constantly -- it is the single most frequent
+  // request the generator serves.
+  { methods: ['GET'], pattern: '/api/v1/auth/status' },
+  { methods: ['GET'], pattern: '/api/v1/auth/verify' },
+  { methods: ['GET'], pattern: '/api/v1/auth/presenton/status' },
+  // Admin-only upstream, so it 403s for a student account and the editor shows a toast about
+  // provider settings. Allowed anyway: refusing it here would change nothing except which
+  // component reports the same failure.
+  { methods: ['GET'], pattern: '/api/user-config' },
+  { methods: ['GET'], pattern: '/api/v1/async-tasks' },
+
+  // The deck being edited. BLOCKED still governs generate/create/prepare/derive/status, so
+  // the single-segment wildcard cannot reach a creation route.
+  { methods: ['GET'], pattern: '/api/v1/ppt/presentation/all' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/presentation/*' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/presentation/*/export' },
+  { methods: ['PATCH'], pattern: '/api/v1/ppt/presentation/slide_update' },
+  { methods: ['PATCH'], pattern: '/api/v1/ppt/presentation/update' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/presentation/edit' },
+
+  // Template and theme reads, one per template the editor renders. Writes are absent on
+  // purpose: templates and themes are instance-wide.
+  { methods: ['GET'], pattern: '/api/v1/ppt/template/all' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/template/*' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/template/*/theme' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/template/layouts/generate' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/themes/all' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/layouts' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/layouts/*' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/theme/generate' },
+
+  // Slide editing, the reason the editor is embedded at all.
+  { methods: ['POST'], pattern: '/api/v1/ppt/slide/edit' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/slide/edit-html' },
+
+  // Pickers. `images/generate` is a GET upstream and is metered.
+  { methods: ['GET'], pattern: '/api/v1/ppt/icons/search' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/images/search' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/images/generate' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/images/generated' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/images/uploaded' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/images/upload' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/fonts/list' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/fonts/uploaded' },
+
+  // Chat: reading history is free, sending a message is metered.
+  { methods: ['GET'], pattern: '/api/v1/ppt/chat/conversations' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/chat/history' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/chat/message' },
+  { methods: ['POST'], pattern: '/api/v1/ppt/chat/message/stream' },
+
+  // Community browse. In the observed traffic, so the editor's own nav reaches it.
+  { methods: ['GET'], pattern: '/api/v1/ppt/community/presentations' },
+  { methods: ['GET'], pattern: '/api/v1/ppt/community/presentations/*' },
+
+  { methods: ['POST'], pattern: '/api/v1/ppt/generation/defaults' },
 ]
 
 @Injectable()
@@ -104,12 +193,32 @@ export class DecksFrameAuthService implements OnModuleInit, OnModuleDestroy {
    * Returns the `Cookie` header value to forward upstream, or throws the status Traefik should
    * turn into a refusal.
    */
-  async authorize(userId: string, requestUri: string, role?: UserRole): Promise<string> {
+  async authorize(
+    userId: string,
+    requestUri: string,
+    role?: UserRole,
+    method?: string,
+  ): Promise<string> {
     const path = pathOf(requestUri)
 
     if (isBlocked(path)) {
       this.logger.warn(`Blocked editor request to ${path} by ${userId}`)
       throw new ForbiddenException('That part of the deck editor is not available')
+    }
+
+    if (isApiPath(path)) {
+      // Traefik's forwardAuth always sends X-Forwarded-Method. Its absence means the caller is
+      // not the proxy, and guessing a method for an allow-list decision would be the hole this
+      // whole change exists to close -- so refuse and say so loudly.
+      if (!method) {
+        this.logger.error(`No X-Forwarded-Method for ${path}; refusing`)
+        throw new ForbiddenException('That part of the deck editor is not available')
+      }
+
+      if (!isAllowed(path, method.toUpperCase())) {
+        this.logger.warn(`Editor request outside the allow-list: ${method} ${path} by ${userId}`)
+        throw new ForbiddenException('That part of the deck editor is not available')
+      }
     }
 
     // Administrators are metered but not capped. The BLOCKED list still applies to them: it
@@ -186,4 +295,28 @@ export function isBlocked(path: string): boolean {
 
 export function isMetered(path: string): boolean {
   return METERED.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
+/**
+ * Whether a path is an API call at all.
+ *
+ * Everything else -- the editor's own pages, its Next.js chunks, the fonts and template assets
+ * under /app_data -- is served to a student who has already been authorized to open the
+ * editor. Enumerating Next's internal routes would break on every generator upgrade for no
+ * security gain, since none of them spend tokens or mutate shared state.
+ */
+export function isApiPath(path: string): boolean {
+  return path === '/api' || path.startsWith('/api/')
+}
+
+/** `*` matches exactly one segment, so a pattern never spans a `/`. */
+function matchesPattern(pattern: string, path: string): boolean {
+  const want = pattern.split('/')
+  const got = path.split('/')
+  if (want.length !== got.length) return false
+  return want.every((segment, i) => segment === '*' || segment === got[i])
+}
+
+export function isAllowed(path: string, method: string): boolean {
+  return ALLOWED.some((rule) => rule.methods.includes(method) && matchesPattern(rule.pattern, path))
 }

@@ -59,6 +59,7 @@ export class DecksController {
     @Session() session: UserSession | null,
     @Res({ passthrough: true }) res: Response,
     @Headers('x-forwarded-uri') forwardedUri?: string,
+    @Headers('x-forwarded-method') forwardedMethod?: string,
   ): Promise<{ ok: true }> {
     const userId = session?.user?.id
     // 401 rather than a redirect: the caller is a proxy, and a redirect body inside the frame
@@ -67,7 +68,12 @@ export class DecksController {
 
     res.setHeader(
       'Cookie',
-      await this.frameAuth.authorize(userId, forwardedUri ?? '/', session.user.role as UserRole),
+      await this.frameAuth.authorize(
+        userId,
+        forwardedUri ?? '/',
+        session.user.role as UserRole,
+        forwardedMethod,
+      ),
     )
     return { ok: true }
   }

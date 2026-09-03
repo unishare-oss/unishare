@@ -1,4 +1,11 @@
-import { DecksFrameAuthService, isBlocked, isMetered, pathOf } from './decks.frame-auth.service'
+import {
+  DecksFrameAuthService,
+  isAllowed,
+  isApiPath,
+  isBlocked,
+  isMetered,
+  pathOf,
+} from './decks.frame-auth.service'
 import { UserRole } from '@/generated/prisma/client'
 
 /**
@@ -86,7 +93,7 @@ describe('embedded editor route policy', () => {
       '/api/v1/ppt/slide/edit-html',
       '/api/v1/ppt/presentation/edit',
       '/api/v1/ppt/images/generate',
-      '/api/v1/ppt/chat/conversation',
+      '/api/v1/ppt/chat/message',
       '/api/v1/ppt/theme/generate',
       '/api/v1/ppt/template/layouts/generate',
     ])('charges %s against the daily cap', (path) => {
@@ -142,21 +149,139 @@ describe('DecksFrameAuthService.authorize', () => {
     'charges a metered route for %s',
     async (role) => {
       const { service, incr } = build()
-      await service.authorize('user-1', METERED, role)
+      await service.authorize('user-1', METERED, role, 'POST')
       expect(incr).toHaveBeenCalledTimes(1)
     },
   )
 
   it('does not charge an administrator', async () => {
     const { service, incr } = build()
-    await service.authorize('admin-1', METERED, UserRole.ADMIN)
+    await service.authorize('admin-1', METERED, UserRole.ADMIN, 'POST')
     expect(incr).not.toHaveBeenCalled()
   })
 
   it('still blocks an administrator from a creation route', async () => {
     const { service } = build()
     await expect(
-      service.authorize('admin-1', '/api/v1/ppt/presentation/generate', UserRole.ADMIN),
+      service.authorize('admin-1', '/api/v1/ppt/presentation/generate', UserRole.ADMIN, 'POST'),
     ).rejects.toThrow(/not available/)
+  })
+})
+
+/**
+ * The allow-list. These are the cases that would have let a student spend model tokens or
+ * damage shared state, and the regression guard that the editor still works.
+ */
+describe('allow-list', () => {
+  describe('closes the gaps a deny-list left open', () => {
+    it.each([
+      // Streams model output via utils.llm_calls. The bypass this change exists for: it was
+      // neither blocked nor metered, so it spent tokens outside AI_EDIT_DAILY_CAP.
+      ['GET', '/api/v1/ppt/outlines/stream/abc123'],
+      ['GET', '/api/v1/ppt/outlines/abc123'],
+      ['PUT', '/api/v1/ppt/outlines/abc123'],
+      // Same gap, in presentation.py.
+      ['GET', '/api/v1/ppt/presentation/stream/abc123'],
+      // Unmetered writes to the shared volume.
+      ['POST', '/api/v1/ppt/files/upload'],
+      ['POST', '/api/v1/ppt/files/decompose'],
+      ['POST', '/api/v1/ppt/fonts/upload'],
+      // Pulls a model onto the node.
+      ['POST', '/api/v1/ppt/ollama/models/pull'],
+      // Provider OAuth.
+      ['POST', '/api/v1/ppt/codex/auth/initiate'],
+      ['POST', '/api/v1/ppt/codex/auth/exchange'],
+    ])('refuses %s %s', (method, path) => {
+      expect(isAllowed(path, method)).toBe(false)
+    })
+
+    /**
+     * Templates and themes are INSTANCE-WIDE, so a delete is not the caller's to make. The
+     * path is identical to a read the editor genuinely needs, which is why the rules carry
+     * methods at all.
+     */
+    it('allows reading a template but never deleting one', () => {
+      expect(isAllowed('/api/v1/ppt/template/executive', 'GET')).toBe(true)
+      expect(isAllowed('/api/v1/ppt/template/executive', 'DELETE')).toBe(false)
+      expect(isAllowed('/api/v1/ppt/template/executive', 'PATCH')).toBe(false)
+    })
+
+    it('allows reading themes but never writing them', () => {
+      expect(isAllowed('/api/v1/ppt/themes/all', 'GET')).toBe(true)
+      expect(isAllowed('/api/v1/ppt/themes/create', 'POST')).toBe(false)
+      expect(isAllowed('/api/v1/ppt/themes/delete/7', 'DELETE')).toBe(false)
+    })
+
+    it('does not let a single-segment wildcard span a slash', () => {
+      // `/presentation/*` must not reach `/presentation/stream/{id}`.
+      expect(isAllowed('/api/v1/ppt/presentation/abc123', 'GET')).toBe(true)
+      expect(isAllowed('/api/v1/ppt/presentation/stream/abc123', 'GET')).toBe(false)
+    })
+  })
+
+  /**
+   * Regression guard, built from what the generator actually served. If a change here breaks
+   * one of these, the editor breaks for a student.
+   */
+  describe('keeps the editor working', () => {
+    it.each([
+      ['GET', '/api/v1/auth/status'],
+      ['GET', '/api/v1/auth/verify'],
+      ['GET', '/api/v1/async-tasks'],
+      ['GET', '/api/user-config'],
+      ['GET', '/api/v1/ppt/presentation/all'],
+      ['GET', '/api/v1/ppt/presentation/019a2f1c-1111-2222-3333-444455556666'],
+      ['PATCH', '/api/v1/ppt/presentation/slide_update'],
+      ['PATCH', '/api/v1/ppt/presentation/update'],
+      ['POST', '/api/v1/ppt/presentation/019a2f1c-1111-2222-3333-444455556666/export'],
+      ['GET', '/api/v1/ppt/template/all'],
+      ['GET', '/api/v1/ppt/template/general'],
+      ['GET', '/api/v1/ppt/template/general/theme'],
+      ['GET', '/api/v1/ppt/community/presentations'],
+      ['GET', '/api/v1/ppt/community/presentations/134'],
+      ['GET', '/api/v1/ppt/chat/conversations'],
+    ])('allows %s %s', (method, path) => {
+      expect(isAllowed(path, method)).toBe(true)
+    })
+
+    it('allows every metered route, since metering implies reachable', () => {
+      const metered: [string, string][] = [
+        ['POST', '/api/v1/ppt/slide/edit'],
+        ['POST', '/api/v1/ppt/slide/edit-html'],
+        ['POST', '/api/v1/ppt/presentation/edit'],
+        ['GET', '/api/v1/ppt/images/generate'],
+        ['POST', '/api/v1/ppt/chat/message'],
+        ['POST', '/api/v1/ppt/theme/generate'],
+        ['POST', '/api/v1/ppt/template/layouts/generate'],
+      ]
+      for (const [method, path] of metered) {
+        expect(isMetered(path)).toBe(true)
+        expect(isAllowed(path, method)).toBe(true)
+      }
+    })
+
+    it('leaves pages and assets alone', () => {
+      // Not API calls, so the allow-list never sees them. Enumerating Next's own routes would
+      // break on every generator upgrade and protect nothing.
+      for (const path of [
+        '/',
+        '/presentation',
+        '/_next/static/chunks/main.js',
+        '/app_data/templates/modern/static/thumbnail.png',
+        '/app_data/exports/deck.pptx',
+      ]) {
+        expect(isApiPath(path)).toBe(false)
+      }
+      expect(isApiPath('/api/v1/auth/status')).toBe(true)
+      expect(isApiPath('/api')).toBe(true)
+    })
+  })
+
+  /** Reading chat history used to cost an AI edit, because METERED named the `/chat` prefix. */
+  it('no longer charges for reading chat history', () => {
+    expect(isMetered('/api/v1/ppt/chat/conversations')).toBe(false)
+    expect(isMetered('/api/v1/ppt/chat/history')).toBe(false)
+    expect(isMetered('/api/v1/ppt/chat/message')).toBe(true)
+    expect(isMetered('/api/v1/ppt/chat/message/stream')).toBe(true)
   })
 })
