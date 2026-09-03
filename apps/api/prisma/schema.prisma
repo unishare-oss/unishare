@@ -799,6 +799,12 @@ model Deck {
   progressPhase          String?
   progressDone           Int?
   progressTotal          Int?
+  /// Null until the owner creates a share link, and null again the moment they revoke it.
+  ///
+  /// The token IS the credential: whoever holds it can read this deck and download the file
+  /// with no account at all. That is why it lives here rather than being a longer expiry on
+  /// the presigned storage URL -- a presigned URL cannot be withdrawn once sent, and this can.
+  shareToken             String?    @unique
   /// Object-store keys in the same bucket as every other file, under a decks/ prefix.
   /// The PDF is a re-render of the same deck, not a second generation, and exists so the
   /// deck can be previewed in-app without downloading it.
