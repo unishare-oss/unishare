@@ -3,7 +3,7 @@
 import { use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, ArrowLeft, Presentation, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Presentation, Share2, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { DeckDeleteDialog } from '@/components/decks/deck-delete-dialog'
 import { DeckEditorFrame } from '@/components/decks/deck-editor-frame'
 import { DeckTitleEditor } from '@/components/decks/deck-title-editor'
 import { DeckDownloadMenu } from '@/components/decks/deck-download-menu'
+import { DeckShareDialog } from '@/components/decks/deck-share-dialog'
 import { deckWaitState, hasRenderedFiles, isRerenderFailure } from '@/lib/decks/waiting-state'
 import { useDecksControllerGetDeck } from '@/src/lib/api/generated/decks/decks'
 
@@ -83,6 +84,16 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
                   <span className="hidden sm:inline">Delete</span>
                 </Button>
               </DeckDeleteDialog>
+              {/* Sharing is only offered once there is a file to share: a link to a deck that
+                  is still generating would 404 for whoever received it. */}
+              {rendered && (
+                <DeckShareDialog deck={deck}>
+                  <Button variant="ghost" size="sm" aria-label="Share this deck">
+                    <Share2 className="size-4 sm:mr-1.5" strokeWidth={1.5} aria-hidden="true" />
+                    <span className="hidden sm:inline">Share</span>
+                  </Button>
+                </DeckShareDialog>
+              )}
               {/* One control for both formats, and it re-renders first so what arrives is the
                   deck as it is now. Replaces PowerPoint / Download PDF / Save to Unishare. */}
               {rendered && <DeckDownloadMenu deck={deck} />}
