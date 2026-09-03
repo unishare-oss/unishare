@@ -124,9 +124,7 @@ export function deckWaitState(deck: DeckEntity, now: number = Date.now()): DeckW
   if (deck.status === 'GENERATING') {
     return {
       kind: 'generating',
-      // There is no progress field on the deck, so this quantifies the work rather than
-      // inventing a percentage that would only ever be a guess.
-      message: `Building ${deck.slideCount} slides — usually a couple of minutes`,
+      message: generatingMessage(deck),
       icon: Sparkles,
       spin: false,
       tone: 'progress',
@@ -190,5 +188,42 @@ export function deckWaitState(deck: DeckEntity, now: number = Date.now()): DeckW
     icon: Users,
     spin: false,
     tone: 'progress',
+  }
+}
+
+/**
+ * What a generating deck says it is doing.
+ *
+ * The worker polls the generator and stores what it hears, so this is reported progress
+ * rather than a percentage derived from elapsed time. That distinction is the point: a deck
+ * writes its slides in small batches with a deliberate pause between them, so a
+ * time-based bar would race ahead and then sit at 99% for a minute.
+ *
+ * Everything here degrades to the old sentence. Progress is null on a deck that has not been
+ * heard from yet, on a deck generated before this existed, and whenever the generator says
+ * something we do not recognise — none of which is a broken deck, so none of it should look
+ * like one.
+ */
+function generatingMessage(deck: DeckEntity): string {
+  const total = deck.progressTotal ?? deck.slideCount
+  const done = deck.progressDone ?? 0
+
+  switch (deck.progressPhase) {
+    case 'outline':
+      return 'Planning what the slides will cover'
+    case 'layout':
+      return 'Choosing a layout for each slide'
+    case 'slides':
+      // Counts slides FINISHED, not the one in flight. "1 of 8 written" the moment the first
+      // one lands is true; "writing slide 2 of 8" would be a guess about what happens next.
+      return `Writing slides — ${done} of ${total} done`
+    case 'assets':
+      return 'Adding images to the slides'
+    case 'finishing':
+      return 'Putting the deck together'
+    case 'starting':
+      return 'Starting up'
+    default:
+      return `Building ${total} slides — usually a couple of minutes`
   }
 }
