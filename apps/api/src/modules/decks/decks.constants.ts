@@ -71,8 +71,17 @@ export const AI_EDIT_DAILY_CAP = 20
  */
 export const MAX_ATTEMPTS = 3
 
-/** Exponential base. 30s, 60s — long enough for a provider hiccup to pass. */
-export const RETRY_BACKOFF_MS = 30_000
+/**
+ * Exponential base, giving 120s then 240s.
+ *
+ * Two minutes, not thirty seconds, because of what the failure actually is. The provider caps
+ * TOKENS per minute (20k), and a deck that failed did so by exhausting that window — so a
+ * retry 30s later runs straight into a budget its own previous attempt drained, and cannot
+ * succeed. It was not backoff, it was a countdown to the same failure three times.
+ *
+ * A full window plus margin is the shortest delay that gives a retry a real chance.
+ */
+export const RETRY_BACKOFF_MS = 120_000
 
 export const MIN_SLIDES = 3
 
@@ -115,6 +124,18 @@ export const TONES = [
 ] as const
 
 export const VERBOSITIES = ['concise', 'standard', 'text-heavy'] as const
+
+/**
+ * Concise, not standard, and the reason is token spend rather than taste.
+ *
+ * The generator retries any slide whose content comes back too long for its layout, and those
+ * retries resend the whole prompt AND the over-long output — 4-5 of them per two-slide batch
+ * were observed, which is the single largest multiplier on a 20k-tokens-per-minute budget.
+ * Shorter target content means fewer of them.
+ *
+ * A student can still pick either of the others; this only changes where the form starts.
+ */
+export const DEFAULT_VERBOSITY = 'concise'
 
 export const PDF_MIME = 'application/pdf'
 
