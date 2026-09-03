@@ -1,5 +1,10 @@
 import type { ConfigService } from '@nestjs/config'
-import { PresentonClient, describeProviderFailure } from './presenton.client'
+import {
+  PresentonClient,
+  describeProviderFailure,
+  describeTaskError,
+  phaseFor,
+} from './presenton.client'
 import type { PresentonAccountsService } from './presenton-accounts.service'
 
 /**
@@ -60,6 +65,71 @@ describe('describeProviderFailure', () => {
  * database by the time it runs, so a throw here would report "could not delete" for a deck
  * that is definitively gone, and a retry would then say "Deck not found".
  */
+describe('phaseFor', () => {
+  /**
+   * These inputs are the generator's own UI copy, captured from a live run. They are matched
+   * loosely on purpose: the vendor rewords them, and a phase that silently stops matching
+   * would leave the UI stuck on whatever it last recognised.
+   */
+  it.each([
+    ['Queued for generation', 'starting'],
+    ['Starting presentation generation', 'starting'],
+    ['Generating presentation outlines', 'outline'],
+    ['Selecting layout for each slide', 'layout'],
+    ['Generating slides', 'slides'],
+    ['Fetching assets for slides', 'assets'],
+    ['Presentation generation completed', 'finishing'],
+  ])('maps %s to %s', (message, expected) => {
+    expect(phaseFor(message)).toBe(expected)
+  })
+
+  it('returns null for a message it does not recognise', () => {
+    // Null so the caller keeps the last known phase. Guessing here would be worse than
+    // saying nothing: an unrecognised message means the vendor changed something, and
+    // inventing a phase from it would move the UI backwards.
+    expect(phaseFor('Reticulating splines')).toBeNull()
+    expect(phaseFor('')).toBeNull()
+    expect(phaseFor(null)).toBeNull()
+  })
+
+  it('prefers the asset phase over the slide phase when a message mentions both', () => {
+    // "Fetching assets for slides" contains both words, and it arrives AFTER the slides are
+    // written. Matching "slide" first would make the UI go backwards at the very end.
+    expect(phaseFor('Fetching assets for slides')).toBe('assets')
+  })
+})
+
+describe('describeTaskError', () => {
+  it('reads a rate limit the same way a failed request would', () => {
+    // The whole point: moving generation to the async endpoint must not change what a
+    // student sees for the failure that actually happens.
+    expect(describeTaskError({ error: { status_code: 429, detail: 'Rate limit exceeded' } })).toBe(
+      describeProviderFailure(429, ''),
+    )
+  })
+
+  it('accepts a status code that arrives as a string', () => {
+    expect(describeTaskError({ error: { status: '503' } })).toBe(describeProviderFailure(503, ''))
+  })
+
+  it("falls back to the payload's own words when there is no status", () => {
+    expect(describeTaskError({ error: { detail: 'Template not found' } })).toBe(
+      'Template not found',
+    )
+  })
+
+  it('falls back to the task message when the error carries nothing usable', () => {
+    expect(describeTaskError({ error: {}, message: 'Presentation generation failed' })).toBe(
+      'Presentation generation failed',
+    )
+  })
+
+  it('never returns an empty string', () => {
+    expect(describeTaskError({})).toMatch(/\S/)
+    expect(describeTaskError({ error: null, message: '   ' })).toMatch(/\S/)
+  })
+})
+
 describe('PresentonClient.deletePresentation', () => {
   const config = {
     get: (key: string) =>

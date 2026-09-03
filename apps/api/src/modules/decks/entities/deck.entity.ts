@@ -51,6 +51,32 @@ export class DeckEntity {
 
   @ApiProperty({ description: 'Attempts made so far' }) attempts: number
   @ApiProperty({ description: 'Attempts before the deck is given up on' }) maxAttempts: number
+
+  /**
+   * Live progress while the deck generates. All three are null until the worker hears
+   * something from the generator, and a client must render a generating deck without them.
+   */
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    enum: ['starting', 'outline', 'layout', 'slides', 'assets', 'finishing'],
+    description: 'Which stage of generation the deck is in',
+  })
+  progressPhase: string | null
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Slides finished so far',
+  })
+  progressDone: number | null
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: "The generator's own slide total, which may differ from slideCount",
+  })
+  progressTotal: number | null
 }
 
 export class DeckTemplateEntity {

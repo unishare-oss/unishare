@@ -35,6 +35,46 @@ export interface DeckExport {
   mimeType: string
 }
 
+/**
+ * Where a generation has got to, in vendor-neutral terms.
+ *
+ * Deliberately an enum rather than the generator's own wording. The backing service reports
+ * progress as prose ("Selecting layout for each slide") — its vocabulary, and its to reword
+ * whenever it likes. Putting that string on a student's screen would leak the vendor through a
+ * port whose whole purpose is to hide it, and let an upgrade rewrite our UI copy.
+ */
+export type DeckPhase =
+  /** Accepted by the generator, no work observable yet. */
+  | 'starting'
+  /** Planning what the slides will say, before any of them exist. */
+  | 'outline'
+  /** Choosing a layout per slide. */
+  | 'layout'
+  /** Writing slide content. The only phase where `done` moves. */
+  | 'slides'
+  /** Slides are written; images are being fetched. */
+  | 'assets'
+  /** Rendering and exporting. */
+  | 'finishing'
+
+export interface DeckProgress {
+  phase: DeckPhase
+  /** Slides finished so far. Only meaningful in the `slides` phase and after. */
+  done: number
+  /**
+   * Slides the GENERATOR believes it is making, which is not necessarily the number we asked
+   * for. Reported rather than assumed so "4 of 8" can never disagree with itself.
+   */
+  total: number
+}
+
+/**
+ * Called as generation advances. Progress is advisory: an implementation that cannot report
+ * it simply never calls this, and callers must treat its absence as normal rather than as a
+ * stalled deck.
+ */
+export type DeckProgressListener = (progress: DeckProgress) => void
+
 export interface GeneratedDeck {
   /** The generator's id for this deck. Required later by every edit and re-export call. */
   externalId: string
@@ -46,7 +86,10 @@ export interface GeneratedDeck {
 }
 
 export interface DeckGenerator {
-  generate(request: DeckGenerationRequest): Promise<GeneratedDeck>
+  generate(
+    request: DeckGenerationRequest,
+    onProgress?: DeckProgressListener,
+  ): Promise<GeneratedDeck>
 }
 
 export interface DeckTemplate {

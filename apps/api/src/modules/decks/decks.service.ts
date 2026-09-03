@@ -12,7 +12,7 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, type Deck } from '@/generated/prisma/client'
 import type { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
-import { DECK_EDITOR, type DeckEditor } from './deck-generator.port'
+import { DECK_EDITOR, type DeckEditor, type DeckProgress } from './deck-generator.port'
 import {
   AVG_SECONDS_PER_SLIDE,
   DAILY_DECK_QUOTA,
@@ -293,6 +293,31 @@ export class DecksService {
         startedAt: new Date(),
         attempts: attempt,
         scheduledFor: null,
+        // Cleared, not carried over. A second attempt starts the deck from scratch, so
+        // leaving the first attempt's count would show a deck marching backwards from
+        // "6 of 8" to "1 of 8" — or worse, sitting at 6 while nothing is happening.
+        progressPhase: null,
+        progressDone: null,
+        progressTotal: null,
+      },
+    })
+  }
+
+  /**
+   * Records how far a running generation has got.
+   *
+   * Scoped to GENERATING and undeleted so a late write cannot resurrect a deleted deck or
+   * contradict a deck that has already finished — the generator's last progress update and
+   * its completion arrive within a second of each other, so that race is routine rather
+   * than theoretical.
+   */
+  async recordProgress(deckId: string, progress: DeckProgress): Promise<void> {
+    await this.prisma.deck.updateMany({
+      where: { id: deckId, deletedAt: null, status: DeckStatus.GENERATING },
+      data: {
+        progressPhase: progress.phase,
+        progressDone: progress.done,
+        progressTotal: progress.total,
       },
     })
   }
@@ -490,6 +515,12 @@ export class DecksService {
       scheduledFor: deck.scheduledFor,
       attempts: deck.attempts,
       maxAttempts: MAX_ATTEMPTS,
+      // Only ever populated while a deck is generating. Left as-is afterwards rather than
+      // cleared: nothing reads it once the deck is READY, and a finished deck's last known
+      // progress is worth having in the row when something goes wrong.
+      progressPhase: deck.progressPhase,
+      progressDone: deck.progressDone,
+      progressTotal: deck.progressTotal,
     }
   }
 }

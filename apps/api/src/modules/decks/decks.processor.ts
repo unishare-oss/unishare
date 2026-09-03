@@ -2,7 +2,7 @@ import { Inject, Logger } from '@nestjs/common'
 import { Processor, WorkerHost } from '@nestjs/bullmq'
 import type { Job } from 'bullmq'
 import { DECK_CONCURRENCY, DECK_QUEUE } from './decks.constants'
-import { DECK_GENERATOR, type DeckGenerator } from './deck-generator.port'
+import { DECK_GENERATOR, type DeckGenerator, type DeckProgress } from './deck-generator.port'
 import { DeckArtifactsService } from './deck-artifacts.service'
 import { DecksService } from './decks.service'
 
@@ -46,21 +46,24 @@ export class DecksProcessor extends WorkerHost {
     await this.decks.markGenerating(deckId, attempt)
 
     try {
-      const generated = await this.generator.generate({
-        // The generator is multi-tenant: without this the deck is created under the shared
-        // administrator account and never appears in the student's editor.
-        ownerId: deck.ownerId,
-        prompt: deck.prompt,
-        slideCount: deck.slideCount,
-        language: deck.language,
-        template: deck.template,
-        tone: deck.tone,
-        verbosity: deck.verbosity,
-        instructions: deck.instructions,
-        includeTitleSlide: deck.includeTitleSlide,
-        includeTableOfContents: deck.includeTableOfContents,
-        webSearch: deck.webSearch,
-      })
+      const generated = await this.generator.generate(
+        {
+          // The generator is multi-tenant: without this the deck is created under the shared
+          // administrator account and never appears in the student's editor.
+          ownerId: deck.ownerId,
+          prompt: deck.prompt,
+          slideCount: deck.slideCount,
+          language: deck.language,
+          template: deck.template,
+          tone: deck.tone,
+          verbosity: deck.verbosity,
+          instructions: deck.instructions,
+          includeTitleSlide: deck.includeTitleSlide,
+          includeTableOfContents: deck.includeTableOfContents,
+          webSearch: deck.webSearch,
+        },
+        (progress) => void this.publishProgress(deckId, progress),
+      )
 
       const key = await this.artifacts.store(generated.pptx)
       const pdfKey = generated.pdf ? await this.artifacts.store(generated.pdf) : null
@@ -103,6 +106,20 @@ export class DecksProcessor extends WorkerHost {
         )
       }
       throw err
+    }
+  }
+
+  /**
+   * Progress is nice-to-have, so a failure to store it must never fail the deck.
+   *
+   * Not awaited by the caller either: the generator's poll loop should not stall behind a
+   * database write, and a dropped update is corrected by the next one a few seconds later.
+   */
+  private async publishProgress(deckId: string, progress: DeckProgress): Promise<void> {
+    try {
+      await this.decks.recordProgress(deckId, progress)
+    } catch (err) {
+      this.logger.warn(`Deck ${deckId} progress update failed: ${String(err)}`)
     }
   }
 

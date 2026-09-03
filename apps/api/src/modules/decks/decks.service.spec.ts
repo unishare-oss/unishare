@@ -319,6 +319,31 @@ describe('DecksService', () => {
       expect(published).toBe(false)
       expect(prisma.deck.updateMany.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
     })
+
+    it('clears progress when an attempt starts', async () => {
+      // Otherwise a retry opens showing the previous attempt's count, which reads as a deck
+      // that got most of the way and then stopped — the opposite of what happened.
+      await service.markGenerating('deck-1', 2)
+      expect(prisma.deck.update.mock.calls[0][0].data).toMatchObject({
+        progressPhase: null,
+        progressDone: null,
+        progressTotal: null,
+      })
+    })
+
+    it('records progress only onto a deck that is still generating', async () => {
+      // Scoped on status as well as deletedAt: the generator's last progress update and its
+      // completion land within a second of each other, so an unscoped write would routinely
+      // stamp progress onto a deck that is already READY.
+      await service.recordProgress('deck-1', { phase: 'slides', done: 2, total: 8 })
+      const call = prisma.deck.updateMany.mock.calls[0][0]
+      expect(call.where).toMatchObject({ id: 'deck-1', deletedAt: null, status: 'GENERATING' })
+      expect(call.data).toMatchObject({
+        progressPhase: 'slides',
+        progressDone: 2,
+        progressTotal: 8,
+      })
+    })
   })
 
   describe('renaming', () => {

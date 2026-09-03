@@ -786,6 +786,19 @@ model Deck {
   includeTitleSlide      Boolean    @default(true)
   includeTableOfContents Boolean    @default(false)
   webSearch              Boolean    @default(false)
+  /// Live progress, written by the worker while a generation runs.
+  ///
+  /// Stored rather than derived because the student's browser cannot see the generator: the
+  /// worker polls it, and this row is the only place that knowledge can be shared. Null on a
+  /// deck that has not started, and reset at the start of every attempt so a retry never
+  /// shows the previous attempt's count.
+  ///
+  /// progressTotal is the generator's OWN slide count, not slideCount. They normally agree,
+  /// and storing what the generator reports means "4 of 8" can never contradict itself if
+  /// they ever stop agreeing.
+  progressPhase          String?
+  progressDone           Int?
+  progressTotal          Int?
   /// Object-store keys in the same bucket as every other file, under a decks/ prefix.
   /// The PDF is a re-render of the same deck, not a second generation, and exists so the
   /// deck can be previewed in-app without downloading it.
