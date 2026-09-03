@@ -115,3 +115,33 @@ export class DeckDownloadEntity {
   @ApiProperty() url: string
   @ApiProperty() expiresIn: number
 }
+
+export class DeckShareEntity {
+  @ApiProperty({ description: 'Append to the deck share URL. Treat it as a credential.' })
+  shareToken: string
+}
+
+export class DeckShareRevokedEntity {
+  @ApiProperty() revoked: boolean
+}
+
+/**
+ * A deck as seen through a share link, by someone who may have no account.
+ *
+ * A deliberately smaller shape than DeckEntity. The prompt, owner, error text and generation
+ * options are all absent: the link exists so a stranger can read the deck, and everything here
+ * is already visible on its slides.
+ */
+export class SharedDeckEntity {
+  @ApiProperty({ type: String, nullable: true }) title: string | null
+  @ApiProperty() slideCount: number
+  @ApiProperty() template: string
+  @ApiProperty() createdAt: Date
+
+  @ApiProperty({
+    isArray: true,
+    type: String,
+    description: 'Only the formats that exist; a failed preview render leaves no pdf.',
+  })
+  formats: string[]
+}

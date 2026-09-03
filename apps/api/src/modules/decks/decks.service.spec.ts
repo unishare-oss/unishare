@@ -41,10 +41,13 @@ describe('DecksService', () => {
     deletePresentation: jest.Mock
   }
 
-  let storage: { deleteFile: jest.Mock }
+  let storage: { deleteFile: jest.Mock; generatePresignedDownloadUrl: jest.Mock }
 
   beforeEach(async () => {
-    storage = { deleteFile: jest.fn().mockResolvedValue(undefined) }
+    storage = {
+      deleteFile: jest.fn().mockResolvedValue(undefined),
+      generatePresignedDownloadUrl: jest.fn().mockResolvedValue('https://signed.example/deck'),
+    }
     prisma = {
       deck: {
         create: jest.fn().mockResolvedValue({ id: 'deck-1' }),
@@ -177,6 +180,106 @@ describe('DecksService', () => {
       const [, , opts] = queue.add.mock.calls[0]
       expect(opts.attempts).toBe(MAX_ATTEMPTS)
       expect(opts.backoff).toMatchObject({ type: 'exponential' })
+    })
+  })
+
+  /**
+   * A share token is an unauthenticated capability, so these cover the two ways that goes
+   * wrong: handing it to the wrong person, and failing to take it back.
+   */
+  describe('sharing', () => {
+    const ready = {
+      id: 'deck-1',
+      ownerId: 'user-1',
+      status: 'READY',
+      title: 'Vocabulary',
+      slideCount: 14,
+      template: 'modern',
+      createdAt: new Date(),
+      key: 'k.pptx',
+      pdfKey: null,
+      shareToken: null,
+      prompt: 'the prompt the student typed',
+    }
+
+    it('mints a token and stores it', async () => {
+      prisma.deck.findFirst.mockResolvedValue(ready)
+      const { shareToken } = await service.createShareLink('deck-1', 'user-1')
+      expect(shareToken).toHaveLength(21)
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-1' },
+        data: { shareToken },
+      })
+    })
+
+    it('returns the existing token instead of rotating it', async () => {
+      // A second "Copy link" must not invalidate the link already pasted somewhere.
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 'existing-token' })
+      const { shareToken } = await service.createShareLink('deck-1', 'user-1')
+      expect(shareToken).toBe('existing-token')
+      expect(prisma.deck.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses to share a deck the caller does not own', async () => {
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, ownerId: 'someone-else' })
+      await expect(service.createShareLink('deck-1', 'user-1')).rejects.toThrow(/Access denied/)
+      expect(prisma.deck.update).not.toHaveBeenCalled()
+    })
+
+    it('revoking clears the token', async () => {
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 'live-token' })
+      await service.revokeShareLink('deck-1', 'user-1')
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-1' },
+        data: { shareToken: null },
+      })
+    })
+
+    it('withholds the prompt and the owner from a shared view', async () => {
+      // The whole reason getSharedDeck does not return a DeckEntity.
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 'live-token' })
+      const shared = await service.getSharedDeck('live-token')
+      expect(shared).not.toHaveProperty('prompt')
+      expect(shared).not.toHaveProperty('ownerId')
+      expect(shared).not.toHaveProperty('error')
+      expect(shared.title).toBe('Vocabulary')
+    })
+
+    it('offers only the formats that exist', async () => {
+      // A failed preview render leaves pdfKey null while the pptx is fine.
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', pdfKey: null })
+      expect((await service.getSharedDeck('t')).formats).toEqual(['pptx'])
+
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', pdfKey: 'k.pdf' })
+      expect((await service.getSharedDeck('t')).formats).toEqual(['pptx', 'pdf'])
+    })
+
+    it('refuses an unknown or revoked token', async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.getSharedDeck('nope')).rejects.toThrow(/no longer valid/)
+    })
+
+    it('never resolves a token on a soft-deleted deck', async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.getSharedDeck('t')).rejects.toThrow()
+      expect(prisma.deck.findFirst.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
+    })
+
+    it('says a deck is still generating rather than that the link is broken', async () => {
+      // The link IS valid; telling the holder otherwise sends them back for a new one.
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', status: 'GENERATING' })
+      await expect(service.getSharedDeck('t')).rejects.toThrow(/still being generated/)
+    })
+
+    it('presigns a download for a valid token', async () => {
+      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't' })
+      const res = await service.getSharedDownloadUrl('t', 'pptx')
+      expect(res.url).toBe('https://signed.example/deck')
+      expect(storage.generatePresignedDownloadUrl).toHaveBeenCalledWith(
+        'k.pptx',
+        3600,
+        'Vocabulary.pptx',
+      )
     })
   })
 

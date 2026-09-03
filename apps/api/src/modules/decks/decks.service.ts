@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
+import { nanoid } from 'nanoid'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, UserRole, type Deck } from '@/generated/prisma/client'
@@ -140,6 +141,91 @@ export class DecksService {
     if (!deck) throw new NotFoundException('Deck not found')
     if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
 
+    return this.presignDownload(deck, format)
+  }
+
+  /**
+   * Creates the deck's share link, or hands back the one it already has.
+   *
+   * Idempotent deliberately: pressing "Copy link" twice must not invalidate the link already
+   * pasted into a group chat. Rotating a token is revoke-then-share, which is a decision the
+   * owner makes on purpose rather than a side effect of a second click.
+   */
+  async createShareLink(id: string, userId: string) {
+    const deck = await this.requireOwned(id, userId)
+    if (deck.shareToken) return { shareToken: deck.shareToken }
+
+    // 21 characters, where a collab room slug uses 10. A room slug is paired with a password;
+    // this token is the only thing between a stranger and the file, so it gets full entropy.
+    const shareToken = nanoid(21)
+    await this.prisma.deck.update({ where: { id }, data: { shareToken } })
+    return { shareToken }
+  }
+
+  /**
+   * Withdraws the share link. The point of storing the token instead of leaning on a longer
+   * presigned expiry: this takes effect immediately for everyone holding the old link.
+   */
+  async revokeShareLink(id: string, userId: string) {
+    await this.requireOwned(id, userId)
+    await this.prisma.deck.update({ where: { id }, data: { shareToken: null } })
+    return { revoked: true }
+  }
+
+  /**
+   * The deck behind a share token, for a caller with no account.
+   *
+   * Deliberately NOT DeckEntity. The prompt the student typed, the owner's id, the error text
+   * and the generation options are all withheld — a share link is for reading the deck, and
+   * what this does return is visible on the slides anyway.
+   */
+  async getSharedDeck(token: string) {
+    const deck = await this.requireShared(token)
+
+    return {
+      title: deck.title,
+      slideCount: deck.slideCount,
+      template: deck.template,
+      createdAt: deck.createdAt,
+      // Only the formats that actually exist. A failed preview render leaves pdfKey null while
+      // the pptx is perfectly fine, and offering a PDF that 404s is worse than not offering it.
+      formats: [...(deck.key ? ['pptx'] : []), ...(deck.pdfKey ? ['pdf'] : [])],
+    }
+  }
+
+  /** The file behind a share token. Same presigned URL the owner gets, same short expiry. */
+  async getSharedDownloadUrl(token: string, format: 'pptx' | 'pdf' = 'pptx') {
+    const deck = await this.requireShared(token)
+    return this.presignDownload(deck, format)
+  }
+
+  private async requireOwned(id: string, userId: string) {
+    const deck = await this.prisma.deck.findFirst({ where: { id, deletedAt: null } })
+    if (!deck) throw new NotFoundException('Deck not found')
+    if (deck.ownerId !== userId) throw new ForbiddenException('Access denied')
+    return deck
+  }
+
+  /**
+   * Resolves a share token, or refuses.
+   *
+   * A revoked token, a token for a deleted deck and a token that never existed are one error
+   * with one message: distinguishing them tells a stranger which guesses were close.
+   */
+  private async requireShared(token: string) {
+    const deck = await this.prisma.deck.findFirst({
+      where: { shareToken: token, deletedAt: null },
+    })
+    if (!deck) throw new NotFoundException('This share link is no longer valid')
+    // A deck still generating has no file yet. Its own message, because the link IS valid and
+    // telling the holder it is broken would send them back to the owner for a new one.
+    if (deck.status !== DeckStatus.READY) {
+      throw new NotFoundException('This deck is still being generated')
+    }
+    return deck
+  }
+
+  private async presignDownload(deck: Deck, format: 'pptx' | 'pdf') {
     const key = format === 'pdf' ? deck.pdfKey : deck.key
     if (!key) {
       // A missing PDF is not the same as a missing deck: the PPTX may be fine while the

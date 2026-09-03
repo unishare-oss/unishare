@@ -26,6 +26,9 @@ import {
   DeckQuotaEntity,
   DeckTemplateEntity,
   PaginatedDecksEntity,
+  DeckShareEntity,
+  DeckShareRevokedEntity,
+  SharedDeckEntity,
 } from './entities/deck.entity'
 import { DecksFrameAuthService } from './decks.frame-auth.service'
 
@@ -85,6 +88,30 @@ export class DecksController {
     return this.decksService.getQuota(session.user.id, session.user.role as UserRole)
   }
 
+  /**
+   * A shared deck, for a caller who may not be signed in.
+   *
+   * OptionalAuth because the share token IS the credential — requiring an account would defeat
+   * the point of sending a link to someone outside the university. Registered above the
+   * parameterized routes so `shared` is never read as a deck id.
+   */
+  @Get('shared/:token')
+  @OptionalAuth()
+  @ApiOkResponse({ type: SharedDeckEntity })
+  @ResponseMessage('Shared deck fetched successfully')
+  getSharedDeck(@Param('token') token: string) {
+    return this.decksService.getSharedDeck(token)
+  }
+
+  @Get('shared/:token/download')
+  @OptionalAuth()
+  @ApiOkResponse({ type: DeckDownloadEntity })
+  @ApiQuery({ name: 'format', required: false, enum: ['pptx', 'pdf'] })
+  @ResponseMessage('Download URL generated successfully')
+  getSharedDownloadUrl(@Param('token') token: string, @Query('format') format?: 'pptx' | 'pdf') {
+    return this.decksService.getSharedDownloadUrl(token, format === 'pdf' ? 'pdf' : 'pptx')
+  }
+
   @Get('templates')
   @ApiOkResponse({ type: [DeckTemplateEntity] })
   @ResponseMessage('Templates fetched successfully')
@@ -129,6 +156,20 @@ export class DecksController {
     @Query('format') format?: 'pptx' | 'pdf',
   ) {
     return this.decksService.getDownloadUrl(id, session.user.id, format === 'pdf' ? 'pdf' : 'pptx')
+  }
+
+  @Post(':id/share')
+  @ApiOkResponse({ type: DeckShareEntity })
+  @ResponseMessage('Share link created successfully')
+  createShareLink(@Param('id') id: string, @Session() session: UserSession) {
+    return this.decksService.createShareLink(id, session.user.id)
+  }
+
+  @Delete(':id/share')
+  @ApiOkResponse({ type: DeckShareRevokedEntity })
+  @ResponseMessage('Share link revoked successfully')
+  revokeShareLink(@Param('id') id: string, @Session() session: UserSession) {
+    return this.decksService.revokeShareLink(id, session.user.id)
   }
 
   @Post(':id/reexport')
