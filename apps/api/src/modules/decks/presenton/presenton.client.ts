@@ -132,6 +132,18 @@ export function describeTaskError(task: { error?: unknown; message?: string | nu
   return 'The AI service returned an unexpected error.'
 }
 
+/**
+ * The rows out of a template-list body, or null when the body is neither shape we know.
+ *
+ * Null rather than `[]` so the caller can tell "the instance offers no templates" apart from
+ * "we could not read the response". Conflating the two is what hid the pagination wrapper.
+ */
+export function templateItems(body: unknown): unknown[] | null {
+  if (Array.isArray(body)) return body
+  const items = (body as { items?: unknown } | null)?.items
+  return Array.isArray(items) ? items : null
+}
+
 interface GenerateResponse {
   presentation_id: string
   /** Server-absolute path to the exported file. Fetched by prepending the base URL verbatim. */
@@ -339,12 +351,23 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
    */
   async listTemplates(): Promise<DeckTemplate[]> {
     const { baseUrl, apiKey } = this.credentials()
-    const rows = await this.getJson<unknown>(
+    const body = await this.getJson<unknown>(
       baseUrl,
       { Authorization: `Bearer ${apiKey}` },
       '/api/v1/ppt/template/all?page_size=50&default=true',
     )
-    const items = Array.isArray(rows) ? rows : []
+
+    // The endpoint is paginated: `{ items, total, page, page_size }`. This read the body as
+    // an array and so returned nothing for every request, which left the create form's
+    // picker empty and pinned every deck to `general` -- in silence, because an empty list
+    // is indistinguishable from "nothing selected yet" in the UI. A bare array is still
+    // accepted in case the shape changes back, but an unrecognised body now logs.
+    const items = templateItems(body)
+    if (items === null) {
+      this.logger.warn('template list: unexpected response shape, offering no templates')
+      return []
+    }
+
     return items
       .filter((t): t is Record<string, unknown> => typeof t === 'object' && t !== null)
       .map((t) => ({

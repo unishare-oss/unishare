@@ -4,6 +4,7 @@ import {
   describeProviderFailure,
   describeTaskError,
   phaseFor,
+  templateItems,
 } from './presenton.client'
 import type { PresentonAccountsService } from './presenton-accounts.service'
 
@@ -128,6 +129,43 @@ describe('describeTaskError', () => {
     expect(describeTaskError({})).toMatch(/\S/)
     expect(describeTaskError({ error: null, message: '   ' })).toMatch(/\S/)
   })
+})
+
+/**
+ * The template endpoint is paginated. Reading its body as an array returned nothing for every
+ * request, so the create form's picker was empty and every deck fell back to `general` --
+ * verified against the instance, which offers 8 templates, and against the database, where
+ * all 13 decks generated to that point had `template = 'general'`.
+ */
+describe('templateItems', () => {
+  it('unwraps the paginated body the instance actually returns', () => {
+    const body = {
+      items: [{ id: 'executive' }, { id: 'dynamic' }],
+      total: 8,
+      page: 1,
+      page_size: 50,
+    }
+    expect(templateItems(body)).toEqual([{ id: 'executive' }, { id: 'dynamic' }])
+  })
+
+  it('still accepts a bare array, in case the shape changes back', () => {
+    expect(templateItems([{ id: 'general' }])).toEqual([{ id: 'general' }])
+  })
+
+  it('reports an empty page as empty rather than unreadable', () => {
+    expect(templateItems({ items: [], total: 0 })).toEqual([])
+  })
+
+  /**
+   * Null, not `[]`. The caller logs on null; returning `[]` for an unreadable body is exactly
+   * the silent failure this replaced.
+   */
+  it.each([null, undefined, {}, { items: 'nope' }, 'string', 42])(
+    'returns null for an unreadable body: %p',
+    (body) => {
+      expect(templateItems(body)).toBeNull()
+    },
+  )
 })
 
 describe('PresentonClient.deletePresentation', () => {
