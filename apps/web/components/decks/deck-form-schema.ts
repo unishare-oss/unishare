@@ -5,8 +5,8 @@ import type {
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 export const MIN_SLIDES = 3
-/** Mirrors MAX_SLIDES in the API's decks.constants.ts, which explains why it is 10. */
-export const MAX_SLIDES = 10
+/** Mirrors MAX_SLIDES in the API's decks.constants.ts, which explains why it is 14. */
+export const MAX_SLIDES = 14
 export const MAX_PROMPT = 2000
 export const MIN_PROMPT = 10
 export const MAX_INSTRUCTIONS = 1000

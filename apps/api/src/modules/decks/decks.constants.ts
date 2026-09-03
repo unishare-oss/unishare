@@ -86,18 +86,33 @@ export const RETRY_BACKOFF_MS = 120_000
 export const MIN_SLIDES = 3
 
 /**
- * Ten, not fifteen, because fifteen was never actually reachable.
+ * Fourteen, and what binds it now is our own deadline rather than the provider's limits.
  *
- * The ceiling here is total provider calls, not slides. The generator retries a slide whose
- * content comes back too long for its layout, so a deck's real call count is its slide count
- * times up to four — which is how a 5-slide deck managed to fail on a rate limit just as
- * reliably as a 10-slide one.
+ * It used to be total provider calls. The generator retries a slide whose content comes back
+ * too long for its layout, so a deck's real call count is its slide count times up to four —
+ * which is how a 5-slide deck managed to fail on a rate limit just as reliably as a 10-slide
+ * one, and why this was pinned to 10.
  *
- * Ten is only reachable at all because the generator's batch is pinned to 2 (the initContainer
- * in k8s-practice/presenton/deployment.yaml, which explains the arithmetic). Raising this
- * without raising that just moves the failure back to where it was.
+ * Two changes moved that ceiling: the generator's batch is pinned to 2 with a 45s pause
+ * between batches (the initContainer in k8s-practice/presenton/deployment.yaml, which
+ * explains the arithmetic), and DEFAULT_VERBOSITY is now concise, which is what removes most
+ * of the content retries rather than merely pacing them.
+ *
+ * The limit is now GENERATE_DEADLINE_MS — 10 minutes, in presenton.client.ts. The pause
+ * schedule alone costs 45 * (ceil(n/2) - 1) seconds, and a measured 10-slide concise deck
+ * finished first try in 277s, of which 180s was pause: about 9.7s of generation per slide.
+ *
+ *   n=14 -> 270s pause + ~136s = ~406s, a third of the deadline spare
+ *   n=20 -> 405s pause + ~194s = ~599s, nothing spare
+ *
+ * Fourteen keeps enough margin to absorb the content retries that do still happen. Past
+ * about eighteen the deadline has to move too, which is a separate decision with its own
+ * consequences for how long a student stares at a progress bar.
+ *
+ * Raising this without the batch size and the pause just moves the failure back to where it
+ * was. Mirrored in apps/web/components/decks/deck-form-schema.ts.
  */
-export const MAX_SLIDES = 10
+export const MAX_SLIDES = 14
 export const DEFAULT_SLIDES = 8
 
 /**
