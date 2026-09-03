@@ -58,7 +58,9 @@ export const DECK_FORM_DEFAULTS: DeckFormValues = {
   slideCount: 8,
   template: '',
   tone: 'educational',
-  verbosity: 'standard',
+  // Mirrors DEFAULT_VERBOSITY in the API: fewer over-long slides means fewer generator
+  // retries, and retries are what exhaust the provider's per-minute token budget.
+  verbosity: 'concise',
   language: 'English',
   instructions: '',
   includeTitleSlide: true,

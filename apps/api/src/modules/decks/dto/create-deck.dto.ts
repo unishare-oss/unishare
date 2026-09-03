@@ -10,7 +10,14 @@ import {
   Min,
   MinLength,
 } from 'class-validator'
-import { DEFAULT_SLIDES, MAX_SLIDES, MIN_SLIDES, TONES, VERBOSITIES } from '../decks.constants'
+import {
+  DEFAULT_SLIDES,
+  DEFAULT_VERBOSITY,
+  MAX_SLIDES,
+  MIN_SLIDES,
+  TONES,
+  VERBOSITIES,
+} from '../decks.constants'
 
 export class CreateDeckDto {
   @ApiProperty({
@@ -46,7 +53,7 @@ export class CreateDeckDto {
   @IsIn(TONES)
   tone?: string
 
-  @ApiPropertyOptional({ enum: VERBOSITIES, default: 'standard' })
+  @ApiPropertyOptional({ enum: VERBOSITIES, default: DEFAULT_VERBOSITY })
   @IsOptional()
   @IsIn(VERBOSITIES)
   verbosity?: string

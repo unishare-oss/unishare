@@ -781,7 +781,7 @@ model Deck {
   /// Generation options, kept so "tweak and regenerate" and the editor can reopen a deck
   /// with the settings it was made under rather than defaults.
   tone                   String     @default("default")
-  verbosity              String     @default("standard")
+  verbosity              String     @default("concise")
   instructions           String?
   includeTitleSlide      Boolean    @default(true)
   includeTableOfContents Boolean    @default(false)
