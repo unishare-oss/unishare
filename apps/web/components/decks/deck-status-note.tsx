@@ -32,14 +32,42 @@ export function DeckStatusNote({ state, className }: { state: DeckWaitState; cla
         strokeWidth={1.5}
         aria-hidden="true"
       />
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block">{state.message}</span>
         {state.detail && (
           <span className={cn('block mt-0.5', warning ? 'text-text-muted' : 'text-text-muted/80')}>
             {state.detail}
           </span>
         )}
+        {state.bar !== undefined && <ProgressBar bar={state.bar} />}
       </span>
     </div>
+  )
+}
+
+/**
+ * The bar, and only ever an ornament as far as assistive tech is concerned.
+ *
+ * aria-hidden rather than role="progressbar" on purpose: the surrounding box is already an
+ * aria-live region announcing "Writing slides — 3 of 8 done", so a progressbar with the same
+ * numbers would have every update read out twice.
+ */
+function ProgressBar({ bar }: { bar: number | 'indeterminate' }) {
+  const determinate = typeof bar === 'number'
+
+  return (
+    <span className="deck-bar mt-2 block h-0.5 w-full rounded-full bg-border" aria-hidden="true">
+      {determinate ? (
+        <>
+          <span
+            className="deck-bar-fill block h-full rounded-full bg-primary"
+            style={{ width: `${Math.round(bar * 100)}%` }}
+          />
+          <span className="deck-bar-sheen block" />
+        </>
+      ) : (
+        <span className="deck-bar-drift block h-full rounded-full bg-primary" />
+      )}
+    </span>
   )
 }

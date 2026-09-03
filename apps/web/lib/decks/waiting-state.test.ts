@@ -74,6 +74,48 @@ describe('deckWaitState — generating', () => {
     expect(state?.message).toBe('Building 8 slides — usually a couple of minutes')
   })
 
+  it('fills the bar to the real fraction while slides are being written', () => {
+    expect(deckWaitState(deck({ progressPhase: 'slides', progressDone: 2 }))?.bar).toBeCloseTo(0.25)
+  })
+
+  it("measures the fraction against the generator's total, not ours", () => {
+    const state = deckWaitState(
+      deck({ slideCount: 8, progressPhase: 'slides', progressDone: 3, progressTotal: 6 }),
+    )
+    expect(state?.bar).toBeCloseTo(0.5)
+  })
+
+  it('clamps a count that overshoots its total', () => {
+    // The two numbers arrive from separate fields on the same poll, so a generator that
+    // counts a title slide it never reported would otherwise overfill the bar.
+    expect(deckWaitState(deck({ progressPhase: 'slides', progressDone: 99 }))?.bar).toBe(1)
+  })
+
+  it.each(['outline', 'layout', 'assets', 'finishing', 'starting'] as const)(
+    'leaves the bar indeterminate during the %s phase',
+    (phase) => {
+      // A fraction here would be invented: nothing tells us what share of the whole job
+      // "planning the outline" represents.
+      expect(deckWaitState(deck({ progressPhase: phase, progressDone: 4 }))?.bar).toBe(
+        'indeterminate',
+      )
+    },
+  )
+
+  it('leaves the bar indeterminate before anything has been reported', () => {
+    expect(deckWaitState(deck())?.bar).toBe('indeterminate')
+  })
+
+  it.each([
+    ['queued', { status: 'QUEUED' as const, queueAhead: 3 }],
+    ['quota-held', { scheduledFor: '2099-01-01T00:00:00.000Z', status: 'QUEUED' as const }],
+    ['retrying', { status: 'QUEUED' as const, attempts: 1, error: 'provider down' }],
+  ])('shows no bar for a %s deck', (_kind, over) => {
+    // A bar under "4 decks ahead of yours" would say this deck is progressing, and one under
+    // a retry would say the failed attempt got somewhere. Neither is true.
+    expect(deckWaitState(deck(over))?.bar).toBeUndefined()
+  })
+
   it('does not use progress copy for a re-render', () => {
     // A re-render reuses GENERATING but is not building slides from the prompt, and its
     // progress fields are whatever the original generation left behind.

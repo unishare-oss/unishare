@@ -45,6 +45,16 @@ export interface DeckWaitState {
   spin: boolean
   /** `warning` renders amber: something went wrong, even though recovery is automatic. */
   tone: 'progress' | 'warning'
+  /**
+   * The bar under the message, when there is one.
+   *
+   * A number is a real fraction of the work done, from the generator's own count.
+   * `'indeterminate'` means the deck IS being worked on but there is nothing to count yet.
+   * Absent means no bar, which is the right answer for every wait that is not this deck
+   * being worked on — a bar under "4 decks ahead of yours" would imply the deck itself is
+   * progressing, and a bar under a retry would imply the failed attempt got somewhere.
+   */
+  bar?: number | 'indeterminate'
 }
 
 /**
@@ -118,6 +128,7 @@ export function deckWaitState(deck: DeckEntity, now: number = Date.now()): DeckW
       icon: RefreshCw,
       spin: true,
       tone: 'progress',
+      bar: 'indeterminate',
     }
   }
 
@@ -128,6 +139,7 @@ export function deckWaitState(deck: DeckEntity, now: number = Date.now()): DeckW
       icon: Sparkles,
       spin: false,
       tone: 'progress',
+      bar: generatingFraction(deck),
     }
   }
 
@@ -226,4 +238,24 @@ function generatingMessage(deck: DeckEntity): string {
     default:
       return `Building ${total} slides — usually a couple of minutes`
   }
+}
+
+/**
+ * How full the bar is while a deck generates.
+ *
+ * Only the slide-writing phase has anything to count, and it is also the phase that takes
+ * almost all of the time. Everything around it returns 'indeterminate' rather than a made-up
+ * fraction: a bar that jumped to 20% for "planning the outline" would be inventing a claim
+ * about how much of the work that phase represents.
+ */
+function generatingFraction(deck: DeckEntity): number | 'indeterminate' {
+  if (deck.progressPhase !== 'slides') return 'indeterminate'
+
+  const total = deck.progressTotal ?? deck.slideCount
+  const done = deck.progressDone ?? 0
+  if (total <= 0) return 'indeterminate'
+
+  // Clamped because the two numbers come from different fields on the same poll and a
+  // generator that counts a title slide it did not report would otherwise overfill the bar.
+  return Math.min(1, Math.max(0, done / total))
 }
