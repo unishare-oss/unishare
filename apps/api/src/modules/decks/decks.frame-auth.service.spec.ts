@@ -63,6 +63,16 @@ describe('embedded editor route policy', () => {
       }
     })
 
+    it.each(['/api/v1/ppt/presentation/status', '/api/v1/ppt/presentation/status/task-abc123'])(
+      'refuses %s because the generator does not check who is asking',
+      (path) => {
+        // The status endpoint looks a task up by id and returns it with no ownership check at
+        // all, so a leaked id hands one student another's progress and error text. The worker
+        // polls this server-side; nothing in the frame has any use for it.
+        expect(isBlocked(path)).toBe(true)
+      },
+    )
+
     it('does not treat a lookalike path as blocked', () => {
       // `/api/v1/administration` must not match the `/api/v1/admin` prefix.
       expect(isBlocked('/api/v1/administration')).toBe(false)

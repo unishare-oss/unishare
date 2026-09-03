@@ -47,6 +47,11 @@ const BLOCKED: readonly string[] = [
   '/api/v1/ppt/presentation/create',
   '/api/v1/ppt/presentation/prepare',
   '/api/v1/ppt/presentation/derive',
+  // Progress for a generation task. Blocked because the generator does not check ownership
+  // on it at all -- it looks the task up by id and returns it -- so a leaked id would hand
+  // one student another's progress and error text. Nothing in the browser needs this; the
+  // worker polls it server-side.
+  '/api/v1/ppt/presentation/status',
   '/api/v1/auth/token',
   '/api/v1/auth/setup',
   // The browser has no business authenticating: the session is injected upstream. Logout in
