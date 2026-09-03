@@ -56,7 +56,11 @@ export function DeckCreateForm() {
   // Over quota is not a refusal — the API accepts the deck and holds it until a slot frees
   // (decks.service.ts createDeck). Disabling submit here would throw away a prompt the
   // student has already written, which is the exact failure the backend was built to avoid.
-  const overQuota = Boolean(quota) && (quota?.used ?? 0) >= (quota?.limit ?? 0)
+  //
+  // `limit: null` is no limit (administrators). It has to be tested before the comparison:
+  // `quota.limit ?? 0` would read as a limit of zero and hold every deck.
+  const uncapped = quota?.limit === null
+  const overQuota = Boolean(quota) && !uncapped && (quota?.used ?? 0) >= (quota?.limit ?? 0)
   const heldUntil = overQuota && quota?.nextSlotAt ? new Date(quota.nextSlotAt) : null
 
   const { mutate: createDeck, isPending } = useDecksControllerCreateDeck({
@@ -181,7 +185,7 @@ export function DeckCreateForm() {
           </Button>
           {quota && (
             <span className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-              {quota.used} of {quota.limit} used today
+              {uncapped ? `${quota.used} used today` : `${quota.used} of ${quota.limit} used today`}
             </span>
           )}
         </div>
