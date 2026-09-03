@@ -75,7 +75,20 @@ export const MAX_ATTEMPTS = 3
 export const RETRY_BACKOFF_MS = 30_000
 
 export const MIN_SLIDES = 3
-export const MAX_SLIDES = 15
+
+/**
+ * Ten, not fifteen, because fifteen was never actually reachable.
+ *
+ * The ceiling here is total provider calls, not slides. The generator retries a slide whose
+ * content comes back too long for its layout, so a deck's real call count is its slide count
+ * times up to four — which is how a 5-slide deck managed to fail on a rate limit just as
+ * reliably as a 10-slide one.
+ *
+ * Ten is only reachable at all because the generator's batch is pinned to 2 (the initContainer
+ * in k8s-practice/presenton/deployment.yaml, which explains the arithmetic). Raising this
+ * without raising that just moves the failure back to where it was.
+ */
+export const MAX_SLIDES = 10
 export const DEFAULT_SLIDES = 8
 
 /**
