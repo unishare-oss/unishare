@@ -42,6 +42,14 @@ export default defineConfig({
           DecksController_getDownloadUrl: {
             query: { useInfinite: false },
           },
+          // Same, for the share-token equivalents. Neither is a list, so an infinite
+          // variant is dead code that invites someone to page a single object.
+          DecksController_getSharedDeck: {
+            query: { useInfinite: false },
+          },
+          DecksController_getSharedDownloadUrl: {
+            query: { useInfinite: false },
+          },
         },
       },
     },
