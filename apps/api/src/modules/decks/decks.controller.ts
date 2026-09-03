@@ -16,6 +16,7 @@ import type { Response } from 'express'
 import { ApiExcludeEndpoint, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
+import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { DecksService } from './decks.service'
 import { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
@@ -61,7 +62,10 @@ export class DecksController {
     // would render the generator's own login page.
     if (!userId) throw new UnauthorizedException('Sign in to open the deck editor')
 
-    res.setHeader('Cookie', await this.frameAuth.authorize(userId, forwardedUri ?? '/'))
+    res.setHeader(
+      'Cookie',
+      await this.frameAuth.authorize(userId, forwardedUri ?? '/', session.user.role as UserRole),
+    )
     return { ok: true }
   }
 
@@ -78,7 +82,7 @@ export class DecksController {
   @ApiOkResponse({ type: DeckQuotaEntity })
   @ResponseMessage('Quota fetched successfully')
   getQuota(@Session() session: UserSession) {
-    return this.decksService.getQuota(session.user.id)
+    return this.decksService.getQuota(session.user.id, session.user.role as UserRole)
   }
 
   @Get('templates')
@@ -92,7 +96,7 @@ export class DecksController {
   @ApiOkResponse({ type: DeckEntity })
   @ResponseMessage('Deck queued successfully')
   createDeck(@Body() dto: CreateDeckDto, @Session() session: UserSession) {
-    return this.decksService.createDeck(session.user.id, dto)
+    return this.decksService.createDeck(session.user.id, dto, session.user.role as UserRole)
   }
 
   @Get(':id')

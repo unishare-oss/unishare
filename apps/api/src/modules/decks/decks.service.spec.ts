@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { getQueueToken } from '@nestjs/bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
+import { UserRole } from '@/generated/prisma/client'
 import { DecksService } from './decks.service'
 import { DECK_EDITOR } from './deck-generator.port'
 import {
@@ -140,6 +141,34 @@ describe('DecksService', () => {
       // was the bug.
       await service.getQuota('user-1')
       expect(prisma.deck.findMany.mock.calls[0][0].where.status).toEqual({ not: 'FAILED' })
+    })
+
+    /**
+     * Administrators are uncapped so that deck generation can be exercised against the real
+     * provider without spending a student's three. `limit: null` is the whole mechanism --
+     * see getQuota -- and null rather than a large number so a forgotten comparison fails
+     * loudly instead of silently re-capping.
+     */
+    it('reports no limit for an administrator', async () => {
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA + 5))
+      const quota = await service.getQuota('admin-1', UserRole.ADMIN)
+      expect(quota.limit).toBeNull()
+      // No cap means nothing to wait for, however many decks are already in the window.
+      expect(quota.nextSlotAt).toBeNull()
+    })
+
+    it('never holds an administrator deck, however many are in the window', async () => {
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA + 5))
+      await service.createDeck('admin-1', { prompt: 'a topic worth covering' }, UserRole.ADMIN)
+      const [, , opts] = queue.add.mock.calls[0]
+      expect(opts.delay).toBeUndefined()
+      expect(prisma.deck.create.mock.calls[0][0].data.scheduledFor).toBeNull()
+    })
+
+    it.each([undefined, UserRole.STUDENT, UserRole.MODERATOR])('still caps %s', async (role) => {
+      prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA))
+      const quota = await service.getQuota('user-1', role)
+      expect(quota.limit).toBe(DAILY_DECK_QUOTA)
     })
 
     it('configures retries with backoff', async () => {

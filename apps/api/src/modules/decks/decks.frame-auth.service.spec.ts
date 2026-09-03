@@ -1,4 +1,5 @@
-import { isBlocked, isMetered, pathOf } from './decks.frame-auth.service'
+import { DecksFrameAuthService, isBlocked, isMetered, pathOf } from './decks.frame-auth.service'
+import { UserRole } from '@/generated/prisma/client'
 
 /**
  * This is the only thing between a student and the generator's whole API once its editor is
@@ -115,5 +116,47 @@ describe('embedded editor route policy', () => {
         expect(isBlocked(path) && isMetered(path)).toBe(false)
       }
     })
+  })
+})
+
+/**
+ * The administrator exemption, which is a hole in a spend cap and so worth stating twice:
+ * an administrator skips the AI-edit charge, and is still refused every BLOCKED route.
+ *
+ * Blocking is not a spending rule. It keeps deck creation inside Unishare so that every deck
+ * has a database row to appear in a library, count against a quota and be cleaned up on
+ * delete -- true for an administrator's decks as much as a student's.
+ */
+describe('DecksFrameAuthService.authorize', () => {
+  const METERED = '/api/v1/ppt/slide/edit'
+
+  function build() {
+    const incr = jest.fn().mockResolvedValue(1)
+    const accounts = { sessionFor: jest.fn().mockResolvedValue('presenton_session=abc') }
+    const service = new DecksFrameAuthService({} as never, accounts as never)
+    ;(service as unknown as { redis: unknown }).redis = { incr, pexpire: jest.fn() }
+    return { service, incr }
+  }
+
+  it.each([undefined, UserRole.STUDENT, UserRole.MODERATOR])(
+    'charges a metered route for %s',
+    async (role) => {
+      const { service, incr } = build()
+      await service.authorize('user-1', METERED, role)
+      expect(incr).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('does not charge an administrator', async () => {
+    const { service, incr } = build()
+    await service.authorize('admin-1', METERED, UserRole.ADMIN)
+    expect(incr).not.toHaveBeenCalled()
+  })
+
+  it('still blocks an administrator from a creation route', async () => {
+    const { service } = build()
+    await expect(
+      service.authorize('admin-1', '/api/v1/ppt/presentation/generate', UserRole.ADMIN),
+    ).rejects.toThrow(/not available/)
   })
 })

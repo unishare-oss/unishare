@@ -10,6 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 import { PresentonAccountsService } from './presenton/presenton-accounts.service'
+import { UserRole } from '@/generated/prisma/client'
 import { AI_EDIT_DAILY_CAP, QUOTA_WINDOW_MS } from './decks.constants'
 
 /**
@@ -103,7 +104,7 @@ export class DecksFrameAuthService implements OnModuleInit, OnModuleDestroy {
    * Returns the `Cookie` header value to forward upstream, or throws the status Traefik should
    * turn into a refusal.
    */
-  async authorize(userId: string, requestUri: string): Promise<string> {
+  async authorize(userId: string, requestUri: string, role?: UserRole): Promise<string> {
     const path = pathOf(requestUri)
 
     if (isBlocked(path)) {
@@ -111,7 +112,10 @@ export class DecksFrameAuthService implements OnModuleInit, OnModuleDestroy {
       throw new ForbiddenException('That part of the deck editor is not available')
     }
 
-    if (isMetered(path)) {
+    // Administrators are metered but not capped. The BLOCKED list still applies to them: it
+    // keeps deck creation inside Unishare so every deck has a row, which is a correctness
+    // rule about the library and the cleanup job rather than a spending limit.
+    if (isMetered(path) && role !== UserRole.ADMIN) {
       await this.chargeAiEdit(userId, path)
     }
 

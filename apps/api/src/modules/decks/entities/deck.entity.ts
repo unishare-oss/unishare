@@ -94,7 +94,13 @@ export class PaginatedDecksEntity {
 
 export class DeckQuotaEntity {
   @ApiProperty() used: number
-  @ApiProperty() limit: number
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Decks per rolling 24h, or null for no limit (administrators).',
+  })
+  limit: number | null
   @ApiProperty({ description: 'When the oldest slot in the window frees' }) resetsAt: Date
 
   @ApiPropertyOptional({

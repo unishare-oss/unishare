@@ -10,7 +10,7 @@ import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
-import { DeckStatus, type Deck } from '@/generated/prisma/client'
+import { DeckStatus, UserRole, type Deck } from '@/generated/prisma/client'
 import type { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import { DECK_EDITOR, type DeckEditor, type DeckProgress } from './deck-generator.port'
 import {
@@ -43,13 +43,15 @@ export class DecksService {
     @Inject(DECK_EDITOR) private readonly editor: DeckEditor,
   ) {}
 
-  async createDeck(userId: string, dto: CreateDeckDto): Promise<DeckEntity> {
-    const quota = await this.getQuota(userId)
+  async createDeck(userId: string, dto: CreateDeckDto, role?: UserRole): Promise<DeckEntity> {
+    const quota = await this.getQuota(userId, role)
 
     // Over quota does NOT mean refused. The deck is accepted and held until the student's
     // allowance frees up, because losing the request is worse than waiting for it: they have
     // already written the prompt, and a 429 makes them come back and retype it.
-    const scheduledFor = quota.used >= quota.limit ? quota.nextSlotAt : null
+    //
+    // A null limit is no limit, so nothing is ever held for an administrator.
+    const scheduledFor = quota.limit !== null && quota.used >= quota.limit ? quota.nextSlotAt : null
 
     const deck = await this.prisma.deck.create({
       data: {
@@ -243,7 +245,17 @@ export class DecksService {
     if (deck.externalId) await this.editor.deletePresentation(deck.externalId, deck.ownerId)
   }
 
-  async getQuota(userId: string) {
+  /**
+   * `limit: null` means no cap, which is the administrator's allowance.
+   *
+   * Null rather than a very large number so that the callers and the UI have to say what they
+   * mean: `used >= limit` on a sentinel silently re-enforces the cap the moment someone
+   * forgets the comparison, and "0 of 9007199254740991" is not a thing to render.
+   *
+   * The role is optional, and omitting it means "not an administrator" — the caller that
+   * knows the role passes it, and the internal callers that do not stay capped.
+   */
+  async getQuota(userId: string, role?: UserRole) {
     const since = new Date(Date.now() - QUOTA_WINDOW_MS)
 
     // Failures are excluded on purpose. A deck that errored produced nothing, and with
@@ -264,12 +276,14 @@ export class DecksService {
     })
 
     const used = inWindow.length
-    const limit = DAILY_DECK_QUOTA
+    const limit = role === UserRole.ADMIN ? null : DAILY_DECK_QUOTA
 
     // When the next slot frees for the request being made right now. With `used` decks in
     // the window and a limit of `limit`, the next request waits for the (used - limit)th
     // oldest to age out — which correctly stacks when several are already held.
-    const index = used - limit
+    //
+    // Uncapped never waits, so there is no slot to report.
+    const index = limit === null ? -1 : used - limit
     const nextSlotAt =
       index >= 0 && inWindow[index]
         ? new Date(inWindow[index].createdAt.getTime() + QUOTA_WINDOW_MS)
