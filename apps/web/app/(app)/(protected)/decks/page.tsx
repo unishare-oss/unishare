@@ -57,7 +57,11 @@ export default function DecksPage() {
         title="Decks"
         subtitle={
           quota
-            ? `${quota.used} of ${quota.limit} used today${total > 0 ? ` · ${total} in your library` : ''}`
+            ? // A null limit is no limit (administrators). Without this the denominator
+              // renders the literal string "null".
+              `${quota.used}${quota.limit === null ? '' : ` of ${quota.limit}`} used today${
+                total > 0 ? ` · ${total} in your library` : ''
+              }`
             : undefined
         }
         action={
