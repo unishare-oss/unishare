@@ -38,6 +38,15 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor'
       name: 'unishare_chat_messages_total',
       help: 'Total number of chat messages',
     }),
+    makeGaugeProvider({
+      name: 'unishare_decks_total',
+      help: 'Total number of decks by generation status',
+      labelNames: ['status'],
+    }),
+    makeGaugeProvider({
+      name: 'unishare_decks_retried_total',
+      help: 'Decks that needed more than one generation attempt',
+    }),
     DomainMetricsService,
     { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
   ],
