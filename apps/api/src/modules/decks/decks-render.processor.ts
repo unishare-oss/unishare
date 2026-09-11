@@ -39,23 +39,44 @@ export class DecksRenderProcessor extends WorkerHost {
       return
     }
 
+    // Tracked outside the try so the catch can still reach them. Uploading happens before
+    // recording, so a failure in between leaves objects the deck row does not point at —
+    // it still points at the PREVIOUS render — and this is the only place that knows them.
+    const uploaded: (string | null)[] = []
+    let recorded = false
+
     try {
       const { pptx, pdf } = await this.editor.reexport(deck.externalId, deck.ownerId)
       const key = await this.artifacts.store(pptx)
+      uploaded.push(key)
       const pdfKey = pdf ? await this.artifacts.store(pdf) : null
+      uploaded.push(pdfKey)
 
       const published = await this.decks.markReexported(deckId, {
         key,
         pdfKey,
         sizeBytes: pptx.buffer.byteLength,
       })
+      // Past this point the row references these keys, so they must survive any later failure.
+      recorded = published
       if (!published) {
-        await this.artifacts.discardOrphans(deckId, [key, pdfKey], deck.externalId, deck.ownerId)
+        await this.artifacts.discard(
+          deckId,
+          uploaded,
+          deck.externalId,
+          deck.ownerId,
+          'was deleted mid-render',
+        )
         return
       }
       this.logger.log(`Deck ${deckId} re-rendered`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      // `null` externalId deliberately: the deck still exists and its generator presentation
+      // has to keep working. Only this attempt's uploads are unreferenced.
+      if (!recorded) {
+        await this.artifacts.discard(deckId, uploaded, null, deck.ownerId, 're-render failed')
+      }
       await this.decks.markFailed(deckId, message)
       this.logger.error(`Deck ${deckId} re-render failed: ${message}`)
       throw err

@@ -45,6 +45,13 @@ export class DecksProcessor extends WorkerHost {
     const attempt = job.attemptsMade + 1
     await this.decks.markGenerating(deckId, attempt)
 
+    // Tracked outside the try so the catch can reach them. Generation uploads two objects and
+    // creates a presentation on the generator before anything is recorded, so a failure in
+    // between leaves all three unreferenced — and this scope is the only thing that knows them.
+    const uploaded: (string | null)[] = []
+    let externalId: string | null = null
+    let recorded = false
+
     try {
       const generated = await this.generator.generate(
         {
@@ -65,8 +72,12 @@ export class DecksProcessor extends WorkerHost {
         (progress) => void this.publishProgress(deckId, progress),
       )
 
+      externalId = generated.externalId
+
       const key = await this.artifacts.store(generated.pptx)
+      uploaded.push(key)
       const pdfKey = generated.pdf ? await this.artifacts.store(generated.pdf) : null
+      uploaded.push(pdfKey)
 
       const published = await this.decks.markReady(deckId, {
         key,
@@ -75,16 +86,20 @@ export class DecksProcessor extends WorkerHost {
         title: this.titleFor(deck.prompt),
         externalId: generated.externalId,
       })
+      // Past this point the row references these keys and the presentation, so none of them
+      // may be cleaned up by the catch below.
+      recorded = published
 
       // Deleted while it was generating. The files were uploaded a moment ago and now belong
       // to nothing, so they are cleaned up here rather than left for a sweep — this is the
       // only place that still knows their keys.
       if (!published) {
-        await this.artifacts.discardOrphans(
+        await this.artifacts.discard(
           deckId,
-          [key, pdfKey],
+          uploaded,
           generated.externalId,
           deck.ownerId,
+          'was deleted mid-generation',
         )
         return
       }
@@ -92,6 +107,15 @@ export class DecksProcessor extends WorkerHost {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       const maxAttempts = job.opts.attempts ?? 1
+
+      // Before the retry produces more. Nothing recorded this attempt's output, so the objects
+      // are unreferenced and its generator presentation is unreachable — the row never learned
+      // the externalId, so neither delete nor purge could ever find it. Without this, every
+      // failed attempt left a full set behind, three times over on a deck that exhausts its
+      // retries.
+      if (!recorded) {
+        await this.artifacts.discard(deckId, uploaded, externalId, deck.ownerId, 'attempt failed')
+      }
 
       // Only the LAST attempt marks the deck failed. Marking it on every attempt made a deck
       // that BullMQ was still retrying look permanently dead, which is how a transient

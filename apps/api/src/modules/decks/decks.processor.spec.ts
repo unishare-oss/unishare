@@ -25,7 +25,7 @@ describe('DecksProcessor — retry boundary', () => {
     recordProgress: jest.Mock
   }
   let generator: { generate: jest.Mock }
-  let artifacts: { store: jest.Mock; discardOrphans: jest.Mock }
+  let artifacts: { store: jest.Mock; discard: jest.Mock }
 
   const deck = {
     id: 'deck-1',
@@ -66,7 +66,7 @@ describe('DecksProcessor — retry boundary', () => {
     generator = { generate: jest.fn().mockRejectedValue(new Error('provider timeout')) }
     artifacts = {
       store: jest.fn().mockResolvedValue('decks/x.pptx'),
-      discardOrphans: jest.fn().mockResolvedValue(undefined),
+      discard: jest.fn().mockResolvedValue(undefined),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -139,11 +139,12 @@ describe('DecksProcessor — retry boundary', () => {
     decks.markReady.mockResolvedValue(false)
 
     await expect(processor.process(job(0))).resolves.toBeUndefined()
-    expect(artifacts.discardOrphans).toHaveBeenCalledWith(
+    expect(artifacts.discard).toHaveBeenCalledWith(
       'deck-1',
       ['decks/x.pptx', null],
       'ext-1',
       'user-1',
+      'was deleted mid-generation',
     )
     // Not a failure: the job did its work and the student got what they asked for.
     expect(decks.markFailed).not.toHaveBeenCalled()
@@ -195,5 +196,47 @@ describe('DecksProcessor — retry boundary', () => {
     await expect(processor.process(job(0))).resolves.toBeUndefined()
     expect(decks.markReady).toHaveBeenCalled()
     expect(decks.markFailed).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The leak this closes. Uploading happens before recording, so a failure in between left the
+   * objects unreferenced AND the generator presentation unreachable — the row never learned the
+   * externalId, so nothing could find it later. On a deck that exhausts its retries that was a
+   * full set abandoned three times over.
+   */
+  it('cleans up a failed attempt before the retry produces more', async () => {
+    generator.generate.mockResolvedValue({
+      externalId: 'ext-1',
+      pptx: { buffer: Buffer.from('x'), mimeType: 'application/vnd.openxmlformats' },
+      pdf: null,
+      filename: 'deck.pptx',
+    })
+    artifacts.store.mockResolvedValue('decks/x.pptx')
+    decks.markReady.mockRejectedValue(new Error('db gone'))
+
+    await expect(processor.process(job(0))).rejects.toThrow('db gone')
+    expect(artifacts.discard).toHaveBeenCalledWith(
+      'deck-1',
+      ['decks/x.pptx', null],
+      'ext-1',
+      'user-1',
+      'attempt failed',
+    )
+  })
+
+  it('does not clean up output the row already references', async () => {
+    // Once markReady has published the keys they are the deck's files. A later failure must not
+    // delete them, or a successful deck would lose its download.
+    generator.generate.mockResolvedValue({
+      externalId: 'ext-1',
+      pptx: { buffer: Buffer.from('x'), mimeType: 'application/vnd.openxmlformats' },
+      pdf: null,
+      filename: 'deck.pptx',
+    })
+    artifacts.store.mockResolvedValue('decks/x.pptx')
+    decks.markReady.mockResolvedValue(true)
+
+    await expect(processor.process(job(0))).resolves.toBeUndefined()
+    expect(artifacts.discard).not.toHaveBeenCalled()
   })
 })

@@ -36,27 +36,42 @@ export class DeckArtifactsService {
   }
 
   /**
-   * Files produced for a deck that was deleted before they could be recorded.
+   * Deletes output that nothing is going to reference.
    *
-   * Best-effort and never rethrown: the job did its work and the deck is gone either way, so
-   * failing here would only retry work whose result is already unwanted.
+   * Called for two different reasons, which is why `externalId` is nullable:
+   *
+   * - The deck was deleted mid-flight. Its generator presentation should go too, so pass the
+   *   id.
+   * - A job failed after uploading but before recording. The objects are unreferenced — the
+   *   deck row still points at whatever it pointed at before — so they must be removed here,
+   *   because this is the only place that still knows their keys. A failed RE-RENDER passes
+   *   null: the deck still exists and its externalId has to keep working. A failed generation
+   *   attempt passes the id, since the retry produces a fresh presentation and this one would
+   *   otherwise sit on the generator forever.
+   *
+   * Best-effort and never rethrown. The caller is either finished with the deck or already
+   * rethrowing its own failure; turning a cleanup error into the reported one would hide why
+   * the job actually failed.
    */
-  async discardOrphans(
+  async discard(
     deckId: string,
     keys: (string | null)[],
-    externalId: string,
+    externalId: string | null,
     ownerId: string,
+    reason: string,
   ): Promise<void> {
-    this.logger.warn(`Deck ${deckId} was deleted mid-flight; discarding its output`)
+    const present = keys.filter((k): k is string => Boolean(k))
+    if (present.length === 0 && !externalId) return
+
+    this.logger.warn(`Deck ${deckId} ${reason}; discarding ${present.length} object(s)`)
     await Promise.all(
-      keys
-        .filter((k): k is string => Boolean(k))
-        .map((key) =>
-          this.storage
-            .deleteFile(key)
-            .catch((err) => this.logger.warn(`Orphaned object ${key}: ${String(err)}`)),
-        ),
+      present.map((key) =>
+        this.storage
+          .deleteFile(key)
+          .catch((err) => this.logger.warn(`Orphaned object ${key}: ${String(err)}`)),
+      ),
     )
-    await this.editor.deletePresentation(externalId, ownerId)
+    // Contractually never throws — see DeckEditor.deletePresentation.
+    if (externalId) await this.editor.deletePresentation(externalId, ownerId)
   }
 }

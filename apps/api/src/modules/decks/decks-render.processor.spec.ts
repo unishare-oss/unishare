@@ -14,7 +14,7 @@ import type { DeckJobData } from './decks.processor'
 describe('DecksRenderProcessor', () => {
   let processor: DecksRenderProcessor
   let decks: { findForJob: jest.Mock; markReexported: jest.Mock; markFailed: jest.Mock }
-  let artifacts: { store: jest.Mock; discardOrphans: jest.Mock }
+  let artifacts: { store: jest.Mock; discard: jest.Mock }
   let editor: { reexport: jest.Mock }
 
   const deck = { id: 'deck-1', ownerId: 'user-1', externalId: 'ext-1' }
@@ -32,7 +32,7 @@ describe('DecksRenderProcessor', () => {
     }
     artifacts = {
       store: jest.fn().mockResolvedValue('decks/x.pptx'),
-      discardOrphans: jest.fn().mockResolvedValue(undefined),
+      discard: jest.fn().mockResolvedValue(undefined),
     }
     editor = {
       reexport: jest.fn().mockResolvedValue({
@@ -83,11 +83,12 @@ describe('DecksRenderProcessor', () => {
     // the files just uploaded belong to nothing.
     decks.markReexported.mockResolvedValue(false)
     await expect(processor.process(job)).resolves.toBeUndefined()
-    expect(artifacts.discardOrphans).toHaveBeenCalledWith(
+    expect(artifacts.discard).toHaveBeenCalledWith(
       'deck-1',
       ['decks/x.pptx', 'decks/x.pptx'],
       'ext-1',
       'user-1',
+      'was deleted mid-render',
     )
     expect(decks.markFailed).not.toHaveBeenCalled()
   })
@@ -98,5 +99,25 @@ describe('DecksRenderProcessor', () => {
     editor.reexport.mockRejectedValue(new Error('generator exploded'))
     await expect(processor.process(job)).rejects.toThrow('generator exploded')
     expect(decks.markFailed).toHaveBeenCalledWith('deck-1', 'generator exploded')
+  })
+
+  /**
+   * A failed re-render used to leave its uploads behind: the row still pointed at the PREVIOUS
+   * render, so the new objects were unreferenced from the moment they were written. Every
+   * download re-renders, so this leaked on each failed download.
+   */
+  it('discards its own uploads when recording the render fails', async () => {
+    artifacts.store.mockResolvedValue('decks/new.pptx')
+    decks.markReexported.mockRejectedValue(new Error('db gone'))
+
+    await expect(processor.process(job)).rejects.toThrow('db gone')
+    // externalId is null on purpose: the deck still exists and its presentation must survive.
+    expect(artifacts.discard).toHaveBeenCalledWith(
+      'deck-1',
+      ['decks/new.pptx', 'decks/new.pptx'],
+      null,
+      'user-1',
+      're-render failed',
+    )
   })
 })
