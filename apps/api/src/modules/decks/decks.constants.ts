@@ -1,0 +1,157 @@
+/** Queue name. Also the Redis key prefix BullMQ derives its lists from. */
+export const DECK_QUEUE = 'decks'
+
+/**
+ * Re-rendering has its own queue.
+ *
+ * Every download re-renders first, so a render is on the critical path of a student waiting
+ * for a file. On the generate queue it would wait behind a model call measured in minutes and
+ * deliberately limited to one at a time. A render costs no tokens, so it needs the isolation
+ * rather than the restraint.
+ */
+export const DECK_RENDER_QUEUE = 'decks-render'
+
+/**
+ * Higher than DECK_CONCURRENCY because nothing here is billed. The ceiling is the generator's
+ * own CPU on a small box, not a provider's token budget, so a couple at once is plenty and
+ * many at once would just make every render slower.
+ */
+export const RENDER_CONCURRENCY = 2
+
+/** Job names on the shared queue. Re-export is a render, generate is a model run. */
+export const GENERATE_JOB = 'generate'
+export const REEXPORT_JOB = 'reexport'
+
+/**
+ * Total concurrent generations across every worker, set via `setGlobalConcurrency`.
+ *
+ * ONE, not two, and the reason is measured rather than cautious: the model provider's free
+ * tier allows 8000 tokens per minute, and it bills the RESERVATION (prompt +
+ * max_completion_tokens), not actual usage. At ~1500 per call that is about five calls a
+ * minute, and a single deck needs one call for the outline plus one per slide. Two decks
+ * running at once cannot both fit, so the second does not merely run slowly — it takes the
+ * first one down with it, because a mid-generation 429 fails the whole deck rather than the
+ * slide.
+ *
+ * Raise this only alongside a paid provider tier. It is a throughput knob that looks free
+ * and is not.
+ */
+export const DECK_CONCURRENCY = 1
+
+/**
+ * Per-user generations per rolling 24h. Counts decks that are queued, running or finished —
+ * NOT failures. A deck that errored gave the student nothing, and charging them for our
+ * provider's flakiness is indefensible when they cannot even retry for free.
+ */
+export const DAILY_DECK_QUOTA = 3
+
+/**
+ * The rolling window both allowances are measured over.
+ *
+ * A rolling 24 hours rather than a calendar day, for two reasons: it sidesteps the question of
+ * whose midnight (the users are not in UTC), and it cannot be gamed by spending the whole
+ * allowance at 23:59 and the next one at 00:01.
+ */
+export const QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Per-user AI slide edits per rolling 24h, enforced on the embedded editor's own model calls.
+ *
+ * Higher than DAILY_DECK_QUOTA because an edit rewrites one slide rather than authoring a deck,
+ * so it is a fraction of the tokens — but capped all the same: these calls bypass the queue
+ * entirely, and the provider's per-minute token budget is shared with every deck waiting to
+ * generate. One student looping a rewrite would fail everyone else's decks.
+ */
+export const AI_EDIT_DAILY_CAP = 20
+
+/**
+ * Retries per deck. Generation reaches out to a model provider over a multi-minute request,
+ * so transient failures are expected rather than exceptional; without retries a single blip
+ * kills a deck permanently.
+ */
+export const MAX_ATTEMPTS = 3
+
+/**
+ * Exponential base, giving 120s then 240s.
+ *
+ * Two minutes, not thirty seconds, because of what the failure actually is. The provider caps
+ * TOKENS per minute (20k), and a deck that failed did so by exhausting that window — so a
+ * retry 30s later runs straight into a budget its own previous attempt drained, and cannot
+ * succeed. It was not backoff, it was a countdown to the same failure three times.
+ *
+ * A full window plus margin is the shortest delay that gives a retry a real chance.
+ */
+export const RETRY_BACKOFF_MS = 120_000
+
+export const MIN_SLIDES = 3
+
+/**
+ * Fourteen, and what binds it now is our own deadline rather than the provider's limits.
+ *
+ * It used to be total provider calls. The generator retries a slide whose content comes back
+ * too long for its layout, so a deck's real call count is its slide count times up to four —
+ * which is how a 5-slide deck managed to fail on a rate limit just as reliably as a 10-slide
+ * one, and why this was pinned to 10.
+ *
+ * Two changes moved that ceiling: the generator's batch is pinned to 2 with a 45s pause
+ * between batches (the initContainer in k8s-practice/presenton/deployment.yaml, which
+ * explains the arithmetic), and DEFAULT_VERBOSITY is now concise, which is what removes most
+ * of the content retries rather than merely pacing them.
+ *
+ * The limit is now GENERATE_DEADLINE_MS — 10 minutes, in presenton.client.ts. The pause
+ * schedule alone costs 45 * (ceil(n/2) - 1) seconds, and a measured 10-slide concise deck
+ * finished first try in 277s, of which 180s was pause: about 9.7s of generation per slide.
+ *
+ *   n=14 -> 270s pause + ~136s = ~406s, a third of the deadline spare
+ *   n=20 -> 405s pause + ~194s = ~599s, nothing spare
+ *
+ * Fourteen keeps enough margin to absorb the content retries that do still happen. Past
+ * about eighteen the deadline has to move too, which is a separate decision with its own
+ * consequences for how long a student stares at a progress bar.
+ *
+ * Raising this without the batch size and the pause just moves the failure back to where it
+ * was. Mirrored in apps/web/components/decks/deck-form-schema.ts.
+ */
+export const MAX_SLIDES = 14
+export const DEFAULT_SLIDES = 8
+
+/**
+ * Measured against the live instance: ~57s for 3 slides, ~114s for 8. Used only to show a
+ * range, never as a promise — a precise countdown that drifts reads worse than a vague one.
+ */
+export const AVG_SECONDS_PER_SLIDE = 18
+
+/**
+ * How far into the waiting list to look for a job before giving up on an exact position.
+ * Beyond this the UI says "more than N ahead" rather than scanning an unbounded list on
+ * every poll.
+ */
+export const WAITING_SCAN_LIMIT = 200
+
+/** Mirrors the generator's accepted values; validated at the DTO so a typo fails fast. */
+export const TONES = [
+  'default',
+  'casual',
+  'professional',
+  'funny',
+  'educational',
+  'sales_pitch',
+] as const
+
+export const VERBOSITIES = ['concise', 'standard', 'text-heavy'] as const
+
+/**
+ * Concise, not standard, and the reason is token spend rather than taste.
+ *
+ * The generator retries any slide whose content comes back too long for its layout, and those
+ * retries resend the whole prompt AND the over-long output — 4-5 of them per two-slide batch
+ * were observed, which is the single largest multiplier on a 20k-tokens-per-minute budget.
+ * Shorter target content means fewer of them.
+ *
+ * A student can still pick either of the others; this only changes where the form starts.
+ */
+export const DEFAULT_VERBOSITY = 'concise'
+
+export const PDF_MIME = 'application/pdf'
+
+export const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'

@@ -37,6 +37,19 @@ export default defineConfig({
           ExamsController_findAll: {
             query: { useInfinite: false },
           },
+          // Takes a `format` param but is not a list: the generated infinite variant
+          // assumes a `page` param and does not compile without this.
+          DecksController_getDownloadUrl: {
+            query: { useInfinite: false },
+          },
+          // Same, for the share-token equivalents. Neither is a list, so an infinite
+          // variant is dead code that invites someone to page a single object.
+          DecksController_getSharedDeck: {
+            query: { useInfinite: false },
+          },
+          DecksController_getSharedDownloadUrl: {
+            query: { useInfinite: false },
+          },
         },
       },
     },

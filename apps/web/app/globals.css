@@ -496,6 +496,77 @@
   --font-scale: 1;
 }
 
+/* Deck progress bar.
+ *
+ * Two animations, because the numbers behind this bar are real but they arrive in jumps: the
+ * generator writes slides two at a time and then pauses ~30s to stay inside the model
+ * provider's per-minute budget. So the FILL is honest about position and mostly motionless,
+ * and a sheen sweeps the track continuously to say the deck is still being worked on. A
+ * determinate bar alone would sit frozen for half a minute at a time and read as broken. */
+.deck-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.deck-bar-fill {
+  /* The jump is 2 slides at a time, so it is worth easing -- an instant snap looks like a
+   * rendering glitch rather than progress. */
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.deck-bar-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary) 45%, transparent) 50%,
+    transparent 100%
+  );
+  animation: deck-bar-sheen 2.4s ease-in-out infinite;
+}
+
+@keyframes deck-bar-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* No count to show, so a short segment travels the track instead of a fill. */
+.deck-bar-drift {
+  width: 40%;
+  animation: deck-bar-drift 1.8s ease-in-out infinite;
+}
+
+@keyframes deck-bar-drift {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The fill still shows the true position -- it is information, not decoration. Only the
+   * two purely reassuring animations stop, and the indeterminate segment parks at the start
+   * rather than vanishing, so the bar never reads as 0%-and-stuck. */
+  .deck-bar-sheen {
+    animation: none;
+    opacity: 0;
+  }
+  .deck-bar-drift {
+    animation: none;
+    transform: none;
+  }
+  .deck-bar-fill {
+    transition: none;
+  }
+}
+
 html {
   font-size: calc(16px * var(--font-scale));
 }

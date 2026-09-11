@@ -12,6 +12,7 @@ import {
   MessageSquare,
   MessageSquareHeart,
   MessageSquarePlus,
+  Presentation,
   Puzzle,
   ShieldCheck,
   Users,
@@ -65,6 +66,7 @@ const authenticatedGroups: NavigationGroup[] = [
       { href: '/departments', label: 'Departments', icon: Building2 },
       { href: '/analytics', label: 'Analytics', icon: BarChart2 },
       { href: '/quizzes', label: 'Quizzes', icon: Puzzle },
+      { href: '/decks', label: 'Decks', icon: Presentation },
     ],
   },
 ]
