@@ -21,6 +21,7 @@ import {
   DECK_QUEUE,
   DECK_RENDER_QUEUE,
   DEFAULT_SLIDES,
+  DEFAULT_VERBOSITY,
   GENERATE_JOB,
   MAX_ATTEMPTS,
   QUOTA_WINDOW_MS,
@@ -62,7 +63,10 @@ export class DecksService {
         language: dto.language ?? 'English',
         template: dto.template ?? 'general',
         tone: dto.tone ?? 'default',
-        verbosity: dto.verbosity ?? 'standard',
+        // DEFAULT_VERBOSITY, not a literal: this hardcoded 'standard' meant the concise
+        // default only ever applied through the web form, so direct API callers kept paying
+        // the retry-token cost the default exists to avoid.
+        verbosity: dto.verbosity ?? DEFAULT_VERBOSITY,
         instructions: dto.instructions ?? null,
         includeTitleSlide: dto.includeTitleSlide ?? true,
         includeTableOfContents: dto.includeTableOfContents ?? false,

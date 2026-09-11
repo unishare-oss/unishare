@@ -7,6 +7,7 @@ import { DecksService } from './decks.service'
 import { DECK_EDITOR } from './deck-generator.port'
 import {
   DAILY_DECK_QUOTA,
+  DEFAULT_VERBOSITY,
   DECK_QUEUE,
   DECK_RENDER_QUEUE,
   MAX_ATTEMPTS,
@@ -172,6 +173,18 @@ describe('DecksService', () => {
       prisma.deck.findMany.mockResolvedValue(window(DAILY_DECK_QUOTA))
       const quota = await service.getQuota('user-1', role)
       expect(quota.limit).toBe(DAILY_DECK_QUOTA)
+    })
+
+    /**
+     * The concise default has to apply to direct API callers, not only the web form. It was
+     * hardcoded to 'standard' here, which silently exempted every non-browser client from the
+     * retry-token saving the default exists for.
+     */
+    it('defaults an omitted verbosity to the shared concise default', async () => {
+      prisma.deck.findMany.mockResolvedValue([])
+      await service.createDeck('user-1', { prompt: 'a topic worth covering' })
+      expect(prisma.deck.create.mock.calls[0][0].data.verbosity).toBe(DEFAULT_VERBOSITY)
+      expect(DEFAULT_VERBOSITY).toBe('concise')
     })
 
     it('configures retries with backoff', async () => {
