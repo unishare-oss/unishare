@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   Patch,
@@ -66,11 +67,20 @@ export class DecksController {
     // would render the generator's own login page.
     if (!userId) throw new UnauthorizedException('Sign in to open the deck editor')
 
+    // Fail closed without X-Forwarded-Uri. Traefik always sends it, so its absence means the
+    // caller is not the proxy -- and defaulting to '/' made the request look like a page load,
+    // which skips BOTH the API allow-list and the missing-method refusal and still hands back
+    // a generator session. The whole point of those checks is that this endpoint cannot be
+    // asked to authorize a request it cannot see.
+    if (!forwardedUri) {
+      throw new ForbiddenException('That part of the deck editor is not available')
+    }
+
     res.setHeader(
       'Cookie',
       await this.frameAuth.authorize(
         userId,
-        forwardedUri ?? '/',
+        forwardedUri,
         session.user.role as UserRole,
         forwardedMethod,
       ),

@@ -199,6 +199,13 @@ export class DecksFrameAuthService implements OnModuleInit, OnModuleDestroy {
     role?: UserRole,
     method?: string,
   ): Promise<string> {
+    // Defence in depth with the controller's own check on X-Forwarded-Uri. A request whose
+    // path we cannot see is one we cannot police, so it is refused rather than defaulted.
+    if (!requestUri) {
+      this.logger.error('No X-Forwarded-Uri; refusing')
+      throw new ForbiddenException('That part of the deck editor is not available')
+    }
+
     const path = pathOf(requestUri)
 
     if (isBlocked(path)) {

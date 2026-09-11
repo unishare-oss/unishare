@@ -154,6 +154,19 @@ describe('DecksFrameAuthService.authorize', () => {
     },
   )
 
+  /**
+   * The proxy boundary. Defaulting a missing X-Forwarded-Uri to '/' made the request look like
+   * a page load, which skips the API allow-list AND the missing-method refusal, and still
+   * returned a generator session.
+   */
+  it.each(['', undefined])('refuses a request with no forwarded uri: %p', async (uri) => {
+    const { service, incr } = build()
+    await expect(
+      service.authorize('user-1', uri as string, UserRole.STUDENT, 'GET'),
+    ).rejects.toThrow(/not available/)
+    expect(incr).not.toHaveBeenCalled()
+  })
+
   it('does not charge an administrator', async () => {
     const { service, incr } = build()
     await service.authorize('admin-1', METERED, UserRole.ADMIN, 'POST')
