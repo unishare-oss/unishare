@@ -252,7 +252,7 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     // A second export of the SAME presentation. This is a re-render, not another model run,
     // so it costs a few seconds and no tokens — cheap enough to do for every deck so the
     // preview is always ready. Failing to produce it must not fail the generation.
-    const pdf = await this.tryExport(baseUrl, auth, body.presentation_id, 'pdf')
+    const pdf = await this.tryExport(baseUrl, auth, body.presentation_id, 'pdf', request.ownerId)
 
     this.logger.log(
       `Generated deck ${body.presentation_id}: ${request.slideCount} slides, ` +
@@ -319,6 +319,16 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
         `${baseUrl}/api/v1/ppt/presentation/status/${encodeURIComponent(initial.id)}`,
         { headers: auth, signal: AbortSignal.timeout(STATUS_TIMEOUT_MS) },
       )
+
+      // The one status that is not worth retrying: the cookie is dead and every remaining poll
+      // in this loop would replay it until the deadline, ten minutes later. Worse, the job's
+      // own retries reuse the same cached session, so all three attempts could fail for the
+      // cache's lifetime. Clear it and end this attempt so the next one logs in.
+      if (res.status === 401) {
+        this.logger.warn(`status poll rejected our session for task ${initial.id}; clearing it`)
+        await this.accounts.invalidate(request.ownerId)
+        throw new InternalServerErrorException(describeProviderFailure(res.status, ''))
+      }
 
       if (!res.ok) {
         // A single failed poll is not a failed deck — the work continues on the generator
@@ -396,11 +406,11 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
   ): Promise<{ pptx: DeckExport; pdf: DeckExport | null }> {
     const { baseUrl } = this.credentials()
     const auth = await this.asOwner(ownerId)
-    const pptx = await this.tryExport(baseUrl, auth, externalId, 'pptx')
+    const pptx = await this.tryExport(baseUrl, auth, externalId, 'pptx', ownerId)
     if (!pptx) {
       throw new InternalServerErrorException('Deck could not be re-exported')
     }
-    const pdf = await this.tryExport(baseUrl, auth, externalId, 'pdf')
+    const pdf = await this.tryExport(baseUrl, auth, externalId, 'pdf', ownerId)
     return { pptx, pdf }
   }
 
@@ -437,6 +447,7 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
     auth: Record<string, string>,
     externalId: string,
     format: 'pptx' | 'pdf',
+    ownerId: string,
   ): Promise<DeckExport | null> {
     try {
       const res = await fetch(`${baseUrl}/api/v1/ppt/presentation/${externalId}/export`, {
@@ -445,6 +456,15 @@ export class PresentonClient implements DeckGenerator, DeckEditor {
         body: JSON.stringify({ export_as: format }),
         signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
       })
+      // A 401 is a dead cookie, not a missing export. Reported as `null` it looked identical
+      // to "this deck has no PDF", so the cached session survived and every re-render and
+      // download failed the same way until the Redis TTL expired — a fresh login would have
+      // recovered immediately. Clearing it here means the caller's retry logs in again.
+      if (res.status === 401) {
+        this.logger.warn(`Export ${format} rejected our session for ${externalId}; clearing it`)
+        await this.accounts.invalidate(ownerId)
+        return null
+      }
       if (!res.ok) return null
       const body = (await res.json()) as GenerateResponse
       if (!body?.path) return null

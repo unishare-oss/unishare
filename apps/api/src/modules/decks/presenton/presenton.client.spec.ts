@@ -220,3 +220,81 @@ describe('PresentonClient.deletePresentation', () => {
     await expect(unconfigured.deletePresentation('ext-1', 'user-1')).resolves.toBeUndefined()
   })
 })
+
+/**
+ * A 401 from the generator means the brokered cookie is dead, and the cure is a fresh login.
+ * Both of these paths previously swallowed it: the export path reported "no export" (identical
+ * to a deck having no PDF) and the poll loop treated it as a transient failure and replayed the
+ * same cookie until the deadline. Because the job's retries reuse the cached session, every
+ * attempt could fail for the cache's lifetime while a re-login would have worked immediately.
+ */
+describe('PresentonClient session invalidation on 401', () => {
+  const config = {
+    get: (key: string) =>
+      ({ PRESENTON_BASE_URL: 'http://presenton', PRESENTON_API_KEY: 'sk-test' })[key],
+  } as unknown as ConfigService
+
+  let accounts: { sessionFor: jest.Mock; invalidate: jest.Mock }
+
+  beforeEach(() => {
+    accounts = {
+      sessionFor: jest.fn().mockResolvedValue('presenton_session=stale'),
+      invalidate: jest.fn().mockResolvedValue(undefined),
+    }
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  const client = () => new PresentonClient(config, accounts as unknown as PresentonAccountsService)
+
+  it('clears the session when a re-export is rejected', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 401 }) as never
+    await expect(client().reexport('ext-1', 'user-1')).rejects.toThrow(/could not be re-exported/)
+    expect(accounts.invalidate).toHaveBeenCalledWith('user-1')
+  })
+
+  it('leaves the session alone for an export failure that is not about credentials', async () => {
+    // Clearing on every 500 would force a pointless re-login for the generator's own problems.
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 }) as never
+    await expect(client().reexport('ext-1', 'user-1')).rejects.toThrow()
+    expect(accounts.invalidate).not.toHaveBeenCalled()
+  })
+
+  // Allowed 15s rather than the default 5: the poll loop genuinely waits POLL_INTERVAL_MS
+  // before its first status call. Real timers rather than fake ones, because the loop
+  // interleaves sleeps with awaited fetches and faking that is more fragile than waiting.
+  it('ends the attempt and clears the session when a status poll is rejected', async () => {
+    globalThis.fetch = jest.fn().mockImplementation((url: string) => {
+      if (url.includes('/generate/async')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'task-1', status: 'pending' }),
+        })
+      }
+      if (url.includes('/presentation/status/')) {
+        return Promise.resolve({ ok: false, status: 401 })
+      }
+      return Promise.resolve({ ok: false, status: 500, text: async () => '' })
+    }) as never
+
+    await expect(
+      client().generate({
+        ownerId: 'user-1',
+        prompt: 'a topic worth covering',
+        slideCount: 8,
+        language: 'English',
+        template: 'general',
+        tone: 'default',
+        verbosity: 'concise',
+        webSearch: false,
+        includeTitleSlide: true,
+        includeTableOfContents: false,
+      }),
+    ).rejects.toThrow(/rejected our credentials/)
+
+    expect(accounts.invalidate).toHaveBeenCalledWith('user-1')
+  }, 15_000)
+})
