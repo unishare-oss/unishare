@@ -278,9 +278,41 @@ describe('DecksService', () => {
       expect(prisma.deck.findFirst.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
     })
 
-    it('says a deck is still generating rather than that the link is broken', async () => {
+    /**
+     * Availability follows the artifact, not the status. A re-render flips the deck back to
+     * GENERATING while its previous file is still downloadable by the owner, and gating on
+     * status made the share link 404 for a deck that was perfectly readable.
+     */
+    it('keeps serving a re-rendering deck that still has its previous file', async () => {
+      prisma.deck.findFirst.mockResolvedValue({
+        ...ready,
+        shareToken: 't',
+        status: 'GENERATING',
+        key: 'previous.pptx',
+      })
+      const shared = await service.getSharedDeck('t')
+      expect(shared.formats).toContain('pptx')
+    })
+
+    it('still serves a deck whose re-render failed outright', async () => {
+      prisma.deck.findFirst.mockResolvedValue({
+        ...ready,
+        shareToken: 't',
+        status: 'FAILED',
+        key: 'previous.pptx',
+      })
+      await expect(service.getSharedDeck('t')).resolves.toBeDefined()
+    })
+
+    it('says a deck is still generating when there is genuinely no file', async () => {
       // The link IS valid; telling the holder otherwise sends them back for a new one.
-      prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', status: 'GENERATING' })
+      prisma.deck.findFirst.mockResolvedValue({
+        ...ready,
+        shareToken: 't',
+        status: 'GENERATING',
+        key: null,
+        pdfKey: null,
+      })
       await expect(service.getSharedDeck('t')).rejects.toThrow(/still being generated/)
     })
 

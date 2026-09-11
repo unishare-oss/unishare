@@ -221,9 +221,16 @@ export class DecksService {
       where: { shareToken: token, deletedAt: null },
     })
     if (!deck) throw new NotFoundException('This share link is no longer valid')
-    // A deck still generating has no file yet. Its own message, because the link IS valid and
+
+    // Gated on the ARTIFACT, not the status. A re-render flips a deck back to GENERATING, and
+    // a failed one to FAILED, while the previously rendered file is still on the row and still
+    // downloadable by its owner. Gating on `status === READY` made the share link 404 for a
+    // deck the owner could download perfectly well, which is the inconsistency to avoid: the
+    // link should track whether there is a file, exactly as `formats` below does.
+    //
+    // Its own message when there is genuinely nothing yet, because the link IS valid and
     // telling the holder it is broken would send them back to the owner for a new one.
-    if (deck.status !== DeckStatus.READY) {
+    if (!deck.key && !deck.pdfKey) {
       throw new NotFoundException('This deck is still being generated')
     }
     return deck
