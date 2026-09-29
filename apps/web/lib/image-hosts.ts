@@ -12,6 +12,9 @@ export const imageHosts = [
   '*.r2.dev',
   'upload.wikimedia.org',
   's3.psstee.dev',
+  // Photos uploaded on uniauth's account page (/api/avatars/…).
+  'auth.psstee.dev',
+  'auth-dev.psstee.dev',
 ] as const
 
 /** True when next/image can render `src`: a relative path, or https on a listed host. */
