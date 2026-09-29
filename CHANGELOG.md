@@ -1,3 +1,9 @@
+# [0.30.0](https://github.com/unishare-oss/unishare/compare/v0.29.0...v0.30.0) (2026-09-29)
+
+### Features
+
+- add admin audit log ([c8d3090](https://github.com/unishare-oss/unishare/commit/c8d3090432944be0475e6edd2ca89f83fcd6338c))
+
 # [0.29.0](https://github.com/unishare-oss/unishare/compare/v0.28.0...v0.29.0) (2026-09-29)
 
 ### Bug Fixes
