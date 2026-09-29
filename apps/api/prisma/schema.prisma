@@ -531,6 +531,28 @@ model AdminAction {
   @@map("admin_action")
 }
 
+// Append-only trail of who did what. actorId is deliberately a plain string, not a relation:
+// deleting a user (including via uniauth) must not erase or cascade into the history.
+model AuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  actorId    String?
+  actorName  String?
+  actorRole  String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action, createdAt])
+  @@map("audit_log")
+}
+
 model ChatRoom {
   id            String                @id @default(cuid())
   type          ChatRoomType          @default(DM)

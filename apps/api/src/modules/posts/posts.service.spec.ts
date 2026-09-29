@@ -9,6 +9,7 @@ import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
+import { AuditService } from '../audit/audit.service'
 
 const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -43,6 +44,7 @@ describe('PostsService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: AiSummaryService, useValue: {} },
         { provide: EmbeddingService, useValue: embeddingMock },
+        { provide: AuditService, useValue: { record: jest.fn() } },
       ],
     }).compile()
 

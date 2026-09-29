@@ -1,5 +1,6 @@
 import { exportJWK, generateKeyPair, SignJWT, type CryptoKey } from 'jose'
 import type { PrismaService } from '@/prisma/prisma.service'
+import type { AuditService } from '../audit/audit.service'
 import { UniauthLogoutService } from './uniauth-logout.service'
 import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
 import { UniauthUserUpdatedService } from './uniauth-user-updated.service'
@@ -31,11 +32,12 @@ describe('uniauth event callbacks', () => {
   let prisma: {
     account: { findFirst: jest.Mock }
     session: { deleteMany: jest.Mock }
-    user: { update: jest.Mock }
+    user: { update: jest.Mock; findUnique: jest.Mock }
     university: { findMany: jest.Mock }
   }
   let logout: UniauthLogoutService
   let userDeleted: UniauthUserDeletedService
+  let audit: { record: jest.Mock }
   let userUpdated: UniauthUserUpdatedService
 
   beforeAll(async () => {
@@ -54,13 +56,20 @@ describe('uniauth event callbacks', () => {
     prisma = {
       account: { findFirst: jest.fn().mockResolvedValue({ userId: 'local-1' }) },
       session: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
-      user: { update: jest.fn().mockResolvedValue({}) },
+      user: {
+        update: jest.fn().mockResolvedValue({}),
+        findUnique: jest.fn().mockResolvedValue({ name: 'Ada', role: 'STUDENT' }),
+      },
       university: {
         findMany: jest.fn().mockResolvedValue([{ id: 'kmutt', uniauthOrgId: 'org-1' }]),
       },
     }
     logout = new UniauthLogoutService(prisma as unknown as PrismaService)
-    userDeleted = new UniauthUserDeletedService(prisma as unknown as PrismaService)
+    audit = { record: jest.fn() }
+    userDeleted = new UniauthUserDeletedService(
+      prisma as unknown as PrismaService,
+      audit as unknown as AuditService,
+    )
     userUpdated = new UniauthUserUpdatedService(prisma as unknown as PrismaService)
   })
 
@@ -125,6 +134,14 @@ describe('uniauth event callbacks', () => {
       expect(mockInternalAdapter.deleteUserSessions).toHaveBeenCalledWith('local-1')
       expect(mockInternalAdapter.deleteAccounts).toHaveBeenCalledWith('local-1')
       expect(mockInternalAdapter.deleteUser).toHaveBeenCalledWith('local-1')
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'user.delete_via_uniauth',
+          actorId: 'local-1',
+          actorName: 'Ada',
+          targetId: 'local-1',
+        }),
+      )
     })
 
     it('accepts but does nothing for someone who never used unishare', async () => {

@@ -4,6 +4,8 @@ import { openAPI, admin, anonymous, genericOAuth } from 'better-auth/plugins'
 import { generateGuestDisplayName } from './guest-display-name'
 import { ac, roles } from '../lib/permissions'
 import { UserRole } from '../generated/prisma/client'
+import { AuditAction } from '../modules/audit/audit.actions'
+import { clientIp, createAuditHooks, recordSafely } from './audit-hooks'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
@@ -89,6 +91,7 @@ export const auth = betterAuth({
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,
+  hooks: createAuditHooks(prisma),
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAgeUnitInMilliseconds: 60 * 60 * 1000,
@@ -117,6 +120,20 @@ export const auth = betterAuth({
   user: {
     deleteUser: {
       enabled: true,
+      // A person deleting their own account. Admin removals are audited by the after hook.
+      afterDelete: async (user, request) => {
+        recordSafely(prisma, {
+          action: AuditAction.UserDelete,
+          actorId: user.id,
+          actorName: user.name,
+          actorRole: (user as { role?: string }).role ?? null,
+          targetType: 'user',
+          targetId: user.id,
+          metadata: { self: true },
+          ip: clientIp(request?.headers),
+          userAgent: request?.headers.get('user-agent') ?? null,
+        })
+      },
     },
     additionalFields: {
       role: {
@@ -156,6 +173,24 @@ export const auth = betterAuth({
           const uniauth = accounts.find((a) => a.providerId === UNIAUTH_PROVIDER_ID)
           const uniauthSid = uniauthSidFromIdToken(uniauth?.idToken)
           return { data: uniauthSid ? { ...session, uniauthSid } : session }
+        },
+        // Guests get a session per visit and are not worth a row each; a real sign-in is.
+        after: async (session, ctx) => {
+          const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { name: true, role: true, isAnonymous: true },
+          })
+          if (!user || user.isAnonymous) return
+          recordSafely(prisma, {
+            action: AuditAction.AuthSignIn,
+            actorId: session.userId,
+            actorName: user.name,
+            actorRole: user.role,
+            targetType: 'user',
+            targetId: session.userId,
+            ip: session.ipAddress ?? null,
+            userAgent: session.userAgent ?? ctx?.request?.headers.get('user-agent') ?? null,
+          })
         },
       },
     },

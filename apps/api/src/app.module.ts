@@ -26,6 +26,7 @@ import { CollabModule } from './modules/collab/collab.module'
 import { TagsModule } from './modules/tags/tags.module'
 import { TrendingModule } from './modules/trending/trending.module'
 import { ReportsModule } from './modules/reports/reports.module'
+import { AuditModule } from './modules/audit/audit.module'
 import { ChatModule } from './modules/chat/chat.module'
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module'
 import { ReadingListsModule } from './modules/reading-lists/reading-lists.module'
@@ -105,6 +106,7 @@ import { DecksModule } from './modules/decks/decks.module'
     TagsModule,
     TrendingModule,
     ReportsModule,
+    AuditModule,
     ChatModule,
     AiSummaryModule,
     ReadingListsModule,

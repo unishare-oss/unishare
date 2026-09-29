@@ -2,6 +2,8 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { PostsService } from '../posts.service'
+import { AuditService } from '../../audit/audit.service'
+import { AuditAction } from '../../audit/audit.actions'
 import { commentSelect, CommentsRepository } from './comments.repository'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
@@ -33,6 +35,7 @@ export class CommentsService {
     private readonly commentsRepository: CommentsRepository,
     private readonly postsService: PostsService,
     private readonly notificationsService: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(postId: string) {
@@ -96,6 +99,14 @@ export class CommentsService {
     }
 
     const deletedComment = await this.commentsRepository.softDelete(commentId)
+    this.audit.record({
+      action: AuditAction.CommentDelete,
+      actorId: userId,
+      actorRole: userRole,
+      targetType: 'comment',
+      targetId: commentId,
+      metadata: { postId, authorId: comment.userId, byOwner: isCommentOwner },
+    })
     return this.sanitizeComment(deletedComment)
   }
 

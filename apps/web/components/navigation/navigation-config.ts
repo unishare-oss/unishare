@@ -14,6 +14,7 @@ import {
   MessageSquarePlus,
   Presentation,
   Puzzle,
+  ScrollText,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -99,7 +100,11 @@ export function buildVisibleNavigation(
       label: 'Admin',
       items:
         role === 'ADMIN'
-          ? [...adminItems, { href: '/admin/users', label: 'Users', icon: Users }]
+          ? [
+              ...adminItems,
+              { href: '/admin/users', label: 'Users', icon: Users },
+              { href: '/admin/audit', label: 'Audit Log', shortLabel: 'Audit', icon: ScrollText },
+            ]
           : [...adminItems],
     })
   }

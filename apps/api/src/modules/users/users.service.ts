@@ -4,6 +4,8 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { computeYearLevel } from '@/common/utils/academic-year'
 import { FollowsService } from '../follows/follows.service'
 import { ChatService } from '../chat/chat.service'
+import { AuditService } from '../audit/audit.service'
+import { AuditAction } from '../audit/audit.actions'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -16,6 +18,7 @@ export class UsersService {
     private readonly config: ConfigService,
     private readonly followsService: FollowsService,
     private readonly chatService: ChatService,
+    private readonly audit: AuditService,
   ) {}
 
   async exportData(id: string) {
@@ -43,6 +46,12 @@ export class UsersService {
   /** Records when the user accepted the terms; the first acceptance is the one kept. */
   async giveConsent(id: string) {
     await this.usersRepository.giveConsent(id, new Date())
+    this.audit.record({
+      action: AuditAction.UserConsent,
+      actorId: id,
+      targetType: 'user',
+      targetId: id,
+    })
   }
 
   async updatePublicKey(id: string, publicKey: string) {

@@ -24,6 +24,7 @@ import {
   Plus,
   Presentation,
   Puzzle,
+  ScrollText,
   Settings,
   ShieldCheck,
   Users,
@@ -272,7 +273,10 @@ export function MobileNav() {
                           { href: '/admin/departments', label: 'Depts', icon: Building2 },
                           { href: '/admin/quizzes', label: 'Gen Quiz', icon: BrainCircuit },
                           ...(user?.role === 'ADMIN'
-                            ? [{ href: '/admin/users', label: 'Users', icon: Users }]
+                            ? [
+                                { href: '/admin/users', label: 'Users', icon: Users },
+                                { href: '/admin/audit', label: 'Audit', icon: ScrollText },
+                              ]
                             : []),
                         ].map((item) => (
                           <Link

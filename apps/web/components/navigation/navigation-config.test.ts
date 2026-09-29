@@ -34,5 +34,7 @@ describe('buildVisibleNavigation', () => {
     const admin = buildVisibleNavigation(true, 'ADMIN').flatMap((group) => group.items)
     expect(moderator.map((item) => item.href)).not.toContain('/admin/users')
     expect(admin.map((item) => item.href)).toContain('/admin/users')
+    expect(moderator.map((item) => item.href)).not.toContain('/admin/audit')
+    expect(admin.map((item) => item.href)).toContain('/admin/audit')
   })
 })

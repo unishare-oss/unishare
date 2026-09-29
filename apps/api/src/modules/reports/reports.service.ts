@@ -3,6 +3,8 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { Prisma } from '@/generated/prisma/client'
 import { CreateReportDto } from './dto/create-report.dto'
 import { ListReportsDto } from './dto/list-reports.dto'
+import { AuditService } from '../audit/audit.service'
+import { AuditAction } from '../audit/audit.actions'
 
 const reportWithRelations = {
   adminAction: true,
@@ -25,7 +27,10 @@ type ReportWithRelations = Prisma.ReportGetPayload<{ include: typeof reportWithR
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async createReport(postId: string, userId: string, dto: CreateReportDto) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } })
@@ -92,6 +97,13 @@ export class ReportsService {
       this.prisma.adminAction.create({ data: { reportId, adminId, action: 'approve', reason } }),
     ])
 
+    this.audit.record({
+      action: AuditAction.ReportApprove,
+      actorId: adminId,
+      targetType: 'report',
+      targetId: reportId,
+      metadata: { postId: report.postId, reason: report.reason, note: reason ?? null },
+    })
     this.logger.log(`[ReportsService] Report ${reportId} approved by admin ${adminId}`)
     return updated
   }
@@ -114,6 +126,13 @@ export class ReportsService {
       this.prisma.adminAction.create({ data: { reportId, adminId, action: 'reject', reason } }),
     ])
 
+    this.audit.record({
+      action: AuditAction.ReportReject,
+      actorId: adminId,
+      targetType: 'report',
+      targetId: reportId,
+      metadata: { postId: report.postId, reason: report.reason, note: reason ?? null },
+    })
     this.logger.log(`[ReportsService] Report ${reportId} rejected by admin ${adminId}`)
     return updated
   }

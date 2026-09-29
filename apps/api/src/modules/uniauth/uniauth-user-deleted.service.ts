@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common'
 import { auth } from '@/auth/auth.config'
 import { PrismaService } from '@/prisma/prisma.service'
 import { resolveLocalUserId } from '../mcp/mcp-token.verifier'
+import { AuditService } from '../audit/audit.service'
+import { AuditAction } from '../audit/audit.actions'
 import { USER_DELETED_EVENT, verifyUniauthEvent } from './uniauth-event-token'
 
 /**
@@ -13,7 +15,10 @@ import { USER_DELETED_EVENT, verifyUniauthEvent } from './uniauth-event-token'
 export class UniauthUserDeletedService {
   private readonly logger = new Logger(UniauthUserDeletedService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /** Returns false for an invalid token (the caller answers 400). */
   async handle(token: string): Promise<boolean> {
@@ -22,10 +27,24 @@ export class UniauthUserDeletedService {
 
     const userId = await resolveLocalUserId(this.prisma, uniauthUserId)
     if (!userId) return true // never used unishare: nothing to delete
+    // Name and role are looked up now: the row is gone once the user is deleted.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, role: true },
+    })
     const { internalAdapter } = await auth.$context
     await internalAdapter.deleteUserSessions(userId)
     await internalAdapter.deleteAccounts(userId)
     await internalAdapter.deleteUser(userId)
+    this.audit.record({
+      action: AuditAction.UserDeleteViaUniauth,
+      actorId: userId,
+      actorName: user?.name,
+      actorRole: user?.role,
+      targetType: 'user',
+      targetId: userId,
+      metadata: { uniauthUserId },
+    })
     this.logger.log(`Deleted user ${userId} (uniauth account ${uniauthUserId} was deleted)`)
     return true
   }

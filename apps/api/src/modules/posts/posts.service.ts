@@ -29,6 +29,8 @@ import { AiChatDto, AiChatResponse } from './dto/ai-chat.dto'
 import { AiIndexState, AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { SUPPORTED_MIME_TYPES } from '../ai/extraction/document-extractor.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
+import { AuditService } from '../audit/audit.service'
+import { AuditAction } from '../audit/audit.actions'
 
 @Injectable()
 export class PostsService {
@@ -42,6 +44,7 @@ export class PostsService {
     private readonly prisma: PrismaService,
     private readonly aiSummaryService: AiSummaryService,
     private readonly embedding: EmbeddingService,
+    private readonly audit: AuditService,
   ) {}
 
   /**
@@ -201,7 +204,16 @@ export class PostsService {
     const isAdmin = userRole === UserRole.ADMIN
     if (!post.isOwner && !isAdmin) throw new ForbiddenException('You do not own this post')
 
-    return this.postsRepository.softDelete(id)
+    const deleted = await this.postsRepository.softDelete(id)
+    this.audit.record({
+      action: AuditAction.PostDelete,
+      actorId: userId,
+      actorRole: userRole,
+      targetType: 'post',
+      targetId: id,
+      metadata: { title: post.title, authorId: post.authorId, byOwner: post.isOwner },
+    })
+    return deleted
   }
 
   async updateStatus(id: string, dto: UpdatePostStatusDto, viewer: { id: string; role: UserRole }) {
@@ -209,6 +221,14 @@ export class PostsService {
     if (!post.authorId) throw new NotFoundException('Post not found')
 
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
+    this.audit.record({
+      action: AuditAction.PostStatusChange,
+      actorId: viewer.id,
+      actorRole: viewer.role,
+      targetType: 'post',
+      targetId: id,
+      metadata: { title: post.title, from: post.status, to: dto.status },
+    })
     void this.notificationsService.notifyPostStatus(id, post.authorId, dto.status, post.title)
     if (dto.status === PostStatus.APPROVED) {
       void this.followsService.getFollowers(post.authorId).then((followers) =>
