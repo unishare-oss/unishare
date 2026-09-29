@@ -58,3 +58,20 @@ export async function universityForMemberships(
   }
   return null
 }
+
+/**
+ * The uniauth session id (`sid`) in an ID token Better Auth already verified at sign-in and
+ * stored on the account row. Only read, never trusted for anything but matching logouts.
+ */
+export function uniauthSidFromIdToken(idToken: string | null | undefined): string | null {
+  const payload = idToken?.split('.')[1]
+  if (!payload) return null
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      sid?: unknown
+    }
+    return typeof claims.sid === 'string' && claims.sid ? claims.sid : null
+  } catch {
+    return null
+  }
+}

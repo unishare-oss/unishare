@@ -19,7 +19,7 @@ const jwks = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
 export async function verifyUniauthEventData(
   token: string,
   event: string,
-): Promise<{ sub: string; data: Record<string, unknown> } | null> {
+): Promise<{ sub: string; sid: string | null; data: Record<string, unknown> } | null> {
   let payload: JWTPayload
   try {
     ;({ payload } = await jwtVerify(token, jwks, {
@@ -34,7 +34,11 @@ export async function verifyUniauthEventData(
   if (!events || !data || typeof data !== 'object' || 'nonce' in payload) return null
   if (EVENTS.some((other) => other !== event && other in events)) return null
   return typeof payload.sub === 'string'
-    ? { sub: payload.sub, data: data as Record<string, unknown> }
+    ? {
+        sub: payload.sub,
+        sid: typeof payload.sid === 'string' ? payload.sid : null,
+        data: data as Record<string, unknown>,
+      }
     : null
 }
 

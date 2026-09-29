@@ -331,9 +331,13 @@ model Session {
   impersonatedBy String?
   displayName    String?
   isViewOnly     Boolean? @default(false)
+  /// The uniauth session this sign-in came from (the ID token's sid), so signing out one
+  /// device in uniauth ends only the unishare sessions from that device.
+  uniauthSid     String?
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([uniauthSid])
   @@map("session")
 }
 

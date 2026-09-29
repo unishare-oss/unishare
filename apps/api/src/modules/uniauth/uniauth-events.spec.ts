@@ -86,6 +86,15 @@ describe('uniauth event callbacks', () => {
       expect(prisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: 'local-1' } })
     })
 
+    it('with a sid, ends only the sessions from that uniauth session (and unmatched old ones)', async () => {
+      await expect(logout.handle(await token(LOGOUT_EVENT, { sid: 'ua-session-1' }))).resolves.toBe(
+        true,
+      )
+      expect(prisma.session.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'local-1', OR: [{ uniauthSid: 'ua-session-1' }, { uniauthSid: null }] },
+      })
+    })
+
     it('accepts but does nothing for someone who never signed in to unishare', async () => {
       prisma.account.findFirst.mockResolvedValue(null)
       await expect(logout.handle(await token(LOGOUT_EVENT))).resolves.toBe(true)

@@ -7,7 +7,11 @@ import { UserRole } from '../generated/prisma/client'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
-import { mapUniauthProfile, withoutAvatarPlaceholder } from './uniauth-sign-in'
+import {
+  mapUniauthProfile,
+  uniauthSidFromIdToken,
+  withoutAvatarPlaceholder,
+} from './uniauth-sign-in'
 
 const isProduction = process.env.NODE_ENV === 'production'
 export const isMcpEnabled = process.env.MCP_ENABLED === 'true'
@@ -102,6 +106,12 @@ export const auth = betterAuth({
         input: false,
         returned: true,
       },
+      uniauthSid: {
+        type: 'string' as const,
+        required: false,
+        input: false,
+        returned: false,
+      },
     },
   },
   user: {
@@ -136,6 +146,19 @@ export const auth = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        // Remember which uniauth session this sign-in came from (the ID token's sid, which
+        // Better Auth has just saved on the account), so a back-channel logout for one device
+        // ends only this device's unishare sessions. Guests have no uniauth account.
+        before: async (session, ctx) => {
+          const accounts = ctx ? await ctx.context.internalAdapter.findAccounts(session.userId) : []
+          const uniauth = accounts.find((a) => a.providerId === UNIAUTH_PROVIDER_ID)
+          const uniauthSid = uniauthSidFromIdToken(uniauth?.idToken)
+          return { data: uniauthSid ? { ...session, uniauthSid } : session }
+        },
+      },
+    },
     user: {
       create: {
         before: async (user) => ({ data: withoutAvatarPlaceholder(user) }),

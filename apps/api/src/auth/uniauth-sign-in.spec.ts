@@ -1,6 +1,7 @@
 import type { PrismaClient } from '../generated/prisma/client'
 import {
   NO_AVATAR,
+  uniauthSidFromIdToken,
   withoutAvatarPlaceholder,
   mapUniauthProfile,
   ORGANIZATIONS_CLAIM,
@@ -78,5 +79,21 @@ describe('withoutAvatarPlaceholder', () => {
       image: 'https://img/ada.png',
     })
     expect(withoutAvatarPlaceholder({ bio: 'hi' })).toEqual({ bio: 'hi' })
+  })
+})
+
+describe('uniauthSidFromIdToken', () => {
+  const jwt = (claims: object) =>
+    `h.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.sig`
+
+  it('reads the uniauth session id from a stored ID token', () => {
+    expect(uniauthSidFromIdToken(jwt({ sub: 'ua_1', sid: 'sess-9' }))).toBe('sess-9')
+  })
+
+  it('returns null without a token, a sid, or a readable payload', () => {
+    expect(uniauthSidFromIdToken(null)).toBeNull()
+    expect(uniauthSidFromIdToken(jwt({ sub: 'ua_1' }))).toBeNull()
+    expect(uniauthSidFromIdToken('not-a-jwt')).toBeNull()
+    expect(uniauthSidFromIdToken('h.@@@.sig')).toBeNull()
   })
 })
