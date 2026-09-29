@@ -570,3 +570,79 @@
 html {
   font-size: calc(16px * var(--font-scale));
 }
+
+/* Landing hero: the file stack deals in; a hovered card moves to the front. */
+.hero-card {
+  box-shadow: 6px 6px 0 0 var(--shadow-color);
+  cursor: pointer;
+  transition:
+    transform 450ms cubic-bezier(0.77, 0, 0.175, 1),
+    box-shadow 200ms ease;
+  animation: hero-deal 640ms cubic-bezier(0.23, 1, 0.32, 1) var(--deal-delay, 0ms) backwards;
+}
+
+.hero-card[data-front] {
+  cursor: default;
+  box-shadow: 8px 8px 0 0 var(--shadow-color);
+}
+
+.hero-chip {
+  pointer-events: none;
+  animation: hero-chip 480ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--chip-delay, 0ms) backwards;
+}
+
+@keyframes hero-deal {
+  from {
+    opacity: 0;
+    translate: 0 36px;
+    rotate: 6deg;
+  }
+}
+
+@keyframes hero-chip {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card,
+  .hero-chip {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Landing demos: new items settle in; --i staggers a group. */
+.demo-pop {
+  animation: demo-pop 260ms cubic-bezier(0.23, 1, 0.32, 1) calc(var(--i, 0) * 45ms) backwards;
+}
+
+@keyframes demo-pop {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+    scale: 0.97;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-pop {
+    animation: none;
+  }
+}
+
+/* Scripted cursor for the landing demos. */
+.demo-cursor {
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.77, 0, 0.175, 1), ease;
+}
+
+.demo-cursor svg {
+  transition: scale 120ms ease-out;
+}
+
+.demo-cursor[data-pressed] svg {
+  scale: 0.85;
+}
