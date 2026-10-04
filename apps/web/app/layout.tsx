@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
+import { cookies } from 'next/headers'
 import { Space_Grotesk, Fira_Code } from 'next/font/google'
 import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import { ThemeProvider } from '@/components/theme-provider'
+import { THEME_COOKIE, isThemeId, isDarkTheme, resolveTheme } from '@unishare-oss/unitheme'
 import './globals.css'
-import './themes.css'
+import '@unishare-oss/unitheme/themes.css'
+import '@unishare-oss/unitheme/picker.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -71,11 +74,14 @@ export const viewport: Viewport = {
   minimumScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode
 }>) {
+  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value
+  const initialTheme = isThemeId(cookieTheme) ? cookieTheme : undefined
+  const theme = resolveTheme(initialTheme)
   const appUrl = process.env.APP_URL ?? 'https://share.psstee.dev'
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -92,31 +98,13 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${theme}${isDarkTheme(theme) ? ' dark' : ''}`}>
       <body className={`${spaceGrotesk.variable} ${firaCode.variable} font-sans antialiased`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="theme-unishare"
-          themes={[
-            'theme-unishare',
-            'theme-catppuccin-mocha',
-            'theme-catppuccin-latte',
-            'theme-nord',
-            'theme-arctic',
-            'theme-tokyo-night',
-            'theme-dracula',
-            'theme-gruvbox-dark',
-            'theme-midnight-library',
-            'theme-parchment',
-            'theme-ocean-depth',
-            'theme-sakura',
-          ]}
-          disableTransitionOnChange
-        >
+        <ThemeProvider initialTheme={initialTheme}>
           <Providers>
             {children}
             <Toaster />

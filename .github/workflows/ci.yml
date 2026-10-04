@@ -11,6 +11,9 @@ jobs:
     name: Lint & Build
     runs-on: ubuntu-latest
     if: github.actor != 'unishare-release-bot[bot]'
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
@@ -22,13 +25,15 @@ jobs:
           version: '10.29.2'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Generate Prisma client
         run: pnpm --filter api db:generate

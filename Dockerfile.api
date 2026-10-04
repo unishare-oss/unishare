@@ -10,8 +10,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/types/package.json ./packages/types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY .npmrc ./
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=secret,id=npm_token,env=NODE_AUTH_TOKEN pnpm install --frozen-lockfile
 
 COPY apps/api ./apps/api
 COPY packages ./packages
@@ -35,11 +36,12 @@ COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY packages ./packages
 
 COPY apps/api/prisma ./apps/api/prisma
+COPY .npmrc ./
 COPY apps/api/prisma.config.ts ./apps/api/
 
 ENV NODE_ENV=production
 ENV npm_config_ignore_scripts=true
-RUN pnpm install --prod --frozen-lockfile
+RUN --mount=type=secret,id=npm_token,env=NODE_AUTH_TOKEN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 

@@ -10,7 +10,6 @@ import {
 } from '@nestjs/websockets'
 import { Logger } from '@nestjs/common'
 import { Server, Socket } from 'socket.io'
-import { parse } from 'cookie'
 import { auth } from '@/auth/auth.config'
 import { StorageService } from '@/modules/storage/storage.service'
 import { CollabRoomService, RoomFileMeta } from './collab.room.service'
@@ -63,16 +62,7 @@ export class CollabGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   afterInit(server: Server) {
     server.use(async (socket: Socket, next: (err?: Error) => void) => {
       const cookieHeader = socket.handshake.headers.cookie ?? ''
-      const cookies = parse(cookieHeader)
-      const sessionToken =
-        cookies['better-auth.session_token'] ??
-        cookies['__Secure-better-auth.session_token'] ??
-        (socket.handshake.auth as Record<string, string>)?.token
-
-      if (!sessionToken) {
-        return next(new Error('Unauthorized'))
-      }
-
+      // Let Better Auth resolve its configured cookie name (including the secure prefix).
       const session = await auth.api.getSession({
         headers: new Headers({ cookie: cookieHeader }),
       })

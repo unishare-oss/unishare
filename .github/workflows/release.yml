@@ -38,13 +38,15 @@ jobs:
           version: '10.29.2'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       # workflow_run jobs run on the default branch (dev), so semantic-release
       # would see GITHUB_REF=refs/heads/dev and skip; point it at main.

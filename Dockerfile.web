@@ -11,8 +11,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/types/package.json ./packages/types/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
+COPY .npmrc ./
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=secret,id=npm_token,env=NODE_AUTH_TOKEN pnpm install --frozen-lockfile
 
 COPY apps/web ./apps/web
 COPY packages ./packages

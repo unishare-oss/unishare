@@ -169,9 +169,7 @@ export class CollabService {
       // Retrieve the full session using the cookie that was just set.
       // The set-cookie value contains the session token — use it directly so
       // getSession doesn't rely on a Bearer token field that may be absent.
-      const cookieMatch = setCookieHeader?.match(
-        /((?:__Secure-)?better-auth\.session_token=[^;,]+)/,
-      )
+      const cookieMatch = setCookieHeader?.match(/((?:__Secure-)?unishare\.session_token=[^;,]+)/)
       const anonSession = await auth.api.getSession({
         headers: new Headers({
           cookie: cookieMatch?.[1] ?? '',

@@ -61,7 +61,7 @@ describe('CollabService', () => {
 
   const mockAnonSignInResult = {
     response: { token: 'anon-token-xyz', user: { id: 'user-anon-1', name: 'Purple Penguin' } },
-    headers: new Headers({ 'set-cookie': 'better-auth.session=xyz' }),
+    headers: new Headers({ 'set-cookie': 'unishare.session_token=xyz; Path=/; HttpOnly' }),
   }
 
   const mockAnonSessionResult = {
@@ -243,6 +243,26 @@ describe('CollabService', () => {
   describe('joinRoom', () => {
     const signInAnonymousMock = auth.api.signInAnonymous as unknown as jest.Mock
     const getSessionMock = auth.api.getSession as unknown as jest.Mock
+
+    it.each(['unishare.session_token', '__Secure-unishare.session_token'])(
+      'should resolve a new guest session using the %s cookie',
+      async (cookieName) => {
+        repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)
+        const cookie = `${cookieName}=guest-token`
+        signInAnonymousMock.mockResolvedValue({
+          ...mockAnonSignInResult,
+          headers: new Headers({ 'set-cookie': `${cookie}; Path=/; HttpOnly; SameSite=Lax` }),
+        })
+        getSessionMock.mockImplementation(async ({ headers }: { headers: Headers }) =>
+          headers.get('cookie') === cookie ? mockAnonSessionResult : null,
+        )
+
+        const result = await service.joinRoom('abc1234567', {}, null, mockReq, mockRes)
+
+        expect(result.userId).toBe('user-anon-1')
+        expect(result.isAnonymous).toBe(true)
+      },
+    )
 
     it('should call signInAnonymous and return isAnonymous: true when no session', async () => {
       repository.findBySlugWithVisibility.mockResolvedValue(mockRoom)

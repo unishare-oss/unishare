@@ -8,7 +8,8 @@ import {
   useHandleLibrary,
 } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
-import { useTheme } from 'next-themes'
+import { useTheme } from '@unishare-oss/unitheme/react'
+import { isDarkTheme } from '@unishare-oss/unitheme'
 import { useCollab, type RemoteFile } from '@/contexts/collab-context'
 import { useLibraryStore } from '@/lib/store'
 import { storageControllerGetPresignedUploadUrl } from '@/src/lib/api/generated/storage/storage'
@@ -21,16 +22,6 @@ import type {
   OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types'
 import type { RemoteExcalidrawElement } from '@excalidraw/excalidraw/data/reconcile'
-
-const DARK_THEMES = [
-  'theme-catppuccin-mocha',
-  'theme-nord',
-  'theme-tokyo-night',
-  'theme-dracula',
-  'theme-gruvbox-dark',
-  'theme-midnight-library',
-  'theme-ocean-depth',
-]
 
 const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
@@ -50,7 +41,7 @@ function ExcalidrawWrapperInner() {
     registerRemoteFileHandler,
   } = useCollab()
   const { theme } = useTheme()
-  const excalidrawTheme = DARK_THEMES.includes(theme ?? '') ? 'dark' : 'light'
+  const excalidrawTheme = isDarkTheme(theme) ? 'dark' : 'light'
   const { libraryItems, setLibraryItems } = useLibraryStore()
 
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null)
