@@ -14,9 +14,9 @@ jest.mock('@/auth/auth.config', () => ({
     api: {
       getSession: jest.fn((opts: { headers: Headers }) => {
         const cookie = opts.headers.get('cookie') ?? ''
-        if (cookie.includes('better-auth.session_token=valid')) {
+        if (cookie.includes('unishare.session_token=valid')) {
           // Derive a unique user id from the token suffix so clients can be distinguished
-          const match = cookie.match(/better-auth\.session_token=([^\s;]+)/)
+          const match = cookie.match(/unishare\.session_token=([^\s;]+)/)
           const token = match ? match[1] : 'valid'
           return Promise.resolve({
             user: { id: `user-${token}`, name: 'Test User' },
@@ -94,7 +94,7 @@ describe('CollabGateway (integration)', () => {
     const client = io(`http://localhost:${port}/collab`, {
       transports: ['websocket'],
       extraHeaders: {
-        cookie: opts.cookie ?? 'better-auth.session_token=valid-token',
+        cookie: opts.cookie ?? 'unishare.session_token=valid-token',
       },
     })
     activeClients.push(client)
@@ -116,8 +116,8 @@ describe('CollabGateway (integration)', () => {
 
   it('relays yjs-update to other clients in same room', async () => {
     const roomSlug = 'relay-room-1'
-    const clientA = connectClient({ cookie: 'better-auth.session_token=valid-token-A' })
-    const clientB = connectClient({ cookie: 'better-auth.session_token=valid-token-B' })
+    const clientA = connectClient({ cookie: 'unishare.session_token=valid-token-A' })
+    const clientB = connectClient({ cookie: 'unishare.session_token=valid-token-B' })
 
     const joinedA = waitForEvent(clientA, 'room-joined')
     const joinedB = waitForEvent(clientB, 'room-joined')
@@ -146,8 +146,8 @@ describe('CollabGateway (integration)', () => {
   })
 
   it('does NOT relay yjs-update to client in different room', async () => {
-    const clientA = connectClient({ cookie: 'better-auth.session_token=valid-token-C' })
-    const clientB = connectClient({ cookie: 'better-auth.session_token=valid-token-D' })
+    const clientA = connectClient({ cookie: 'unishare.session_token=valid-token-C' })
+    const clientB = connectClient({ cookie: 'unishare.session_token=valid-token-D' })
 
     const joinedA = waitForEvent(clientA, 'room-joined')
     const joinedB = waitForEvent(clientB, 'room-joined')
@@ -172,7 +172,7 @@ describe('CollabGateway (integration)', () => {
 
   it('new joiner receives full Y.Doc state', async () => {
     const roomSlug = 'state-room-1'
-    const clientA = connectClient({ cookie: 'better-auth.session_token=valid-token-E' })
+    const clientA = connectClient({ cookie: 'unishare.session_token=valid-token-E' })
 
     const joinedA = waitForEvent(clientA, 'room-joined')
     clientA.emit('join-room', roomSlug)
@@ -188,7 +188,7 @@ describe('CollabGateway (integration)', () => {
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     // New joiner connects and joins the same room
-    const clientB = connectClient({ cookie: 'better-auth.session_token=valid-token-F' })
+    const clientB = connectClient({ cookie: 'unishare.session_token=valid-token-F' })
 
     const joinedB = waitForEvent<{ slug: string; state: Buffer | number[] }>(clientB, 'room-joined')
     clientB.emit('join-room', roomSlug)
@@ -202,6 +202,24 @@ describe('CollabGateway (integration)', () => {
     Y.applyUpdate(receivedDoc, stateBytes)
 
     expect(receivedDoc.getText('content').toString()).toBe('hello integration')
+  })
+
+  it('accepts the __Secure- prefixed session cookie used in production', async () => {
+    const client = connectClient({ cookie: '__Secure-unishare.session_token=valid-token-G' })
+
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Timeout: expected connect')), 5000)
+
+      client.on('connect', () => {
+        clearTimeout(timer)
+        resolve()
+      })
+
+      client.on('connect_error', (err: Error) => {
+        clearTimeout(timer)
+        reject(err)
+      })
+    })
   })
 
   it('rejects connection without valid session cookie', async () => {
