@@ -1,3 +1,13 @@
+# [0.31.0](https://github.com/unishare-oss/unishare/compare/v0.30.0...v0.31.0) (2026-10-04)
+
+### Bug Fixes
+
+- **collab:** accept UniShare session cookies after UniAuth sign-in ([15d8e0d](https://github.com/unishare-oss/unishare/commit/15d8e0dad184d0af15e4dc977ff57171cca441d3))
+
+### Features
+
+- integrate shared themes with account sync and cookie rendering ([fdd4c79](https://github.com/unishare-oss/unishare/commit/fdd4c79fb8f4c19654a735b42d3b68fd1b999046))
+
 # [0.30.0](https://github.com/unishare-oss/unishare/compare/v0.29.0...v0.30.0) (2026-09-29)
 
 ### Features
