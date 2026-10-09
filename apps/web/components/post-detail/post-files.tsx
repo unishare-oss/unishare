@@ -129,6 +129,9 @@ interface PostFilesProps {
 }
 
 export function PostFiles({ post }: PostFilesProps) {
+  const files = [...post.files].sort((a, b) =>
+    a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }),
+  )
   const [previewFile, setPreviewFile] = useState<{
     id: string
     mimeType: string
@@ -425,7 +428,7 @@ export function PostFiles({ post }: PostFilesProps) {
           Attachments
         </h2>
         <div className="flex flex-col gap-2">
-          {post.files.map((file) => (
+          {files.map((file) => (
             <div
               key={file.id}
               className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
