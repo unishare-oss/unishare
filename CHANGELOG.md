@@ -1,3 +1,9 @@
+## [0.31.1](https://github.com/unishare-oss/unishare/compare/v0.31.0...v0.31.1) (2026-10-09)
+
+### Bug Fixes
+
+- **web:** sort post attachments naturally by name ([adb5992](https://github.com/unishare-oss/unishare/commit/adb5992e91044a7151ed53eb487d58d568e4a278))
+
 # [0.31.0](https://github.com/unishare-oss/unishare/compare/v0.30.0...v0.31.0) (2026-10-04)
 
 ### Bug Fixes
