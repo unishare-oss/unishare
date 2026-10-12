@@ -82,7 +82,7 @@ export default async function RootLayout({
   const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value
   const initialTheme = isThemeId(cookieTheme) ? cookieTheme : undefined
   const theme = resolveTheme(initialTheme)
-  const appUrl = process.env.APP_URL ?? 'https://share.psstee.dev'
+  const appUrl = process.env.APP_URL ?? 'https://share.psstee.me'
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -112,7 +112,7 @@ export default async function RootLayout({
         </ThemeProvider>
         <Script
           defer
-          src="https://analytics.psstee.dev/script.js"
+          src="https://analytics.psstee.me/script.js"
           data-website-id="ab4d7758-1c52-4fc4-943b-0c7bf7a374f5"
         />
       </body>
