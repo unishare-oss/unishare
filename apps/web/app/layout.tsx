@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
-import { Space_Grotesk, Fira_Code } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -11,15 +11,15 @@ import '@unishare-oss/unitheme/themes.css'
 import '@unishare-oss/unitheme/picker.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
+const spaceGrotesk = localFont({
+  src: '../fonts/SpaceGrotesk.ttf',
   variable: '--font-sans',
-  weight: ['400', '500', '600', '700'],
+  weight: '300 700',
 })
-const firaCode = Fira_Code({
-  subsets: ['latin'],
+const firaCode = localFont({
+  src: '../fonts/FiraCode.ttf',
   variable: '--font-mono',
-  weight: ['400', '500', '600', '700'],
+  weight: '300 700',
 })
 
 export const metadata: Metadata = {
