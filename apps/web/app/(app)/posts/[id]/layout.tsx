@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001'
-const APP_URL = process.env.APP_URL ?? 'https://share.psstee.dev'
+const APP_URL = process.env.APP_URL ?? 'https://share.psstee.me'
 
 async function getPost(id: string): Promise<PostDetailEntity | null> {
   try {

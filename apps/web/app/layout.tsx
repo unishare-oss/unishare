@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
-import { Space_Grotesk, Fira_Code } from 'next/font/google'
-import Script from 'next/script'
+import localFont from 'next/font/local'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -12,15 +11,15 @@ import '@unishare-oss/unitheme/themes.css'
 import '@unishare-oss/unitheme/picker.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
+const spaceGrotesk = localFont({
+  src: '../fonts/SpaceGrotesk.ttf',
   variable: '--font-sans',
-  weight: ['400', '500', '600', '700'],
+  weight: '300 700',
 })
-const firaCode = Fira_Code({
-  subsets: ['latin'],
+const firaCode = localFont({
+  src: '../fonts/FiraCode.ttf',
   variable: '--font-mono',
-  weight: ['400', '500', '600', '700'],
+  weight: '300 700',
 })
 
 export const metadata: Metadata = {
@@ -82,7 +81,7 @@ export default async function RootLayout({
   const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value
   const initialTheme = isThemeId(cookieTheme) ? cookieTheme : undefined
   const theme = resolveTheme(initialTheme)
-  const appUrl = process.env.APP_URL ?? 'https://share.psstee.dev'
+  const appUrl = process.env.APP_URL ?? 'https://share.psstee.me'
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -110,11 +109,6 @@ export default async function RootLayout({
             <Toaster />
           </Providers>
         </ThemeProvider>
-        <Script
-          defer
-          src="https://analytics.psstee.dev/script.js"
-          data-website-id="ab4d7758-1c52-4fc4-943b-0c7bf7a374f5"
-        />
       </body>
     </html>
   )
