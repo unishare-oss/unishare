@@ -32,7 +32,7 @@ ENV NEXT_PUBLIC_UNIAUTH_URL=$UNIAUTH_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm --filter web api:generate
-RUN pnpm --filter web build
+RUN pnpm --filter web build --webpack
 
 # prod
 FROM node:26-alpine AS runner
