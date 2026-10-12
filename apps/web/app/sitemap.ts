@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const APP_URL = process.env.APP_URL ?? 'https://share.psstee.dev'
+const APP_URL = process.env.APP_URL ?? 'https://share.psstee.me'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

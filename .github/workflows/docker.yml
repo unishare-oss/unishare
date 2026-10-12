@@ -5,6 +5,11 @@ on:
     branches: [main, dev]
   workflow_dispatch:
     inputs:
+      target_env:
+        description: Build environment (auto follows main/dev)
+        type: choice
+        options: [auto, prod, dev]
+        default: auto
       force_api:
         description: Force build API
         type: boolean
@@ -47,9 +52,10 @@ jobs:
         id: target
         env:
           REF_NAME: ${{ github.ref_name }}
+          TARGET_ENV: ${{ inputs.target_env }}
         run: |
           set -euo pipefail
-          if [ "$REF_NAME" = "main" ]; then
+          if [ "$TARGET_ENV" = "prod" ] || { [ "$TARGET_ENV" != "dev" ] && [ "$REF_NAME" = "main" ]; }; then
             ENV=prod
             VALUES_FILE=unishare-chart/values.yaml
             TAG_SUFFIX=""
@@ -179,6 +185,7 @@ jobs:
     name: Write image tags to GitOps repo
     needs: [changes, build-api, build-web]
     if: >-
+      (github.ref_name == 'main' || github.ref_name == 'dev') &&
       always() &&
       (needs.build-api.result == 'success' || needs.build-web.result == 'success')
     runs-on: ubuntu-latest

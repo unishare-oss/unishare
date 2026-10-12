@@ -11,10 +11,10 @@ export const imageHosts = [
   '*.r2.cloudflarestorage.com',
   '*.r2.dev',
   'upload.wikimedia.org',
-  's3.psstee.dev',
+  's3.psstee.me',
   // Photos uploaded on uniauth's account page (/api/avatars/…).
-  'auth.psstee.dev',
-  'auth-dev.psstee.dev',
+  'auth.psstee.me',
+  'auth-dev.psstee.me',
 ] as const
 
 /** True when next/image can render `src`: a relative path, or https on a listed host. */
