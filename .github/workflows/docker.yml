@@ -175,8 +175,8 @@ jobs:
             ghcr.io/${{ env.OWNER }}/unishare-web:${{ needs.changes.outputs.moving_tag }}
             ghcr.io/${{ env.OWNER }}/unishare-web:sha-${{ github.sha }}${{ needs.changes.outputs.tag_suffix }}
           build-args: |
-            API_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_API_URL || secrets.API_URL }}
-            APP_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_APP_URL || secrets.APP_URL }}
+            API_URL=${{ needs.changes.outputs.env == 'dev' && (vars.DEV_API_URL || 'http://unishare-api.unishare-dev.svc.cluster.local:3001') || vars.API_URL || 'http://unishare-api.default.svc.cluster.local:3001' }}
+            APP_URL=${{ needs.changes.outputs.env == 'dev' && (vars.DEV_APP_URL || 'https://share-dev.psstee.me') || vars.APP_URL || 'https://share.psstee.me' }}
             UNIAUTH_URL=${{ needs.changes.outputs.env == 'dev' && vars.DEV_UNIAUTH_URL || vars.UNIAUTH_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
