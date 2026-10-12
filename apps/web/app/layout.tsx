@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
 import { Space_Grotesk, Fira_Code } from 'next/font/google'
-import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/src/providers'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -110,11 +109,6 @@ export default async function RootLayout({
             <Toaster />
           </Providers>
         </ThemeProvider>
-        <Script
-          defer
-          src="https://analytics.psstee.me/script.js"
-          data-website-id="ab4d7758-1c52-4fc4-943b-0c7bf7a374f5"
-        />
       </body>
     </html>
   )
