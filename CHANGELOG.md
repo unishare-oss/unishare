@@ -1,3 +1,13 @@
+## [0.31.2](https://github.com/unishare-oss/unishare/compare/v0.31.1...v0.31.2) (2026-10-12)
+
+### Bug Fixes
+
+- **build:** bundle fonts without Google CSS fetches ([58c820f](https://github.com/unishare-oss/unishare/commit/58c820fb3d582c173449fa7a7a00e1927e47a2e9))
+- **build:** use webpack for production font compilation ([ac6fc59](https://github.com/unishare-oss/unishare/commit/ac6fc59a8564bd16edb09293a9a78ea2c42ed5c7))
+- **deploy:** build web proxies with internal API addresses ([f6f405d](https://github.com/unishare-oss/unishare/commit/f6f405dfac39946e3a13eafbfadca7b845d85e66))
+- **web:** migrate public domain to psstee.me ([6edb53f](https://github.com/unishare-oss/unishare/commit/6edb53f0aef7c037d294c09205506685556d8fe8))
+- **web:** remove retired analytics dependency ([f8d59b7](https://github.com/unishare-oss/unishare/commit/f8d59b707318042583247ad3bef96d0500491bf3))
+
 ## [0.31.1](https://github.com/unishare-oss/unishare/compare/v0.31.0...v0.31.1) (2026-10-09)
 
 ### Bug Fixes
