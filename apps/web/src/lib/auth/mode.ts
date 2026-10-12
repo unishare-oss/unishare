@@ -4,7 +4,7 @@
  * NEXT_PUBLIC_* values are baked into the image at build time.
  */
 
-/** uniauth origin, e.g. https://auth.psstee.dev. */
+/** uniauth origin, e.g. https://auth.psstee.me. */
 export const uniauthURL = (process.env.NEXT_PUBLIC_UNIAUTH_URL ?? 'http://localhost:3002').replace(
   /\/+$/,
   '',
