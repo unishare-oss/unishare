@@ -65,6 +65,10 @@ jobs:
             TAG_SUFFIX="-dev"
             MOVING_TAG=dev
           fi
+          # Preview builds get an isolated tag and never replace a shared moving tag.
+          if [ "$REF_NAME" != "main" ] && [ "$REF_NAME" != "dev" ]; then
+            MOVING_TAG="preview-${GITHUB_RUN_ID}"
+          fi
           {
             echo "env=$ENV"
             echo "values_file=$VALUES_FILE"
@@ -179,6 +183,7 @@ jobs:
     name: Write image tags to GitOps repo
     needs: [changes, build-api, build-web]
     if: >-
+      (github.ref_name == 'main' || github.ref_name == 'dev') &&
       always() &&
       (needs.build-api.result == 'success' || needs.build-web.result == 'success')
     runs-on: ubuntu-latest
