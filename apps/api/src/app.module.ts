@@ -42,6 +42,7 @@ import { MetricsController } from './metrics/metrics.controller'
 import { MetricsModule } from './metrics/metrics.module'
 import { McpModule } from './modules/mcp/mcp.module'
 import { DecksModule } from './modules/decks/decks.module'
+import { BullMQOtel } from 'bullmq-otel'
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { DecksModule } from './modules/decks/decks.module'
         // BullMQ's `connection` is an options object, so the URL has to be unpacked.
         const url = new URL(config.get<string>('REDIS_URL', 'redis://localhost:6379'))
         return {
+          telemetry: new BullMQOtel({ tracerName: 'unishare-queues' }),
           connection: {
             host: url.hostname,
             port: Number(url.port || 6379),
