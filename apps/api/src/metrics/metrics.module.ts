@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common'
-import { APP_INTERCEPTOR } from '@nestjs/core'
 import {
   makeCounterProvider,
   makeGaugeProvider,
   makeHistogramProvider,
 } from '@willsoto/nestjs-prometheus'
 import { DomainMetricsService } from './domain-metrics.service'
-import { HttpMetricsInterceptor } from './http-metrics.interceptor'
+import { HttpMetricsMiddleware } from './http-metrics.middleware'
+import { TelemetryLifecycleService } from './telemetry-lifecycle.service'
 
 @Module({
   providers: [
@@ -48,7 +48,9 @@ import { HttpMetricsInterceptor } from './http-metrics.interceptor'
       help: 'Decks that needed more than one generation attempt',
     }),
     DomainMetricsService,
-    { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
+    HttpMetricsMiddleware,
+    TelemetryLifecycleService,
   ],
+  exports: [HttpMetricsMiddleware],
 })
 export class MetricsModule {}
