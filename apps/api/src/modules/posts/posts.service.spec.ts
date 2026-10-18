@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { NotFoundException } from '@nestjs/common'
-import { IngestStatus, PostPublicationStatus, PostStatus } from '@/generated/prisma/client'
+import {
+  IngestStatus,
+  PostPublicationStatus,
+  PostStatus,
+  PostType,
+} from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsService } from './posts.service'
 import { PostsRepository } from './posts.repository'
@@ -26,6 +31,7 @@ describe('PostsService', () => {
   let service: PostsService
   let prismaMock: any
   let embeddingMock: { enabled: boolean }
+  let repoMock: any
 
   beforeEach(async () => {
     prismaMock = {
@@ -33,11 +39,16 @@ describe('PostsService', () => {
       postChunk: { count: jest.fn().mockResolvedValue(0) },
     }
     embeddingMock = { enabled: true }
+    repoMock = {
+      findById: jest.fn(),
+      recordView: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn(),
+    }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostsService,
-        { provide: PostsRepository, useValue: {} },
+        { provide: PostsRepository, useValue: repoMock },
         { provide: NotificationsService, useValue: {} },
         { provide: FollowsService, useValue: {} },
         { provide: TagsService, useValue: {} },
@@ -236,5 +247,21 @@ describe('PostsService', () => {
         expect(prismaMock.postChunk.count).not.toHaveBeenCalled()
       },
     )
+  })
+
+  describe('update', () => {
+    it('stamps editedAt when the owner edits the post', async () => {
+      const post = { id: 'post-1', type: PostType.NOTE, isOwner: true }
+      repoMock.findById.mockResolvedValue(post)
+      repoMock.update.mockResolvedValue(post)
+
+      await service.update('post-1', { title: 'New title' }, 'user-1')
+
+      expect(repoMock.update).toHaveBeenCalledWith(
+        'post-1',
+        expect.objectContaining({ title: 'New title', editedAt: expect.any(Date) }),
+        { id: 'user-1' },
+      )
+    })
   })
 })

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare, Sparkles } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 
 import { calcYearLevel, pluralize } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
@@ -154,7 +154,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               <p className="font-mono text-xs text-text-muted">
                 {yearLevel != null && `Year ${yearLevel} student · `}
                 {author.department?.name && `${author.department.name} · `}
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                <PostTimestamp createdAt={post.createdAt} editedAt={post.editedAt} />
               </p>
             </div>
           </Link>
@@ -166,7 +166,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
                 {user.name} <span className="text-text-muted font-normal">(you · anonymous)</span>
               </p>
               <p className="font-mono text-xs text-text-muted">
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                <PostTimestamp createdAt={post.createdAt} editedAt={post.editedAt} />
               </p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
             <div>
               <p className="text-sm font-medium text-foreground">Anonymous</p>
               <p className="font-mono text-xs text-text-muted">
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+                <PostTimestamp createdAt={post.createdAt} editedAt={post.editedAt} />
               </p>
             </div>
           </div>
@@ -263,6 +263,26 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
       </div>
 
       <div className="border-t border-border" />
+    </>
+  )
+}
+
+function PostTimestamp({ createdAt, editedAt }: { createdAt: string; editedAt?: string | null }) {
+  const created = new Date(createdAt)
+  const edited = editedAt ? new Date(editedAt) : null
+  return (
+    <>
+      <time dateTime={created.toISOString()} title={format(created, 'PPpp')}>
+        {formatDistanceToNow(created, { addSuffix: true })}
+      </time>
+      {edited && (
+        <>
+          {' · '}
+          <time dateTime={edited.toISOString()} title={format(edited, 'PPpp')}>
+            edited {formatDistanceToNow(edited, { addSuffix: true })}
+          </time>
+        </>
+      )}
     </>
   )
 }

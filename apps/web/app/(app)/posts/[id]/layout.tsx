@@ -71,7 +71,7 @@ export default async function Layout({
         url: `${APP_URL}/posts/${id}`,
         image: `${APP_URL}/og-image.png`,
         datePublished: post.createdAt,
-        dateModified: post.updatedAt ?? post.createdAt,
+        dateModified: post.editedAt ?? post.createdAt,
         author: {
           '@type': 'Person',
           name: post.author?.name ?? 'Student',

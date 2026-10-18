@@ -186,7 +186,11 @@ export class PostsService {
       ;(postData as Record<string, unknown>).externalUrl = null
     }
 
-    const updatedPost = await this.postsRepository.update(id, postData, { id: userId })
+    const updatedPost = await this.postsRepository.update(
+      id,
+      { ...postData, editedAt: new Date() },
+      { id: userId },
+    )
 
     // Update tags if provided
     if (tags) {
