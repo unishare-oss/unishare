@@ -1,3 +1,20 @@
+# [0.32.0](https://github.com/unishare-oss/unishare/compare/v0.31.2...v0.32.0) (2026-10-18)
+
+### Bug Fixes
+
+- **build:** bundle fonts without Google CSS fetches ([1f7aae2](https://github.com/unishare-oss/unishare/commit/1f7aae268bec16c7ea3a7e9b1444828b59026eb4))
+- **build:** use webpack for production font compilation ([e1728e9](https://github.com/unishare-oss/unishare/commit/e1728e9a40204e761b0d2d73a5e583e839511bd2))
+- **ci:** isolate feature builds from deployment write-back ([1ed4d9d](https://github.com/unishare-oss/unishare/commit/1ed4d9d1a302483ed00e875cb30fe6a3876ef863))
+- **deploy:** build web proxies with internal API addresses ([8d0e521](https://github.com/unishare-oss/unishare/commit/8d0e52181d4e009278be96b5a072a24b154cf2a1))
+- **web:** migrate development domain to psstee.me ([9765f24](https://github.com/unishare-oss/unishare/commit/9765f2426fd23cb1bde49c7e95909cc2f5f8500f))
+- **web:** point Tailwind font tokens at bundled next/font variables ([0e5cda5](https://github.com/unishare-oss/unishare/commit/0e5cda59b14c467c13979221691c0d3bc7d01807))
+- **web:** remove retired analytics dependency ([60e57e8](https://github.com/unishare-oss/unishare/commit/60e57e8467be53a792af70f68c06d194074010f1))
+
+### Features
+
+- **api:** add request tracing and correct HTTP metrics ([c14dca7](https://github.com/unishare-oss/unishare/commit/c14dca743f56fefe55468e6c2b707833b19b7e17))
+- **posts:** track and show when a post was last edited ([4f81370](https://github.com/unishare-oss/unishare/commit/4f81370dae684d5c7955d7a1738d2318b723a1df))
+
 ## [0.31.2](https://github.com/unishare-oss/unishare/compare/v0.31.1...v0.31.2) (2026-10-12)
 
 ### Bug Fixes
