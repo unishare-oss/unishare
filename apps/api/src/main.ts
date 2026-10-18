@@ -24,6 +24,7 @@ async function bootstrap() {
     'http://localhost:3000',
     // MCP Inspector — dev-only tooling, never allow it in production
     ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:6274'] : []),
+    ...(process.env.NODE_ENV !== 'production' ? ['http://127.0.0.1:3000'] : []),
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
