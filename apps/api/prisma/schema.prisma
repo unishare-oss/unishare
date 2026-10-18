@@ -147,6 +147,7 @@ model Post {
   courseId            String
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+  editedAt            DateTime?
   deletedAt           DateTime?
   moduleNumber        Int?
   status              PostStatus               @default(APPROVED)

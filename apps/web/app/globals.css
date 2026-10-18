@@ -9,8 +9,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Space Grotesk', sans-serif;
-  --font-mono: 'Fira Code', monospace;
+  --font-sans: var(--font-space-grotesk), sans-serif;
+  --font-mono: var(--font-fira-code), monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

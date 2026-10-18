@@ -35,6 +35,7 @@ const prisma = new PrismaClient({ adapter })
 
 const trustedOrigins = [
   'http://localhost:3000',
+  ...(process.env.NODE_ENV !== 'production' ? ['http://127.0.0.1:3000'] : []),
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 

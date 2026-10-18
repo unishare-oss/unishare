@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './telemetry'
 import helmet from 'helmet'
 import { json } from 'express'
 import { NestFactory, Reflector } from '@nestjs/core'
@@ -9,6 +10,7 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggerMiddleware } from './common/middleware'
+import { HttpMetricsMiddleware } from './metrics/http-metrics.middleware'
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap')
@@ -22,9 +24,12 @@ async function bootstrap() {
     'http://localhost:3000',
     // MCP Inspector — dev-only tooling, never allow it in production
     ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:6274'] : []),
+    ...(process.env.NODE_ENV !== 'production' ? ['http://127.0.0.1:3000'] : []),
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
   ]
 
+  const httpMetrics = app.get(HttpMetricsMiddleware)
+  app.use(httpMetrics.use.bind(httpMetrics))
   app.use(helmet({ contentSecurityPolicy: false }))
   app.enableCors({ origin: allowedOrigins, credentials: true })
   app.use('/mcp', json({ type: 'application/json', limit: '1mb' }))

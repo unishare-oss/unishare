@@ -13,12 +13,12 @@ import 'prismjs/themes/prism-tomorrow.css'
 
 const spaceGrotesk = localFont({
   src: '../fonts/SpaceGrotesk.ttf',
-  variable: '--font-sans',
+  variable: '--font-space-grotesk',
   weight: '300 700',
 })
 const firaCode = localFont({
   src: '../fonts/FiraCode.ttf',
-  variable: '--font-mono',
+  variable: '--font-fira-code',
   weight: '300 700',
 })
 

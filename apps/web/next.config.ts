@@ -4,6 +4,7 @@ import { imageHosts } from './lib/image-hosts'
 const API_URL = process.env.API_URL ?? 'http://localhost:3001'
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['127.0.0.1'],
   output: 'standalone',
   compress: false,
   images: {

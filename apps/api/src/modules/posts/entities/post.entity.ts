@@ -160,6 +160,9 @@ export class PostEntity {
   @ApiProperty()
   updatedAt: Date
 
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  editedAt: Date | null
+
   @ApiPropertyOptional({ nullable: true, type: PostAuthorEntity })
   author?: PostAuthorEntity | null
 
