@@ -10,6 +10,8 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common'
+import { Res } from '@nestjs/common'
+import type { Response } from 'express'
 import { ApiExcludeController, ApiOkResponse } from '@nestjs/swagger'
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@/auth/auth.config'
@@ -19,6 +21,7 @@ import { UniauthLogoutService } from './uniauth-logout.service'
 import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
 import { UniauthUserUpdatedService } from './uniauth-user-updated.service'
 import { UniauthThemeService } from './uniauth-theme.service'
+import { UniauthIdentityEventsService } from './uniauth-identity-events.service'
 import { ThemePreferenceDto, ThemePreferenceEntity } from './dto/theme-preference.dto'
 
 @ApiExcludeController()
@@ -29,6 +32,7 @@ export class UniauthController {
     private readonly userDeleted: UniauthUserDeletedService,
     private readonly userUpdated: UniauthUserUpdatedService,
     private readonly themes: UniauthThemeService,
+    private readonly identityEvents: UniauthIdentityEventsService,
   ) {}
 
   @Get('theme')
@@ -87,6 +91,22 @@ export class UniauthController {
     if (!(await this.userUpdated.handle(dto.token))) {
       throw new BadRequestException('invalid token')
     }
+    return null
+  }
+
+  /**
+   * v1 identity events from uniauth (versioned, deduplicated; docs/uniauth/integration.md). 204 when done, duplicate, stale
+   * or about nobody here; 401 for a token it cannot verify (uniauth retries); 400 for a verified token it cannot use (final);
+   * 503 when it could not finish (uniauth retries). The two legacy notices above stay until uniauth stops sending them.
+   */
+  @Post('identity-events')
+  @AllowAnonymous()
+  @Header('Cache-Control', 'no-store')
+  async identityEvent(@Body() dto: UniauthEventDto, @Res({ passthrough: true }) res: Response) {
+    const status = await this.identityEvents.handle(dto.token)
+    if (status === 401) throw new UnauthorizedException('invalid token')
+    if (status === 400) throw new BadRequestException('invalid event')
+    res.status(204)
     return null
   }
 }

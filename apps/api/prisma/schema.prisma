@@ -25,6 +25,10 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
+  /// The last uniauth identity version applied to this person (null until one is); an event applies only if newer.
+  identityVersion         Int?
+  /// uniauth's account state: active | suspended. Separate from the local ban (banned): a ban is Unishare's own decision.
+  identityStatus          String                   @default("active")
   universityId            String?
   publicKey               String?
   /// Passphrase-encrypted private key backup (PBKDF2 + AES-GCM blob, opaque to the server)
@@ -358,6 +362,8 @@ model Account {
   updatedAt             DateTime  @updatedAt
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  /// One local user per uniauth account (providerId 'uniauth', accountId = the uniauth user id), and one account row per provider id.
+  @@unique([providerId, accountId])
   @@index([userId])
   @@map("account")
 }
@@ -896,4 +902,25 @@ enum ChatMessageType {
 enum FeedbackType {
   FEEDBACK
   BUG_REPORT
+}
+
+/// uniauth identity events already applied, by their stable event id: a redelivery changes nothing.
+model IdentityEventReceipt {
+  eventId    String   @id
+  subject    String
+  version    Int
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+  @@map("identity_event_receipt")
+}
+
+/// Where reconciliation with uniauth's change feed stands (one row).
+model IdentityReconcile {
+  id        Int      @id @default(1)
+  cursor    String?
+  updatedAt DateTime @updatedAt
+
+  @@map("identity_reconcile")
 }
