@@ -2,7 +2,7 @@ import { exportJWK, generateKeyPair, SignJWT, type CryptoKey } from 'jose'
 import { ServiceUnavailableException } from '@nestjs/common'
 import type { PrismaService } from '@/prisma/prisma.service'
 import { UniauthIdentityEventsService } from './uniauth-identity-events.service'
-import { UniauthReconcileService } from './uniauth-reconcile.service'
+import { UniauthReconcileService, reconcileIntervalMs } from './uniauth-reconcile.service'
 import { ResyncRequired, type DirectoryIdentity } from './uniauth-directory.client'
 
 const issuer = 'http://auth.test/api/auth'
@@ -27,6 +27,7 @@ interface FakeUser {
   image: string | null
   identityVersion: number | null
   identityStatus: string
+  universityId?: string | null
 }
 
 /** An in-memory stand-in for the few Prisma calls the services make, with real createMany/skipDuplicates semantics. */
@@ -37,6 +38,7 @@ function fakePrisma() {
   let sessions: { userId: string }[] = []
   let cursor: string | null = null
   let hasCursorRow = false
+  let chain: Promise<void> = Promise.resolve()
   const prisma = {
     users,
     accounts,
@@ -62,11 +64,18 @@ function fakePrisma() {
           ) ?? null,
       ),
       findMany: jest.fn(
-        async ({ where, take }: { where: { accountId?: { gt: string } }; take: number }) =>
+        async ({
+          where,
+          take,
+        }: {
+          where: { accountId?: { gt?: string; in?: string[] } }
+          take?: number
+        }) =>
           accounts
-            .filter((a) => !where.accountId || a.accountId > where.accountId.gt)
+            .filter((a) => !where.accountId?.gt || a.accountId > where.accountId.gt)
+            .filter((a) => !where.accountId?.in || where.accountId.in.includes(a.accountId))
             .sort((a, b) => a.accountId.localeCompare(b.accountId))
-            .slice(0, take),
+            .slice(0, take ?? 1000),
       ),
     },
     user: {
@@ -109,7 +118,23 @@ function fakePrisma() {
         hasCursorRow = true
       }),
     },
-    $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(prisma)),
+    university: {
+      findMany: jest.fn(async ({ where }: { where: { uniauthOrgId: { in: string[] } } }) =>
+        where.uniauthOrgId.in
+          .filter((o) => o.startsWith('org-'))
+          .map((o) => ({ id: `uni-${o}`, uniauthOrgId: o })),
+      ),
+    },
+    $queryRaw: jest.fn(async () => []),
+    // Transactions run one after the other, like the real row lock (SELECT ... FOR UPDATE) makes them for one user.
+    $transaction: jest.fn((fn: (tx: unknown) => unknown) => {
+      const run = chain.then(() => fn(prisma))
+      chain = run.then(
+        () => undefined,
+        () => undefined,
+      )
+      return run
+    }),
   }
   return prisma
 }
@@ -183,6 +208,7 @@ describe('uniauth v1 identity events', () => {
       prisma as unknown as PrismaService,
       directory as never,
       service,
+      {} as never,
     )
   })
 
@@ -327,13 +353,23 @@ describe('uniauth v1 identity events', () => {
         ['uaB', { result: 'found', identity: profile('uaB', { status: 'suspended' }) }],
       ]),
     )
-    expect(await reconcile.reconcile()).toEqual({ applied: 2, resynced: false })
+    expect(await reconcile.reconcile()).toEqual({
+      applied: 2,
+      skipped: 0,
+      resynced: false,
+      stopped: false,
+    })
     expect(prisma.users.get('a')).toMatchObject({ name: 'A offline', identityVersion: 2 })
     expect(prisma.users.get('b')).toMatchObject({ identityStatus: 'suspended' })
     expect(prisma.cursor).toBe('3')
 
     directory.changes.mockResolvedValueOnce({ changes: [], cursor: '3', hasMore: false })
-    expect(await reconcile.reconcile()).toEqual({ applied: 0, resynced: false })
+    expect(await reconcile.reconcile()).toEqual({
+      applied: 0,
+      skipped: 0,
+      resynced: false,
+      stopped: false,
+    })
     expect(directory.changes).toHaveBeenLastCalledWith('3', 100) // resumed from the saved cursor
   })
 
@@ -359,5 +395,170 @@ describe('uniauth v1 identity events', () => {
     expect(prisma.users.get('susp')).toMatchObject({ identityStatus: 'suspended' })
     expect(prisma.sessions.filter((s) => s.userId === 'susp')).toHaveLength(0)
     expect(prisma.cursor).toBe('0')
+  })
+
+  it('stores the directory version when it is newer than the event, and answers 503 when it is older', async () => {
+    addUser('u1', 'ua1')
+    directory.read.mockResolvedValue(profile('ua1', { name: 'Five', version: 5 }))
+    expect(await service.handle(await token('ua1', event('identity.updated', 3)))).toBe(204)
+    expect(prisma.users.get('u1')).toMatchObject({ name: 'Five', identityVersion: 5 })
+    directory.read.mockResolvedValue(profile('ua1', { name: 'Still five', version: 5 }))
+    await expect(
+      service.handle(await token('ua1', event('identity.updated', 7, 'lag'))),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException)
+    expect(prisma.receipts.has('lag')).toBe(false)
+    expect(prisma.users.get('u1')!.name).toBe('Five')
+    directory.read.mockResolvedValue(profile('ua1', { name: 'Seven', version: 7 }))
+    expect(await service.handle(await token('ua1', event('identity.updated', 7, 'lag')))).toBe(204)
+    expect(prisma.users.get('u1')).toMatchObject({ name: 'Seven', identityVersion: 7 })
+  })
+
+  it('applies two events for one person at the same moment in either order and ends at the newer', async () => {
+    for (let round = 0; round < 10; round++) {
+      addUser(`r${round}`, `uaR${round}`)
+      const at = (version: number, name: string) => profile(`uaR${round}`, { name, version })
+      const ev = (version: number) => ({
+        eventId: `ev-${round}-${version}`,
+        type: 'identity.updated',
+        subject: `uaR${round}`,
+        identityVersion: version,
+      })
+      const pair = [
+        service.apply(ev(5), { profile: at(5, 'Five'), userId: `r${round}` }),
+        service.apply(ev(6), { profile: at(6, 'Six'), userId: `r${round}` }),
+      ]
+      await Promise.all(round % 2 ? pair : pair.reverse())
+      expect(prisma.users.get(`r${round}`)).toMatchObject({ name: 'Six', identityVersion: 6 })
+    }
+  })
+
+  it('maps the directory memberships onto the university like sign-in, and leaves it alone when none maps', async () => {
+    addUser('u1', 'ua1', { universityId: 'old-uni' })
+    directory.read.mockResolvedValue(
+      profile('ua1', {
+        version: 2,
+        'urn:uniauth:organizations': [{ id: 'org-kmutt', verified: true }],
+      }),
+    )
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({ universityId: 'uni-org-kmutt' })
+    directory.read.mockResolvedValue(
+      profile('ua1', {
+        version: 3,
+        'urn:uniauth:organizations': [{ id: 'unknown-org', verified: true }],
+      }),
+    )
+    await service.handle(await token('ua1', event('identity.updated', 3)))
+    expect(prisma.users.get('u1')!.universityId).toBe('uni-org-kmutt') // nothing maps: unchanged
+  })
+
+  it('keeps the old email and applies the rest when the new email is raced onto another user', async () => {
+    addUser('u1', 'ua1')
+    directory.read.mockResolvedValue(
+      profile('ua1', { name: 'Renamed', email: 'new@example.com', version: 2 }),
+    )
+    let first = true
+    const real = prisma.$transaction.getMockImplementation()!
+    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => {
+      if (first) {
+        first = false
+        return Promise.reject(
+          Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+        )
+      }
+      return real(fn)
+    })
+    expect(await service.handle(await token('ua1', event('identity.updated', 2)))).toBe(204)
+    expect(prisma.users.get('u1')).toMatchObject({
+      name: 'Renamed',
+      email: 'u1@example.com',
+      identityVersion: 2,
+    })
+  })
+
+  it('a tombstone read for an update, or a deleted batch entry, is the existing deletion', async () => {
+    addUser('u1', 'ua1')
+    directory.read.mockResolvedValue({ id: 'ua1', status: 'deleted', version: 4 })
+    expect(await service.handle(await token('ua1', event('identity.updated', 4)))).toBe(204)
+    expect(deleted.deleteLocalUser).toHaveBeenCalledWith('ua1')
+    addUser('u2', 'ua2')
+    directory.batch.mockResolvedValue(
+      new Map([
+        ['ua2', { result: 'found', identity: { id: 'ua2', status: 'deleted', version: 4 } }],
+      ]),
+    )
+    expect(await reconcile.resync()).toBe(0)
+    expect(prisma.users.has('u2')).toBe(false)
+  })
+
+  it('skips and counts a malformed entry and an unreadable profile instead of wedging the cursor; a lagging directory stops', async () => {
+    addUser('good', 'uaGood')
+    addUser('orphan', 'uaOrphan')
+    directory.changes.mockResolvedValueOnce({
+      changes: [
+        { eventId: 5, type: 'identity.updated', id: 'x', version: 1 },
+        { eventId: 'm1', type: 'identity.updated', id: 'uaOrphan', version: 1 },
+        { eventId: 'ok1', type: 'identity.updated', id: 'uaGood', version: 2 },
+      ],
+      cursor: '3',
+      hasMore: false,
+    })
+    directory.batch.mockResolvedValue(
+      new Map([
+        [
+          'uaGood',
+          { result: 'found', identity: profile('uaGood', { name: 'Good now', version: 2 }) },
+        ],
+        ['uaOrphan', { result: 'not_found', identity: null }],
+      ]),
+    )
+    expect(await reconcile.reconcile()).toEqual({
+      applied: 1,
+      skipped: 2,
+      resynced: false,
+      stopped: false,
+    })
+    expect(prisma.users.get('good')!.name).toBe('Good now')
+    expect(prisma.cursor).toBe('3') // moved past the bad entries
+
+    directory.changes.mockResolvedValueOnce({
+      changes: [{ eventId: 'ahead', type: 'identity.updated', id: 'uaGood', version: 9 }],
+      cursor: '4',
+      hasMore: false,
+    })
+    directory.batch.mockResolvedValue(
+      new Map([['uaGood', { result: 'found', identity: profile('uaGood', { version: 8 }) }]]),
+    )
+    expect(await reconcile.reconcile()).toMatchObject({ applied: 0, stopped: true })
+    expect(prisma.cursor).toBe('3') // not advanced: retried next run
+    expect(directory.batch).toHaveBeenCalledTimes(2) // one batch per page, not one read per change
+  })
+
+  it('looks up who it knows with one query per page', async () => {
+    addUser('a', 'uaA')
+    addUser('b', 'uaB')
+    directory.changes.mockResolvedValueOnce({
+      changes: [
+        { eventId: 'e1', type: 'identity.suspended', id: 'uaA', version: 2 },
+        { eventId: 'e2', type: 'identity.suspended', id: 'uaB', version: 2 },
+        { eventId: 'e3', type: 'identity.reactivated', id: 'uaA', version: 3 },
+      ],
+      cursor: '3',
+      hasMore: false,
+    })
+    await reconcile.reconcile()
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(1)
+    expect(prisma.account.findFirst).not.toHaveBeenCalled()
+    expect(directory.batch).not.toHaveBeenCalled() // only updates need profiles
+  })
+
+  describe('UNIAUTH_RECONCILE_HOURS', () => {
+    it('defaults to 6 hours, takes a positive number, caps at a timer limit, and refuses nonsense', () => {
+      for (const raw of [undefined, '', ' ']) expect(reconcileIntervalMs(raw)).toBe(6 * 3_600_000)
+      expect(reconcileIntervalMs('0.5')).toBe(1_800_000)
+      expect(reconcileIntervalMs('100000')).toBe(2 ** 31 - 1)
+      for (const raw of ['0', '-1', 'abc', 'Infinity'])
+        expect(() => reconcileIntervalMs(raw)).toThrow(/positive number/)
+    })
   })
 })

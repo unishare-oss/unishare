@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { CronLockModule } from '@/common/cron-lock.module'
 import { UniauthController } from './uniauth.controller'
 import { UniauthLogoutService } from './uniauth-logout.service'
 import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
@@ -10,6 +11,7 @@ import { UniauthReconcileService } from './uniauth-reconcile.service'
 
 /** uniauth → unishare server-to-server callbacks (sign-out, account deletion and updates). */
 @Module({
+  imports: [CronLockModule],
   controllers: [UniauthController],
   providers: [
     UniauthLogoutService,

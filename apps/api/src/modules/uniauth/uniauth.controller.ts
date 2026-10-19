@@ -10,8 +10,6 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common'
-import { Res } from '@nestjs/common'
-import type { Response } from 'express'
 import { ApiExcludeController, ApiOkResponse } from '@nestjs/swagger'
 import { AllowAnonymous, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@/auth/auth.config'
@@ -101,12 +99,11 @@ export class UniauthController {
    */
   @Post('identity-events')
   @AllowAnonymous()
+  @HttpCode(204)
   @Header('Cache-Control', 'no-store')
-  async identityEvent(@Body() dto: UniauthEventDto, @Res({ passthrough: true }) res: Response) {
+  async identityEvent(@Body() dto: UniauthEventDto) {
     const status = await this.identityEvents.handle(dto.token)
     if (status === 401) throw new UnauthorizedException('invalid token')
     if (status === 400) throw new BadRequestException('invalid event')
-    res.status(204)
-    return null
   }
 }

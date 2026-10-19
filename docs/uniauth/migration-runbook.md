@@ -34,13 +34,15 @@ normal. No primary key is ever rewritten.
 
 ## 2. Expand (additive, reversible)
 
-1. `pnpm --filter api db:deploy` applies `…_uniauth_identity_events` (new columns and two tables; nothing changes for the
-   running app). `…_account_provider_unique` refuses to run if duplicate `(providerId, accountId)` rows exist, which the report
-   lists; it is a `DROP INDEX` to undo.
+1. `pnpm --filter api exec prisma migrate deploy` applies `…_uniauth_identity_events` (new columns and two tables; nothing
+   changes for the running app). The unique `(providerId, accountId)` index is **not** a migration: after the mapping report exits
+   0, run `docs/uniauth/sql/account-provider-unique.sql` by hand (`psql "$DATABASE_URL" -f …`, no wrapping transaction). It refuses
+   to run if duplicates exist and builds the index concurrently; `DROP INDEX "account_providerId_accountId_key"` undoes it. The app
+   works without it.
 2. Deploy the API with the new receiver. The legacy notices keep working; nothing is delivered to the new endpoint yet.
 3. In the uniauth dashboard: add a machine credential to the Unishare environment (`directory:read`, `identity:events`), set
    `identity_events_uri`, run **Connection check**, store the secret as `UNIAUTH_DIRECTORY_CLIENT_*`, redeploy.
-   (Unishare only: leave `identity_events_uri` unset until memberships are in the directory, see integration.md.)
+   (Unishare can use v1 events fully: the directory carries university memberships, so an update also refreshes the university.)
 4. Watch the receiver and the reconcile log for a day: duplicates and stale answers are normal; 401/503 are not.
 
 ## 3. Verify (staging)
@@ -60,11 +62,12 @@ Each step is independent and loses nothing:
    client), unset `UNIAUTH_DIRECTORY_CLIENT_*`, redeploy. Pending deliveries stay queued in uniauth and may be replayed or
    dropped; receipts and the cursor are kept.
 2. **Roll back the code**: the previous API image ignores the new columns and tables. Do not drop them.
-3. **Constraint**: `DROP INDEX "account_providerId_accountId_key";` only if it blocks something.
+3. **Constraint**: `DROP INDEX "account_providerId_accountId_key";` only if it blocks something (it was applied by hand, so
+   there is no migration to revert).
 4. Never reactivate a suspended account, restore a deleted one or rewrite ids as part of a rollback; those stay as uniauth
    says. Sessions ended by a suspension are not restored.
 
 ## Needs staging (cannot be proven in a throwaway database)
 
-Real mapping report and `--directory` comparison, the duplicate/conflict decisions, the rollback exercise above, observed
-propagation latency, and the university membership gap.
+Real mapping report and `--directory` comparison, the duplicate/conflict decisions, the manual index step, the rollback exercise
+above, applying the migration to a real schema (pgvector), and observed propagation latency.

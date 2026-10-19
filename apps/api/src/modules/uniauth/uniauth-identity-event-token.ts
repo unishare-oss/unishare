@@ -1,5 +1,5 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
-import { uniauthConfig, uniauthDirectoryConfig } from '@/auth/uniauth-config'
+import { uniauthDirectoryConfig } from '@/auth/uniauth-config'
+import { verifyUniauthJwt } from './uniauth-event-token'
 
 export const IDENTITY_EVENT = 'urn:uniauth:event:identity'
 export const CONNECTION_CHECK_EVENT = 'urn:uniauth:event:connection-check'
@@ -22,23 +22,14 @@ export type IdentityEventResult =
   /** 400: a verified token this receiver cannot use; uniauth treats it as final. */
   | { kind: 'malformed' }
 
-const jwks = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
-
 /**
  * Verifies a v1 identity event token: signed with uniauth's key, issued by it, for one of this app's machine clients
  * (several during a credential rotation), carrying exactly one event of a known kind and schema version, about the
  * token's own subject.
  */
 export async function verifyIdentityEvent(token: string): Promise<IdentityEventResult> {
-  let payload: JWTPayload
-  try {
-    ;({ payload } = await jwtVerify(token, jwks, {
-      issuer: uniauthConfig.issuer,
-      audience: uniauthDirectoryConfig().audiences,
-    }))
-  } catch {
-    return { kind: 'unverified' }
-  }
+  const payload = await verifyUniauthJwt(token, uniauthDirectoryConfig().audiences)
+  if (!payload) return { kind: 'unverified' }
   const events = payload.events as Record<string, unknown> | undefined
   if (
     !events ||

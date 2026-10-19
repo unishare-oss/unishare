@@ -10,6 +10,8 @@ export interface DirectoryIdentity {
   image?: string | null
   status: 'active' | 'suspended' | 'deleted'
   version: number
+  /** University memberships (`urn:uniauth:organizations`), as in the ID token: `verified` = proven by the email domain. */
+  'urn:uniauth:organizations'?: { id: string; verified: boolean }[]
 }
 
 export interface DirectoryChange {
@@ -118,6 +120,8 @@ export class UniauthDirectoryClient {
     const d = data as Record<string, unknown> | null
     if (!d || typeof d.id !== 'string' || typeof d.version !== 'number') return null
     if (!['active', 'suspended', 'deleted'].includes(String(d.status))) return null
+    // A deleted account is a tombstone: the id, the status and the last version, no profile.
+    if (d.status === 'deleted') return { id: d.id, status: 'deleted', version: d.version }
     return d as unknown as DirectoryIdentity
   }
 

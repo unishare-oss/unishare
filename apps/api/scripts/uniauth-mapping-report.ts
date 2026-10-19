@@ -190,37 +190,25 @@ async function main() {
   try {
     const report = await buildMappingReport(client)
     if (process.argv.includes('--directory')) {
-      const issuer = (process.env.UNIAUTH_ISSUER ?? '').replace(/\/+$/, '')
-      const id = process.env.UNIAUTH_DIRECTORY_CLIENT_ID
-      const secret = process.env.UNIAUTH_DIRECTORY_CLIENT_SECRET
-      if (!issuer || !id || !secret)
+      // The same client the API uses (machine token, timeouts, typed 503s), so a failure says what is wrong.
+      // Loaded only here: it reads UNIAUTH_* settings, which a plain database report does not need.
+      await import('reflect-metadata')
+      const { UniauthDirectoryClient } =
+        await import('../src/modules/uniauth/uniauth-directory.client')
+      const directory = new UniauthDirectoryClient()
+      if (!directory.enabled()) {
         throw new Error('--directory needs UNIAUTH_ISSUER and UNIAUTH_DIRECTORY_CLIENT_ID/SECRET')
-      const origin = new URL(issuer).origin
-      const tokenRes = await fetch(`${issuer}/oauth2/token`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`,
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          resource: `${origin}/api/directory`,
-        }),
-      })
-      const token = ((await tokenRes.json()) as { access_token: string }).access_token
+      }
       await compareWithDirectory(client, report, {
         batch: async (ids) => {
-          const res = await fetch(`${origin}/api/directory/v1/users/batch`, {
-            method: 'POST',
-            headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-            body: JSON.stringify({ ids }),
+          const answers = await directory.batch(ids).catch((error: unknown) => {
+            throw new Error(
+              `could not read uniauth's directory (see the log above): ${String(error)}`,
+            )
           })
-          const results = (
-            (await res.json()) as {
-              data: { results: { id: string; result: string; data?: { email?: string } }[] }
-            }
-          ).data.results
-          return new Map(results.map((r) => [r.id, { result: r.result, email: r.data?.email }]))
+          return new Map(
+            [...answers].map(([id, a]) => [id, { result: a.result, email: a.identity?.email }]),
+          )
         },
       })
     }
