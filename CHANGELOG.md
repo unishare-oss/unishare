@@ -1,3 +1,14 @@
+# [0.33.0](https://github.com/unishare-oss/unishare/compare/v0.32.0...v0.33.0) (2026-10-19)
+
+### Bug Fixes
+
+- **uniauth:** lock-safe identity events, memberships from the directory, manual unique index ([e7ffa10](https://github.com/unishare-oss/unishare/commit/e7ffa10cad064f50af7d94cbf49e13b8cccaa8e6))
+
+### Features
+
+- **api:** add the uniauth mapping report and the migration runbook ([d3a7265](https://github.com/unishare-oss/unishare/commit/d3a726598c445d8fe062ade756cd6235ea7b0427))
+- **api:** apply uniauth v1 identity events and reconcile from the change feed ([1a44d52](https://github.com/unishare-oss/unishare/commit/1a44d52466201769ae8b2de4cf6416dacd31c510))
+
 # [0.32.0](https://github.com/unishare-oss/unishare/compare/v0.31.2...v0.32.0) (2026-10-18)
 
 ### Bug Fixes
