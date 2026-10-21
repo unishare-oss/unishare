@@ -25,6 +25,8 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
+  unicorpTermsVersion     Int?
+  unicorpTermsAcceptedAt  DateTime?
   /// The last uniauth identity version applied to this person (null until one is); an event applies only if newer.
   identityVersion         Int?
   /// uniauth's account state: active | suspended. Separate from the local ban (banned): a ban is Unishare's own decision.

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { takeReturnTo } from '@/src/lib/auth/uniauth'
+import { signInWithUniauth, takeReturnTo } from '@/src/lib/auth/uniauth'
 
 /**
  * Where unishare's Better Auth sends uniauth errors (onAPIError.errorURL). login_required is
@@ -13,6 +13,12 @@ export default function UniauthReturnPage() {
     const params = new URLSearchParams(window.location.search)
     const error = params.get('error')
     const returnTo = takeReturnTo()
+    if (error === 'interaction_required') {
+      void signInWithUniauth({
+        returnTo: new URL(returnTo ?? '/feed', window.location.origin).href,
+      })
+      return
+    }
     if (!error || error === 'login_required') window.location.replace(returnTo ?? '/feed')
     else window.location.replace(`/login?error=${encodeURIComponent(error)}`)
   }, [])

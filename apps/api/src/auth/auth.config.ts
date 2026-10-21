@@ -9,6 +9,7 @@ import { clientIp, createAuditHooks, recordSafely } from './audit-hooks'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
+import { verifiedSharedTerms } from './shared-terms'
 import {
   mapUniauthProfile,
   uniauthSidFromIdToken,
@@ -70,6 +71,7 @@ export const auth = betterAuth({
           clientSecret: uniauthConfig.clientSecret,
           authentication: 'basic',
           pkce: true,
+          requireIdTokenVerification: true,
           scopes: ['openid', 'profile', 'email', 'offline_access'],
           // Name, avatar and university are uniauth's: refreshed on every sign-in.
           overrideUserInfo: true,
@@ -155,6 +157,8 @@ export const auth = betterAuth({
         input: true,
         returned: true,
       },
+      unicorpTermsVersion: { type: 'number', required: false, input: false, returned: true },
+      unicorpTermsAcceptedAt: { type: 'date', required: false, input: false, returned: true },
       consentGivenAt: {
         type: 'date',
         required: false,
@@ -179,6 +183,11 @@ export const auth = betterAuth({
           const accounts = ctx ? await ctx.context.internalAdapter.findAccounts(session.userId) : []
           const uniauth = accounts.find((a) => a.providerId === UNIAUTH_PROVIDER_ID)
           const uniauthSid = uniauthSidFromIdToken(uniauth?.idToken)
+          // input:false profile fields are intentionally filtered by Better Auth; copy verified evidence explicitly.
+          if (uniauth?.idToken) {
+            const evidence = await verifiedSharedTerms(uniauth.idToken, uniauth.accountId)
+            await prisma.user.update({ where: { id: session.userId }, data: evidence })
+          }
           return { data: uniauthSid ? { ...session, uniauthSid } : session }
         },
         // Guests get a session per visit and are not worth a row each; a real sign-in is.
@@ -204,9 +213,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => ({ data: withoutAvatarPlaceholder(user) }),
-        // Guests accept the terms by continuing as a guest. Everyone else accepts them on
-        // unishare's own consent screen (POST /users/me/consent): signing up on another app
-        // (unigym) and arriving here through single sign-on is not agreeing to unishare's.
+        // Guest access keeps its existing app-only acceptance; signed-in people use UniAuth's shared record.
         after: async (user) => {
           if ((user as { isAnonymous?: boolean }).isAnonymous && !user.consentGivenAt) {
             await prisma.user.update({
