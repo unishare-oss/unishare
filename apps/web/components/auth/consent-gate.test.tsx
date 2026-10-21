@@ -1,51 +1,38 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ConsentGate } from './consent-gate'
 
-vi.mock('next/image', () => ({
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} />,
-}))
+const connect = vi.fn()
 const signOut = vi.fn()
+vi.mock('@/src/lib/auth/uniauth', () => ({ signInWithUniauth: (value: unknown) => connect(value) }))
 vi.mock('@/src/lib/auth/sign-out', () => ({ signOut: () => signOut() }))
 
+beforeEach(() => {
+  sessionStorage.clear()
+  connect.mockResolvedValue(undefined)
+})
+afterEach(() => vi.clearAllMocks())
+
 describe('ConsentGate', () => {
-  const realFetch = global.fetch
-  afterEach(() => {
-    global.fetch = realFetch
-    vi.clearAllMocks()
+  it('refreshes through UniAuth instead of accepting terms in the app', async () => {
+    render(<ConsentGate />)
+    await waitFor(() => expect(connect).toHaveBeenCalledWith({ returnTo: window.location.href }))
+    expect(screen.queryByRole('button', { name: 'I agree' })).not.toBeInTheDocument()
   })
-
-  it('records consent, then lets the user in', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
-    global.fetch = fetchMock
-    const onAccepted = vi.fn()
-    render(<ConsentGate onAccepted={onAccepted} />)
-
-    expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', '/terms')
-    await userEvent.click(screen.getByRole('button', { name: 'I agree' }))
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/users/me/consent', {
-      method: 'POST',
-      credentials: 'include',
-    })
-    expect(onAccepted).toHaveBeenCalled()
+  it('stops repeated redirects and lets the user retry', async () => {
+    sessionStorage.setItem('unishare:shared-terms-refresh', '1')
+    render(<ConsentGate />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm')
+    expect(connect).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(connect).toHaveBeenCalledTimes(1)
   })
-
-  it('keeps the user out and says so when saving fails', async () => {
-    global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 500 }))
-    const onAccepted = vi.fn()
-    render(<ConsentGate onAccepted={onAccepted} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'I agree' }))
-
-    expect(await screen.findByText(/Could not save that/)).toBeInTheDocument()
-    expect(onAccepted).not.toHaveBeenCalled()
-  })
-
-  it('offers a way out', async () => {
-    render(<ConsentGate onAccepted={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Not now, sign out' }))
+  it('offers sign-out if UniAuth cannot be reached', async () => {
+    connect.mockRejectedValue(new Error('network'))
+    render(<ConsentGate />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not connect')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(signOut).toHaveBeenCalled()
   })
 })

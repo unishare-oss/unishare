@@ -28,7 +28,7 @@ export class UsersController {
     return this.usersService.exportData(session.user.id)
   }
 
-  /** Accepts unishare's Terms and Privacy Policy (the web app asks once, before first use). */
+  /** Compatibility endpoint: confirms shared acceptance recorded on UniAuth. */
   @Post('me/consent')
   @HttpCode(200)
   @ResponseMessage('Consent recorded')
