@@ -6,7 +6,23 @@ export const USER_DELETED_EVENT = 'urn:uniauth:event:user-deleted'
 export const USER_UPDATED_EVENT = 'urn:uniauth:event:user-updated'
 const EVENTS = [LOGOUT_EVENT, USER_DELETED_EVENT, USER_UPDATED_EVENT]
 
-const jwks = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
+/** uniauth's signing keys, fetched lazily and cached: ONE key set shared by the legacy and the v1 event verifiers. */
+export const jwks = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
+
+/**
+ * The core of every uniauth event check: signed with uniauth's key, issued by it, for one of `audience` (the login client
+ * for the legacy notices, the machine client for v1 identity events), not expired. Null if any of that fails.
+ */
+export async function verifyUniauthJwt(
+  token: string,
+  audience: string | string[],
+): Promise<JWTPayload | null> {
+  try {
+    return (await jwtVerify(token, jwks, { issuer: uniauthConfig.issuer, audience })).payload
+  } catch {
+    return null
+  }
+}
 
 /**
  * Verifies a server-to-server event token from uniauth (back-channel logout, account
@@ -20,15 +36,8 @@ export async function verifyUniauthEventData(
   token: string,
   event: string,
 ): Promise<{ sub: string; sid: string | null; data: Record<string, unknown> } | null> {
-  let payload: JWTPayload
-  try {
-    ;({ payload } = await jwtVerify(token, jwks, {
-      issuer: uniauthConfig.issuer,
-      audience: uniauthConfig.clientId,
-    }))
-  } catch {
-    return null
-  }
+  const payload = await verifyUniauthJwt(token, uniauthConfig.clientId)
+  if (!payload) return null
   const events = payload.events as Record<string, unknown> | undefined
   const data = events?.[event]
   if (!events || !data || typeof data !== 'object' || 'nonce' in payload) return null

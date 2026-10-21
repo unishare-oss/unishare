@@ -1,4 +1,4 @@
-import { ExecutionContext } from '@nestjs/common'
+import { ExecutionContext, ForbiddenException } from '@nestjs/common'
 import { verifyMcpAccessToken, resolveLocalUserId } from '@/modules/mcp/mcp-token.verifier'
 import { McpAuthGuard } from './mcp-auth.guard'
 
@@ -18,12 +18,28 @@ function contextFor(req: Record<string, unknown>, res: Record<string, unknown>):
 }
 
 describe('McpAuthGuard', () => {
-  const guard = new McpAuthGuard({} as never)
+  const findUser = jest.fn().mockResolvedValue({ identityStatus: 'active' })
+  const guard = new McpAuthGuard({ user: { findUnique: findUser } } as never)
   const verify = verifyMcpAccessToken as jest.Mock
   const resolve = resolveLocalUserId as jest.Mock
 
   beforeEach(() => {
     jest.clearAllMocks()
+    findUser.mockResolvedValue({ identityStatus: 'active' })
+  })
+
+  it('refuses a still-valid token of a suspended person with 403 account_suspended', async () => {
+    verify.mockResolvedValue({ userId: 'ua_1', scopes: 'openid posts:write' })
+    resolve.mockResolvedValue('user-1')
+    findUser.mockResolvedValue({ identityStatus: 'suspended' })
+    const req: Record<string, unknown> = { headers: { authorization: 'Bearer abc' } }
+    const error = await guard.canActivate(contextFor(req, {})).then(
+      () => null,
+      (e: unknown) => e,
+    )
+    expect(error).toBeInstanceOf(ForbiddenException)
+    expect((error as ForbiddenException).getResponse()).toMatchObject({ code: 'account_suspended' })
+    expect(req.mcpSession).toBeUndefined()
   })
 
   it('attaches the local user’s session to the request and allows the call through', async () => {

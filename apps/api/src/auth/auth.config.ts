@@ -174,6 +174,12 @@ export const auth = betterAuth({
         // Better Auth has just saved on the account), so a back-channel logout for one device
         // ends only this device's unishare sessions. Guests have no uniauth account.
         before: async (session, ctx) => {
+          // Suspended on uniauth: no new sessions (uniauth refuses the sign-in too; this closes the gap until its event).
+          const holder = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { identityStatus: true },
+          })
+          if (holder?.identityStatus === 'suspended') return false
           const accounts = ctx ? await ctx.context.internalAdapter.findAccounts(session.userId) : []
           const uniauth = accounts.find((a) => a.providerId === UNIAUTH_PROVIDER_ID)
           const uniauthSid = uniauthSidFromIdToken(uniauth?.idToken)
