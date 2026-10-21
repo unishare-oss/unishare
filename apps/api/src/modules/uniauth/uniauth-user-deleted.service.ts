@@ -25,8 +25,17 @@ export class UniauthUserDeletedService {
     const uniauthUserId = await verifyUniauthEvent(token, USER_DELETED_EVENT)
     if (!uniauthUserId) return false
 
+    await this.deleteLocalUser(uniauthUserId)
+    return true
+  }
+
+  /**
+   * The deletion itself, shared with the v1 identity event `identity.deleted` so both do exactly the same thing.
+   * Safe to repeat: someone who never used unishare, or is already gone, is a no-op.
+   */
+  async deleteLocalUser(uniauthUserId: string): Promise<void> {
     const userId = await resolveLocalUserId(this.prisma, uniauthUserId)
-    if (!userId) return true // never used unishare: nothing to delete
+    if (!userId) return // never used unishare: nothing to delete
     // Name and role are looked up now: the row is gone once the user is deleted.
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -46,6 +55,5 @@ export class UniauthUserDeletedService {
       metadata: { uniauthUserId },
     })
     this.logger.log(`Deleted user ${userId} (uniauth account ${uniauthUserId} was deleted)`)
-    return true
   }
 }

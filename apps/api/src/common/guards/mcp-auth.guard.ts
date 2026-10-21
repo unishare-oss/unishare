@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common'
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common'
 import type { Request, Response } from 'express'
 import { PrismaService } from '@/prisma/prisma.service'
 import type { McpAuthSession } from '@/modules/mcp/dto/mcp-auth-session.dto'
@@ -56,6 +56,18 @@ export class McpAuthGuard implements CanActivate {
     const verified = await verifyMcpAccessToken(token)
     if (!verified) return null
     const userId = await resolveLocalUserId(this.prisma, verified.userId)
-    return userId ? { ...verified, userId } : null
+    if (!userId) return null
+    // Suspended on uniauth: a still-valid agent token must not keep working (403, not a token problem).
+    const holder = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { identityStatus: true },
+    })
+    if (holder?.identityStatus === 'suspended') {
+      throw new ForbiddenException({
+        code: 'account_suspended',
+        message: 'This account is suspended',
+      })
+    }
+    return { ...verified, userId }
   }
 }
