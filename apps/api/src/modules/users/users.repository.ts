@@ -32,6 +32,8 @@ export class UsersRepository {
         enrollmentYear: true,
         createdAt: true,
         consentGivenAt: true,
+        unicorpTermsVersion: true,
+        unicorpTermsAcceptedAt: true,
         department: { select: { id: true, name: true } },
         posts: {
           where: { deletedAt: null },
@@ -88,13 +90,6 @@ export class UsersRepository {
       where: { id },
       data: dto,
       include: this.countInclude,
-    })
-  }
-
-  giveConsent(id: string, at: Date) {
-    return this.prisma.user.updateMany({
-      where: { id, consentGivenAt: null },
-      data: { consentGivenAt: at },
     })
   }
 

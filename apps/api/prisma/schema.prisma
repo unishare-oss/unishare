@@ -25,6 +25,8 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
+  unicorpTermsVersion     Int?
+  unicorpTermsAcceptedAt  DateTime?
   universityId            String?
   publicKey               String?
   /// Passphrase-encrypted private key backup (PBKDF2 + AES-GCM blob, opaque to the server)

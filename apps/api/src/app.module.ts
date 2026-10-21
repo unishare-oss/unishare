@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
+import { SharedTermsGuard } from './auth/shared-terms.guard'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerModule } from '@nestjs/throttler'
@@ -93,7 +95,7 @@ import { BullMQOtel } from 'bullmq-otel'
     EventEmitterModule.forRoot(),
     PrismaModule,
     StorageModule,
-    AuthModule.forRoot({ auth }),
+    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     CoursesModule,
     UsersModule,
     DepartmentsModule,
@@ -121,6 +123,6 @@ import { BullMQOtel } from 'bullmq-otel'
     McpModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: SharedTermsGuard }],
 })
 export class AppModule {}

@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ForbiddenException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '@/prisma/prisma.service'
 import { computeYearLevel } from '@/common/utils/academic-year'
 import { FollowsService } from '../follows/follows.service'
 import { ChatService } from '../chat/chat.service'
 import { AuditService } from '../audit/audit.service'
-import { AuditAction } from '../audit/audit.actions'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -43,15 +47,14 @@ export class UsersService {
     return this.toProfileView(user)
   }
 
-  /** Records when the user accepted the terms; the first acceptance is the one kept. */
+  /** Compatibility endpoint: shared acceptance can only be recorded by UniAuth. */
   async giveConsent(id: string) {
-    await this.usersRepository.giveConsent(id, new Date())
-    this.audit.record({
-      action: AuditAction.UserConsent,
-      actorId: id,
-      targetType: 'user',
-      targetId: id,
-    })
+    const user = await this.usersRepository.findById(id)
+    if (user?.unicorpTermsVersion !== 1 || !user.unicorpTermsAcceptedAt)
+      throw new ForbiddenException({
+        code: 'consent_required',
+        message: 'Complete shared Unicorp terms through UniAuth',
+      })
   }
 
   async updatePublicKey(id: string, publicKey: string) {
