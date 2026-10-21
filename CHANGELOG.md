@@ -1,3 +1,10 @@
+# [0.34.0](https://github.com/unishare-oss/unishare/compare/v0.33.0...v0.34.0) (2026-10-21)
+
+### Features
+
+- **api:** verify and enforce shared Unicorp acceptance ([267b714](https://github.com/unishare-oss/unishare/commit/267b714c8589695ddea4afc475fab5c10399ec40))
+- **web:** reuse central acceptance during Unishare sign-in ([c677d23](https://github.com/unishare-oss/unishare/commit/c677d23422b946987f4f23af1ae7270a4126e51a))
+
 # [0.33.0](https://github.com/unishare-oss/unishare/compare/v0.32.0...v0.33.0) (2026-10-19)
 
 ### Bug Fixes
