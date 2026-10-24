@@ -48,6 +48,9 @@ export default defineConfig({
           DecksController_getSharedDownloadUrl: {
             query: { useInfinite: false },
           },
+          FollowsController_getMentionable: {
+            query: { useInfinite: false },
+          },
         },
       },
     },

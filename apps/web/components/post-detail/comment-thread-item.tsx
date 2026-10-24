@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
-import { renderWithLinks } from '@/lib/render-with-links'
+import type { MentionPerson } from '@/lib/mentions'
+import { renderWithMentions } from '@/lib/render-with-mentions'
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 
@@ -37,13 +38,15 @@ interface CommentThreadPendingState {
 }
 
 interface CommentThreadEditActions {
-  start: (commentId: string, content: string) => void
+  start: (commentId: string, content: string, mentions: MentionPerson[]) => void
+  pick: (person: MentionPerson) => void
   cancel: () => void
   change: (value: string) => void
   submit: (commentId: string) => void
 }
 
 interface CommentThreadReplyActions {
+  pick: (person: MentionPerson) => void
   start: (commentId: string) => void
   cancel: () => void
   change: (value: string) => void
@@ -142,8 +145,9 @@ export function CommentThreadItem({
 
   return (
     <div
+      id={`comment-${comment.id}`}
       className={cn(
-        'group py-4',
+        'group py-4 scroll-mt-24',
         isTopLevelComment && 'border-b border-border/70 last:border-b-0',
         depth > 0 && 'pb-0',
         layerStyle.indentClassName,
@@ -215,6 +219,7 @@ export function CommentThreadItem({
               <CommentEditor
                 value={editState.editText}
                 onChange={editActions.change}
+                onPick={editActions.pick}
                 onCancel={editActions.cancel}
                 onSubmit={() => editActions.submit(comment.id)}
                 isPending={pendingState.isUpdating}
@@ -232,7 +237,7 @@ export function CommentThreadItem({
               >
                 {isDeletedComment
                   ? comment.content
-                  : renderWithLinks(comment.content, 'text-primary')}
+                  : renderWithMentions(comment.content, comment.mentions, 'text-primary')}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (
@@ -253,7 +258,7 @@ export function CommentThreadItem({
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => editActions.start(comment.id, comment.content)}
+                    onClick={() => editActions.start(comment.id, comment.content, comment.mentions)}
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Edit comment"
                   >
@@ -281,6 +286,7 @@ export function CommentThreadItem({
               <CommentEditor
                 value={replyState.replyText}
                 onChange={replyActions.change}
+                onPick={replyActions.pick}
                 onCancel={replyActions.cancel}
                 onSubmit={() => replyActions.submit(comment.id)}
                 isPending={pendingState.isReplying}
