@@ -14,7 +14,8 @@ import {
 } from '@/src/lib/api/generated/comments/comments'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { MentionTextarea } from '@/components/post-detail/mention-textarea'
+import { mentionIdsIn, type MentionPerson } from '@/lib/mentions'
 import { pluralize } from '@/lib/utils'
 
 interface CommentSectionProps {
@@ -28,6 +29,8 @@ interface DraftState {
   editText: string
   replyCommentId: string | null
   replyText: string
+  commentPicked: MentionPerson[]
+  replyPicked: MentionPerson[]
 }
 
 const INITIAL_DRAFT_STATE: DraftState = {
@@ -36,6 +39,8 @@ const INITIAL_DRAFT_STATE: DraftState = {
   editText: '',
   replyCommentId: null,
   replyText: '',
+  commentPicked: [],
+  replyPicked: [],
 }
 
 export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
@@ -54,7 +59,15 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
   const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
 
-  const { commentText, editingCommentId, editText, replyCommentId, replyText } = drafts
+  const {
+    commentText,
+    editingCommentId,
+    editText,
+    replyCommentId,
+    replyText,
+    commentPicked,
+    replyPicked,
+  } = drafts
 
   const commentThreadViewer = {
     user,
@@ -100,6 +113,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       ...current,
       replyCommentId: commentId,
       replyText,
+      replyPicked: [],
     }))
   }
 
@@ -140,8 +154,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await createComment({ postId, data: { content } })
-      setDrafts((current) => ({ ...current, commentText: '' }))
+      await createComment({
+        postId,
+        data: { content, mentions: mentionIdsIn(content, commentPicked) },
+      })
+      setDrafts((current) => ({ ...current, commentText: '', commentPicked: [] }))
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
       })
@@ -158,7 +175,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await createReply({ postId, commentId, data: { content } })
+      await createReply({
+        postId,
+        commentId,
+        data: { content, mentions: mentionIdsIn(content, replyPicked) },
+      })
       cancelReply()
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
@@ -197,6 +218,8 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     start: startReply,
     cancel: cancelReply,
     change: (value: string) => setDrafts((current) => ({ ...current, replyText: value })),
+    pick: (person: MentionPerson) =>
+      setDrafts((current) => ({ ...current, replyPicked: [...current.replyPicked, person] })),
     submit: handleReplySubmit,
   }
 
@@ -207,9 +230,15 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       </h2>
 
       <div className="mb-6">
-        <Textarea
+        <MentionTextarea
           value={commentText}
-          onChange={(e) => setDrafts((current) => ({ ...current, commentText: e.target.value }))}
+          onValueChange={(value) => setDrafts((current) => ({ ...current, commentText: value }))}
+          onPick={(person) =>
+            setDrafts((current) => ({
+              ...current,
+              commentPicked: [...current.commentPicked, person],
+            }))
+          }
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.shiftKey) {
               e.preventDefault()

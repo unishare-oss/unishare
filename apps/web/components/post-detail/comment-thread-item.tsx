@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { CommentEntity, UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { cn } from '@/lib/utils'
-import { renderWithLinks } from '@/lib/render-with-links'
+import type { MentionPerson } from '@/lib/mentions'
+import { renderWithMentions } from '@/lib/render-with-mentions'
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 
@@ -44,6 +45,7 @@ interface CommentThreadEditActions {
 }
 
 interface CommentThreadReplyActions {
+  pick: (person: MentionPerson) => void
   start: (commentId: string) => void
   cancel: () => void
   change: (value: string) => void
@@ -232,7 +234,7 @@ export function CommentThreadItem({
               >
                 {isDeletedComment
                   ? comment.content
-                  : renderWithLinks(comment.content, 'text-primary')}
+                  : renderWithMentions(comment.content, comment.mentions, 'text-primary')}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (
@@ -281,6 +283,7 @@ export function CommentThreadItem({
               <CommentEditor
                 value={replyState.replyText}
                 onChange={replyActions.change}
+                onPick={replyActions.pick}
                 onCancel={replyActions.cancel}
                 onSubmit={() => replyActions.submit(comment.id)}
                 isPending={pendingState.isReplying}

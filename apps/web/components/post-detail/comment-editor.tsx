@@ -1,7 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { MentionTextarea } from '@/components/post-detail/mention-textarea'
 import { Textarea } from '@/components/ui/textarea'
+import type { MentionPerson } from '@/lib/mentions'
 
 interface CommentEditorProps {
   value: string
@@ -12,6 +14,8 @@ interface CommentEditorProps {
   submitLabel: string
   pendingLabel: string
   placeholder?: string
+  /** Turns on @ suggestions. Leave out where mentions are not saved, such as editing. */
+  onPick?: (person: MentionPerson) => void
 }
 
 export function CommentEditor({
@@ -23,22 +27,28 @@ export function CommentEditor({
   submitLabel,
   pendingLabel,
   placeholder,
+  onPick,
 }: CommentEditorProps) {
+  const shared = {
+    value,
+    onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault()
+        if (value.trim() && !isPending) onSubmit()
+      }
+    },
+    placeholder,
+    rows: 3,
+    className: 'resize-none',
+  }
+
   return (
     <div className="space-y-3">
-      <Textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && e.shiftKey) {
-            e.preventDefault()
-            if (value.trim() && !isPending) onSubmit()
-          }
-        }}
-        placeholder={placeholder}
-        rows={3}
-        className="resize-none"
-      />
+      {onPick ? (
+        <MentionTextarea {...shared} onValueChange={onChange} onPick={onPick} />
+      ) : (
+        <Textarea {...shared} onChange={(event) => onChange(event.target.value)} />
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] text-text-muted select-none">
           <kbd className="font-mono">Shift</kbd> + <kbd className="font-mono">Enter</kbd> to submit
