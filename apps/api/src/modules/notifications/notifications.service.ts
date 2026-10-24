@@ -93,8 +93,10 @@ export class NotificationsService {
     commenterId: string,
     postTitle?: string | null,
     commenterName?: string,
+    exceptUserIds: string[] = [],
   ) {
     if (postAuthorId === commenterId) return
+    if (exceptUserIds.includes(postAuthorId)) return
 
     const who = commenterName ?? 'Someone'
     const title = postTitle ? `"${postTitle}"` : 'your post'
@@ -105,6 +107,32 @@ export class NotificationsService {
       postId,
     })
     this.events$.next({ userId: postAuthorId, data: notification })
+  }
+
+  async notifyMentions(args: {
+    postId: string
+    commentId: string
+    actorName: string
+    postTitle?: string | null
+    recipientIds: string[]
+  }) {
+    const { postId, commentId, actorName, postTitle, recipientIds } = args
+    if (recipientIds.length === 0) return
+
+    const title = postTitle ? `"${postTitle}"` : 'a post'
+    const message = `${actorName} mentioned you in a comment on ${title}.`
+    const notifications = await this.notificationsRepository.createMentions(
+      recipientIds.map((userId) => ({
+        userId,
+        type: NotificationType.MENTION,
+        message,
+        postId,
+        commentId,
+      })),
+    )
+    for (const notification of notifications) {
+      this.events$.next({ userId: notification.userId, data: notification })
+    }
   }
 
   async notifyFollowersNewPost(

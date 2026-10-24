@@ -18,6 +18,18 @@ export class NotificationsRepository {
     return this.prisma.notification.create({ data })
   }
 
+  createMentions(
+    rows: {
+      userId: string
+      type: NotificationType
+      message: string
+      postId: string
+      commentId: string
+    }[],
+  ) {
+    return this.prisma.notification.createManyAndReturn({ data: rows, skipDuplicates: true })
+  }
+
   findByUser(userId: string) {
     return this.prisma.notification.findMany({
       where: { userId },
@@ -32,6 +44,7 @@ export class NotificationsRepository {
         requestId: true,
         chatRoomId: true,
         examId: true,
+        commentId: true,
         createdAt: true,
       },
     })

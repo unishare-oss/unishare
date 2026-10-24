@@ -267,19 +267,20 @@ model PostChunk {
 }
 
 model Comment {
-  id         String    @id @default(cuid())
-  content    String
-  userId     String
-  postId     String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-  parentId   String?
-  mentionIds String[]  @default([])
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  children   Comment[] @relation("CommentReplies")
-  post       Post      @relation(fields: [postId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  id            String         @id @default(cuid())
+  content       String
+  userId        String
+  postId        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  parentId      String?
+  mentionIds    String[]       @default([])
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children      Comment[]      @relation("CommentReplies")
+  post          Post           @relation(fields: [postId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  notifications Notification[]
 
   @@index([userId])
   @@index([postId])
@@ -392,12 +393,15 @@ model Notification {
   requestId  String?
   chatRoomId String?
   examId     String?
+  commentId  String?
   post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   request    PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   chatRoom   ChatRoom?        @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   exam       Exam?            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  comment    Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([commentId, userId])
   @@index([userId])
   @@map("notification")
 }
@@ -839,6 +843,7 @@ enum NotificationType {
   NEW_POST_FROM_FOLLOWED
   CHAT_MESSAGE
   EXAM_REMINDER
+  MENTION
 }
 
 enum UserRole {

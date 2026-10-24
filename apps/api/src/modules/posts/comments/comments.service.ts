@@ -63,12 +63,20 @@ export class CommentsService {
     const mentionIds = await this.followsService.keepConnected(userId, dto.mentions ?? [])
     const created = await this.commentsRepository.create(postId, userId, dto, mentionIds)
     const [comment] = await this.withMentions([created])
+    void this.notificationsService.notifyMentions({
+      postId,
+      commentId: comment.id,
+      actorName: comment.user.name,
+      postTitle: post.title,
+      recipientIds: mentionIds,
+    })
     void this.notificationsService.notifyComment(
       postId,
       post.authorId,
       userId,
       post.title,
       comment.user.name,
+      mentionIds,
     )
     return comment
   }
