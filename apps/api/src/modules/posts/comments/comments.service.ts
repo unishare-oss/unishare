@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
+import { FollowsService } from '../../follows/follows.service'
 import { PostsService } from '../posts.service'
 import { AuditService } from '../../audit/audit.service'
 import { AuditAction } from '../../audit/audit.actions'
@@ -20,7 +21,10 @@ type CommentTreeNode = FlatCommentNode & {
   children?: CommentTreeNode[]
 }
 
-type CommentResponseNode = CommentTreeNode
+type CommentResponseNode = Omit<CommentTreeNode, 'mentionIds' | 'children'> & {
+  mentions: { id: string; name: string }[]
+  children?: CommentResponseNode[]
+}
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 const DELETED_COMMENT_USER = {
@@ -36,13 +40,14 @@ export class CommentsService {
     private readonly postsService: PostsService,
     private readonly notificationsService: NotificationsService,
     private readonly audit: AuditService,
+    private readonly followsService: FollowsService,
   ) {}
 
   async findAll(postId: string) {
     await this.postsService.assertCommentTargetExists(postId)
 
     const comments = await this.commentsRepository.findAll(postId)
-    return this.sanitizeCommentTree(this.buildCommentTree(comments))
+    return this.withMentions(this.sanitizeCommentTree(this.buildCommentTree(comments)))
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
@@ -55,7 +60,9 @@ export class CommentsService {
       }
     }
 
-    const comment = await this.commentsRepository.create(postId, userId, dto)
+    const mentionIds = await this.followsService.keepConnected(userId, dto.mentions ?? [])
+    const created = await this.commentsRepository.create(postId, userId, dto, mentionIds)
+    const [comment] = await this.withMentions([created])
     void this.notificationsService.notifyComment(
       postId,
       post.authorId,
@@ -78,7 +85,9 @@ export class CommentsService {
       throw new ForbiddenException('You do not own this comment')
     }
 
-    return this.commentsRepository.update(commentId, dto)
+    const updated = await this.commentsRepository.update(commentId, dto)
+    const [result] = await this.withMentions([updated])
+    return result
   }
 
   async remove(postId: string, commentId: string, userId: string, userRole: UserRole) {
@@ -107,7 +116,36 @@ export class CommentsService {
       targetId: commentId,
       metadata: { postId, authorId: comment.userId, byOwner: isCommentOwner },
     })
-    return this.sanitizeComment(deletedComment)
+    const [result] = await this.withMentions([this.sanitizeComment(deletedComment)])
+    return result
+  }
+
+  async withMentions(comments: CommentTreeNode[]): Promise<CommentResponseNode[]> {
+    const ids = new Set<string>()
+    const collect = (nodes: CommentTreeNode[]) => {
+      for (const node of nodes) {
+        if (!node.deletedAt) node.mentionIds.forEach((id) => ids.add(id))
+        if (node.children) collect(node.children)
+      }
+    }
+    collect(comments)
+
+    const users = ids.size > 0 ? await this.commentsRepository.findUserNames([...ids]) : []
+    const names = new Map(users.map((user) => [user.id, user.name]))
+
+    const attach = (nodes: CommentTreeNode[]): CommentResponseNode[] =>
+      nodes.map(({ mentionIds, children, ...rest }) => ({
+        ...rest,
+        mentions: rest.deletedAt
+          ? []
+          : mentionIds.flatMap((id) => {
+              const name = names.get(id)
+              return name === undefined ? [] : [{ id, name }]
+            }),
+        ...(children ? { children: attach(children) } : {}),
+      }))
+
+    return attach(comments)
   }
 
   private buildCommentTree(comments: FlatCommentNode[]) {
@@ -131,11 +169,11 @@ export class CommentsService {
     return roots
   }
 
-  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentResponseNode[] {
+  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentTreeNode[] {
     return comments.map((comment) => this.sanitizeComment(comment))
   }
 
-  private sanitizeComment(comment: CommentTreeNode): CommentResponseNode {
+  private sanitizeComment(comment: CommentTreeNode): CommentTreeNode {
     const children = comment.children ? this.sanitizeCommentTree(comment.children) : undefined
 
     if (!comment.deletedAt) {

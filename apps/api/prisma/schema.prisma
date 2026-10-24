@@ -267,18 +267,19 @@ model PostChunk {
 }
 
 model Comment {
-  id        String    @id @default(cuid())
-  content   String
-  userId    String
-  postId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  parentId  String?
-  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Comment[] @relation("CommentReplies")
-  post      Post      @relation(fields: [postId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  id         String    @id @default(cuid())
+  content    String
+  userId     String
+  postId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  parentId   String?
+  mentionIds String[]  @default([])
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Comment[] @relation("CommentReplies")
+  post       Post      @relation(fields: [postId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([postId])

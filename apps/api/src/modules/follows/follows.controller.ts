@@ -1,15 +1,24 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common'
 import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { FollowsService } from './follows.service'
+import { MentionableQueryDto } from './dto/mentionable-query.dto'
+import { MentionableUserEntity } from './entities/mentionable-user.entity'
 import { FollowUserEntity } from './entities/follow-user.entity'
 
 @ApiTags('follows')
 @Controller('users')
 export class FollowsController {
   constructor(private readonly followsService: FollowsService) {}
+
+  @Get('me/mentionable')
+  @ApiOkResponse({ type: [MentionableUserEntity] })
+  @ResponseMessage('Mentionable users fetched successfully')
+  getMentionable(@Query() dto: MentionableQueryDto, @Session() session: UserSession) {
+    return this.followsService.getMentionable(session.user.id, dto.q)
+  }
 
   @Post(':id/follow')
   @ApiOkResponse()

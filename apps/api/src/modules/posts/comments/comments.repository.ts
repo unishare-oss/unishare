@@ -10,6 +10,7 @@ export const commentSelect = {
   userId: true,
   postId: true,
   parentId: true,
+  mentionIds: true,
   deletedAt: true,
   createdAt: true,
   updatedAt: true,
@@ -34,6 +35,13 @@ export class CommentsRepository {
     })
   }
 
+  findUserNames(ids: string[]) {
+    return this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true },
+    })
+  }
+
   findById(id: string) {
     return this.prisma.comment.findUnique({
       where: { id },
@@ -51,12 +59,13 @@ export class CommentsRepository {
     })
   }
 
-  create(postId: string, userId: string, dto: CreateCommentDto) {
+  create(postId: string, userId: string, dto: CreateCommentDto, mentionIds: string[]) {
     return this.prisma.comment.create({
       data: {
         postId,
         userId,
         content: dto.content,
+        mentionIds,
         ...(dto.parentId ? { parentId: dto.parentId } : {}),
       },
       select: commentSelect,

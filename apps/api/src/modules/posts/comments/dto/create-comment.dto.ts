@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
+import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
 
 export class CreateCommentDto {
   @ApiProperty({ minLength: 1, maxLength: 2000 })
@@ -14,4 +14,15 @@ export class CreateCommentDto {
   @IsOptional()
   @IsString()
   parentId?: string
+
+  @ApiPropertyOptional({
+    type: [String],
+    maxItems: 20,
+    description: 'Ids of people mentioned. Only people with a follow link to the author are kept.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  mentions?: string[]
 }
