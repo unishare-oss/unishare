@@ -12,9 +12,11 @@ import {
   useCommentsControllerRemove,
   useCommentsControllerUpdate,
 } from '@/src/lib/api/generated/comments/comments'
+import { useScrollToHashComment } from '@/hooks/use-scroll-to-hash-comment'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { MentionTextarea } from '@/components/post-detail/mention-textarea'
+import { mentionIdsIn, type MentionPerson } from '@/lib/mentions'
 import { pluralize } from '@/lib/utils'
 
 interface CommentSectionProps {
@@ -26,16 +28,22 @@ interface DraftState {
   commentText: string
   editingCommentId: string | null
   editText: string
+  editPicked: MentionPerson[]
   replyCommentId: string | null
   replyText: string
+  commentPicked: MentionPerson[]
+  replyPicked: MentionPerson[]
 }
 
 const INITIAL_DRAFT_STATE: DraftState = {
   commentText: '',
   editingCommentId: null,
   editText: '',
+  editPicked: [],
   replyCommentId: null,
   replyText: '',
+  commentPicked: [],
+  replyPicked: [],
 }
 
 export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
@@ -49,12 +57,22 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { data: comments = [], isLoading } = useCommentsControllerFindAll(postId, {
     query: { select: (response) => response.data },
   })
+  useScrollToHashComment(!isLoading)
   const { mutateAsync: createComment, isPending } = useCommentsControllerCreate()
   const { mutateAsync: createReply, isPending: isReplying } = useCommentsControllerCreateReply()
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()
   const { mutateAsync: removeComment, isPending: isRemoving } = useCommentsControllerRemove()
 
-  const { commentText, editingCommentId, editText, replyCommentId, replyText } = drafts
+  const {
+    commentText,
+    editingCommentId,
+    editText,
+    editPicked,
+    replyCommentId,
+    replyText,
+    commentPicked,
+    replyPicked,
+  } = drafts
 
   const commentThreadViewer = {
     user,
@@ -77,17 +95,22 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     isReplying,
   }
 
-  function setEditingState(commentId: string | null, editText = '') {
+  function setEditingState(
+    commentId: string | null,
+    editText = '',
+    editPicked: MentionPerson[] = [],
+  ) {
     setError(null)
     setDrafts((current) => ({
       ...current,
       editingCommentId: commentId,
       editText,
+      editPicked,
     }))
   }
 
-  function startEditing(commentId: string, content: string) {
-    setEditingState(commentId, content)
+  function startEditing(commentId: string, content: string, mentions: MentionPerson[]) {
+    setEditingState(commentId, content, mentions)
   }
 
   function cancelEditing() {
@@ -100,6 +123,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       ...current,
       replyCommentId: commentId,
       replyText,
+      replyPicked: [],
     }))
   }
 
@@ -122,7 +146,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await updateComment({ postId, commentId, data: { content } })
+      await updateComment({
+        postId,
+        commentId,
+        data: { content, mentions: mentionIdsIn(content, editPicked) },
+      })
       cancelEditing()
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
@@ -140,8 +168,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await createComment({ postId, data: { content } })
-      setDrafts((current) => ({ ...current, commentText: '' }))
+      await createComment({
+        postId,
+        data: { content, mentions: mentionIdsIn(content, commentPicked) },
+      })
+      setDrafts((current) => ({ ...current, commentText: '', commentPicked: [] }))
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
       })
@@ -158,7 +189,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await createReply({ postId, commentId, data: { content } })
+      await createReply({
+        postId,
+        commentId,
+        data: { content, mentions: mentionIdsIn(content, replyPicked) },
+      })
       cancelReply()
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
@@ -191,12 +226,16 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     start: startEditing,
     cancel: cancelEditing,
     change: (value: string) => setDrafts((current) => ({ ...current, editText: value })),
+    pick: (person: MentionPerson) =>
+      setDrafts((current) => ({ ...current, editPicked: [...current.editPicked, person] })),
     submit: handleUpdate,
   }
   const commentThreadReplyActions = {
     start: startReply,
     cancel: cancelReply,
     change: (value: string) => setDrafts((current) => ({ ...current, replyText: value })),
+    pick: (person: MentionPerson) =>
+      setDrafts((current) => ({ ...current, replyPicked: [...current.replyPicked, person] })),
     submit: handleReplySubmit,
   }
 
@@ -207,9 +246,16 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
       </h2>
 
       <div className="mb-6">
-        <Textarea
+        <MentionTextarea
           value={commentText}
-          onChange={(e) => setDrafts((current) => ({ ...current, commentText: e.target.value }))}
+          onValueChange={(value) => setDrafts((current) => ({ ...current, commentText: value }))}
+          onPick={(person) =>
+            setDrafts((current) => ({
+              ...current,
+              commentPicked: [...current.commentPicked, person],
+            }))
+          }
+          mentionsEnabled={isAuthenticated}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.shiftKey) {
               e.preventDefault()

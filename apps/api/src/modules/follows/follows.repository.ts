@@ -59,6 +59,39 @@ export class FollowsRepository {
     return rows.map((r) => r.following)
   }
 
+  findMentionable(userId: string, q: string, take = 8) {
+    return this.prisma.user.findMany({
+      where: {
+        id: { not: userId },
+        name: { startsWith: q, mode: 'insensitive' },
+        OR: [
+          { following: { some: { followingId: userId } } },
+          { followers: { some: { followerId: userId } } },
+        ],
+      },
+      select: { id: true, name: true, image: true },
+      orderBy: { name: 'asc' },
+      take,
+    })
+  }
+
+  async filterConnected(userId: string, ids: string[]): Promise<string[]> {
+    if (ids.length === 0) return []
+    const rows = await this.prisma.follow.findMany({
+      where: {
+        OR: [
+          { followerId: userId, followingId: { in: ids } },
+          { followingId: userId, followerId: { in: ids } },
+        ],
+      },
+      select: { followerId: true, followingId: true },
+    })
+    const connected = new Set(
+      rows.map((r) => (r.followerId === userId ? r.followingId : r.followerId)),
+    )
+    return ids.filter((id) => connected.has(id))
+  }
+
   countFollowers(followingId: string) {
     return this.prisma.follow.count({ where: { followingId } })
   }

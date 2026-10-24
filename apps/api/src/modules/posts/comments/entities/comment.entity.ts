@@ -11,6 +11,14 @@ export class CommentUserEntity {
   image: string | null
 }
 
+export class CommentMentionEntity {
+  @ApiProperty()
+  id: string
+
+  @ApiProperty()
+  name: string
+}
+
 export class CommentEntity {
   @ApiProperty()
   id: string
@@ -38,6 +46,9 @@ export class CommentEntity {
 
   @ApiProperty({ type: CommentUserEntity })
   user: CommentUserEntity
+
+  @ApiProperty({ type: [CommentMentionEntity] })
+  mentions: CommentMentionEntity[]
 
   @ApiPropertyOptional({
     type: () => [CommentEntity],
