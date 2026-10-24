@@ -12,6 +12,7 @@ import {
   useCommentsControllerRemove,
   useCommentsControllerUpdate,
 } from '@/src/lib/api/generated/comments/comments'
+import { useScrollToHashComment } from '@/hooks/use-scroll-to-hash-comment'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { MentionTextarea } from '@/components/post-detail/mention-textarea'
@@ -54,6 +55,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { data: comments = [], isLoading } = useCommentsControllerFindAll(postId, {
     query: { select: (response) => response.data },
   })
+  useScrollToHashComment(!isLoading)
   const { mutateAsync: createComment, isPending } = useCommentsControllerCreate()
   const { mutateAsync: createReply, isPending: isReplying } = useCommentsControllerCreateReply()
   const { mutateAsync: updateComment, isPending: isUpdating } = useCommentsControllerUpdate()

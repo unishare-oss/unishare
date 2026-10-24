@@ -144,8 +144,9 @@ export function CommentThreadItem({
 
   return (
     <div
+      id={`comment-${comment.id}`}
       className={cn(
-        'group py-4',
+        'group py-4 scroll-mt-24',
         isTopLevelComment && 'border-b border-border/70 last:border-b-0',
         depth > 0 && 'pb-0',
         layerStyle.indentClassName,
