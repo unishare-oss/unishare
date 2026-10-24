@@ -72,11 +72,12 @@ export class CommentsRepository {
     })
   }
 
-  update(id: string, dto: UpdateCommentDto) {
+  update(id: string, dto: UpdateCommentDto, mentionIds?: string[]) {
     return this.prisma.comment.update({
       where: { id },
       data: {
         ...(dto.content !== undefined ? { content: dto.content } : {}),
+        ...(mentionIds !== undefined ? { mentionIds } : {}),
       },
       select: commentSelect,
     })

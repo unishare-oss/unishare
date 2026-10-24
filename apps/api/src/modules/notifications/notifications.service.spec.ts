@@ -41,6 +41,25 @@ describe('NotificationsService mentions', () => {
     expect(other).not.toHaveBeenCalled()
   })
 
+  it('streams only the rows the repository returns, so an already-notified person gets none', async () => {
+    repo.createMentions.mockResolvedValue([
+      { id: 'n1', userId: 'b', type: 'MENTION', commentId: 'c1' },
+    ])
+    const a = jest.fn()
+    const b = firstValueFrom(service.streamForUser('b'))
+    service.streamForUser('a').subscribe(a)
+
+    await service.notifyMentions({
+      postId: 'p1',
+      commentId: 'c1',
+      actorName: 'Jane',
+      recipientIds: ['a', 'b'],
+    })
+
+    expect(await b).toEqual({ data: expect.objectContaining({ userId: 'b' }) })
+    expect(a).not.toHaveBeenCalled()
+  })
+
   it('saves nothing when nobody is mentioned', async () => {
     await service.notifyMentions({
       postId: 'p1',

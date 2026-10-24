@@ -94,8 +94,27 @@ export class CommentsService {
       throw new ForbiddenException('You do not own this comment')
     }
 
-    const updated = await this.commentsRepository.update(commentId, dto)
+    // Without `mentions` the saved mentions stay and nobody is notified.
+    const mentionIds =
+      dto.mentions === undefined
+        ? undefined
+        : await this.followsService.keepConnected(userId, dto.mentions)
+    const updated = await this.commentsRepository.update(commentId, dto, mentionIds)
     const [result] = await this.withMentions([updated])
+
+    if (mentionIds !== undefined) {
+      const post = await this.postsService.getNotificationTarget(postId)
+      // Sends the full list: the unique (commentId, userId) key drops people already notified.
+      void this.notificationsService
+        .notifyMentions({
+          postId,
+          commentId,
+          actorName: result.user.name,
+          postTitle: post.title,
+          recipientIds: mentionIds,
+        })
+        .catch((err: unknown) => this.logNotifyFailure('mention', commentId, err))
+    }
     return result
   }
 

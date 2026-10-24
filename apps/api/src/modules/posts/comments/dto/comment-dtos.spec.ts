@@ -24,8 +24,20 @@ describe('comment DTOs', () => {
     })
   })
 
-  it('strips mentions from an edit, so saved mentions stay as they are', async () => {
+  it('keeps mentions on an edit', async () => {
     const dto = await validate(UpdateCommentDto, { content: 'edited', mentions: ['u1'] })
+    expect(dto).toEqual({ content: 'edited', mentions: ['u1'] })
+  })
+
+  it('accepts an edit without mentions', async () => {
+    const dto = await validate(UpdateCommentDto, { content: 'edited' })
     expect(dto).toEqual({ content: 'edited' })
+  })
+
+  it('rejects more than 20 mentions on an edit', async () => {
+    const mentions = Array.from({ length: 21 }, (_, i) => `u${i}`)
+    await expect(validate(UpdateCommentDto, { mentions })).rejects.toBeInstanceOf(
+      BadRequestException,
+    )
   })
 })
