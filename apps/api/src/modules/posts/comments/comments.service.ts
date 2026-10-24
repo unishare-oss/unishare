@@ -83,7 +83,8 @@ export class CommentsService {
   }
 
   async update(postId: string, commentId: string, dto: UpdateCommentDto, userId: string) {
-    await this.postsService.assertCommentTargetExists(postId)
+    // Same lookup as assertCommentTargetExists, plus the title a mention notification needs.
+    const post = await this.postsService.getNotificationTarget(postId)
 
     const comment = await this.commentsRepository.findById(commentId)
     if (!comment || comment.postId !== postId || comment.deletedAt) {
@@ -103,7 +104,6 @@ export class CommentsService {
     const [result] = await this.withMentions([updated])
 
     if (mentionIds !== undefined) {
-      const post = await this.postsService.getNotificationTarget(postId)
       // Sends the full list: the unique (commentId, userId) key drops people already notified.
       void this.notificationsService
         .notifyMentions({
