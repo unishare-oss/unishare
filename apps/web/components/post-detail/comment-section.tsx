@@ -239,6 +239,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
               commentPicked: [...current.commentPicked, person],
             }))
           }
+          mentionsEnabled={isAuthenticated}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.shiftKey) {
               e.preventDefault()

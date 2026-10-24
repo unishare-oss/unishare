@@ -21,13 +21,33 @@ vi.mock('@/src/lib/api/generated/follows/follows', () => ({
   },
 }))
 
-function Harness({ onPick }: { onPick: (p: { id: string; name: string }) => void }) {
+function Harness({
+  onPick,
+  mentionsEnabled,
+}: {
+  onPick: (p: { id: string; name: string }) => void
+  mentionsEnabled?: boolean
+}) {
   const [value, setValue] = useState('')
-  return <MentionTextarea value={value} onValueChange={setValue} onPick={onPick} />
+  return (
+    <MentionTextarea
+      value={value}
+      onValueChange={setValue}
+      onPick={onPick}
+      mentionsEnabled={mentionsEnabled}
+    />
+  )
 }
 
 describe('MentionTextarea', () => {
   beforeEach(() => mocks.query.mockClear())
+
+  it('never queries or suggests when mentions are disabled (signed out)', async () => {
+    render(<Harness onPick={vi.fn()} mentionsEnabled={false} />)
+    await userEvent.type(screen.getByRole('combobox'), '@ja')
+    expect(mocks.query).not.toHaveBeenCalledWith(expect.anything(), true)
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
 
   it('shows suggestions for @ja and Enter inserts the name and reports the pick', async () => {
     const onPick = vi.fn()

@@ -16,12 +16,15 @@ export function MentionTextarea({
   value,
   onValueChange,
   onPick,
+  mentionsEnabled = true,
   onKeyDown,
   ...props
 }: Omit<React.ComponentProps<'textarea'>, 'value' | 'onChange'> & {
   value: string
   onValueChange: (value: string) => void
   onPick: (person: MentionPerson) => void
+  // Off for signed-out visitors: the mentionable list needs a session and would answer 401.
+  mentionsEnabled?: boolean
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null)
   // One id per box: the composer and an open reply box can both show a list.
@@ -31,7 +34,7 @@ export function MentionTextarea({
   const [active, setActive] = useState(0)
   const [dismissed, setDismissed] = useState(false)
 
-  const trigger = findMentionTrigger(value, caret)
+  const trigger = mentionsEnabled ? findMentionTrigger(value, caret) : null
   const { data: users = [] } = useFollowsControllerGetMentionable(
     { q: trigger?.query },
     { query: { enabled: trigger !== null, select: (r) => r.data } },
