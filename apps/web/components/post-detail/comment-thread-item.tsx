@@ -38,7 +38,8 @@ interface CommentThreadPendingState {
 }
 
 interface CommentThreadEditActions {
-  start: (commentId: string, content: string) => void
+  start: (commentId: string, content: string, mentions: MentionPerson[]) => void
+  pick: (person: MentionPerson) => void
   cancel: () => void
   change: (value: string) => void
   submit: (commentId: string) => void
@@ -218,6 +219,7 @@ export function CommentThreadItem({
               <CommentEditor
                 value={editState.editText}
                 onChange={editActions.change}
+                onPick={editActions.pick}
                 onCancel={editActions.cancel}
                 onSubmit={() => editActions.submit(comment.id)}
                 isPending={pendingState.isUpdating}
@@ -256,7 +258,7 @@ export function CommentThreadItem({
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => editActions.start(comment.id, comment.content)}
+                    onClick={() => editActions.start(comment.id, comment.content, comment.mentions)}
                     disabled={pendingState.isUpdating || pendingState.isRemoving}
                     aria-label="Edit comment"
                   >

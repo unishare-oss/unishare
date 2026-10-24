@@ -28,6 +28,7 @@ interface DraftState {
   commentText: string
   editingCommentId: string | null
   editText: string
+  editPicked: MentionPerson[]
   replyCommentId: string | null
   replyText: string
   commentPicked: MentionPerson[]
@@ -38,6 +39,7 @@ const INITIAL_DRAFT_STATE: DraftState = {
   commentText: '',
   editingCommentId: null,
   editText: '',
+  editPicked: [],
   replyCommentId: null,
   replyText: '',
   commentPicked: [],
@@ -65,6 +67,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     commentText,
     editingCommentId,
     editText,
+    editPicked,
     replyCommentId,
     replyText,
     commentPicked,
@@ -92,17 +95,22 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     isReplying,
   }
 
-  function setEditingState(commentId: string | null, editText = '') {
+  function setEditingState(
+    commentId: string | null,
+    editText = '',
+    editPicked: MentionPerson[] = [],
+  ) {
     setError(null)
     setDrafts((current) => ({
       ...current,
       editingCommentId: commentId,
       editText,
+      editPicked,
     }))
   }
 
-  function startEditing(commentId: string, content: string) {
-    setEditingState(commentId, content)
+  function startEditing(commentId: string, content: string, mentions: MentionPerson[]) {
+    setEditingState(commentId, content, mentions)
   }
 
   function cancelEditing() {
@@ -138,7 +146,11 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     setError(null)
 
     try {
-      await updateComment({ postId, commentId, data: { content } })
+      await updateComment({
+        postId,
+        commentId,
+        data: { content, mentions: mentionIdsIn(content, editPicked) },
+      })
       cancelEditing()
       await queryClient.invalidateQueries({
         queryKey: getCommentsControllerFindAllQueryKey(postId),
@@ -214,6 +226,8 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
     start: startEditing,
     cancel: cancelEditing,
     change: (value: string) => setDrafts((current) => ({ ...current, editText: value })),
+    pick: (person: MentionPerson) =>
+      setDrafts((current) => ({ ...current, editPicked: [...current.editPicked, person] })),
     submit: handleUpdate,
   }
   const commentThreadReplyActions = {

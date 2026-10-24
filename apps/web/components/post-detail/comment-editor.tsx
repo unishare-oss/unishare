@@ -14,7 +14,7 @@ interface CommentEditorProps {
   submitLabel: string
   pendingLabel: string
   placeholder?: string
-  /** Turns on @ suggestions. Leave out where mentions are not saved, such as editing. */
+  /** Turns on @ suggestions. Leave out where mentions are not saved. */
   onPick?: (person: MentionPerson) => void
 }
 
