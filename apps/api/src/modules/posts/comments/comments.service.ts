@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { FollowsService } from '../../follows/follows.service'
@@ -35,6 +35,8 @@ const DELETED_COMMENT_USER = {
 
 @Injectable()
 export class CommentsService {
+  private readonly logger = new Logger(CommentsService.name)
+
   constructor(
     private readonly commentsRepository: CommentsRepository,
     private readonly postsService: PostsService,
@@ -63,21 +65,20 @@ export class CommentsService {
     const mentionIds = await this.followsService.keepConnected(userId, dto.mentions ?? [])
     const created = await this.commentsRepository.create(postId, userId, dto, mentionIds)
     const [comment] = await this.withMentions([created])
-    void this.notificationsService.notifyMentions({
-      postId,
-      commentId: comment.id,
-      actorName: comment.user.name,
-      postTitle: post.title,
-      recipientIds: mentionIds,
-    })
-    void this.notificationsService.notifyComment(
-      postId,
-      post.authorId,
-      userId,
-      post.title,
-      comment.user.name,
-      mentionIds,
-    )
+    // Fire-and-forget: the comment is already saved. There is no unhandledRejection handler in
+    // this app, so an escaped rejection would take the process down; log it instead.
+    void this.notificationsService
+      .notifyMentions({
+        postId,
+        commentId: comment.id,
+        actorName: comment.user.name,
+        postTitle: post.title,
+        recipientIds: mentionIds,
+      })
+      .catch((err: unknown) => this.logNotifyFailure('mention', comment.id, err))
+    void this.notificationsService
+      .notifyComment(postId, post.authorId, userId, post.title, comment.user.name, mentionIds)
+      .catch((err: unknown) => this.logNotifyFailure('comment', comment.id, err))
     return comment
   }
 
@@ -154,6 +155,11 @@ export class CommentsService {
       }))
 
     return attach(comments)
+  }
+
+  private logNotifyFailure(kind: 'mention' | 'comment', commentId: string, err: unknown) {
+    const reason = err instanceof Error ? err.message : String(err)
+    this.logger.warn(`Failed to send ${kind} notifications for comment ${commentId}: ${reason}`)
   }
 
   private buildCommentTree(comments: FlatCommentNode[]) {

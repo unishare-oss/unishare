@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import { CommentsService } from './comments.service'
 import { NotificationsService } from '../../notifications/notifications.service'
 
@@ -89,6 +90,29 @@ describe('CommentsService mentions', () => {
       expect.objectContaining({ userId: 'j', type: 'MENTION', postId: 'p1', commentId: 'c1' }),
     ])
     expect(notificationsRepo.create).not.toHaveBeenCalled()
+  })
+
+  it('still returns the comment and logs when a notification write fails', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    notificationsRepo.createMentions.mockRejectedValue(new Error('connection lost'))
+    notificationsRepo.create.mockRejectedValue(new Error('connection lost'))
+    repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: ['j'] })
+
+    const result = await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1')
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(result.id).toBe('c1')
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('mention notifications for comment c1'),
+    )
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('comment notifications for comment c1'),
+    )
+    expect(unhandled).not.toHaveBeenCalled()
+    process.off('unhandledRejection', unhandled)
+    warn.mockRestore()
   })
 
   it('still sends COMMENT_ADDED to a post author who is not mentioned', async () => {
