@@ -161,6 +161,19 @@ describe('verified board key backups', () => {
     expect(useBoardKeysStore.getState().getKey('test-board')).toBeUndefined()
   })
 
+  it('drops undecryptable live updates without closing a verified board', async () => {
+    await join()
+    await receive('room-joined', [await encryptElement({ id: '1', version: 1 }, boardKey)])
+    await waitFor(() => expect(patches()).toHaveLength(1))
+    await receive('scene-update', [await encryptElement({ id: 'bad', version: 1 }, wrongKey)])
+    expect(screen.getByTestId('canvas')).toBeInTheDocument()
+    expect(socket.disconnect).not.toHaveBeenCalled()
+    await receive('scene-update', [await encryptElement({ id: '1', version: 2 }, boardKey)])
+    expect(screen.getByTestId('canvas')).toBeInTheDocument()
+    expect(patches()).toHaveLength(1)
+    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(await exportRoomKeyRaw(boardKey))
+  })
+
   it('defers empty-board backups until encrypted content arrives, then saves only once', async () => {
     await join()
     await receive('room-joined', [])
