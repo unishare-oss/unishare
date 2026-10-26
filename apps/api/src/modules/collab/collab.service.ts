@@ -45,6 +45,7 @@ export class CollabService {
       visibility: dto.visibility,
       passwordHash,
       encrypted,
+      encryptedOwnerKey: encrypted ? dto.encryptedOwnerKey : undefined,
     })
     return this.toRoomResponse(room)
   }
@@ -122,9 +123,11 @@ export class CollabService {
       title?: string
       visibility?: RoomVisibility
       passwordHash?: string | null
+      encryptedOwnerKey?: string
     } = {}
     if (dto.visibility !== undefined) updateData.visibility = dto.visibility
     if (dto.title !== undefined) updateData.title = dto.title
+    if (dto.encryptedOwnerKey !== undefined) updateData.encryptedOwnerKey = dto.encryptedOwnerKey
     if (dto.password !== undefined) {
       if (dto.password === null) {
         updateData.passwordHash = null
@@ -225,11 +228,18 @@ export class CollabService {
       isViewOnly,
       ownerId: room.ownerId,
       encrypted: room.encrypted,
+      ...(activeSession.user.id === room.ownerId && room.encryptedOwnerKey
+        ? { encryptedOwnerKey: room.encryptedOwnerKey }
+        : {}),
     }
   }
 
   private toRoomResponse(room: Record<string, unknown>): RoomEntity {
-    const { passwordHash, ...rest } = room as Record<string, unknown> & {
+    const {
+      passwordHash,
+      encryptedOwnerKey: _encryptedOwnerKey,
+      ...rest
+    } = room as Record<string, unknown> & {
       passwordHash?: string | null
     }
     return {

@@ -8,6 +8,9 @@ import { CollabService } from './collab.service'
 import { CollabRepository } from './collab.repository'
 import { CollabGateway } from './collab.gateway'
 import { CollabRoomService } from './collab.room.service'
+import { validate } from 'class-validator'
+import { CreateCollabRoomDto } from './dto/create-room.dto'
+import { UpdateRoomDto } from './dto/update-room.dto'
 
 // Mock bcryptjs
 jest.mock('bcryptjs', () => ({
@@ -110,6 +113,15 @@ describe('CollabService', () => {
   })
 
   describe('createRoom', () => {
+    it('stores the owner backup without exposing it in room responses', async () => {
+      repository.create.mockResolvedValue({ ...mockRoom, encryptedOwnerKey: 'wrapped' })
+      const result = await service.createRoom({ encryptedOwnerKey: 'wrapped' }, 'user-1')
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ encryptedOwnerKey: 'wrapped' }),
+      )
+      expect(result).not.toHaveProperty('encryptedOwnerKey')
+    })
+
     it('should call repository.create with ownerId and a 10-char slug', async () => {
       const mockRoom = {
         id: 'room-1',
@@ -241,6 +253,32 @@ describe('CollabService', () => {
   })
 
   describe('joinRoom', () => {
+    it('returns the wrapped key only to the authenticated owner', async () => {
+      repository.findBySlugWithVisibility.mockResolvedValue({
+        ...mockRoom,
+        encryptedOwnerKey: 'wrapped',
+      })
+      const owner = { ...mockAuthSession, user: { ...mockAuthSession.user, id: 'user-1' } }
+      const result = await service.joinRoom(mockRoom.slug, {}, owner as any, mockReq, mockRes)
+      expect(result.encryptedOwnerKey).toBe('wrapped')
+      const guest = await service.joinRoom(
+        mockRoom.slug,
+        {},
+        mockAnonSessionResult as any,
+        mockReq,
+        mockRes,
+      )
+      expect(guest).not.toHaveProperty('encryptedOwnerKey')
+      const otherUser = await service.joinRoom(
+        mockRoom.slug,
+        {},
+        mockAuthSession as any,
+        mockReq,
+        mockRes,
+      )
+      expect(otherUser).not.toHaveProperty('encryptedOwnerKey')
+    })
+
     const signInAnonymousMock = auth.api.signInAnonymous as unknown as jest.Mock
     const getSessionMock = auth.api.getSession as unknown as jest.Mock
 
@@ -640,6 +678,24 @@ describe('CollabService', () => {
   })
 
   describe('updateRoom with title', () => {
+    it('allows only the owner to backfill a wrapped board key', async () => {
+      repository.findBySlug.mockResolvedValue(mockRoom)
+      repository.updateRoom.mockResolvedValue({ ...mockRoom, encryptedOwnerKey: 'wrapped' })
+      await expect(
+        service.updateRoom(mockRoom.slug, { encryptedOwnerKey: 'wrapped' }, 'other'),
+      ).rejects.toThrow(ForbiddenException)
+      expect(repository.updateRoom).not.toHaveBeenCalled()
+      const result = await service.updateRoom(
+        mockRoom.slug,
+        { encryptedOwnerKey: 'wrapped' },
+        'user-1',
+      )
+      expect(repository.updateRoom).toHaveBeenCalledWith(mockRoom.slug, {
+        encryptedOwnerKey: 'wrapped',
+      })
+      expect(result).not.toHaveProperty('encryptedOwnerKey')
+    })
+
     it('should call repository.updateRoom with title only when dto has only title', async () => {
       repository.findBySlug.mockResolvedValue(mockRoom)
       repository.updateRoom.mockResolvedValue({ ...mockRoom, title: 'New Title' })
@@ -696,4 +752,19 @@ describe('CollabService', () => {
       expect(repository.updateRoom).toHaveBeenCalledWith('abc1234567', { passwordHash: null })
     })
   })
+})
+
+describe('board owner key validation', () => {
+  it.each([CreateCollabRoomDto, UpdateRoomDto])(
+    'validates bounded base64 key envelopes in %p',
+    async (Dto) => {
+      const dto = new Dto()
+      dto.encryptedOwnerKey = Buffer.alloc(125).toString('base64')
+      expect(await validate(dto)).toHaveLength(0)
+      for (const invalid of ['', 'not-a-key', 'x'.repeat(169), null]) {
+        Object.assign(dto, { encryptedOwnerKey: invalid })
+        expect((await validate(dto)).length).toBeGreaterThan(0)
+      }
+    },
+  )
 })

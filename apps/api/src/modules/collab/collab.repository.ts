@@ -13,6 +13,7 @@ export class CollabRepository {
     visibility?: RoomVisibility
     passwordHash?: string
     encrypted?: boolean
+    encryptedOwnerKey?: string
   }) {
     return this.prisma.room.create({ data })
   }
@@ -32,6 +33,7 @@ export class CollabRepository {
         visibility: true,
         passwordHash: true,
         encrypted: true,
+        encryptedOwnerKey: true,
       },
     })
   }
@@ -49,7 +51,12 @@ export class CollabRepository {
 
   async updateRoom(
     slug: string,
-    data: { title?: string; visibility?: RoomVisibility; passwordHash?: string | null },
+    data: {
+      title?: string
+      visibility?: RoomVisibility
+      passwordHash?: string | null
+      encryptedOwnerKey?: string
+    },
   ) {
     return this.prisma.room.update({ where: { slug }, data })
   }

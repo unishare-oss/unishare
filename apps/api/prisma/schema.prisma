@@ -457,17 +457,18 @@ model PostRequestUpvote {
 }
 
 model Room {
-  id           String         @id @default(cuid())
-  slug         String         @unique
-  title        String?
-  ownerId      String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  snapshot     Bytes?
-  visibility   RoomVisibility @default(OPEN)
-  passwordHash String?
-  encrypted    Boolean        @default(false)
-  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id                String         @id @default(cuid())
+  slug              String         @unique
+  title             String?
+  ownerId           String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  snapshot          Bytes?
+  visibility        RoomVisibility @default(OPEN)
+  passwordHash      String?
+  encrypted         Boolean        @default(false)
+  encryptedOwnerKey String?
+  owner             User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("room")
