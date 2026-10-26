@@ -156,6 +156,7 @@ export function CollabProvider({
   const onAccessRevokedRef = useRef(onAccessRevoked)
   const keyCallbacksRef = useRef({ onRoomKeyVerified, onDecryptionFailed })
   const verifiedKeyRef = useRef<CryptoKey | null>(null)
+  const initialSceneDecryptedRef = useRef(false)
   useEffect(() => {
     onAccessRevokedRef.current = onAccessRevoked
     keyCallbacksRef.current = { onRoomKeyVerified, onDecryptionFailed }
@@ -194,7 +195,7 @@ export function CollabProvider({
   }, [])
 
   const decryptBatch = useCallback(
-    async (elements: unknown[]): Promise<ExcalidrawElement[] | null> => {
+    async (elements: unknown[], canVerifyKey: boolean): Promise<ExcalidrawElement[] | null> => {
       const key = roomKeyRef.current
       if (!key) return elements as ExcalidrawElement[]
       const decrypted = await Promise.all(
@@ -205,7 +206,7 @@ export function CollabProvider({
         return null
       }
       // shortcut: empty boards cannot prove key ownership; verify after encrypted content arrives.
-      if (elements.length > 0 && verifiedKeyRef.current !== key) {
+      if (canVerifyKey && elements.length > 0 && verifiedKeyRef.current !== key) {
         verifiedKeyRef.current = key
         keyCallbacksRef.current.onRoomKeyVerified?.(key)
       }
@@ -256,6 +257,7 @@ export function CollabProvider({
     socketRef.current = socket
 
     socket.on('connect', () => {
+      initialSceneDecryptedRef.current = false
       setSocketId(socket.id ?? null)
       socket.emit('join-room', slug)
     })
@@ -263,8 +265,9 @@ export function CollabProvider({
     socket.on(
       'room-joined',
       async ({ elements, files }: { slug: string; elements: unknown[]; files: RemoteFile[] }) => {
-        const decrypted = await decryptBatch(elements)
+        const decrypted = await decryptBatch(elements, true)
         if (!decrypted) return
+        initialSceneDecryptedRef.current = true
         const validElements = renderableElements(decrypted)
         const isReconnect = broadcastedVersionsRef.current.size > 0
         setInitialElements(validElements)
@@ -279,7 +282,7 @@ export function CollabProvider({
     )
 
     socket.on('scene-update', async (elements: unknown[]) => {
-      const decrypted = await decryptBatch(elements)
+      const decrypted = await decryptBatch(elements, initialSceneDecryptedRef.current)
       if (decrypted) remoteHandlerRef.current?.(renderableElements(decrypted))
     })
 
