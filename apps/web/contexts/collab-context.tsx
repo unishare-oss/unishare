@@ -112,6 +112,8 @@ interface CollabProviderProps {
   userId: string | null
   roomKey: CryptoKey | null
   onAccessRevoked?: () => void
+  onRoomKeyVerified?: (key: CryptoKey) => void
+  onDecryptionFailed?: () => void
   children: ReactNode
 }
 
@@ -126,6 +128,8 @@ export function CollabProvider({
   userId,
   roomKey,
   onAccessRevoked,
+  onRoomKeyVerified,
+  onDecryptionFailed,
   children,
 }: CollabProviderProps) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
@@ -150,8 +154,11 @@ export function CollabProvider({
   const unmountingRef = useRef(false)
   const kickedRef = useRef(false)
   const onAccessRevokedRef = useRef(onAccessRevoked)
+  const keyCallbacksRef = useRef({ onRoomKeyVerified, onDecryptionFailed })
+  const verifiedKeyRef = useRef<CryptoKey | null>(null)
   useEffect(() => {
     onAccessRevokedRef.current = onAccessRevoked
+    keyCallbacksRef.current = { onRoomKeyVerified, onDecryptionFailed }
   })
 
   // Tracks the version of each element we've last broadcast so we only send diffs.
@@ -186,14 +193,26 @@ export function CollabProvider({
     )
   }, [])
 
-  const decryptBatch = useCallback(async (elements: unknown[]): Promise<ExcalidrawElement[]> => {
-    const key = roomKeyRef.current
-    if (!key) return elements as ExcalidrawElement[]
-    const decrypted = await Promise.all(
-      (elements as EncryptedWireElement[]).map((el) => decryptElement(el, key)),
-    )
-    return decrypted as unknown as ExcalidrawElement[]
-  }, [])
+  const decryptBatch = useCallback(
+    async (elements: unknown[]): Promise<ExcalidrawElement[] | null> => {
+      const key = roomKeyRef.current
+      if (!key) return elements as ExcalidrawElement[]
+      const decrypted = await Promise.all(
+        (elements as EncryptedWireElement[]).map((el) => decryptElement(el, key)),
+      ).catch(() => null)
+      if (!decrypted) {
+        keyCallbacksRef.current.onDecryptionFailed?.()
+        return null
+      }
+      // shortcut: empty boards cannot prove key ownership; verify after encrypted content arrives.
+      if (elements.length > 0 && verifiedKeyRef.current !== key) {
+        verifiedKeyRef.current = key
+        keyCallbacksRef.current.onRoomKeyVerified?.(key)
+      }
+      return decrypted as unknown as ExcalidrawElement[]
+    },
+    [],
+  )
 
   const emitSceneUpdate = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
@@ -244,7 +263,9 @@ export function CollabProvider({
     socket.on(
       'room-joined',
       async ({ elements, files }: { slug: string; elements: unknown[]; files: RemoteFile[] }) => {
-        const validElements = renderableElements(await decryptBatch(elements))
+        const decrypted = await decryptBatch(elements)
+        if (!decrypted) return
+        const validElements = renderableElements(decrypted)
         const isReconnect = broadcastedVersionsRef.current.size > 0
         setInitialElements(validElements)
         setInitialFiles(files)
@@ -258,7 +279,8 @@ export function CollabProvider({
     )
 
     socket.on('scene-update', async (elements: unknown[]) => {
-      remoteHandlerRef.current?.(renderableElements(await decryptBatch(elements)))
+      const decrypted = await decryptBatch(elements)
+      if (decrypted) remoteHandlerRef.current?.(renderableElements(decrypted))
     })
 
     socket.on('file-added', (file: RemoteFile) => {

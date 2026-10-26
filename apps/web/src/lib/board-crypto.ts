@@ -67,7 +67,6 @@ export async function getRoomKeyFromLocation(
     }
     if (!raw) return null
     const key = await importRoomKeyRaw(raw)
-    useBoardKeysStore.getState().setKey(slug, raw)
     const url = new URL(window.location.href)
     const hash = new URLSearchParams(url.hash.slice(1))
     hash.set(ROOM_KEY_HASH_PARAM, raw)
@@ -79,15 +78,24 @@ export async function getRoomKeyFromLocation(
   }
 }
 
-/** Backfill existing boards when their owner opens a full link or has a cached key. */
+/** Save or repair the owner backup only after the caller verifies board decryption. */
 export async function backupOwnerRoomKey(
   slug: string,
   key: CryptoKey,
   userId: string,
+  existingBackup?: string,
 ): Promise<void> {
   const privateKey = await getPrivateKey(userId)
   if (!privateKey)
     throw new Error('Import your encryption key in Chat Settings to back up this board.')
+  if (existingBackup) {
+    try {
+      const savedKey = await decryptRoomKey(existingBackup, privateKey)
+      if ((await exportRoomKeyRaw(savedKey)) === (await exportRoomKeyRaw(key))) return
+    } catch {
+      // A verified board key can repair a backup that this account can no longer decrypt.
+    }
+  }
   const publicJwk = await crypto.subtle.exportKey('jwk', privateKey)
   delete publicJwk.d
   const encryptedOwnerKey = await encryptRoomKey(

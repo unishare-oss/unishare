@@ -98,7 +98,7 @@ describe('room key URL fragment', () => {
       version: 1,
       note: 'x',
     })
-    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(exported)
+    expect(useBoardKeysStore.getState().getKey('test-board')).toBeUndefined()
   })
 
   it('restores a cached key and repairs the URL without losing query or hash parameters', async () => {
@@ -119,10 +119,10 @@ describe('room key URL fragment', () => {
     useBoardKeysStore.getState().setKey('test-board', cached)
     window.location.hash = `#key=${raw}`
     expect(await getRoomKeyFromLocation('test-board')).not.toBeNull()
-    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(raw)
+    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(cached)
     window.location.hash = '#key=invalid'
     expect(await getRoomKeyFromLocation('test-board')).toBeNull()
-    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(raw)
+    expect(useBoardKeysStore.getState().getKey('test-board')).toBe(cached)
   })
 
   it('recovers on another device with the restored account private key', async () => {
@@ -166,6 +166,21 @@ describe('room key URL fragment', () => {
     )
     vi.mocked(getPrivateKey).mockResolvedValue(null)
     await expect(backupOwnerRoomKey('test-board', key, 'owner')).rejects.toThrow('Import')
+  })
+
+  it('does not rewrite a matching owner backup', async () => {
+    const account = await generateKeyPair()
+    const key = await generateRoomKey()
+    vi.mocked(getPrivateKey).mockResolvedValue(account.privateKey)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await backupOwnerRoomKey(
+      'test-board',
+      key,
+      'owner',
+      await encryptRoomKey(key, account.publicKey),
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('appends the exported key to a path as a fragment', async () => {
