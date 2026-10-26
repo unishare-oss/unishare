@@ -140,3 +140,23 @@ newly-joining client can fetch+decrypt each image from S3 before/while Excalidra
 4. Wire encryption into `collab-context.tsx` (elements) and `excalidraw-wrapper.tsx` (files/images)
 5. Share-link fragment propagation across the three UI touchpoints
 6. Manual verification: paste image → reload → still visible; open link without fragment → blocked; two-tab live collab still reconciles correctly; legacy (pre-flag) room still loads
+
+## Owner recovery
+
+Board keys remain in shared URL fragments, with a device-local cache for reopening boards.
+The browser also wraps each new board key with the owner's existing account public key
+(the same ECDH/AES-GCM envelope used by chat) before creating the room. The server stores only
+`Room.encryptedOwnerKey` and returns it only when the authenticated owner joins; general room
+responses never contain it. Only the owner can update this backup.
+
+On join, the client reads the explicit fragment first, then the device cache, then the owner
+backup using the account private key from IndexedDB. A recovered key is restored to the URL
+so copying/sharing still works, but is cached only after decrypting nonempty board content.
+Only then does the owner save or repair a backup; a matching backup is left unchanged.
+Existing empty boards defer backup until encrypted content can verify their key. New boards
+already have the backup saved at creation. On another browser or after clearing browser data, the owner must first
+import/restore their existing account encryption key through Chat Settings. No key is generated
+as a substitute for a lost board key. Without a saved full link, a device cache, or a decryptable
+owner backup, existing encrypted content cannot be recovered.
+
+Deploy the `20261026120000_board_owner_key` migration before the API and web changes.
