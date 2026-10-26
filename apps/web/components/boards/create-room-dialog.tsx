@@ -15,8 +15,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { generateRoomKey, exportRoomKeyRaw } from '@/src/lib/crypto'
+import {
+  generateRoomKey,
+  exportRoomKeyRaw,
+  encryptRoomKey,
+  importPublicKey,
+} from '@/src/lib/crypto'
 import { useBoardKeysStore } from '@/lib/store'
+import { useAuth } from '@/contexts/auth-context'
 
 type RoomVisibility = 'OPEN' | 'VIEW_ONLY' | 'PRIVATE'
 
@@ -27,6 +33,7 @@ interface CreateRoomDialogProps {
 
 export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState<RoomVisibility>('OPEN')
   const [password, setPassword] = useState('')
@@ -38,7 +45,15 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
     setIsPending(true)
 
     try {
+      if (!user?.publicKey) {
+        toast.error('Encryption is still being set up. Please try again in a moment.')
+        return
+      }
+      const key = await generateRoomKey()
+      const exportedKey = await exportRoomKeyRaw(key)
+      const encryptedOwnerKey = await encryptRoomKey(key, await importPublicKey(user.publicKey))
       const body: Record<string, unknown> = { title: title.trim() || undefined, visibility }
+      body.encryptedOwnerKey = encryptedOwnerKey
       if (password.trim()) body.password = password.trim()
 
       const res = await fetch('/api/rooms', {
@@ -59,7 +74,6 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
       setTitle('')
       setVisibility('OPEN')
       setPassword('')
-      const exportedKey = await exportRoomKeyRaw(await generateRoomKey())
       useBoardKeysStore.getState().setKey(room.data.slug, exportedKey)
       router.push(`/canvas/${room.data.slug}#key=${exportedKey}`)
     } catch {

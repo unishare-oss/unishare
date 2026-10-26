@@ -1,6 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 
 export class JoinRoomResponseDto {
+  @ApiPropertyOptional({ description: 'Wrapped board key, returned only to the owner' })
+  encryptedOwnerKey?: string
+
   @ApiProperty()
   roomSlug: string
 

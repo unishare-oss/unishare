@@ -1,8 +1,23 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator'
+import {
+  IsBase64,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator'
 import { RoomVisibility } from '@/generated/prisma/client'
 
 export class CreateCollabRoomDto {
+  @ApiPropertyOptional({ description: 'Board key wrapped with the owner public key' })
+  @ValidateIf((o) => o.encryptedOwnerKey !== undefined)
+  @IsBase64()
+  @Length(168, 168)
+  encryptedOwnerKey?: string
+
   @ApiPropertyOptional({ description: 'Optional room title', maxLength: 120 })
   @IsOptional()
   @IsString()
