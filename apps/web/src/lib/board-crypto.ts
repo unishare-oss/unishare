@@ -5,13 +5,17 @@ import {
   decryptBytes,
   exportRoomKeyRaw,
   importRoomKeyRaw,
+  encryptRoomKey,
+  decryptRoomKey,
+  importPublicKey,
 } from '@/src/lib/crypto'
+import { getPrivateKey } from '@/src/lib/indexeddb'
+import { useBoardKeysStore } from '@/lib/store'
 
 /**
- * Board content is E2E encrypted with a symmetric key carried in the URL fragment (never sent to
- * the server) rather than wrapped per-participant like chat — rooms have no participant table and
- * allow anonymous authors, so there's no stable identity to wrap a key to. See
- * docs/board-e2e-encryption/planning.md.
+ * Board content is E2E encrypted with a symmetric key shared in the URL fragment (never sent
+ * to the server). The owner also has a backup wrapped with their account public key; guests
+ * still need the full link. See docs/board-e2e-encryption/planning.md.
  */
 
 const ROOM_KEY_HASH_PARAM = 'key'
@@ -47,16 +51,64 @@ export function getRoomKeyFromHash(hash: string): string | null {
   return new URLSearchParams(hash.replace(/^#/, '')).get(ROOM_KEY_HASH_PARAM)
 }
 
-/** Reads the room key out of the current page's URL fragment, if present and well-formed. */
-export async function getRoomKeyFromLocation(): Promise<CryptoKey | null> {
+/** Recover missing fragments from this browser or the owner's encrypted backup. */
+export async function getRoomKeyFromLocation(
+  slug: string,
+  encryptedOwnerKey?: string,
+  userId?: string,
+): Promise<CryptoKey | null> {
   if (typeof window === 'undefined') return null
-  const raw = getRoomKeyFromHash(window.location.hash)
-  if (!raw) return null
   try {
-    return await importRoomKeyRaw(raw)
+    let raw = getRoomKeyFromHash(window.location.hash) ?? useBoardKeysStore.getState().getKey(slug)
+    if (!raw && encryptedOwnerKey && userId) {
+      const privateKey = await getPrivateKey(userId)
+      if (privateKey)
+        raw = await exportRoomKeyRaw(await decryptRoomKey(encryptedOwnerKey, privateKey))
+    }
+    if (!raw) return null
+    const key = await importRoomKeyRaw(raw)
+    const url = new URL(window.location.href)
+    const hash = new URLSearchParams(url.hash.slice(1))
+    hash.set(ROOM_KEY_HASH_PARAM, raw)
+    url.hash = hash.toString()
+    window.history.replaceState(window.history.state, '', url)
+    return key
   } catch {
     return null
   }
+}
+
+/** Save or repair the owner backup only after the caller verifies board decryption. */
+export async function backupOwnerRoomKey(
+  slug: string,
+  key: CryptoKey,
+  userId: string,
+  existingBackup?: string,
+): Promise<void> {
+  const privateKey = await getPrivateKey(userId)
+  if (!privateKey)
+    throw new Error('Import your encryption key in Chat Settings to back up this board.')
+  if (existingBackup) {
+    try {
+      const savedKey = await decryptRoomKey(existingBackup, privateKey)
+      if ((await exportRoomKeyRaw(savedKey)) === (await exportRoomKeyRaw(key))) return
+    } catch {
+      // A verified board key can repair a backup that this account can no longer decrypt.
+    }
+  }
+  const publicJwk = await crypto.subtle.exportKey('jwk', privateKey)
+  delete publicJwk.d
+  const encryptedOwnerKey = await encryptRoomKey(
+    key,
+    await importPublicKey(JSON.stringify(publicJwk)),
+  )
+  const res = await fetch(`/api/rooms/${slug}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ encryptedOwnerKey }),
+  })
+  if (!res.ok) throw new Error('Could not back up the board key. Reopen this board to retry.')
 }
 
 /** Builds `path#key=...` for sharing — e.g. `/canvas/{slug}` or a full canvas URL. */
