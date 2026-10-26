@@ -201,10 +201,7 @@ export function CollabProvider({
       const decrypted = await Promise.all(
         (elements as EncryptedWireElement[]).map((el) => decryptElement(el, key)),
       ).catch(() => null)
-      if (!decrypted) {
-        keyCallbacksRef.current.onDecryptionFailed?.()
-        return null
-      }
+      if (!decrypted) return null
       // shortcut: empty boards cannot prove key ownership; verify after encrypted content arrives.
       if (canVerifyKey && elements.length > 0 && verifiedKeyRef.current !== key) {
         verifiedKeyRef.current = key
@@ -266,7 +263,10 @@ export function CollabProvider({
       'room-joined',
       async ({ elements, files }: { slug: string; elements: unknown[]; files: RemoteFile[] }) => {
         const decrypted = await decryptBatch(elements, true)
-        if (!decrypted) return
+        if (!decrypted) {
+          keyCallbacksRef.current.onDecryptionFailed?.()
+          return
+        }
         initialSceneDecryptedRef.current = true
         const validElements = renderableElements(decrypted)
         const isReconnect = broadcastedVersionsRef.current.size > 0
