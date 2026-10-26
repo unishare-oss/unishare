@@ -74,6 +74,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -126,6 +127,30 @@ describe('verified board key backups', () => {
     const restored = await decryptRoomKey(wrapped, account.privateKey)
     expect(await exportRoomKeyRaw(restored)).toBe(await exportRoomKeyRaw(boardKey))
     expect(useBoardKeysStore.getState().getKey('test-board')).toBe(await exportRoomKeyRaw(boardKey))
+  })
+
+  it('does not trust an incoming update before the initial board has decrypted', async () => {
+    window.location.hash = `#key=${await exportRoomKeyRaw(wrongKey)}`
+    const snapshot = [await encryptElement({ id: 'original', version: 1 }, boardKey)]
+    const update = [await encryptElement({ id: 'injected', version: 1 }, wrongKey)]
+    let rejectSnapshot!: (reason: Error) => void
+    vi.spyOn(crypto.subtle, 'decrypt').mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectSnapshot = reject
+        }),
+    )
+    await join()
+    await act(async () => {
+      const pending = socket.handlers.get('room-joined')?.({ elements: snapshot, files: [] })
+      await socket.handlers.get('scene-update')?.(update)
+      expect(useBoardKeysStore.getState().getKey('test-board')).toBeUndefined()
+      expect(patches()).toHaveLength(0)
+      rejectSnapshot(new Error('Incorrect key'))
+      await pending
+    })
+    expect(screen.getByText('This board is encrypted')).toBeInTheDocument()
+    expect(patches()).toHaveLength(0)
   })
 
   it('does not replace an existing backup when board decryption fails', async () => {
