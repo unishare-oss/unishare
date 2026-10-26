@@ -12,6 +12,8 @@ import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
 import { CollabProvider, useCollab, useCollabPresence } from '@/contexts/collab-context'
 import { backupOwnerRoomKey, getRoomKeyFromLocation } from '@/src/lib/board-crypto'
 import { toast } from 'sonner'
+import { exportRoomKeyRaw } from '@/src/lib/crypto'
+import { useBoardKeysStore } from '@/lib/store'
 
 const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
   ssr: false,
@@ -28,6 +30,7 @@ export default function CanvasPage() {
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [roomKey, setRoomKey] = useState<CryptoKey | null>(null)
+  const [encryptedOwnerKey, setEncryptedOwnerKey] = useState<string | undefined>()
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
   const [shake, setShake] = useState(false)
@@ -68,11 +71,7 @@ export default function CanvasPage() {
             return
           }
           setRoomKey(key)
-          if (data.data.userId === data.data.ownerId && !data.data.encryptedOwnerKey) {
-            backupOwnerRoomKey(slug, key, data.data.userId).catch((error: Error) => {
-              toast.warning(error.message)
-            })
-          }
+          setEncryptedOwnerKey(data.data.encryptedOwnerKey)
         }
         setJoinState('joined')
         return
@@ -234,6 +233,7 @@ export default function CanvasPage() {
   // Join succeeded — mount CollabProvider which opens socket
   return (
     <CollabProvider
+      key={slug}
       slug={slug}
       isAnonymous={isAnonymous}
       isViewOnly={isViewOnly}
@@ -241,6 +241,17 @@ export default function CanvasPage() {
       userId={userId}
       roomKey={roomKey}
       onAccessRevoked={() => setJoinState('private')}
+      onDecryptionFailed={() => setJoinState('key-missing')}
+      onRoomKeyVerified={async (key) => {
+        try {
+          useBoardKeysStore.getState().setKey(slug, await exportRoomKeyRaw(key))
+          if (userId && userId === ownerId) {
+            await backupOwnerRoomKey(slug, key, userId, encryptedOwnerKey)
+          }
+        } catch (error) {
+          toast.warning(error instanceof Error ? error.message : 'Could not save the board key.')
+        }
+      }}
     >
       <CanvasInner />
     </CollabProvider>

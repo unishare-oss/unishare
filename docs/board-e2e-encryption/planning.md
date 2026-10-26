@@ -150,9 +150,11 @@ The browser also wraps each new board key with the owner's existing account publ
 responses never contain it. Only the owner can update this backup.
 
 On join, the client reads the explicit fragment first, then the device cache, then the owner
-backup using the account private key from IndexedDB. A recovered key is cached and restored to
-the URL so copying/sharing still works. Existing boards get a backup when their owner opens
-them with a known key. On another browser or after clearing browser data, the owner must first
+backup using the account private key from IndexedDB. A recovered key is restored to the URL
+so copying/sharing still works, but is cached only after decrypting nonempty board content.
+Only then does the owner save or repair a backup; a matching backup is left unchanged.
+Existing empty boards defer backup until encrypted content can verify their key. New boards
+already have the backup saved at creation. On another browser or after clearing browser data, the owner must first
 import/restore their existing account encryption key through Chat Settings. No key is generated
 as a substitute for a lost board key. Without a saved full link, a device cache, or a decryptable
 owner backup, existing encrypted content cannot be recovered.
