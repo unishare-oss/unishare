@@ -1,3 +1,12 @@
+## [0.35.1](https://github.com/unishare-oss/unishare/compare/v0.35.0...v0.35.1) (2026-10-26)
+
+### Bug Fixes
+
+- **boards:** keep sessions open on invalid live updates ([77f561b](https://github.com/unishare-oss/unishare/commit/77f561b5dbdc785efa3d633178002bd02951a785))
+- **boards:** recover owner encryption keys when reopening boards ([10f87ba](https://github.com/unishare-oss/unishare/commit/10f87ba60b79e81ca8087ee293f5970129af36ca))
+- **boards:** verify content before saving recovery keys ([9dd16df](https://github.com/unishare-oss/unishare/commit/9dd16df0877d3ed1fac9c161303f85acbdd1d312))
+- **boards:** wait for initial snapshot before trusting live keys ([589e370](https://github.com/unishare-oss/unishare/commit/589e370d0c4e1c21cb5c581a0435fcfe0c7ad600))
+
 # [0.35.0](https://github.com/unishare-oss/unishare/compare/v0.34.0...v0.35.0) (2026-10-24)
 
 ### Bug Fixes
