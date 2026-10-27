@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { NotificationType } from '@/generated/prisma/client'
 
 export class NotificationEntity {
   @ApiProperty() id: string
-  @ApiProperty() type: string
+  @ApiProperty({ enum: NotificationType }) type: NotificationType
   @ApiProperty() message: string
   @ApiProperty() read: boolean
   @ApiProperty({ type: String, nullable: true }) postId: string | null

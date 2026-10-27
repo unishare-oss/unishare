@@ -1,3 +1,28 @@
+## [0.35.1](https://github.com/unishare-oss/unishare/compare/v0.35.0...v0.35.1) (2026-10-26)
+
+### Bug Fixes
+
+- **boards:** keep sessions open on invalid live updates ([77f561b](https://github.com/unishare-oss/unishare/commit/77f561b5dbdc785efa3d633178002bd02951a785))
+- **boards:** recover owner encryption keys when reopening boards ([10f87ba](https://github.com/unishare-oss/unishare/commit/10f87ba60b79e81ca8087ee293f5970129af36ca))
+- **boards:** verify content before saving recovery keys ([9dd16df](https://github.com/unishare-oss/unishare/commit/9dd16df0877d3ed1fac9c161303f85acbdd1d312))
+- **boards:** wait for initial snapshot before trusting live keys ([589e370](https://github.com/unishare-oss/unishare/commit/589e370d0c4e1c21cb5c581a0435fcfe0c7ad600))
+
+# [0.35.0](https://github.com/unishare-oss/unishare/compare/v0.34.0...v0.35.0) (2026-10-24)
+
+### Bug Fixes
+
+- **comments:** log failed mention and comment notifications instead of crashing ([07664a2](https://github.com/unishare-oss/unishare/commit/07664a26528485a77a6ec894e22b391b5cce803b))
+- **comments:** skip mention lookups when signed out and test mention DTO limits ([49e2003](https://github.com/unishare-oss/unishare/commit/49e2003fbaacfd1603d9f5a06a037ec61db14016))
+
+### Features
+
+- **comments:** change mentions when editing a comment ([3a2efba](https://github.com/unishare-oss/unishare/commit/3a2efba16f2a241b7966d6eeb54c500015ba011c))
+- **comments:** mention followed or following users in comments ([1389f8b](https://github.com/unishare-oss/unishare/commit/1389f8b9428903a195c5cb27674b64e891061b7c))
+- **notifications:** notify people mentioned in a new comment ([9a7f8a4](https://github.com/unishare-oss/unishare/commit/9a7f8a401ee2bbdb4cebc08d3c47c61cb37c1aad))
+- **web:** mention people in comments and highlight mentions ([315ad4d](https://github.com/unishare-oss/unishare/commit/315ad4d2a6659dc6f72ce934ed915d27c6f72bd1))
+- **web:** mention people when editing a comment ([2d998de](https://github.com/unishare-oss/unishare/commit/2d998defcbcd725567962002e6425b0523aae140))
+- **web:** open a mentioned comment from its notification ([3a019b3](https://github.com/unishare-oss/unishare/commit/3a019b3be5e15c5dff1625bfc8e5fe7d68383b31))
+
 # [0.34.0](https://github.com/unishare-oss/unishare/compare/v0.33.0...v0.34.0) (2026-10-21)
 
 ### Features
