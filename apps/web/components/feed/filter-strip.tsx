@@ -1,8 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
@@ -69,9 +70,17 @@ export function FilterStrip({
   sortType = 'recent',
   onSortChange,
 }: FilterStripProps) {
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments, isLoading: departmentsLoading } = useMyDepartments()
+  const selectedDept = departments.find((d) => d.id === selectedDeptId)
+
+  // A persisted or profile department outside the user's university falls back to all departments.
+  const deptOutOfScope =
+    !!selectedDeptId && !departmentsLoading && departments.length > 0 && !selectedDept
+  useEffect(() => {
+    if (!deptOutOfScope) return
+    onDeptChange('')
+    onCourseChange('')
+  }, [deptOutOfScope, onDeptChange, onCourseChange])
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100, ...(selectedDeptId ? { departmentId: selectedDeptId } : {}) },
@@ -85,9 +94,7 @@ export function FilterStrip({
     return deptOk && yearOk
   })
 
-  const selectedDeptLabel = selectedDeptId
-    ? ((departments ?? []).find((d) => d.id === selectedDeptId)?.name ?? '')
-    : 'All departments'
+  const selectedDeptLabel = selectedDept?.name ?? 'All departments'
 
   const selectedYearLabel = selectedYear === null ? 'All years' : `Year ${selectedYear}`
 
