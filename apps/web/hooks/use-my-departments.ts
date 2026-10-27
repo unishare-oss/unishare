@@ -19,7 +19,7 @@ export function useMyDepartments({ staleTime }: { staleTime?: number } = {}) {
   const universityId = user?.university?.id
   const enabled = !authLoading && (!isAuthenticated || !!universityId)
 
-  const { data, isLoading } = useDepartmentsControllerFindAll(
+  const { data, isLoading, isSuccess } = useDepartmentsControllerFindAll(
     universityId ? { universityId } : undefined,
     { query: { enabled, staleTime, select: (r) => r.data } },
   )
@@ -27,6 +27,8 @@ export function useMyDepartments({ staleTime }: { staleTime?: number } = {}) {
   return {
     departments: enabled ? (data ?? []) : [],
     isLoading: authLoading || (enabled && isLoading),
+    // A failed request also gives an empty list, so callers can tell the two apart
+    loaded: enabled && isSuccess,
     // Only once the profile has loaded: a failed profile request is not a missing university.
     noUniversity: !authLoading && !!user && !universityId,
   }

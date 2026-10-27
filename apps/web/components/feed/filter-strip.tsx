@@ -70,12 +70,12 @@ export function FilterStrip({
   sortType = 'recent',
   onSortChange,
 }: FilterStripProps) {
-  const { departments, isLoading: departmentsLoading } = useMyDepartments()
+  const { departments, loaded: departmentsLoaded, noUniversity } = useMyDepartments()
   const selectedDept = departments.find((d) => d.id === selectedDeptId)
 
   // A persisted or profile department outside the user's university falls back to all departments.
-  const deptOutOfScope =
-    !!selectedDeptId && !departmentsLoading && departments.length > 0 && !selectedDept
+  // Only on a loaded list or a missing university: a failed request also gives an empty list.
+  const deptOutOfScope = !!selectedDeptId && !selectedDept && (noUniversity || departmentsLoaded)
   useEffect(() => {
     if (!deptOutOfScope) return
     onDeptChange('')

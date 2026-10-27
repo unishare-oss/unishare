@@ -105,6 +105,7 @@ export class UsersRepository {
       where: { id },
       select: {
         universityId: true,
+        departmentId: true,
         department: { select: { faculty: { select: { universityId: true } } } },
       },
     })
@@ -114,6 +115,22 @@ export class UsersRepository {
     return this.prisma.university.findUnique({
       where: { id },
       select: { id: true },
+    })
+  }
+
+  /**
+   * Writes only while the user's stored university and department still equal `expected`, so a
+   * concurrent profile change can't pair a department with another university. Null when they changed.
+   */
+  updateAcademicProfileIf(
+    id: string,
+    expected: { universityId?: string | null; departmentId?: string | null },
+    dto: UpdateAcademicProfileDto,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({ where: { id, ...expected }, data: dto })
+      if (count === 0) return null
+      return tx.user.findUnique({ where: { id }, include: this.countInclude })
     })
   }
 

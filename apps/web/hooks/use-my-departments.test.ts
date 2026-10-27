@@ -61,6 +61,21 @@ describe('useMyDepartments', () => {
     expect(result.noUniversity).toBe(false)
   })
 
+  it('reports loaded only after a successful fetch, not after a failed one', () => {
+    mocks.auth = {
+      user: { university: { id: 'u-kmutt' } },
+      isAuthenticated: true,
+      isLoading: false,
+    }
+    mocks.findAll.mockReturnValue({ data: [], isLoading: false, isSuccess: true })
+    expect(callHook().result.loaded).toBe(true)
+
+    mocks.findAll.mockReturnValue({ data: undefined, isLoading: false, isSuccess: false })
+    const { result } = callHook()
+    expect(result.departments).toEqual([])
+    expect(result.loaded).toBe(false)
+  })
+
   it('shows nothing and flags noUniversity for a signed-in user without a university', () => {
     mocks.auth = { user: { university: null }, isAuthenticated: true, isLoading: false }
     const { result, params, query } = callHook()
