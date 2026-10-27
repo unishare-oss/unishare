@@ -67,22 +67,39 @@ model User {
 }
 
 model Department {
-  id      String   @id @default(cuid())
-  name    String   @unique
-  courses Course[]
-  users   User[]
+  id        String   @id @default(cuid())
+  name      String
+  facultyId String
+  faculty   Faculty  @relation(fields: [facultyId], references: [id])
+  courses   Course[]
+  users     User[]
 
+  @@unique([facultyId, name])
+  @@index([facultyId])
   @@map("department")
 }
 
+model Faculty {
+  id           String       @id @default(cuid())
+  name         String
+  universityId String
+  university   University   @relation(fields: [universityId], references: [id])
+  departments  Department[]
+
+  @@unique([universityId, name])
+  @@index([universityId])
+  @@map("faculty")
+}
+
 model University {
-  id           String  @id @default(cuid())
-  name         String  @unique
+  id           String    @id @default(cuid())
+  name         String    @unique
   shortName    String
   logoUrl      String?
   /// uniauth organization this university is linked to (memberships live in uniauth)
-  uniauthOrgId String? @unique
+  uniauthOrgId String?   @unique
   users        User[]
+  faculties    Faculty[]
 
   @@map("university")
 }

@@ -3,6 +3,8 @@ import { PrismaService } from '@/prisma/prisma.service'
 import { CreateDepartmentDto } from './dto/create-department.dto'
 import { UpdateDepartmentDto } from './dto/update-department.dto'
 
+const facultySelect = { select: { id: true, name: true, universityId: true } }
+
 @Injectable()
 export class DepartmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -11,21 +13,24 @@ export class DepartmentsRepository {
     return this.prisma.department.create({ data: dto })
   }
 
-  findAll() {
+  findAll(universityId?: string) {
     return this.prisma.department.findMany({
+      where: universityId ? { faculty: { universityId } } : undefined,
       orderBy: { name: 'asc' },
-      include: { _count: { select: { courses: true } } },
+      include: { faculty: facultySelect, _count: { select: { courses: true } } },
     })
   }
 
-  findByName(name: string) {
-    return this.prisma.department.findUnique({ where: { name } })
+  findByFacultyAndName(facultyId: string, name: string) {
+    return this.prisma.department.findUnique({
+      where: { facultyId_name: { facultyId, name } },
+    })
   }
 
   findById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },
-      include: { courses: { orderBy: { name: 'asc' } } },
+      include: { faculty: facultySelect, courses: { orderBy: { name: 'asc' } } },
     })
   }
 

@@ -96,7 +96,17 @@ export class UsersRepository {
   findDepartmentById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, faculty: { select: { universityId: true } } },
+    })
+  }
+
+  findAcademicProfileOfUser(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        universityId: true,
+        department: { select: { faculty: { select: { universityId: true } } } },
+      },
     })
   }
 

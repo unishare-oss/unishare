@@ -116,17 +116,33 @@ export class UsersService {
       )
     }
 
-    if (dto.departmentId !== undefined && dto.departmentId !== null) {
-      const department = await this.usersRepository.findDepartmentById(dto.departmentId)
-      if (!department) throw new NotFoundException('Department not found')
-    }
-
     if (dto.universityId !== undefined && dto.universityId !== null) {
       const university = await this.usersRepository.findUniversityById(dto.universityId)
       if (!university) throw new NotFoundException('University not found')
     }
 
-    const user = await this.usersRepository.updateAcademicProfile(id, dto)
+    let departmentId = dto.departmentId
+    if (departmentId) {
+      const department = await this.usersRepository.findDepartmentById(departmentId)
+      if (!department) throw new NotFoundException('Department not found')
+
+      // null clears the university, so only fall back to the stored one when it's left out
+      const universityId =
+        dto.universityId !== undefined
+          ? dto.universityId
+          : (await this.usersRepository.findAcademicProfileOfUser(id))?.universityId
+      if (!universityId || department.faculty.universityId !== universityId) {
+        throw new BadRequestException('Department is not in your university')
+      }
+    } else if (departmentId === undefined && dto.universityId !== undefined) {
+      // Changing university drops a department that belongs to another one
+      const current = await this.usersRepository.findAcademicProfileOfUser(id)
+      if (current?.department && current.department.faculty.universityId !== dto.universityId) {
+        departmentId = null
+      }
+    }
+
+    const user = await this.usersRepository.updateAcademicProfile(id, { ...dto, departmentId })
     return this.toProfileView(user)
   }
 
