@@ -1,3 +1,9 @@
+## [0.35.3](https://github.com/unishare-oss/unishare/compare/v0.35.2...v0.35.3) (2026-10-27)
+
+### Bug Fixes
+
+- **deps:** patch dependency security vulnerabilities ([44f20cd](https://github.com/unishare-oss/unishare/commit/44f20cd488f0d0526a0b258e206d2972ddee020b))
+
 ## [0.35.2](https://github.com/unishare-oss/unishare/compare/v0.35.1...v0.35.2) (2026-10-27)
 
 ### Bug Fixes
