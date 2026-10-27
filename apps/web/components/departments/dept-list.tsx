@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { Building2, ChevronRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-
-export type ApiDept = { id: string; name: string; courseCount: number }
+import { groupByFaculty } from '@/hooks/use-my-departments'
+import type {
+  DepartmentEntity,
+  UniversityEntity,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
 
 export function DeptListSkeleton() {
   return (
@@ -27,9 +30,56 @@ export function DeptListSkeleton() {
   )
 }
 
-export function DeptList({ departments }: { departments: ApiDept[] }) {
+/**
+ * One section per faculty. With `universities` (signed-out visitors), sections are
+ * nested under one heading per university.
+ */
+export function DeptList({
+  departments,
+  universities,
+}: {
+  departments: DepartmentEntity[]
+  universities?: UniversityEntity[]
+}) {
+  if (!universities) {
+    return (
+      <div className="max-w-[700px] mx-auto px-6 py-6 flex flex-col gap-6">
+        <FacultySections departments={departments} />
+      </div>
+    )
+  }
+
+  const byUniversity = new Map<string, DepartmentEntity[]>()
+  for (const dept of departments) {
+    const id = dept.faculty.universityId
+    byUniversity.set(id, [...(byUniversity.get(id) ?? []), dept])
+  }
+  const sections = [...byUniversity.entries()]
+    .map(([id, depts]) => ({
+      id,
+      name: universities.find((u) => u.id === id)?.name ?? 'Other',
+      depts,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
   return (
-    <div className="max-w-[700px] mx-auto px-6 py-6">
+    <div className="max-w-[700px] mx-auto px-6 py-6 flex flex-col gap-10">
+      {sections.map((uni) => (
+        <section key={uni.id} aria-label={uni.name} className="flex flex-col gap-6">
+          <h2 className="text-lg font-semibold text-foreground">{uni.name}</h2>
+          <FacultySections departments={uni.depts} />
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function FacultySections({ departments }: { departments: DepartmentEntity[] }) {
+  return groupByFaculty(departments).map(({ faculty, departments }) => (
+    <section key={faculty.id} aria-label={faculty.name}>
+      <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-2">
+        {faculty.name}
+      </h3>
       <div className="grid gap-2">
         {departments.map((dept) => (
           <Link
@@ -51,6 +101,6 @@ export function DeptList({ departments }: { departments: ApiDept[] }) {
           </Link>
         ))}
       </div>
-    </div>
-  )
+    </section>
+  ))
 }

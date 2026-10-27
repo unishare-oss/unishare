@@ -30,7 +30,6 @@ export default function AdminDepartmentsPage() {
 
   // Dept modal state
   const [deptModal, setDeptModal] = useState<{ open: boolean; dept?: ApiDept }>({ open: false })
-  const [deptName, setDeptName] = useState('')
 
   // Course modal state
   const [courseModal, setCourseModal] = useState<{ open: boolean; course?: ApiCourse }>({
@@ -44,7 +43,8 @@ export default function AdminDepartmentsPage() {
   const [deleteDept, setDeleteDept] = useState<ApiDept | null>(null)
   const [deleteCourse, setDeleteCourse] = useState<ApiCourse | null>(null)
 
-  const { data: depts, isLoading: deptsLoading } = useDepartmentsControllerFindAll({
+  // Admins manage every university's departments.
+  const { data: depts, isLoading: deptsLoading } = useDepartmentsControllerFindAll(undefined, {
     query: { select: (r) => r.data },
   })
 
@@ -106,14 +106,8 @@ export default function AdminDepartmentsPage() {
           depts={depts ?? []}
           selectedDeptId={effectiveDeptId}
           onSelect={setSelectedDeptId}
-          onAddClick={() => {
-            setDeptName('')
-            setDeptModal({ open: true })
-          }}
-          onEditClick={(dept) => {
-            setDeptName(dept.name)
-            setDeptModal({ open: true, dept })
-          }}
+          onAddClick={() => setDeptModal({ open: true })}
+          onEditClick={(dept) => setDeptModal({ open: true, dept })}
           onDeleteClick={setDeleteDept}
           isLoading={deptsLoading}
         />
@@ -139,15 +133,13 @@ export default function AdminDepartmentsPage() {
 
       <AddDeptModal
         open={deptModal.open}
-        value={deptName}
-        onChange={setDeptName}
-        editMode={!!deptModal.dept}
+        dept={deptModal.dept}
         onClose={() => setDeptModal({ open: false })}
-        onSubmit={(name) => {
+        onSubmit={(data) => {
           if (deptModal.dept) {
-            updateDept({ id: deptModal.dept.id, data: { name } })
+            updateDept({ id: deptModal.dept.id, data })
           } else {
-            createDept({ data: { name } })
+            createDept({ data })
           }
         }}
       />

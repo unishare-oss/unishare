@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import {
   useUsersControllerUpdateMe,
@@ -24,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useMyDepartments, NO_UNIVERSITY_MESSAGE } from '@/hooks/use-my-departments'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 
 interface EditProfileFormProps {
   user: UserProfileEntity
@@ -73,9 +75,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     })
   }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name, user.university?.id])
 
-  const { data: depts } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments, noUniversity } = useMyDepartments()
 
   const { data: unis } = useUniversitiesControllerFindAll({
     query: { select: (r) => r.data },
@@ -88,6 +88,9 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
   async function handleSave(values: EditProfileValues) {
     setSaving(true)
     setSuccess(false)
+    // Only send the department the user picked here: an untouched one may predate university
+    // scoping, and the API rejects a department outside the user's university.
+    const departmentChanged = values.departmentId !== (user.department?.id ?? '')
     try {
       await Promise.all([
         updateMe({
@@ -98,8 +101,7 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
         }),
         updateAcademic({
           data: {
-            universityId: values.universityId || null,
-            departmentId: values.departmentId || null,
+            ...(departmentChanged && { departmentId: values.departmentId || null }),
             enrollmentYear: values.enrollmentYear ? Number(values.enrollmentYear) : null,
           },
         }),
@@ -107,6 +109,8 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
 
       await queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
       setSuccess(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save profile')
     } finally {
       setSaving(false)
     }
@@ -224,14 +228,11 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                       <SelectItem value="_none" className="text-text-muted">
                         None
                       </SelectItem>
-                      {(depts ?? []).map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          <span className="truncate block">{dept.name}</span>
-                        </SelectItem>
-                      ))}
+                      <DepartmentSelectItems departments={departments} />
                     </SelectContent>
                   </Select>
                 </FormControl>
+                {noUniversity && <p className="text-xs text-text-muted">{NO_UNIVERSITY_MESSAGE}</p>}
                 <FormMessage className="text-xs" />
               </FormItem>
             )}

@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
@@ -116,17 +117,42 @@ export class UsersService {
       )
     }
 
-    if (dto.departmentId !== undefined && dto.departmentId !== null) {
-      const department = await this.usersRepository.findDepartmentById(dto.departmentId)
-      if (!department) throw new NotFoundException('Department not found')
-    }
-
     if (dto.universityId !== undefined && dto.universityId !== null) {
       const university = await this.usersRepository.findUniversityById(dto.universityId)
       if (!university) throw new NotFoundException('University not found')
     }
 
-    const user = await this.usersRepository.updateAcademicProfile(id, dto)
+    let departmentId = dto.departmentId
+    // What the checks below relied on; the write only applies if it still holds
+    let expected: { universityId?: string | null; departmentId?: string | null } | undefined
+    if (departmentId) {
+      const department = await this.usersRepository.findDepartmentById(departmentId)
+      if (!department) throw new NotFoundException('Department not found')
+
+      // null clears the university, so only fall back to the stored one when it's left out
+      let universityId = dto.universityId
+      if (universityId === undefined) {
+        universityId = (await this.usersRepository.findAcademicProfileOfUser(id))?.universityId
+        expected = { universityId: universityId ?? null }
+      }
+      if (!universityId || department.faculty.universityId !== universityId) {
+        throw new BadRequestException('Department is not in your university')
+      }
+    } else if (departmentId === undefined && dto.universityId !== undefined) {
+      // Changing university drops a department that belongs to another one
+      const current = await this.usersRepository.findAcademicProfileOfUser(id)
+      if (current?.department && current.department.faculty.universityId !== dto.universityId) {
+        departmentId = null
+      } else {
+        expected = { departmentId: current?.departmentId ?? null }
+      }
+    }
+
+    const data = { ...dto, departmentId }
+    const user = expected
+      ? await this.usersRepository.updateAcademicProfileIf(id, expected, data)
+      : await this.usersRepository.updateAcademicProfile(id, data)
+    if (!user) throw new ConflictException('Your profile changed while saving. Try again.')
     return this.toProfileView(user)
   }
 

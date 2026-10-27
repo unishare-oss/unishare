@@ -14,7 +14,8 @@ import type {
   PostRequestsControllerFindAllParams,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -49,7 +50,7 @@ export default function RequestsPage() {
   const [courseFilter, setCourseFilter] = useState<string>(ALL)
   const [page, setPage] = useState(1)
 
-  const { data: depts } = useDepartmentsControllerFindAll({ query: { select: (r) => r.data } })
+  const { departments: depts } = useMyDepartments()
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
     { query: { select: (r) => r.data } },
@@ -161,11 +162,7 @@ export default function RequestsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All depts</SelectItem>
-              {(depts ?? []).map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
+              <DepartmentSelectItems departments={depts} />
             </SelectContent>
           </Select>
 

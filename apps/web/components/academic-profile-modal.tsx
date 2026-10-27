@@ -25,7 +25,8 @@ import {
   useUsersControllerUpdateAcademicProfile,
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments, NO_UNIVERSITY_MESSAGE } from '@/hooks/use-my-departments'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 import { getPostsControllerFindAllQueryKey } from '@/src/lib/api/generated/posts/posts'
 import { useFeedStore } from '@/lib/store'
 
@@ -65,9 +66,7 @@ export function AcademicProfileModal({
     mode: 'onChange',
   })
 
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments, noUniversity } = useMyDepartments()
 
   const { mutate, isPending } = useUsersControllerUpdateAcademicProfile({
     mutation: {
@@ -139,14 +138,13 @@ export function AcademicProfileModal({
                         <SelectItem value="_none" className="text-text-muted">
                           {requireDepartment ? 'Select your department' : 'Department (optional)'}
                         </SelectItem>
-                        {(departments ?? []).map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
+                        <DepartmentSelectItems departments={departments} />
                       </SelectContent>
                     </Select>
                   </FormControl>
+                  {noUniversity && (
+                    <p className="text-xs text-text-muted">{NO_UNIVERSITY_MESSAGE}</p>
+                  )}
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}

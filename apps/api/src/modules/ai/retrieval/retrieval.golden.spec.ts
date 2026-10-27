@@ -162,6 +162,7 @@ const describeGolden = process.env.RUN_GOLDEN_EVAL === '1' ? describe : describe
 jest.setTimeout(600_000)
 
 const UNIVERSITY_ID = 'golden-eval-uni'
+const FACULTY_ID = 'golden-eval-faculty'
 const DEPARTMENT_ID = 'golden-eval-dept'
 const COURSE_ID = 'golden-eval-course'
 const USER_ID = 'golden-eval-user'
@@ -193,6 +194,7 @@ describeGolden('retrieval golden set (live pgvector + Ollama)', () => {
     await prisma.user.deleteMany({ where: { id: USER_ID } })
     await prisma.course.deleteMany({ where: { id: COURSE_ID } })
     await prisma.department.deleteMany({ where: { id: DEPARTMENT_ID } })
+    await prisma.faculty.deleteMany({ where: { id: FACULTY_ID } })
     await prisma.university.deleteMany({ where: { id: UNIVERSITY_ID } })
   }
 
@@ -217,8 +219,11 @@ describeGolden('retrieval golden set (live pgvector + Ollama)', () => {
     await prisma.university.create({
       data: { id: UNIVERSITY_ID, name: 'Golden Eval University', shortName: 'GEU' },
     })
+    await prisma.faculty.create({
+      data: { id: FACULTY_ID, name: 'Golden Eval Faculty', universityId: UNIVERSITY_ID },
+    })
     await prisma.department.create({
-      data: { id: DEPARTMENT_ID, name: 'Golden Eval Department' },
+      data: { id: DEPARTMENT_ID, name: 'Golden Eval Department', facultyId: FACULTY_ID },
     })
     await prisma.course.create({
       data: {
