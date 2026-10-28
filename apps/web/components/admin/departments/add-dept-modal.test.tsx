@@ -76,8 +76,9 @@ describe('AddDeptModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    // Enabled again once the rejected save has settled
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled())
     expect(onClose).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
   })
 
   it('resets the faculty when the university changes', async () => {

@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { SearchSelect } from '@/components/ui/search-select'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 
 interface CourseSelectorProps {
   deptId: string
@@ -36,6 +37,9 @@ export function CourseSelector({
   const { data: departments } = useDepartmentsControllerFindAll(undefined, {
     query: { select: (r) => r.data },
   })
+  const { data: universities } = useUniversitiesControllerFindAll({
+    query: { select: (r) => r.data },
+  })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     {
@@ -54,10 +58,14 @@ export function CourseSelector({
       .map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))
   }, [coursesData?.items, yearLevel])
 
-  const deptOptions = useMemo(
-    () => (departments ?? []).map((d) => ({ value: d.id, label: d.name })),
-    [departments],
-  )
+  // Universities can share department names, so each label names its university
+  const deptOptions = useMemo(() => {
+    const shortNames = new Map((universities ?? []).map((u) => [u.id, u.shortName]))
+    return (departments ?? []).map((d) => {
+      const uni = shortNames.get(d.faculty.universityId)
+      return { value: d.id, label: uni ? `${d.name} (${uni})` : d.name }
+    })
+  }, [departments, universities])
 
   return (
     <section className="space-y-4">
