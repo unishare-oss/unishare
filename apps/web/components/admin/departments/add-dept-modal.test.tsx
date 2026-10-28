@@ -60,6 +60,24 @@ describe('AddDeptModal', () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith({ name: 'Robotics', facultyId: 'f-eng' }),
     )
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('stays open when the save fails', async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error('Department already exists'))
+    const onClose = vi.fn()
+    render(<AddDeptModal open onClose={onClose} onSubmit={onSubmit} />)
+
+    await userEvent.type(screen.getByLabelText('Name'), 'Robotics')
+    await userEvent.click(screen.getByRole('combobox', { name: 'University' }))
+    await userEvent.click(await screen.findByRole('option', { name: /KMUTT University/ }))
+    await userEvent.click(screen.getByRole('combobox', { name: 'Faculty' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Faculty of Engineering' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
   })
 
   it('resets the faculty when the university changes', async () => {

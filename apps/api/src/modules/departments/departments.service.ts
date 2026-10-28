@@ -9,6 +9,14 @@ import { DepartmentsRepository } from './departments.repository'
 import { CreateDepartmentDto } from './dto/create-department.dto'
 import { UpdateDepartmentDto } from './dto/update-department.dto'
 
+/** The unique (facultyId, name) index catches a duplicate created between the check and the write. */
+function rethrowDuplicate(error: unknown): never {
+  if ((error as { code?: string } | null)?.code === 'P2002') {
+    throw new ConflictException('Department already exists')
+  }
+  throw error
+}
+
 @Injectable()
 export class DepartmentsService {
   constructor(
@@ -19,7 +27,7 @@ export class DepartmentsService {
   async create(dto: CreateDepartmentDto) {
     await this.facultiesService.findById(dto.facultyId)
     await this.assertNameFree(dto.facultyId, dto.name)
-    return this.departmentsRepository.create(dto)
+    return this.departmentsRepository.create(dto).catch(rethrowDuplicate)
   }
 
   async findAll(universityId?: string) {
@@ -42,13 +50,19 @@ export class DepartmentsService {
       throw new BadRequestException('name and facultyId cannot be null')
     }
     const department = await this.findOne(id)
-    if (dto.facultyId !== undefined) await this.facultiesService.findById(dto.facultyId)
+    if (dto.facultyId !== undefined) {
+      const faculty = await this.facultiesService.findById(dto.facultyId)
+      // Its members' university wouldn't match their department any more
+      if (faculty.universityId !== department.faculty.universityId) {
+        throw new BadRequestException('A department cannot move to another university')
+      }
+    }
     await this.assertNameFree(
       dto.facultyId ?? department.facultyId,
       dto.name ?? department.name,
       id,
     )
-    return this.departmentsRepository.update(id, dto)
+    return this.departmentsRepository.update(id, dto).catch(rethrowDuplicate)
   }
 
   async remove(id: string) {

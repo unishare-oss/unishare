@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { SearchSelect } from '@/components/ui/search-select'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useMyDepartments } from '@/hooks/use-my-departments'
+import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
 
 interface CourseSelectorProps {
   deptId: string
@@ -32,7 +32,10 @@ export function CourseSelector({
   disabled,
   onlyWithOutline,
 }: CourseSelectorProps) {
-  const { departments } = useMyDepartments()
+  // Admins write quizzes for every university, not only their own
+  const { data: departments } = useDepartmentsControllerFindAll(undefined, {
+    query: { select: (r) => r.data },
+  })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     {
@@ -52,7 +55,7 @@ export function CourseSelector({
   }, [coursesData?.items, yearLevel])
 
   const deptOptions = useMemo(
-    () => departments.map((d) => ({ value: d.id, label: d.name })),
+    () => (departments ?? []).map((d) => ({ value: d.id, label: d.name })),
     [departments],
   )
 
