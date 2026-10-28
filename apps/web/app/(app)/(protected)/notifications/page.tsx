@@ -10,20 +10,33 @@ import {
   useNotificationsControllerMarkAllRead,
   getNotificationsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/notifications/notifications'
-import type { NotificationEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import type {
+  NotificationEntity,
+  NotificationEntityType,
+} from '@/src/lib/api/generated/unishareAPI.schemas'
 import { PageHeader } from '@/components/shared/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-const NOTIFICATION_META: Record<string, { label: string; color: string }> = {
+const NOTIFICATION_META: Record<NotificationEntityType, { label: string; color: string }> = {
   POST_APPROVED: { label: 'Approved', color: 'text-info' },
   POST_REJECTED: { label: 'Rejected', color: 'text-red-400' },
   REQUEST_SUGGESTION_ADDED: { label: 'Suggestion', color: 'text-text-muted' },
   REQUEST_FULFILLED: { label: 'Fulfilled', color: 'text-success' },
   NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
-  POST_COMMENT: { label: 'Comment', color: 'text-text-muted' },
+  COMMENT_ADDED: { label: 'Comment', color: 'text-text-muted' },
   CHAT_MESSAGE: { label: 'Message', color: 'text-info' },
   EXAM_REMINDER: { label: 'Exam', color: 'text-red-400' },
+  MENTION: { label: 'Mention', color: 'text-primary' },
+}
+
+function notificationHref(n: NotificationEntity) {
+  if (n.requestId) return `/requests/${n.requestId}`
+  if (n.postId)
+    return n.commentId ? `/posts/${n.postId}#comment-${n.commentId}` : `/posts/${n.postId}`
+  if (n.chatRoomId) return `/chat/${n.chatRoomId}`
+  if (n.examId) return '/calendar'
+  return null
 }
 
 export default function NotificationsPage() {
@@ -65,10 +78,8 @@ export default function NotificationsPage() {
 
   function handleClick(n: NotificationEntity) {
     if (!n.read) markOneRead({ id: n.id })
-    if (n.requestId) router.push(`/requests/${n.requestId}`)
-    else if (n.postId) router.push(`/posts/${n.postId}`)
-    else if (n.chatRoomId) router.push(`/chat/${n.chatRoomId}`)
-    else if (n.examId) router.push('/calendar')
+    const href = notificationHref(n)
+    if (href) router.push(href)
   }
 
   return (
@@ -127,9 +138,7 @@ export default function NotificationsPage() {
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
                     !n.read && 'bg-amber/[0.04]',
-                    n.postId || n.requestId || n.chatRoomId || n.examId
-                      ? 'cursor-pointer'
-                      : 'cursor-default',
+                    notificationHref(n) ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <span

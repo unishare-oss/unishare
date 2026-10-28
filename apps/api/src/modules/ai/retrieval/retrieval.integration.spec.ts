@@ -37,6 +37,7 @@ const describeDb = process.env.RUN_DB_TESTS === '1' ? describe : describe.skip
 jest.setTimeout(300_000)
 
 const UNIVERSITY_ID = 'ret-int-uni'
+const FACULTY_ID = 'ret-int-faculty'
 const DEPARTMENT_ID = 'ret-int-dept'
 const COURSE_ID = 'ret-int-course'
 const USER_ID = 'ret-int-user'
@@ -143,6 +144,7 @@ describeDb('RetrievalService (live pgvector)', () => {
     await prisma.user.deleteMany({ where: { id: USER_ID } })
     await prisma.course.deleteMany({ where: { id: COURSE_ID } })
     await prisma.department.deleteMany({ where: { id: DEPARTMENT_ID } })
+    await prisma.faculty.deleteMany({ where: { id: FACULTY_ID } })
     await prisma.university.deleteMany({ where: { id: UNIVERSITY_ID } })
   }
 
@@ -166,8 +168,11 @@ describeDb('RetrievalService (live pgvector)', () => {
     await prisma.university.create({
       data: { id: UNIVERSITY_ID, name: 'Retrieval Integration University', shortName: 'RIU' },
     })
+    await prisma.faculty.create({
+      data: { id: FACULTY_ID, name: 'Retrieval Integration Faculty', universityId: UNIVERSITY_ID },
+    })
     await prisma.department.create({
-      data: { id: DEPARTMENT_ID, name: 'Retrieval Integration Department' },
+      data: { id: DEPARTMENT_ID, name: 'Retrieval Integration Department', facultyId: FACULTY_ID },
     })
     await prisma.course.create({
       data: {

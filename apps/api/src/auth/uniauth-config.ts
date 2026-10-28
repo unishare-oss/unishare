@@ -21,3 +21,22 @@ export const uniauthConfig = {
   clientId: required('UNIAUTH_CLIENT_ID', 'unishare-test'),
   clientSecret: required('UNIAUTH_CLIENT_SECRET', 'unishare-test-secret'),
 }
+
+/**
+ * The machine credential (client_credentials) uniauth issued for the identity directory, and the client ids v1 identity
+ * events are addressed to: the machine client, plus UNIAUTH_EVENTS_EXTRA_AUDIENCES (comma-separated) while a credential
+ * rotation overlaps. Both unset means the directory is off: updates then cannot be fetched and reconciliation does not run.
+ */
+export function uniauthDirectoryConfig() {
+  const clientId = process.env.UNIAUTH_DIRECTORY_CLIENT_ID || undefined
+  const clientSecret = process.env.UNIAUTH_DIRECTORY_CLIENT_SECRET || undefined
+  if (!!clientId !== !!clientSecret) {
+    throw new Error(
+      'Set both UNIAUTH_DIRECTORY_CLIENT_ID and UNIAUTH_DIRECTORY_CLIENT_SECRET, or neither',
+    )
+  }
+  const audiences = [clientId, ...(process.env.UNIAUTH_EVENTS_EXTRA_AUDIENCES ?? '').split(',')]
+    .map((a) => a?.trim())
+    .filter((a): a is string => !!a)
+  return { clientId, clientSecret, audiences, origin: new URL(uniauthConfig.issuer).origin }
+}

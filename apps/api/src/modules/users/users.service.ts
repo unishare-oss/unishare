@@ -1,11 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ForbiddenException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '@/prisma/prisma.service'
 import { computeYearLevel } from '@/common/utils/academic-year'
 import { FollowsService } from '../follows/follows.service'
 import { ChatService } from '../chat/chat.service'
 import { AuditService } from '../audit/audit.service'
-import { AuditAction } from '../audit/audit.actions'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -43,15 +48,14 @@ export class UsersService {
     return this.toProfileView(user)
   }
 
-  /** Records when the user accepted the terms; the first acceptance is the one kept. */
+  /** Compatibility endpoint: shared acceptance can only be recorded by UniAuth. */
   async giveConsent(id: string) {
-    await this.usersRepository.giveConsent(id, new Date())
-    this.audit.record({
-      action: AuditAction.UserConsent,
-      actorId: id,
-      targetType: 'user',
-      targetId: id,
-    })
+    const user = await this.usersRepository.findById(id)
+    if (user?.unicorpTermsVersion !== 1 || !user.unicorpTermsAcceptedAt)
+      throw new ForbiddenException({
+        code: 'consent_required',
+        message: 'Complete shared Unicorp terms through UniAuth',
+      })
   }
 
   async updatePublicKey(id: string, publicKey: string) {
@@ -113,17 +117,42 @@ export class UsersService {
       )
     }
 
-    if (dto.departmentId !== undefined && dto.departmentId !== null) {
-      const department = await this.usersRepository.findDepartmentById(dto.departmentId)
-      if (!department) throw new NotFoundException('Department not found')
-    }
-
     if (dto.universityId !== undefined && dto.universityId !== null) {
       const university = await this.usersRepository.findUniversityById(dto.universityId)
       if (!university) throw new NotFoundException('University not found')
     }
 
-    const user = await this.usersRepository.updateAcademicProfile(id, dto)
+    let departmentId = dto.departmentId
+    // What the checks below relied on; the write only applies if it still holds
+    let expected: { universityId?: string | null; departmentId?: string | null } | undefined
+    if (departmentId) {
+      const department = await this.usersRepository.findDepartmentById(departmentId)
+      if (!department) throw new NotFoundException('Department not found')
+
+      // null clears the university, so only fall back to the stored one when it's left out
+      let universityId = dto.universityId
+      if (universityId === undefined) {
+        universityId = (await this.usersRepository.findAcademicProfileOfUser(id))?.universityId
+        expected = { universityId: universityId ?? null }
+      }
+      if (!universityId || department.faculty.universityId !== universityId) {
+        throw new BadRequestException('Department is not in your university')
+      }
+    } else if (departmentId === undefined && dto.universityId !== undefined) {
+      // Changing university drops a department that belongs to another one
+      const current = await this.usersRepository.findAcademicProfileOfUser(id)
+      if (current?.department && current.department.faculty.universityId !== dto.universityId) {
+        departmentId = null
+      } else {
+        expected = { departmentId: current?.departmentId ?? null }
+      }
+    }
+
+    const data = { ...dto, departmentId }
+    const user = expected
+      ? await this.usersRepository.updateAcademicProfileIf(id, expected, data)
+      : await this.usersRepository.updateAcademicProfile(id, data)
+    if (!user) throw new ConflictException('Your profile changed while saving. Try again.')
     return this.toProfileView(user)
   }
 

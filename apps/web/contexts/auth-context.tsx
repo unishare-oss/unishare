@@ -44,11 +44,7 @@ async function generateAndUploadKeys(userId: string): Promise<string> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const pathname = usePathname()
-  const {
-    data: session,
-    isPending: sessionPending,
-    refetch: refetchSession,
-  } = authClient.useSession()
+  const { data: session, isPending: sessionPending } = authClient.useSession()
   const { data: user, isPending: userPending } = useUsersControllerGetMe({
     query: {
       enabled: !!session?.user,
@@ -75,6 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // A signed-out visitor who is already signed in to uniauth (from another app)
   // is signed in here too — one invisible prompt=none round-trip per browser session.
   useEffect(() => {
+    const user = session?.user as
+      { unicorpTermsVersion?: number; unicorpTermsAcceptedAt?: unknown } | undefined
+    if (user?.unicorpTermsVersion === 1 && user.unicorpTermsAcceptedAt)
+      sessionStorage.removeItem('unishare:shared-terms-refresh')
     if (sessionPending || session || silentCheckDone()) return
     if (window.location.pathname.startsWith('/login')) return
     signInWithUniauth({ returnTo: window.location.href, silent: true }).catch(console.error)
@@ -82,14 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isLoading = sessionPending || (!!session?.user && userPending)
   const isAuthenticated = !!session?.user
-  // Guests accept the terms by continuing as a guest (the API records it); everyone else once
-  // here. The terms themselves stay readable.
+  // Signed-in users need the shared UniAuth record; app-only history remains separate.
   const sessionUser = session?.user as
-    { isAnonymous?: boolean | null; consentGivenAt?: Date | string | null } | undefined
+    | {
+        isAnonymous?: boolean | null
+        unicorpTermsVersion?: number | null
+        unicorpTermsAcceptedAt?: Date | string | null
+      }
+    | undefined
   const needsConsent =
     !!sessionUser &&
     !sessionUser.isAnonymous &&
-    !sessionUser.consentGivenAt &&
+    (sessionUser.unicorpTermsVersion !== 1 || !sessionUser.unicorpTermsAcceptedAt) &&
     pathname !== '/terms' &&
     pathname !== '/privacy'
 
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
       }}
     >
-      {needsConsent ? <ConsentGate onAccepted={() => refetchSession()} /> : children}
+      {needsConsent ? <ConsentGate /> : children}
     </AuthContext>
   )
 }

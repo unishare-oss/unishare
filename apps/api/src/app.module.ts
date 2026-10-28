@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
+import { SharedTermsGuard } from './auth/shared-terms.guard'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerModule } from '@nestjs/throttler'
@@ -15,6 +17,7 @@ import { StorageModule } from './modules/storage/storage.module'
 import { CoursesModule } from './modules/courses/courses.module'
 import { UsersModule } from './modules/users/users.module'
 import { DepartmentsModule } from './modules/departments/departments.module'
+import { FacultiesModule } from './modules/faculties/faculties.module'
 import { PostsModule } from './modules/posts/posts.module'
 import { FilesModule } from './modules/files/files.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
@@ -93,10 +96,11 @@ import { BullMQOtel } from 'bullmq-otel'
     EventEmitterModule.forRoot(),
     PrismaModule,
     StorageModule,
-    AuthModule.forRoot({ auth }),
+    AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }),
     CoursesModule,
     UsersModule,
     DepartmentsModule,
+    FacultiesModule,
     PostsModule,
     FilesModule,
     NotificationsModule,
@@ -121,6 +125,6 @@ import { BullMQOtel } from 'bullmq-otel'
     McpModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: SharedTermsGuard }],
 })
 export class AppModule {}

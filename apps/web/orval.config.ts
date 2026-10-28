@@ -35,6 +35,13 @@ export default defineConfig({
           ExamsController_findAll: {
             query: { useInfinite: false },
           },
+          // Filtered by `universityId`, not paged: an infinite variant would not compile.
+          DepartmentsController_findAll: {
+            query: { useInfinite: false },
+          },
+          FacultiesController_findAll: {
+            query: { useInfinite: false },
+          },
           // Takes a `format` param but is not a list: the generated infinite variant
           // assumes a `page` param and does not compile without this.
           DecksController_getDownloadUrl: {
@@ -46,6 +53,9 @@ export default defineConfig({
             query: { useInfinite: false },
           },
           DecksController_getSharedDownloadUrl: {
+            query: { useInfinite: false },
+          },
+          FollowsController_getMentionable: {
             query: { useInfinite: false },
           },
         },

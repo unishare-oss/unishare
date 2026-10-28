@@ -25,6 +25,12 @@ model User {
   enrollmentYear          Int?
   isAnonymous             Boolean?                 @default(false)
   consentGivenAt          DateTime?
+  unicorpTermsVersion     Int?
+  unicorpTermsAcceptedAt  DateTime?
+  /// The last uniauth identity version applied to this person (null until one is); an event applies only if newer.
+  identityVersion         Int?
+  /// uniauth's account state: active | suspended. Separate from the local ban (banned): a ban is Unishare's own decision.
+  identityStatus          String                   @default("active")
   universityId            String?
   publicKey               String?
   /// Passphrase-encrypted private key backup (PBKDF2 + AES-GCM blob, opaque to the server)
@@ -61,22 +67,39 @@ model User {
 }
 
 model Department {
-  id      String   @id @default(cuid())
-  name    String   @unique
-  courses Course[]
-  users   User[]
+  id        String   @id @default(cuid())
+  name      String
+  facultyId String
+  faculty   Faculty  @relation(fields: [facultyId], references: [id])
+  courses   Course[]
+  users     User[]
 
+  @@unique([facultyId, name])
+  @@index([facultyId])
   @@map("department")
 }
 
+model Faculty {
+  id           String       @id @default(cuid())
+  name         String
+  universityId String
+  university   University   @relation(fields: [universityId], references: [id])
+  departments  Department[]
+
+  @@unique([universityId, name])
+  @@index([universityId])
+  @@map("faculty")
+}
+
 model University {
-  id           String  @id @default(cuid())
-  name         String  @unique
+  id           String    @id @default(cuid())
+  name         String    @unique
   shortName    String
   logoUrl      String?
   /// uniauth organization this university is linked to (memberships live in uniauth)
-  uniauthOrgId String? @unique
+  uniauthOrgId String?   @unique
   users        User[]
+  faculties    Faculty[]
 
   @@map("university")
 }
@@ -261,18 +284,20 @@ model PostChunk {
 }
 
 model Comment {
-  id        String    @id @default(cuid())
-  content   String
-  userId    String
-  postId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  parentId  String?
-  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Comment[] @relation("CommentReplies")
-  post      Post      @relation(fields: [postId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  id            String         @id @default(cuid())
+  content       String
+  userId        String
+  postId        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  parentId      String?
+  mentionIds    String[]       @default([])
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  children      Comment[]      @relation("CommentReplies")
+  post          Post           @relation(fields: [postId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  notifications Notification[]
 
   @@index([userId])
   @@index([postId])
@@ -385,12 +410,15 @@ model Notification {
   requestId  String?
   chatRoomId String?
   examId     String?
+  commentId  String?
   post       Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   request    PostRequest?     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   chatRoom   ChatRoom?        @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   exam       Exam?            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  comment    Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([commentId, userId])
   @@index([userId])
   @@map("notification")
 }
@@ -458,17 +486,18 @@ model PostRequestUpvote {
 }
 
 model Room {
-  id           String         @id @default(cuid())
-  slug         String         @unique
-  title        String?
-  ownerId      String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  snapshot     Bytes?
-  visibility   RoomVisibility @default(OPEN)
-  passwordHash String?
-  encrypted    Boolean        @default(false)
-  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id                String         @id @default(cuid())
+  slug              String         @unique
+  title             String?
+  ownerId           String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  snapshot          Bytes?
+  visibility        RoomVisibility @default(OPEN)
+  passwordHash      String?
+  encrypted         Boolean        @default(false)
+  encryptedOwnerKey String?
+  owner             User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("room")
@@ -832,6 +861,7 @@ enum NotificationType {
   NEW_POST_FROM_FOLLOWED
   CHAT_MESSAGE
   EXAM_REMINDER
+  MENTION
 }
 
 enum UserRole {
@@ -896,4 +926,25 @@ enum ChatMessageType {
 enum FeedbackType {
   FEEDBACK
   BUG_REPORT
+}
+
+/// uniauth identity events already applied, by their stable event id: a redelivery changes nothing.
+model IdentityEventReceipt {
+  eventId    String   @id
+  subject    String
+  version    Int
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
+  @@map("identity_event_receipt")
+}
+
+/// Where reconciliation with uniauth's change feed stands (one row).
+model IdentityReconcile {
+  id        Int      @id @default(1)
+  cursor    String?
+  updatedAt DateTime @updatedAt
+
+  @@map("identity_reconcile")
 }

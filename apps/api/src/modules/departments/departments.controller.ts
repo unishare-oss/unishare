@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { DepartmentsService } from './departments.service'
 import { CreateDepartmentDto } from './dto/create-department.dto'
+import { FindDepartmentsDto } from './dto/find-departments.dto'
 import { UpdateDepartmentDto } from './dto/update-department.dto'
 import { DepartmentEntity, DepartmentWithCoursesEntity } from './entities/department.entity'
 
@@ -24,8 +25,8 @@ export class DepartmentsController {
   @OptionalAuth()
   @ApiOkResponse({ type: [DepartmentEntity] })
   @ResponseMessage('Departments fetched successfully')
-  findAll() {
-    return this.departmentsService.findAll()
+  findAll(@Query() query: FindDepartmentsDto) {
+    return this.departmentsService.findAll(query.universityId)
   }
 
   @Get(':id')

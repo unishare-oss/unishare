@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
+import { FollowsService } from '../../follows/follows.service'
 import { PostsService } from '../posts.service'
 import { AuditService } from '../../audit/audit.service'
 import { AuditAction } from '../../audit/audit.actions'
@@ -20,7 +21,10 @@ type CommentTreeNode = FlatCommentNode & {
   children?: CommentTreeNode[]
 }
 
-type CommentResponseNode = CommentTreeNode
+type CommentResponseNode = Omit<CommentTreeNode, 'mentionIds' | 'children'> & {
+  mentions: { id: string; name: string }[]
+  children?: CommentResponseNode[]
+}
 
 const DELETED_COMMENT_CONTENT = 'This comment was deleted.'
 const DELETED_COMMENT_USER = {
@@ -31,18 +35,21 @@ const DELETED_COMMENT_USER = {
 
 @Injectable()
 export class CommentsService {
+  private readonly logger = new Logger(CommentsService.name)
+
   constructor(
     private readonly commentsRepository: CommentsRepository,
     private readonly postsService: PostsService,
     private readonly notificationsService: NotificationsService,
     private readonly audit: AuditService,
+    private readonly followsService: FollowsService,
   ) {}
 
   async findAll(postId: string) {
     await this.postsService.assertCommentTargetExists(postId)
 
     const comments = await this.commentsRepository.findAll(postId)
-    return this.sanitizeCommentTree(this.buildCommentTree(comments))
+    return this.withMentions(this.sanitizeCommentTree(this.buildCommentTree(comments)))
   }
 
   async create(postId: string, dto: CreateCommentDto, userId: string) {
@@ -55,19 +62,29 @@ export class CommentsService {
       }
     }
 
-    const comment = await this.commentsRepository.create(postId, userId, dto)
-    void this.notificationsService.notifyComment(
-      postId,
-      post.authorId,
-      userId,
-      post.title,
-      comment.user.name,
-    )
+    const mentionIds = await this.followsService.keepConnected(userId, dto.mentions ?? [])
+    const created = await this.commentsRepository.create(postId, userId, dto, mentionIds)
+    const [comment] = await this.withMentions([created])
+    // Fire-and-forget: the comment is already saved. There is no unhandledRejection handler in
+    // this app, so an escaped rejection would take the process down; log it instead.
+    void this.notificationsService
+      .notifyMentions({
+        postId,
+        commentId: comment.id,
+        actorName: comment.user.name,
+        postTitle: post.title,
+        recipientIds: mentionIds,
+      })
+      .catch((err: unknown) => this.logNotifyFailure('mention', comment.id, err))
+    void this.notificationsService
+      .notifyComment(postId, post.authorId, userId, post.title, comment.user.name, mentionIds)
+      .catch((err: unknown) => this.logNotifyFailure('comment', comment.id, err))
     return comment
   }
 
   async update(postId: string, commentId: string, dto: UpdateCommentDto, userId: string) {
-    await this.postsService.assertCommentTargetExists(postId)
+    // Same lookup as assertCommentTargetExists, plus the title a mention notification needs.
+    const post = await this.postsService.getNotificationTarget(postId)
 
     const comment = await this.commentsRepository.findById(commentId)
     if (!comment || comment.postId !== postId || comment.deletedAt) {
@@ -78,7 +95,27 @@ export class CommentsService {
       throw new ForbiddenException('You do not own this comment')
     }
 
-    return this.commentsRepository.update(commentId, dto)
+    // Without `mentions` the saved mentions stay and nobody is notified.
+    const mentionIds =
+      dto.mentions === undefined
+        ? undefined
+        : await this.followsService.keepConnected(userId, dto.mentions)
+    const updated = await this.commentsRepository.update(commentId, dto, mentionIds)
+    const [result] = await this.withMentions([updated])
+
+    if (mentionIds !== undefined) {
+      // Sends the full list: the unique (commentId, userId) key drops people already notified.
+      void this.notificationsService
+        .notifyMentions({
+          postId,
+          commentId,
+          actorName: result.user.name,
+          postTitle: post.title,
+          recipientIds: mentionIds,
+        })
+        .catch((err: unknown) => this.logNotifyFailure('mention', commentId, err))
+    }
+    return result
   }
 
   async remove(postId: string, commentId: string, userId: string, userRole: UserRole) {
@@ -107,7 +144,41 @@ export class CommentsService {
       targetId: commentId,
       metadata: { postId, authorId: comment.userId, byOwner: isCommentOwner },
     })
-    return this.sanitizeComment(deletedComment)
+    const [result] = await this.withMentions([this.sanitizeComment(deletedComment)])
+    return result
+  }
+
+  async withMentions(comments: CommentTreeNode[]): Promise<CommentResponseNode[]> {
+    const ids = new Set<string>()
+    const collect = (nodes: CommentTreeNode[]) => {
+      for (const node of nodes) {
+        if (!node.deletedAt) node.mentionIds.forEach((id) => ids.add(id))
+        if (node.children) collect(node.children)
+      }
+    }
+    collect(comments)
+
+    const users = ids.size > 0 ? await this.commentsRepository.findUserNames([...ids]) : []
+    const names = new Map(users.map((user) => [user.id, user.name]))
+
+    const attach = (nodes: CommentTreeNode[]): CommentResponseNode[] =>
+      nodes.map(({ mentionIds, children, ...rest }) => ({
+        ...rest,
+        mentions: rest.deletedAt
+          ? []
+          : mentionIds.flatMap((id) => {
+              const name = names.get(id)
+              return name === undefined ? [] : [{ id, name }]
+            }),
+        ...(children ? { children: attach(children) } : {}),
+      }))
+
+    return attach(comments)
+  }
+
+  private logNotifyFailure(kind: 'mention' | 'comment', commentId: string, err: unknown) {
+    const reason = err instanceof Error ? err.message : String(err)
+    this.logger.warn(`Failed to send ${kind} notifications for comment ${commentId}: ${reason}`)
   }
 
   private buildCommentTree(comments: FlatCommentNode[]) {
@@ -131,11 +202,11 @@ export class CommentsService {
     return roots
   }
 
-  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentResponseNode[] {
+  private sanitizeCommentTree(comments: CommentTreeNode[]): CommentTreeNode[] {
     return comments.map((comment) => this.sanitizeComment(comment))
   }
 
-  private sanitizeComment(comment: CommentTreeNode): CommentResponseNode {
+  private sanitizeComment(comment: CommentTreeNode): CommentTreeNode {
     const children = comment.children ? this.sanitizeCommentTree(comment.children) : undefined
 
     if (!comment.deletedAt) {

@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { SearchSelect } from '@/components/ui/search-select'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 
 interface CourseSelectorProps {
   deptId: string
@@ -32,9 +32,7 @@ export function CourseSelector({
   disabled,
   onlyWithOutline,
 }: CourseSelectorProps) {
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments } = useMyDepartments()
 
   const { data: coursesData } = useCoursesControllerFindAll(
     {
@@ -54,7 +52,7 @@ export function CourseSelector({
   }, [coursesData?.items, yearLevel])
 
   const deptOptions = useMemo(
-    () => (departments ?? []).map((d) => ({ value: d.id, label: d.name })),
+    () => departments.map((d) => ({ value: d.id, label: d.name })),
     [departments],
   )
 

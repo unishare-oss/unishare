@@ -99,7 +99,7 @@ export function RoomCard({
   // Encrypted boards' decryption key never leaves the URL fragment of a device that has
   // actually opened them — this cache (populated on create/visit) is the only way this list
   // can rebuild a working link without it. A device that's never opened the board falls back
-  // to a bare, keyless link — see docs/board-e2e-encryption/planning.md.
+  // to a bare link; the canvas page can recover the owner's encrypted backup.
   const boardPath = () => {
     const key = useBoardKeysStore.getState().getKey(room.slug)
     return key ? `/canvas/${room.slug}#key=${key}` : `/canvas/${room.slug}`

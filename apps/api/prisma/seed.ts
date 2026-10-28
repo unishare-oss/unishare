@@ -1,37 +1,11 @@
 import { PrismaClient } from '../src/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { cs } from './seeds/cs'
-import { it } from './seeds/it'
-import { dsi } from './seeds/dsi'
-import { cpe } from './seeds/cpe'
-import { inc } from './seeds/inc'
-import { eie } from './seeds/eie'
-import { arc } from './seeds/arc'
-import { dd } from './seeds/dd'
-import { dt } from './seeds/dt'
-import { env } from './seeds/env'
-import { cve } from './seeds/cve'
-import { che } from './seeds/che'
-import { universities } from './seeds/universities'
+import { universities } from './seeds'
 
 const pool = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter: pool })
 
-const departments = [cs, it, dsi, cpe, inc, eie, arc, dd, dt, env, cve, che]
-
 async function main() {
-  console.log('Seeding universities...')
-  for (const uni of universities) {
-    await prisma.university.upsert({
-      where: { name: uni.name },
-      update: { shortName: uni.shortName, logoUrl: uni.logoUrl },
-      create: uni,
-    })
-    console.log(`✓ ${uni.shortName}`)
-  }
-
-  console.log('Seeding departments and courses...')
-
   const postCount = await prisma.post.count()
   if (postCount > 0) {
     console.warn('⚠ Posts exist — skipping wipe, using upserts instead')
@@ -40,27 +14,50 @@ async function main() {
     await prisma.department.deleteMany()
   }
 
-  for (const dept of departments) {
-    const department = await prisma.department.upsert({
-      where: { name: dept.name },
-      update: {},
-      create: { name: dept.name },
+  for (const { university: uni, faculties } of universities) {
+    const university = await prisma.university.upsert({
+      where: { name: uni.name },
+      update: {
+        shortName: uni.shortName,
+        logoUrl: uni.logoUrl,
+        // An unset variable keeps the existing link instead of clearing it
+        ...(uni.uniauthOrgId && { uniauthOrgId: uni.uniauthOrgId }),
+      },
+      // An empty variable is '', which would collide on the unique column
+      create: { ...uni, uniauthOrgId: uni.uniauthOrgId || undefined },
     })
+    console.log(`✓ ${uni.shortName}`)
 
-    for (const course of dept.courses) {
-      await prisma.course.upsert({
-        where: { code_departmentId: { code: course.code, departmentId: department.id } },
-        update: { name: course.name, yearLevel: course.yearLevel ?? null },
-        create: {
-          code: course.code,
-          name: course.name,
-          departmentId: department.id,
-          yearLevel: course.yearLevel ?? null,
-        },
+    for (const fac of faculties) {
+      const faculty = await prisma.faculty.upsert({
+        where: { universityId_name: { universityId: university.id, name: fac.name } },
+        update: {},
+        create: { name: fac.name, universityId: university.id },
       })
-    }
 
-    console.log(`✓ ${department.name} — ${dept.courses.length} courses`)
+      for (const dept of fac.departments) {
+        const department = await prisma.department.upsert({
+          where: { facultyId_name: { facultyId: faculty.id, name: dept.name } },
+          update: {},
+          create: { name: dept.name, facultyId: faculty.id },
+        })
+
+        for (const course of dept.courses) {
+          await prisma.course.upsert({
+            where: { code_departmentId: { code: course.code, departmentId: department.id } },
+            update: { name: course.name, yearLevel: course.yearLevel ?? null },
+            create: {
+              code: course.code,
+              name: course.name,
+              departmentId: department.id,
+              yearLevel: course.yearLevel ?? null,
+            },
+          })
+        }
+
+        console.log(`  ✓ ${faculty.name} / ${department.name} — ${dept.courses.length} courses`)
+      }
+    }
   }
 
   console.log('Done.')

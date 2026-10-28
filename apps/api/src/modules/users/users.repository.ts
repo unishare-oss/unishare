@@ -32,6 +32,8 @@ export class UsersRepository {
         enrollmentYear: true,
         createdAt: true,
         consentGivenAt: true,
+        unicorpTermsVersion: true,
+        unicorpTermsAcceptedAt: true,
         department: { select: { id: true, name: true } },
         posts: {
           where: { deletedAt: null },
@@ -91,17 +93,21 @@ export class UsersRepository {
     })
   }
 
-  giveConsent(id: string, at: Date) {
-    return this.prisma.user.updateMany({
-      where: { id, consentGivenAt: null },
-      data: { consentGivenAt: at },
-    })
-  }
-
   findDepartmentById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, faculty: { select: { universityId: true } } },
+    })
+  }
+
+  findAcademicProfileOfUser(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        universityId: true,
+        departmentId: true,
+        department: { select: { faculty: { select: { universityId: true } } } },
+      },
     })
   }
 
@@ -109,6 +115,22 @@ export class UsersRepository {
     return this.prisma.university.findUnique({
       where: { id },
       select: { id: true },
+    })
+  }
+
+  /**
+   * Writes only while the user's stored university and department still equal `expected`, so a
+   * concurrent profile change can't pair a department with another university. Null when they changed.
+   */
+  updateAcademicProfileIf(
+    id: string,
+    expected: { universityId?: string | null; departmentId?: string | null },
+    dto: UpdateAcademicProfileDto,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({ where: { id, ...expected }, data: dto })
+      if (count === 0) return null
+      return tx.user.findUnique({ where: { id }, include: this.countInclude })
     })
   }
 

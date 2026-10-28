@@ -259,8 +259,8 @@ interface BoardKeysStore {
  * A board's decryption key lives only in its URL fragment, which the boards list (room-card,
  * share-to-chat) never sees. Caching it here — on the same device that created or visited the
  * board — lets "Copy link" and "Share to Chat" from the list still produce a working link. A
- * device that never opened the board has no key to offer; those flows fall back to a bare,
- * keyless link for such rooms. See docs/board-e2e-encryption/planning.md.
+ * device that never opened the board first recovers the owner's encrypted backup on the
+ * canvas page. See docs/board-e2e-encryption/planning.md.
  */
 export const useBoardKeysStore = create<BoardKeysStore>()(
   persist(

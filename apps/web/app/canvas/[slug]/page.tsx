@@ -10,7 +10,9 @@ import { DoorClosed, KeyRound, Loader2, Lock, ShieldAlert } from 'lucide-react'
 import { CanvasHeader } from '@/src/components/canvas/canvas-header'
 import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
 import { CollabProvider, useCollab, useCollabPresence } from '@/contexts/collab-context'
-import { getRoomKeyFromLocation, getRoomKeyFromHash } from '@/src/lib/board-crypto'
+import { backupOwnerRoomKey, getRoomKeyFromLocation } from '@/src/lib/board-crypto'
+import { toast } from 'sonner'
+import { exportRoomKeyRaw } from '@/src/lib/crypto'
 import { useBoardKeysStore } from '@/lib/store'
 
 const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
@@ -28,6 +30,7 @@ export default function CanvasPage() {
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [roomKey, setRoomKey] = useState<CryptoKey | null>(null)
+  const [encryptedOwnerKey, setEncryptedOwnerKey] = useState<string | undefined>()
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
   const [shake, setShake] = useState(false)
@@ -58,14 +61,17 @@ export default function CanvasPage() {
         sessionStorage.setItem(`pw-verified-${slug}`, '1')
 
         if (data.data?.encrypted) {
-          const rawKey = getRoomKeyFromHash(window.location.hash)
-          const key = await getRoomKeyFromLocation()
-          if (!key || !rawKey) {
+          const key = await getRoomKeyFromLocation(
+            slug,
+            data.data.encryptedOwnerKey,
+            data.data.userId,
+          )
+          if (!key) {
             setJoinState('key-missing')
             return
           }
-          useBoardKeysStore.getState().setKey(slug, rawKey)
           setRoomKey(key)
+          setEncryptedOwnerKey(data.data.encryptedOwnerKey)
         }
         setJoinState('joined')
         return
@@ -182,8 +188,9 @@ export default function CanvasPage() {
         <ShieldAlert className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-semibold text-foreground">This board is encrypted</h1>
         <p className="max-w-xs text-center text-sm text-muted-foreground">
-          The link you opened is missing its decryption key. Ask whoever shared this board for the
-          full link, including everything after the <code>#</code>.
+          {userId === ownerId
+            ? 'Open this board’s original full link, or use Import encryption keys in Chat Settings to restore your account key if this board has a backup.'
+            : 'Ask whoever shared this board for the full link, including everything after the #.'}
         </p>
         <Button asChild variant="default">
           <Link href="/boards">Back to Boards</Link>
@@ -226,6 +233,7 @@ export default function CanvasPage() {
   // Join succeeded — mount CollabProvider which opens socket
   return (
     <CollabProvider
+      key={slug}
       slug={slug}
       isAnonymous={isAnonymous}
       isViewOnly={isViewOnly}
@@ -233,6 +241,17 @@ export default function CanvasPage() {
       userId={userId}
       roomKey={roomKey}
       onAccessRevoked={() => setJoinState('private')}
+      onDecryptionFailed={() => setJoinState('key-missing')}
+      onRoomKeyVerified={async (key) => {
+        try {
+          useBoardKeysStore.getState().setKey(slug, await exportRoomKeyRaw(key))
+          if (userId && userId === ownerId) {
+            await backupOwnerRoomKey(slug, key, userId, encryptedOwnerKey)
+          }
+        } catch (error) {
+          toast.warning(error instanceof Error ? error.message : 'Could not save the board key.')
+        }
+      }}
     >
       <CanvasInner />
     </CollabProvider>

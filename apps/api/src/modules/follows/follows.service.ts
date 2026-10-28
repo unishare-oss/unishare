@@ -28,6 +28,15 @@ export class FollowsService {
     return this.followsRepository.getFollowing(followerId)
   }
 
+  getMentionable(userId: string, q = '') {
+    return this.followsRepository.findMentionable(userId, q)
+  }
+
+  keepConnected(authorId: string, ids: string[]) {
+    const unique = [...new Set(ids)].filter((id) => id !== authorId)
+    return this.followsRepository.filterConnected(authorId, unique)
+  }
+
   countFollowers(followingId: string) {
     return this.followsRepository.countFollowers(followingId)
   }
