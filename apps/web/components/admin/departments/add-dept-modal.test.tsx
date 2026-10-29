@@ -63,6 +63,27 @@ describe('AddDeptModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
+  it('cannot be dismissed while a save is in flight', async () => {
+    let finish: () => void = () => {}
+    const onSubmit = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)))
+    const onClose = vi.fn()
+    render(<AddDeptModal open onClose={onClose} onSubmit={onSubmit} />)
+
+    await userEvent.type(screen.getByLabelText('Name'), 'Robotics')
+    await userEvent.click(screen.getByRole('combobox', { name: 'University' }))
+    await userEvent.click(await screen.findByRole('option', { name: /KMUTT University/ }))
+    await userEvent.click(screen.getByRole('combobox', { name: 'Faculty' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Faculty of Engineering' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled())
+    await userEvent.keyboard('{Escape}')
+    expect(onClose).not.toHaveBeenCalled()
+
+    finish()
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
   it('stays open when the save fails', async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error('Department already exists'))
     const onClose = vi.fn()

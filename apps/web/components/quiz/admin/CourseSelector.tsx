@@ -37,7 +37,7 @@ export function CourseSelector({
   const { data: departments } = useDepartmentsControllerFindAll(undefined, {
     query: { select: (r) => r.data },
   })
-  const { data: universities } = useUniversitiesControllerFindAll({
+  const { data: universities, isError: universitiesFailed } = useUniversitiesControllerFindAll({
     query: { select: (r) => r.data },
   })
 
@@ -58,12 +58,28 @@ export function CourseSelector({
       .map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))
   }, [coursesData?.items, yearLevel])
 
-  // Universities can share department names, so each label names its university
+  // Universities share department names, so each label names its university: the short
+  // name unless two universities share it, plus the faculty when a name repeats inside one.
+  // Empty until universities load, so no ambiguous option is ever offered.
   const deptOptions = useMemo(() => {
-    const shortNames = new Map((universities ?? []).map((u) => [u.id, u.shortName]))
-    return (departments ?? []).map((d) => {
-      const uni = shortNames.get(d.faculty.universityId)
-      return { value: d.id, label: uni ? `${d.name} (${uni})` : d.name }
+    if (!universities || !departments) return []
+    const shortNameCount = new Map<string, number>()
+    for (const u of universities) {
+      shortNameCount.set(u.shortName, (shortNameCount.get(u.shortName) ?? 0) + 1)
+    }
+    const uniLabel = new Map(
+      universities.map((u) => [u.id, shortNameCount.get(u.shortName) === 1 ? u.shortName : u.name]),
+    )
+    const nameKey = (d: (typeof departments)[number]) => `${d.faculty.universityId}:${d.name}`
+    const nameCount = new Map<string, number>()
+    for (const d of departments) nameCount.set(nameKey(d), (nameCount.get(nameKey(d)) ?? 0) + 1)
+
+    return departments.map((d) => {
+      const where = [
+        nameCount.get(nameKey(d))! > 1 ? d.faculty.name : null,
+        uniLabel.get(d.faculty.universityId),
+      ]
+      return { value: d.id, label: `${d.name} (${where.filter(Boolean).join(', ')})` }
     })
   }, [departments, universities])
 
@@ -84,8 +100,16 @@ export function CourseSelector({
               onYearChange('')
             }}
             placeholder="All departments"
-            disabled={disabled}
+            disabledPlaceholder={
+              deptOptions.length ? undefined : universitiesFailed ? 'Unavailable' : 'Loading…'
+            }
+            disabled={disabled || deptOptions.length === 0}
           />
+          {universitiesFailed && (
+            <p className="mt-1.5 text-xs text-destructive">
+              Couldn&apos;t load universities. Reload to pick a department.
+            </p>
+          )}
         </div>
         <div>
           <label className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground block mb-1.5">

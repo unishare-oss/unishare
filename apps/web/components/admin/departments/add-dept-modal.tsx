@@ -63,6 +63,9 @@ export function AddDeptModal({ open, dept, onClose, onSubmit }: AddDeptModalProp
     { query: { enabled: !!universityId, select: (r) => r.data } },
   )
 
+  // A save in flight would otherwise close whichever modal is open when it finishes
+  const saving = form.formState.isSubmitting
+
   async function handleSubmit(values: DeptFormValues) {
     try {
       await onSubmit({ name: values.name, facultyId: values.facultyId })
@@ -73,7 +76,7 @@ export function AddDeptModal({ open, dept, onClose, onSubmit }: AddDeptModalProp
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !saving && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{dept ? 'Edit Department' : 'Add Department'}</DialogTitle>
@@ -168,12 +171,12 @@ export function AddDeptModal({ open, dept, onClose, onSubmit }: AddDeptModalProp
             />
 
             <div className="flex items-center gap-3 justify-end mt-1">
-              <Button type="button" variant="ghost" onClick={onClose}>
+              <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={form.formState.isSubmitting}
+                disabled={saving}
                 className="bg-amber text-primary-foreground hover:bg-amber-hover"
               >
                 {dept ? 'Save' : 'Create'}
