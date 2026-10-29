@@ -60,11 +60,13 @@ export default function AdminDepartmentsPage() {
   const invalidateCourses = () =>
     queryClient.invalidateQueries({ queryKey: getCoursesControllerFindAllQueryKey() })
 
-  const { mutate: createDept } = useDepartmentsControllerCreate({
-    mutation: { onSuccess: invalidateDepts },
+  const onDeptSaveError = (err: unknown) =>
+    toast.error(err instanceof Error ? err.message : 'Failed to save department')
+  const { mutateAsync: createDept } = useDepartmentsControllerCreate({
+    mutation: { onSuccess: invalidateDepts, onError: onDeptSaveError },
   })
-  const { mutate: updateDept } = useDepartmentsControllerUpdate({
-    mutation: { onSuccess: invalidateDepts },
+  const { mutateAsync: updateDept } = useDepartmentsControllerUpdate({
+    mutation: { onSuccess: invalidateDepts, onError: onDeptSaveError },
   })
   const { mutate: removeDept, isPending: removingDept } = useDepartmentsControllerRemove({
     mutation: {
@@ -135,13 +137,9 @@ export default function AdminDepartmentsPage() {
         open={deptModal.open}
         dept={deptModal.dept}
         onClose={() => setDeptModal({ open: false })}
-        onSubmit={(data) => {
-          if (deptModal.dept) {
-            updateDept({ id: deptModal.dept.id, data })
-          } else {
-            createDept({ data })
-          }
-        }}
+        onSubmit={(data) =>
+          deptModal.dept ? updateDept({ id: deptModal.dept.id, data }) : createDept({ data })
+        }
       />
 
       <AddCourseModal

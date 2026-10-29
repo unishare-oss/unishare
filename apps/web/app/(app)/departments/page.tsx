@@ -7,10 +7,11 @@ import { PageHeader } from '@/components/shared/page-header'
 import { DeptList, DeptListSkeleton } from '@/components/departments/dept-list'
 
 export default function DepartmentsPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const { departments, isLoading, noUniversity } = useMyDepartments()
   const { data: universities, isLoading: universitiesLoading } = useUniversitiesControllerFindAll({
-    query: { enabled: !isAuthenticated, select: (r) => r.data },
+    // Only for signed-out visitors, once the session has loaded
+    query: { enabled: !authLoading && !isAuthenticated, select: (r) => r.data },
   })
   const loading = isLoading || (!isAuthenticated && universitiesLoading)
 

@@ -52,14 +52,13 @@ export function DeptList({
   const byUniversity = new Map<string, DepartmentEntity[]>()
   for (const dept of departments) {
     const id = dept.faculty.universityId
-    byUniversity.set(id, [...(byUniversity.get(id) ?? []), dept])
+    const group = byUniversity.get(id)
+    if (group) group.push(dept)
+    else byUniversity.set(id, [dept])
   }
+  const names = new Map(universities.map((u) => [u.id, u.name]))
   const sections = [...byUniversity.entries()]
-    .map(([id, depts]) => ({
-      id,
-      name: universities.find((u) => u.id === id)?.name ?? 'Other',
-      depts,
-    }))
+    .map(([id, depts]) => ({ id, name: names.get(id) ?? 'Other', depts }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (

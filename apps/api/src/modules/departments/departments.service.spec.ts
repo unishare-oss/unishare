@@ -61,6 +61,13 @@ describe('DepartmentsService', () => {
   })
 
   describe('create', () => {
+    it('409s when a concurrent create wins the unique index', async () => {
+      repo.create.mockRejectedValue(Object.assign(new Error('unique'), { code: 'P2002' }))
+      await expect(service.create({ name: 'CS', facultyId: 'f1' })).rejects.toThrow(
+        ConflictException,
+      )
+    })
+
     it('404s when the faculty does not exist', async () => {
       faculties.findById.mockRejectedValue(new NotFoundException('Faculty not found'))
       await expect(service.create({ name: 'CS', facultyId: 'nope' })).rejects.toThrow(
@@ -92,7 +99,29 @@ describe('DepartmentsService', () => {
 
   describe('update', () => {
     beforeEach(() => {
-      repo.findById.mockResolvedValue({ id: 'd1', name: 'CS', facultyId: 'f1', courses: [] })
+      repo.findById.mockResolvedValue({
+        id: 'd1',
+        name: 'CS',
+        facultyId: 'f1',
+        faculty: { id: 'f1', name: 'F', universityId: 'u1' },
+        courses: [],
+      })
+    })
+
+    it('moves to another faculty of the same university', async () => {
+      await service.update('d1', { facultyId: 'f2' })
+      expect(repo.update).toHaveBeenCalledWith('d1', { facultyId: 'f2' })
+    })
+
+    it('400s when moving into a faculty of another university', async () => {
+      faculties.findById.mockResolvedValue({ id: 'f9', name: 'F', universityId: 'u2' })
+      await expect(service.update('d1', { facultyId: 'f9' })).rejects.toThrow(BadRequestException)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('409s when a concurrent rename wins the unique index', async () => {
+      repo.update.mockRejectedValue(Object.assign(new Error('unique'), { code: 'P2002' }))
+      await expect(service.update('d1', { name: 'IT' })).rejects.toThrow(ConflictException)
     })
 
     it('409s when renaming to a name taken in the same faculty', async () => {

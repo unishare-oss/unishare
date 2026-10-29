@@ -1,16 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
+import { IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
 
 export class UpdateAcademicProfileDto {
   @ApiPropertyOptional({ nullable: true, type: String, maxLength: 50 })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(50)
   departmentId?: string | null
 
   @ApiPropertyOptional({ nullable: true, type: String, maxLength: 50 })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(50)
   universityId?: string | null
 
