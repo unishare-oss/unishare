@@ -99,8 +99,8 @@ is the `account` row it writes: `providerId = 'uniauth'`, `accountId = <uniauth 
 - **New users:** a new local id, linked by the `account` row.
 - **MCP:** the verifier resolves `sub` → local user through the same row (today it assumes
   `sub` is the local id).
-- **Universities:** uniauth adds `organizations: [{ id, verified }]` to the ID token and
-  userinfo; unishare maps it through `University.uniauthOrgId` on sign-in.
+- **Universities:** uniauth adds `organizations: [{ id, slug, verified }]` to the ID token and
+  userinfo; unishare maps it through `University.slug` on sign-in (US-12).
 
 ## Account actions move to uniauth
 
@@ -154,7 +154,7 @@ The branch is local and unpushed, so it is rebuilt from `9633ee31` (MCP verifier
 | profile / sign-out components                                | security settings link to uniauth `/account`; sign-out → local + end-session                                                 |
 | env                                                          | `AUTH_MODE`, `UNIAUTH_ISSUER`, `UNIAUTH_CLIENT_ID`, `UNIAUTH_CLIENT_SECRET` (API); `NEXT_PUBLIC_AUTH_MODE` (web, build-time) |
 
-No controller changes. No schema change beyond `uniauthOrgId` (already committed).
+No controller changes. No schema change beyond `University.slug` (US-12; it replaced `uniauthOrgId`).
 
 ## Steps
 

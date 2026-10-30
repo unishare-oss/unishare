@@ -20,11 +20,9 @@ async function main() {
       update: {
         shortName: uni.shortName,
         logoUrl: uni.logoUrl,
-        // An unset variable keeps the existing link instead of clearing it
-        ...(uni.uniauthOrgId && { uniauthOrgId: uni.uniauthOrgId }),
+        slug: uni.slug,
       },
-      // An empty variable is '', which would collide on the unique column
-      create: { ...uni, uniauthOrgId: uni.uniauthOrgId || undefined },
+      create: uni,
     })
     console.log(`✓ ${uni.shortName}`)
 

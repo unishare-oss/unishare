@@ -92,14 +92,14 @@ model Faculty {
 }
 
 model University {
-  id           String    @id @default(cuid())
-  name         String    @unique
-  shortName    String
-  logoUrl      String?
-  /// uniauth organization this university is linked to (memberships live in uniauth)
-  uniauthOrgId String?   @unique
-  users        User[]
-  faculties    Faculty[]
+  id        String    @id @default(cuid())
+  name      String    @unique
+  shortName String
+  logoUrl   String?
+  /// uniauth organization slug (memberships live in uniauth); the same in every environment
+  slug      String    @unique
+  users     User[]
+  faculties Faculty[]
 
   @@map("university")
 }

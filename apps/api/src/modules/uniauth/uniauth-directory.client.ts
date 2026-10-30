@@ -1,5 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { uniauthConfig, uniauthDirectoryConfig } from '@/auth/uniauth-config'
+import type { UniauthMembership } from '@/auth/uniauth-sign-in'
 
 /** A shared profile as uniauth's directory returns it (only the fields unishare uses). */
 export interface DirectoryIdentity {
@@ -11,7 +12,7 @@ export interface DirectoryIdentity {
   status: 'active' | 'suspended' | 'deleted'
   version: number
   /** University memberships (`urn:uniauth:organizations`), as in the ID token: `verified` = proven by the email domain. */
-  'urn:uniauth:organizations'?: { id: string; verified: boolean }[]
+  'urn:uniauth:organizations'?: UniauthMembership[]
 }
 
 export interface DirectoryChange {

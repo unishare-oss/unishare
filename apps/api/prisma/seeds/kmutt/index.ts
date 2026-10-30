@@ -17,8 +17,8 @@ export const kmutt = {
     shortName: 'KMUTT',
     logoUrl:
       "https://upload.wikimedia.org/wikipedia/en/7/76/Seal_of_King_Mongkut's_University_of_Technology_Thonburi.svg",
-    // uniauth organization ids differ per environment
-    uniauthOrgId: process.env.UNIAUTH_ORG_KMUTT,
+    // the uniauth organization slug, the same in every environment
+    slug: 'kmutt',
   },
   faculties: [
     { name: 'School of Information Technology', departments: [cs, it, dsi] },

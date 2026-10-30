@@ -119,10 +119,8 @@ function fakePrisma() {
       }),
     },
     university: {
-      findMany: jest.fn(async ({ where }: { where: { uniauthOrgId: { in: string[] } } }) =>
-        where.uniauthOrgId.in
-          .filter((o) => o.startsWith('org-'))
-          .map((o) => ({ id: `uni-${o}`, uniauthOrgId: o })),
+      findMany: jest.fn(async ({ where }: { where: { slug: { in: string[] } } }) =>
+        where.slug.in.filter((s) => s === 'kmutt').map((s) => ({ id: `uni-${s}`, slug: s })),
       ),
     },
     $queryRaw: jest.fn(async () => []),
@@ -437,19 +435,19 @@ describe('uniauth v1 identity events', () => {
     directory.read.mockResolvedValue(
       profile('ua1', {
         version: 2,
-        'urn:uniauth:organizations': [{ id: 'org-kmutt', verified: true }],
+        'urn:uniauth:organizations': [{ id: 'org-kmutt', slug: 'kmutt', verified: true }],
       }),
     )
     await service.handle(await token('ua1', event('identity.updated', 2)))
-    expect(prisma.users.get('u1')).toMatchObject({ universityId: 'uni-org-kmutt' })
+    expect(prisma.users.get('u1')).toMatchObject({ universityId: 'uni-kmutt' })
     directory.read.mockResolvedValue(
       profile('ua1', {
         version: 3,
-        'urn:uniauth:organizations': [{ id: 'unknown-org', verified: true }],
+        'urn:uniauth:organizations': [{ id: 'unknown-org', slug: 'unknown', verified: true }],
       }),
     )
     await service.handle(await token('ua1', event('identity.updated', 3)))
-    expect(prisma.users.get('u1')!.universityId).toBe('uni-org-kmutt') // nothing maps: unchanged
+    expect(prisma.users.get('u1')!.universityId).toBe('uni-kmutt') // nothing maps: unchanged
   })
 
   it('keeps the old email and applies the rest when the new email is raced onto another user', async () => {

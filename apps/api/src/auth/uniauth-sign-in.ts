@@ -11,13 +11,20 @@ export function withoutAvatarPlaceholder<T extends { image?: string | null }>(da
   return data.image === NO_AVATAR ? { ...data, image: null } : data
 }
 
+/** One university membership, as uniauth sends it. `slug` is optional: tokens are external input. */
+export interface UniauthMembership {
+  id: string
+  slug?: string
+  verified: boolean
+}
+
 interface UniauthProfile {
   sub: string
   email: string
   email_verified?: boolean
   name?: string
   picture?: string | null
-  [ORGANIZATIONS_CLAIM]?: { id: string; verified: boolean }[]
+  [ORGANIZATIONS_CLAIM]?: UniauthMembership[]
 }
 
 /**
@@ -44,16 +51,17 @@ export function mapUniauthProfile(prisma: PrismaClient) {
 
 export async function universityForMemberships(
   prisma: PrismaClient,
-  memberships: { id: string; verified: boolean }[],
+  memberships: UniauthMembership[],
 ): Promise<string | null> {
-  if (!memberships.length) return null
-  const ordered = [...memberships].sort((a, b) => +b.verified - +a.verified)
+  // A membership without a slug (a token from before uniauth sent one) matches nothing
+  const ordered = memberships.filter((m) => m.slug).sort((a, b) => +b.verified - +a.verified)
+  if (!ordered.length) return null
   const universities = await prisma.university.findMany({
-    where: { uniauthOrgId: { in: ordered.map((m) => m.id) } },
-    select: { id: true, uniauthOrgId: true },
+    where: { slug: { in: ordered.map((m) => m.slug!) } },
+    select: { id: true, slug: true },
   })
   for (const m of ordered) {
-    const match = universities.find((u) => u.uniauthOrgId === m.id)
+    const match = universities.find((u) => u.slug === m.slug)
     if (match) return match.id
   }
   return null
