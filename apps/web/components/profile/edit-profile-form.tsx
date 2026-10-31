@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
-import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import {
   useUsersControllerUpdateMe,
   useUsersControllerUpdateAcademicProfile,
@@ -24,8 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useMyDepartments, NO_UNIVERSITY_MESSAGE } from '@/hooks/use-my-departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 import { DepartmentSelectItems } from '@/components/departments/department-select-items'
+import { uniauthAccountURL, uniauthPickUniversityURL } from '@/src/lib/auth/mode'
 
 interface EditProfileFormProps {
   user: UserProfileEntity
@@ -75,11 +75,8 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     })
   }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name, user.university?.id])
 
-  const { departments, noUniversity } = useMyDepartments()
-
-  const { data: unis } = useUniversitiesControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments } = useMyDepartments()
+  const university = user.university
 
   const { mutateAsync: updateMe } = useUsersControllerUpdateMe()
   const { mutateAsync: updateAcademic } = useUsersControllerUpdateAcademicProfile()
@@ -164,46 +161,40 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="universityId"
-            render={({ field }) => (
-              <FormItem className="min-w-0">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-                  University
-                </label>
-                <FormControl>
-                  <Select
-                    value={field.value || '_none'}
-                    onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
-                    // The university comes from the unicorp account at sign-in.
-                    disabled
+          {/* The university comes from the unicorp account at sign-in; it is picked there. */}
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1.5">
+              University
+            </p>
+            {university ? (
+              <>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm text-foreground truncate">{university.name}</p>
+                  <a
+                    href={uniauthAccountURL('/profile')}
+                    className="text-xs text-text-muted underline hover:text-foreground shrink-0"
                   >
-                    <SelectTrigger className="w-full min-w-0">
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent
-                      position="popper"
-                      className="w-[var(--radix-select-trigger-width)]"
-                    >
-                      <SelectItem value="_none" className="text-text-muted">
-                        None
-                      </SelectItem>
-                      {(unis ?? []).map((uni) => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          <span className="truncate block">
-                            {uni.shortName} — {uni.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <p className="text-xs text-text-muted">Set on your unicorp account.</p>
-                <FormMessage className="text-xs" />
-              </FormItem>
+                    Change on unicorp
+                  </a>
+                </div>
+                <p className="text-xs text-text-muted mt-1.5">From your unicorp account.</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm text-text-secondary">
+                    You haven&rsquo;t picked your university yet.
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={uniauthPickUniversityURL('/profile')}>Pick your university</a>
+                  </Button>
+                </div>
+                <p className="text-xs text-text-muted mt-1.5">
+                  It&rsquo;s saved on your unicorp account and used across unicorp apps.
+                </p>
+              </>
             )}
-          />
+          </div>
 
           <FormField
             control={form.control}
@@ -215,11 +206,15 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                 </label>
                 <FormControl>
                   <Select
-                    value={field.value || '_none'}
+                    // Empty while there's no university, so the placeholder explains why.
+                    value={university ? field.value || '_none' : ''}
                     onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
+                    disabled={!university}
                   >
                     <SelectTrigger className="w-full min-w-0">
-                      <SelectValue placeholder="None" />
+                      <SelectValue
+                        placeholder={university ? 'None' : 'Pick your university first'}
+                      />
                     </SelectTrigger>
                     <SelectContent
                       position="popper"
@@ -232,7 +227,6 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                     </SelectContent>
                   </Select>
                 </FormControl>
-                {noUniversity && <p className="text-xs text-text-muted">{NO_UNIVERSITY_MESSAGE}</p>}
                 <FormMessage className="text-xs" />
               </FormItem>
             )}

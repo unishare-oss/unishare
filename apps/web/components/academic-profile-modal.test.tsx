@@ -22,6 +22,7 @@ vi.mock('@/src/lib/api/generated/users/users', () => ({
 vi.mock('@/src/lib/api/generated/posts/posts', () => ({
   getPostsControllerFindAllQueryKey: () => ['posts'],
 }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/posts/new' }))
 vi.mock('@/lib/store', () => ({
   useFeedStore: (select: (s: { setSelectedDeptId: () => void }) => unknown) =>
     select({ setSelectedDeptId: vi.fn() }),
@@ -77,9 +78,14 @@ describe('AcademicProfileModal department picker', () => {
     expect(within(listbox).getAllByRole('option')).toHaveLength(4)
   })
 
-  it('explains the empty list when the user has no university', () => {
+  it('links to the university picker and disables departments without a university', () => {
     mocks.myDepartments = { departments: [], isLoading: false, noUniversity: true }
     renderModal()
-    expect(screen.getByText(/Your university isn't set yet/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'Pick your university' })
+    const href = new URL(link.getAttribute('href')!)
+    expect(href.pathname).toBe('/select-university')
+    expect(href.searchParams.get('redirect')).toMatch(/\/auth\/refresh\?to=%2Fposts%2Fnew$/)
+    expect(screen.getByRole('combobox')).toBeDisabled()
+    expect(screen.getByRole('combobox')).toHaveTextContent('Pick your university first')
   })
 })

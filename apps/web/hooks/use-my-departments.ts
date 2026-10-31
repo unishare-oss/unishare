@@ -7,8 +7,7 @@ import type {
   DepartmentFacultyEntity,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-export const NO_UNIVERSITY_MESSAGE =
-  "Your university isn't set yet. It comes from your uniauth account."
+export const NO_UNIVERSITY_MESSAGE = 'Pick your university first.'
 
 /**
  * Departments of the signed-in user's university. Signed-out visitors get every

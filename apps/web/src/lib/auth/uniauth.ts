@@ -39,6 +39,16 @@ export function takeReturnTo(): string | null {
 }
 
 /**
+ * `value` if it is a path on this app, else /feed. It decides a redirect, so full URLs and
+ * protocol-relative ones (`//host`, `/\host`) are refused.
+ */
+export function safeReturnPath(value: string | null | undefined) {
+  return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
+    ? value
+    : '/feed'
+}
+
+/**
  * Starts sign-in on uniauth and comes back to `returnTo`. `silent` asks with prompt=none:
  * uniauth returns straight away, signed in if the user already is, or with
  * `?error=login_required` (they stay a guest) — no page is ever shown.

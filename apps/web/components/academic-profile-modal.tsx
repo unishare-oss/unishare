@@ -1,5 +1,6 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
@@ -25,7 +26,8 @@ import {
   useUsersControllerUpdateAcademicProfile,
   getUsersControllerGetMeQueryKey,
 } from '@/src/lib/api/generated/users/users'
-import { useMyDepartments, NO_UNIVERSITY_MESSAGE } from '@/hooks/use-my-departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
+import { uniauthPickUniversityURL } from '@/src/lib/auth/mode'
 import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 import { getPostsControllerFindAllQueryKey } from '@/src/lib/api/generated/posts/posts'
 import { useFeedStore } from '@/lib/store'
@@ -55,6 +57,7 @@ export function AcademicProfileModal({
   onSkip,
 }: AcademicProfileModalProps) {
   const queryClient = useQueryClient()
+  const pathname = usePathname()
   const setSelectedDeptId = useFeedStore((s) => s.setSelectedDeptId)
 
   const form = useForm<AcademicProfileFormValues>({
@@ -124,13 +127,19 @@ export function AcademicProfileModal({
                 <FormItem>
                   <FormControl>
                     <Select
-                      value={field.value || '_none'}
+                      // Empty while there's no university, so the placeholder explains why.
+                      value={noUniversity ? '' : field.value || '_none'}
                       onValueChange={(value) => field.onChange(value === '_none' ? '' : value)}
+                      disabled={noUniversity}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={
-                            requireDepartment ? 'Select your department' : 'Department (optional)'
+                            noUniversity
+                              ? 'Pick your university first'
+                              : requireDepartment
+                                ? 'Select your department'
+                                : 'Department (optional)'
                           }
                         />
                       </SelectTrigger>
@@ -143,7 +152,11 @@ export function AcademicProfileModal({
                     </Select>
                   </FormControl>
                   {noUniversity && (
-                    <p className="text-xs text-text-muted">{NO_UNIVERSITY_MESSAGE}</p>
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href={uniauthPickUniversityURL(pathname ?? '/feed')}>
+                        Pick your university
+                      </a>
+                    </Button>
                   )}
                   <FormMessage className="text-xs" />
                 </FormItem>
