@@ -21,7 +21,7 @@ export function silentCheckDone() {
   return document.cookie.split('; ').some((c) => c.startsWith(`${CHECKED_COOKIE}=`))
 }
 
-/** Where to go back to if uniauth answers with an error (see app/(auth)/auth/return). */
+/** Where to go back to if uniauth answers with an error (see app/auth/return). */
 const RETURN_KEY = 'unishare:uniauth-return-to'
 
 /** Reads and clears the page a sign-in attempt started from. */

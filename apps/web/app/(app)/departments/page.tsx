@@ -5,6 +5,8 @@ import { useMyDepartments, NO_UNIVERSITY_MESSAGE } from '@/hooks/use-my-departme
 import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import { PageHeader } from '@/components/shared/page-header'
 import { DeptList, DeptListSkeleton } from '@/components/departments/dept-list'
+import { Button } from '@/components/ui/button'
+import { uniauthPickUniversityURL } from '@/src/lib/auth/mode'
 
 export default function DepartmentsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
@@ -22,9 +24,12 @@ export default function DepartmentsPage() {
         {loading ? (
           <DeptListSkeleton />
         ) : noUniversity ? (
-          <p className="max-w-[700px] mx-auto px-6 py-6 text-sm text-text-muted">
-            {NO_UNIVERSITY_MESSAGE}
-          </p>
+          <div className="max-w-[700px] mx-auto px-6 py-6 flex flex-col items-start gap-3">
+            <p className="text-sm text-text-muted">{NO_UNIVERSITY_MESSAGE}</p>
+            <Button variant="outline" size="sm" asChild>
+              <a href={uniauthPickUniversityURL('/departments')}>Pick your university</a>
+            </Button>
+          </div>
         ) : (
           <DeptList
             departments={departments}
