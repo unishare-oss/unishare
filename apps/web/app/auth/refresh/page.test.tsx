@@ -37,6 +37,23 @@ describe('/auth/refresh', () => {
     })
   })
 
+  it('goes on to `to` when the sign-in cannot start', async () => {
+    const realLocation = window.location
+    const replace = vi.fn()
+    signInWithUniauth.mockRejectedValueOnce(new Error('network'))
+    window.history.replaceState(null, '', '/auth/refresh?to=%2Fprofile')
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...realLocation, origin: realLocation.origin, search: '?to=%2Fprofile', replace },
+    })
+    try {
+      render(<UniauthRefreshPage />)
+      await vi.waitFor(() => expect(replace).toHaveBeenCalledWith('/profile'))
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: realLocation })
+    }
+  })
+
   it.each(['?to=%2F%2Fevil.example', '?to=https%3A%2F%2Fevil.example', ''])(
     'lands on /feed for %j',
     (search) => {

@@ -76,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.unicorpTermsVersion === 1 && user.unicorpTermsAcceptedAt)
       sessionStorage.removeItem('unishare:shared-terms-refresh')
     if (sessionPending || session || silentCheckDone()) return
-    if (window.location.pathname.startsWith('/login')) return
+    // /login and the /auth/* pages run their own uniauth round trip.
+    if (/^\/(login|auth\/)/.test(window.location.pathname)) return
     signInWithUniauth({ returnTo: window.location.href, silent: true }).catch(console.error)
   }, [session, sessionPending])
 

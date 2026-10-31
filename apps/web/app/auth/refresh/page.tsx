@@ -16,7 +16,10 @@ export default function UniauthRefreshPage() {
     if (started.current) return
     started.current = true
     const to = safeReturnPath(new URLSearchParams(window.location.search).get('to'))
-    void signInWithUniauth({ returnTo: `${window.location.origin}${to}`, silent: true })
+    // If the sign-in can't even start (API down), go on to `to` instead of waiting here forever.
+    signInWithUniauth({ returnTo: `${window.location.origin}${to}`, silent: true }).catch(() =>
+      window.location.replace(to),
+    )
   }, [])
 
   return (

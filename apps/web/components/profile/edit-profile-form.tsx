@@ -34,7 +34,6 @@ interface EditProfileFormProps {
 const editProfileSchema = z.object({
   name: z.string().max(100),
   bio: z.string().max(300),
-  universityId: z.string(),
   departmentId: z.string(),
   enrollmentYear: z
     .string()
@@ -58,7 +57,6 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     defaultValues: {
       name: user.name,
       bio: user.bio ?? '',
-      universityId: user.university?.id ?? '',
       departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     },
@@ -69,11 +67,10 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
     form.reset({
       name: user.name,
       bio: user.bio ?? '',
-      universityId: user.university?.id ?? '',
       departmentId: user.department?.id ?? '',
       enrollmentYear: user.enrollmentYear != null ? String(user.enrollmentYear) : '',
     })
-  }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name, user.university?.id])
+  }, [form, user.bio, user.department?.id, user.enrollmentYear, user.name])
 
   const { departments } = useMyDepartments()
   const university = user.university
