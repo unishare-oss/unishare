@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { ORGANIZATIONS_CLAIM, universityForMemberships } from '@/auth/uniauth-sign-in'
+import {
+  ORGANIZATIONS_CLAIM,
+  type UniauthMembership,
+  universityForMemberships,
+} from '@/auth/uniauth-sign-in'
 import { PrismaService } from '@/prisma/prisma.service'
 import { resolveLocalUserId } from '../mcp/mcp-token.verifier'
 import { USER_UPDATED_EVENT, verifyUniauthEventData } from './uniauth-event-token'
@@ -25,7 +29,7 @@ export class UniauthUserUpdatedService {
     if (!userId) return true // never used unishare: nothing to refresh
 
     const memberships = Array.isArray(data[ORGANIZATIONS_CLAIM])
-      ? (data[ORGANIZATIONS_CLAIM] as { id: string; verified: boolean }[])
+      ? (data[ORGANIZATIONS_CLAIM] as UniauthMembership[])
       : []
     const universityId = await universityForMemberships(this.prisma, memberships)
     const profile = {

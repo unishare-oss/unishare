@@ -166,7 +166,12 @@ describeDb('RetrievalService (live pgvector)', () => {
     await cleanup()
 
     await prisma.university.create({
-      data: { id: UNIVERSITY_ID, name: 'Retrieval Integration University', shortName: 'RIU' },
+      data: {
+        id: UNIVERSITY_ID,
+        name: 'Retrieval Integration University',
+        shortName: 'RIU',
+        slug: 'retrieval-integration',
+      },
     })
     await prisma.faculty.create({
       data: { id: FACULTY_ID, name: 'Retrieval Integration Faculty', universityId: UNIVERSITY_ID },

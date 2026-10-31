@@ -5,13 +5,24 @@ import {
   withoutAvatarPlaceholder,
   mapUniauthProfile,
   ORGANIZATIONS_CLAIM,
+  universityForMemberships,
 } from './uniauth-sign-in'
 
-function prismaWith(universities: { id: string; uniauthOrgId: string }[]) {
+function prismaWith(universities: { id: string; slug: string }[]) {
   return {
-    university: { findMany: jest.fn().mockResolvedValue(universities) },
+    university: {
+      findMany: jest.fn(async ({ where }: { where: { slug: { in: string[] } } }) =>
+        universities.filter((u) => where.slug.in.includes(u.slug)),
+      ),
+    },
   } as unknown as PrismaClient
 }
+
+const kmuttAndMfu = () =>
+  prismaWith([
+    { id: 'uni_kmutt', slug: 'kmutt' },
+    { id: 'uni_mfu', slug: 'mfu' },
+  ])
 
 const profile = (extra: Record<string, unknown> = {}) => ({
   sub: 'ua_1',
@@ -34,26 +45,28 @@ describe('mapUniauthProfile', () => {
   })
 
   it('prefers a verified membership when choosing the university', async () => {
-    const map = mapUniauthProfile(
-      prismaWith([
-        { id: 'uni_picked', uniauthOrgId: 'org_picked' },
-        { id: 'uni_kmutt', uniauthOrgId: 'org_kmutt' },
-      ]),
-    )
+    const map = mapUniauthProfile(kmuttAndMfu())
     const mapped = await map(
       profile({
         [ORGANIZATIONS_CLAIM]: [
-          { id: 'org_picked', verified: false },
+          { id: 'org_kmutt', slug: 'kmutt', verified: false },
+          { id: 'org_mfu', slug: 'mfu', verified: true },
+        ],
+      }),
+    )
+    expect(mapped).toMatchObject({ universityId: 'uni_mfu' })
+  })
+
+  it('leaves the university untouched when no membership maps to one', async () => {
+    const map = mapUniauthProfile(kmuttAndMfu())
+    const mapped = await map(
+      profile({
+        [ORGANIZATIONS_CLAIM]: [
+          { id: 'org_x', slug: 'unknown', verified: true },
           { id: 'org_kmutt', verified: true },
         ],
       }),
     )
-    expect(mapped).toMatchObject({ universityId: 'uni_kmutt' })
-  })
-
-  it('leaves the university untouched when no membership maps to one', async () => {
-    const map = mapUniauthProfile(prismaWith([]))
-    const mapped = await map(profile({ [ORGANIZATIONS_CLAIM]: [{ id: 'org_x', verified: true }] }))
     expect(mapped).not.toHaveProperty('universityId')
   })
 
@@ -66,6 +79,31 @@ describe('mapUniauthProfile', () => {
   it('says "no avatar" when uniauth has none, so a removed avatar clears here too', async () => {
     const map = mapUniauthProfile(prismaWith([]))
     await expect(map(profile({ picture: null }))).resolves.toMatchObject({ image: NO_AVATAR })
+  })
+})
+
+describe('universityForMemberships', () => {
+  it('matches by slug, verified memberships first', async () => {
+    await expect(
+      universityForMemberships(kmuttAndMfu(), [
+        { id: 'org_kmutt', slug: 'kmutt', verified: false },
+        { id: 'org_mfu', slug: 'mfu', verified: true },
+      ]),
+    ).resolves.toBe('uni_mfu')
+  })
+
+  it('returns null for an unknown slug', async () => {
+    await expect(
+      universityForMemberships(kmuttAndMfu(), [{ id: 'org_x', slug: 'unknown', verified: true }]),
+    ).resolves.toBeNull()
+  })
+
+  it('returns null for a membership without a slug, even when its id is a university id', async () => {
+    const prisma = kmuttAndMfu()
+    await expect(
+      universityForMemberships(prisma, [{ id: 'kmutt', verified: true }]),
+    ).resolves.toBeNull()
+    expect(prisma.university.findMany).not.toHaveBeenCalled()
   })
 })
 

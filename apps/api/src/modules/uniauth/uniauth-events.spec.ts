@@ -61,7 +61,9 @@ describe('uniauth event callbacks', () => {
         findUnique: jest.fn().mockResolvedValue({ name: 'Ada', role: 'STUDENT' }),
       },
       university: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'kmutt', uniauthOrgId: 'org-1' }]),
+        findMany: jest.fn(async ({ where }: { where: { slug: { in: string[] } } }) =>
+          where.slug.in.includes('kmutt') ? [{ id: 'kmutt', slug: 'kmutt' }] : [],
+        ),
       },
     }
     logout = new UniauthLogoutService(prisma as unknown as PrismaService)
@@ -175,7 +177,7 @@ describe('uniauth event callbacks', () => {
       email_verified: true,
       name: 'Ada L.',
       picture: null,
-      'urn:uniauth:organizations': [{ id: 'org-1', verified: true }],
+      'urn:uniauth:organizations': [{ id: 'org-1', slug: 'kmutt', verified: true }],
     }
 
     it('refreshes name, avatar (cleared), email and university', async () => {

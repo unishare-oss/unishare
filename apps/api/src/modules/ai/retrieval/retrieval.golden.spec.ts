@@ -217,7 +217,12 @@ describeGolden('retrieval golden set (live pgvector + Ollama)', () => {
     await cleanup()
 
     await prisma.university.create({
-      data: { id: UNIVERSITY_ID, name: 'Golden Eval University', shortName: 'GEU' },
+      data: {
+        id: UNIVERSITY_ID,
+        name: 'Golden Eval University',
+        shortName: 'GEU',
+        slug: 'golden-eval',
+      },
     })
     await prisma.faculty.create({
       data: { id: FACULTY_ID, name: 'Golden Eval Faculty', universityId: UNIVERSITY_ID },
