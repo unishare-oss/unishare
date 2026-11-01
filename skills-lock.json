@@ -5,6 +5,12 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "computedHash": "53a1de29d2b76481202608376fa4a20a8bd7e65b0b8a907a8c9578e629cf313f"
+    },
+    "uniloom": {
+      "source": "unishare-oss/uniloom",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "31eb02254e9e56619ec888be0c30380394aeb75a1b43e6d821d167c9fd88bd6b"
     }
   }
 }
