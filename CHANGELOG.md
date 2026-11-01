@@ -1,3 +1,9 @@
+## [0.35.4](https://github.com/unishare-oss/unishare/compare/v0.35.3...v0.35.4) (2026-11-01)
+
+### Bug Fixes
+
+- **web:** change the profile picture on unicorp ([d21f67e](https://github.com/unishare-oss/unishare/commit/d21f67ec51fdb6c22d9c45efd571465cec83932c))
+
 ## [0.35.3](https://github.com/unishare-oss/unishare/compare/v0.35.2...v0.35.3) (2026-10-27)
 
 ### Bug Fixes
