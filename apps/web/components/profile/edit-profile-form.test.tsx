@@ -24,11 +24,6 @@ vi.mock('@/hooks/use-my-departments', async (importOriginal) => ({
     noUniversity: false,
   }),
 }))
-vi.mock('@/src/lib/api/generated/universities/universities', () => ({
-  useUniversitiesControllerFindAll: () => ({
-    data: [{ id: 'u-kmutt', name: 'KMUTT University', shortName: 'KMUTT' }],
-  }),
-}))
 vi.mock('@/src/lib/api/generated/users/users', () => ({
   useUsersControllerUpdateMe: () => ({ mutateAsync: mocks.updateMe }),
   useUsersControllerUpdateAcademicProfile: () => ({ mutateAsync: mocks.updateAcademic }),
@@ -76,9 +71,31 @@ function renderForm(user: UserProfileEntity) {
   )
 }
 
-/** The university select is disabled; the department select is the enabled combobox. */
-const departmentSelect = () =>
-  screen.getAllByRole('combobox').find((el) => !el.hasAttribute('disabled'))!
+/** The university is plain text, so the department select is the only combobox. */
+const departmentSelect = () => screen.getByRole('combobox')
+
+describe('EditProfileForm university', () => {
+  it('shows the university name and a link to change it on unicorp', () => {
+    renderForm(baseUser)
+    expect(screen.getByText('KMUTT University')).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'Change on unicorp' })
+    const href = new URL(link.getAttribute('href')!)
+    expect(href.pathname).toBe('/account')
+    expect(href.searchParams.get('redirect')).toMatch(/\/auth\/refresh\?to=%2Fprofile$/)
+    expect(departmentSelect()).toBeEnabled()
+  })
+
+  it('links to the university picker and disables departments without a university', () => {
+    renderForm({ ...baseUser, university: null })
+    expect(screen.getByText(/You haven.t picked your university yet/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: 'Pick your university' })
+    const href = new URL(link.getAttribute('href')!)
+    expect(href.pathname).toBe('/select-university')
+    expect(href.searchParams.get('redirect')).toMatch(/\/auth\/refresh\?to=%2Fprofile$/)
+    expect(departmentSelect()).toBeDisabled()
+    expect(departmentSelect()).toHaveTextContent('Pick your university first')
+  })
+})
 
 describe('EditProfileForm department picker', () => {
   it('groups departments by faculty and sends a newly picked one', async () => {
