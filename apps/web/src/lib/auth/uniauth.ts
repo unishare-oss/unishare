@@ -39,13 +39,18 @@ export function takeReturnTo(): string | null {
 }
 
 /**
- * `value` if it is a path on this app, else /feed. It decides a redirect, so full URLs and
- * protocol-relative ones (`//host`, `/\host`) are refused.
+ * `value` if it is a path on this app, else /feed. It decides a redirect, so it is checked the
+ * way the browser will read it: URL parsing drops tabs and newlines and turns `\` into `/`, so
+ * `/\n/host` or `/\host` would leave the site.
  */
 export function safeReturnPath(value: string | null | undefined) {
-  return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\')
-    ? value
-    : '/feed'
+  if (!value?.startsWith('/')) return '/feed'
+  try {
+    const url = new URL(value, window.location.origin)
+    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/feed'
+  } catch {
+    return '/feed'
+  }
 }
 
 /**
@@ -69,8 +74,9 @@ export async function signInWithUniauth({
   } catch {
     // Without storage an error just lands on /feed.
   }
-  // Better Auth 1.7 registers genericOAuth providers as social providers.
-  await authClient.signIn.social({
+  // Better Auth 1.7 registers genericOAuth providers as social providers. A failed request
+  // resolves with `error` instead of rejecting; throw it so callers' catch runs.
+  const { error } = await authClient.signIn.social({
     provider: 'uniauth',
     callbackURL: returnTo,
     // Every error goes through /auth/return: login_required quietly returns to returnTo,
@@ -78,6 +84,7 @@ export async function signInWithUniauth({
     errorCallbackURL: `${window.location.origin}/auth/return`,
     ...(silent && { additionalParams: { prompt: 'none' } }),
   })
+  if (error) throw new Error(error.message ?? 'Sign-in could not start')
 }
 
 /**
