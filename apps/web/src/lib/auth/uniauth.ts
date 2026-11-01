@@ -40,14 +40,17 @@ export function takeReturnTo(): string | null {
 
 /**
  * `value` if it is a path on this app, else /feed. It decides a redirect, so it is checked the
- * way the browser will read it: URL parsing drops tabs and newlines and turns `\` into `/`, so
- * `/\n/host` or `/\host` would leave the site.
+ * way the browser will read it: URL parsing drops tabs and newlines, turns `\` into `/` and
+ * resolves `.` and `..`, so `/\n/host`, `/\host` or `/.//host` would leave the site. The parsed
+ * path is checked too: `//host` passes the origin check but is another site to the browser.
  */
 export function safeReturnPath(value: string | null | undefined) {
   if (!value?.startsWith('/')) return '/feed'
   try {
     const url = new URL(value, window.location.origin)
-    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/feed'
+    return url.origin === window.location.origin && !url.pathname.startsWith('//')
+      ? url.pathname + url.search + url.hash
+      : '/feed'
   } catch {
     return '/feed'
   }
