@@ -17,13 +17,18 @@ apps/web/src/lib/api/generated/
 demo-output/
 
 # Personal tooling — not part of the shared codebase
-openspec/
 .opencode/
-.agents/skills/slade-*/
-slade/
+/opencode.json
+/.claude/worktrees/
+/graphify-out/
+/.agents/skills/graphify
+/.claude/skills/graphify
+/.codex/skills/graphify
+/.codex/hooks.json
 
 # Local agent instructions
 /AGENTS.md
+/CLAUDE.local.md
 /apps/web/AGENTS.md
 /apps/api/AGENTS.md
 /gemini.md
