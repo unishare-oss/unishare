@@ -68,7 +68,8 @@ export async function copyFromUniauthIdToken(
 
 /**
  * The university part of the sign-in update, from the verified ID token: it follows the uniauth
- * membership (verified first), and a user with no mapped membership keeps the one they have.
+ * membership (verified first). No memberships at all clears it; memberships that map to nothing
+ * keep the one they have.
  */
 export async function signInUniversity(
   prisma: PrismaClient,
@@ -79,17 +80,31 @@ export async function signInUniversity(
   const universityId = Array.isArray(memberships)
     ? await universityForMemberships(prisma, memberships as UniauthMembership[])
     : null
-  return universityChange(storedUniversityId, universityId)
+  return universityChange(storedUniversityId, universityId, membershipsRemoved(memberships))
 }
 
 /**
  * The write for a university read from uniauth: nothing when none maps or it is unchanged, and a
- * changed one clears the department, which belonged to the old university.
+ * changed one clears the department, which belonged to the old university. `removed` (no
+ * memberships at all) clears both.
  */
-export function universityChange(storedUniversityId: string | null, universityId: string | null) {
+export function universityChange(
+  storedUniversityId: string | null,
+  universityId: string | null,
+  removed = false,
+) {
+  if (removed) return storedUniversityId ? { universityId: null, departmentId: null } : {}
   return universityId && universityId !== storedUniversityId
     ? { universityId, departmentId: null }
     : {}
+}
+
+/**
+ * uniauth sent the memberships and there are none: the person left (or lost) their university, so
+ * it is cleared. A missing claim (an older token) or a membership that maps to nothing keeps it.
+ */
+export function membershipsRemoved(claim: unknown) {
+  return Array.isArray(claim) && claim.length === 0
 }
 
 export async function universityForMemberships(
