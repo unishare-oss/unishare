@@ -83,6 +83,14 @@ describe('login page', () => {
     expect(authClient.signIn.anonymous).toHaveBeenCalled()
   })
 
+  it('frees the buttons again when the guest sign-in request throws', async () => {
+    vi.mocked(authClient.signIn.anonymous).mockRejectedValue(new Error('offline'))
+    render(<LoginPage />)
+    const guest = screen.getByRole('button', { name: 'Continue as guest' })
+    await userEvent.click(guest)
+    expect(guest).toBeEnabled()
+  })
+
   it('explains real errors but stays quiet about login_required', () => {
     params.error = 'BANNED_USER'
     const { unmount } = render(<LoginPage />)
