@@ -172,9 +172,6 @@ export class McpRepository {
       throw new BadRequestException('Please set your department in UniShare before creating posts')
     }
 
-    // Another university's course is a 404, checked before PostsService's department rule.
-    await this.coursesService.findOne(input.courseId, universityScope(user))
-
     const created = await this.postsService.create(
       {
         title: input.title,
@@ -191,6 +188,8 @@ export class McpRepository {
       },
       session.userId,
       user.departmentId,
+      // Another university's course is a 404 there, the same as on the website
+      universityScope(user),
     )
 
     const attachedFiles: Array<{

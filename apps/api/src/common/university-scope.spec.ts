@@ -36,7 +36,7 @@ describe('postInScope', () => {
   })
 
   it('matches no post for none', () => {
-    expect(postInScope({ kind: 'none' })).toEqual({ id: { in: [] } })
+    expect(postInScope({ kind: 'none' })).toEqual({ course: { id: { in: [] } } })
   })
 })
 

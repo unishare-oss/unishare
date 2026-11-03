@@ -100,7 +100,6 @@ export class ReadingListsController {
     @Session() session: UserSession,
     @UniversityScopeParam() scope: UniversityScope,
   ) {
-    await this.postsService.assertPostInScope(postId, scope)
     return this.readingListsService.addPost(id, postId, session.user.id, scope)
   }
 

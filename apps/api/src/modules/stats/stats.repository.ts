@@ -1,18 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
-import { postInScope, UniversityScope } from '@/common/university-scope'
-
-function userInScope(scope: UniversityScope): Prisma.UserWhereInput {
-  switch (scope.kind) {
-    case 'all':
-      return {}
-    case 'university':
-      return { universityId: scope.universityId }
-    case 'none':
-      return { id: { in: [] } }
-  }
-}
+import { postInScope, UniversityScope, userInScope } from '@/common/university-scope'
 
 @Injectable()
 export class StatsRepository {
@@ -102,7 +91,8 @@ export class StatsRepository {
             : Prisma.empty
         }
       LEFT JOIN "department" d ON d.id = u."departmentId"
-      ${universityId ? Prisma.sql`WHERE u."universityId" = ${universityId}` : Prisma.empty}
+      WHERE u."isAnonymous" IS NOT TRUE
+      ${universityId ? Prisma.sql`AND u."universityId" = ${universityId}` : Prisma.empty}
       GROUP BY u.id, u.name, u.image, d.name
       ORDER BY "postCount" DESC
       LIMIT 5

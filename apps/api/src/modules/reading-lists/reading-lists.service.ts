@@ -77,6 +77,12 @@ export class ReadingListsService {
 
   async addPost(id: string, postId: string, userId: string, scope: UniversityScope) {
     await this.assertOwner(id, userId)
+    // A post the owner can't read can't go on their list
+    const post = await this.prisma.post.findFirst({
+      where: { AND: [{ id: postId, deletedAt: null }, postInScope(scope)] },
+      select: { id: true },
+    })
+    if (!post) throw new NotFoundException('Post not found')
     await this.prisma.readingListPost.upsert({
       where: { listId_postId: { listId: id, postId } },
       create: { listId: id, postId },

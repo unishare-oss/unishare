@@ -450,10 +450,6 @@ describe('McpRepository', () => {
         where: { id: 'user-1' },
         select: { departmentId: true, role: true, universityId: true },
       })
-      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', {
-        kind: 'university',
-        universityId: 'uni-1',
-      })
       expect(postsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Data Structures Lecture 1',
@@ -464,6 +460,7 @@ describe('McpRepository', () => {
         }),
         'user-1',
         'dept-1',
+        { kind: 'university', universityId: 'uni-1' },
       )
       expect(result).toEqual({
         post: {
@@ -561,27 +558,25 @@ describe('McpRepository', () => {
 
     it("answers 404 for another university's course and creates nothing", async () => {
       prisma.user.findUnique.mockResolvedValue(member)
-      coursesService.findOne.mockRejectedValueOnce(new NotFoundException('Course not found'))
+      postsService.create.mockRejectedValueOnce(new NotFoundException('Course not found'))
 
       await expect(
         repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput),
       ).rejects.toThrow(NotFoundException)
-      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', {
+      expect(postsService.create.mock.calls[0][3]).toEqual({
         kind: 'university',
         universityId: 'uni-1',
       })
-      expect(postsService.create).not.toHaveBeenCalled()
     })
 
     it('checks the course with no scope at all for a user with no university', async () => {
       prisma.user.findUnique.mockResolvedValue({ ...member, universityId: null })
-      coursesService.findOne.mockRejectedValueOnce(new NotFoundException('Course not found'))
+      postsService.create.mockRejectedValueOnce(new NotFoundException('Course not found'))
 
       await expect(
         repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput),
       ).rejects.toThrow(NotFoundException)
-      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', { kind: 'none' })
-      expect(postsService.create).not.toHaveBeenCalled()
+      expect(postsService.create.mock.calls[0][3]).toEqual({ kind: 'none' })
     })
 
     it('lets an admin create in any university course', async () => {
@@ -590,8 +585,7 @@ describe('McpRepository', () => {
 
       await repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput)
 
-      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', { kind: 'all' })
-      expect(postsService.create).toHaveBeenCalled()
+      expect(postsService.create.mock.calls[0][3]).toEqual({ kind: 'all' })
     })
 
     it('rejects post creation if user has no department set', async () => {

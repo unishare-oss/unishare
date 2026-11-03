@@ -110,7 +110,7 @@ async function handleDownload(
   const isNew = !getDownloadedSet().has(fileId)
   const [{ data }] = await Promise.all([
     filesControllerGetDownloadUrl(postId, fileId),
-    // Only a counter: a refusal (guests are read-only) must not stop the download.
+    // Only a counter: if recording fails, the download still goes ahead.
     isNew ? filesControllerRecordDownload(postId, fileId).catch(() => undefined) : undefined,
   ])
   if (isNew) {

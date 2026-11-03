@@ -16,16 +16,9 @@ export function universityScope(
   return { kind: 'none' }
 }
 
-/** Prisma filter for the posts a scope may read. Combine it with other filters in `AND`. */
+/** Prisma filter for the posts a scope may read: those on a course it may read. Combine it in `AND`. */
 export function postInScope(scope: UniversityScope): Prisma.PostWhereInput {
-  switch (scope.kind) {
-    case 'all':
-      return {}
-    case 'university':
-      return { course: { department: { faculty: { universityId: scope.universityId } } } }
-    case 'none':
-      return { id: { in: [] } }
-  }
+  return scope.kind === 'all' ? {} : { course: courseInScope(scope) }
 }
 
 /** Prisma filter for the courses a scope may read, and through `course`, everything on them. */
@@ -35,6 +28,18 @@ export function courseInScope(scope: UniversityScope): Prisma.CourseWhereInput {
       return {}
     case 'university':
       return { department: { faculty: { universityId: scope.universityId } } }
+    case 'none':
+      return { id: { in: [] } }
+  }
+}
+
+/** Prisma filter for the users a scope may read: those in its university. */
+export function userInScope(scope: UniversityScope): Prisma.UserWhereInput {
+  switch (scope.kind) {
+    case 'all':
+      return {}
+    case 'university':
+      return { universityId: scope.universityId }
     case 'none':
       return { id: { in: [] } }
   }

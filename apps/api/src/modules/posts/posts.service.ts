@@ -59,12 +59,18 @@ export class PostsService {
     }
   }
 
-  async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
+  async create(
+    dto: CreatePostDto,
+    userId: string,
+    departmentId: string | null | undefined,
+    scope: UniversityScope,
+  ) {
     if (!departmentId) {
       throw new BadRequestException('Please set your department before creating a post')
     }
 
-    const course = await this.postsRepository.findCourseDepartmentById(dto.courseId)
+    // Another university's course is a 404, the same as on every read
+    const course = await this.postsRepository.findCourseDepartmentInScope(dto.courseId, scope)
     if (!course) throw new NotFoundException('Course not found')
 
     if (course.departmentId !== departmentId) {
