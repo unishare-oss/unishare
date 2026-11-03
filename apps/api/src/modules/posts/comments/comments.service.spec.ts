@@ -1,6 +1,9 @@
-import { Logger } from '@nestjs/common'
+import { Logger, NotFoundException } from '@nestjs/common'
+import { UniversityScope } from '@/common/university-scope'
 import { CommentsService } from './comments.service'
 import { NotificationsService } from '../../notifications/notifications.service'
+
+const U1: UniversityScope = { kind: 'university', universityId: 'uni-1' }
 
 const base = {
   content: 'hi',
@@ -31,7 +34,7 @@ describe('CommentsService mentions', () => {
     follows = { keepConnected: jest.fn().mockResolvedValue(['j']) }
     posts = {
       getNotificationTarget: jest.fn().mockResolvedValue({ authorId: 'x', title: 't' }),
-      assertCommentTargetExists: jest.fn(),
+      assertPostInScope: jest.fn(),
     }
     notificationsRepo = {
       create: jest.fn().mockResolvedValue({ id: 'n1' }),
@@ -53,7 +56,7 @@ describe('CommentsService mentions', () => {
     repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: ['j'] })
     const dto = { content: 'hi @Jane Doe', mentions: ['j', 'stranger'], ...extra }
 
-    const result = await service.create('p1', dto, 'u1')
+    const result = await service.create('p1', dto, 'u1', U1)
 
     expect(follows.keepConnected).toHaveBeenCalledWith('u1', ['j', 'stranger'])
     expect(repo.create).toHaveBeenCalledWith('p1', 'u1', dto, ['j'])
@@ -63,7 +66,7 @@ describe('CommentsService mentions', () => {
 
   it('create defaults mentions to an empty list', async () => {
     repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: [] })
-    await service.create('p1', { content: 'hi' }, 'u1')
+    await service.create('p1', { content: 'hi' }, 'u1', U1)
     expect(follows.keepConnected).toHaveBeenCalledWith('u1', [])
   })
 
@@ -73,7 +76,7 @@ describe('CommentsService mentions', () => {
       { ...base, id: 'dead', mentionIds: ['j'], deletedAt: new Date() },
     ])
 
-    const result = await service.findAll('p1')
+    const result = await service.findAll('p1', U1)
 
     expect(result.find((c) => c.id === 'live')?.mentions).toEqual([{ id: 'j', name: 'Jane Doe' }])
     expect(result.find((c) => c.id === 'dead')?.mentions).toEqual([])
@@ -84,7 +87,7 @@ describe('CommentsService mentions', () => {
     posts.getNotificationTarget.mockResolvedValue({ authorId: 'j', title: 'Notes' })
     repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: ['j'] })
 
-    await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1')
+    await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1', U1)
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(notificationsRepo.createMentions).toHaveBeenCalledWith([
@@ -101,7 +104,12 @@ describe('CommentsService mentions', () => {
     notificationsRepo.create.mockRejectedValue(new Error('connection lost'))
     repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: ['j'] })
 
-    const result = await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1')
+    const result = await service.create(
+      'p1',
+      { content: 'hi @Jane Doe', mentions: ['j'] },
+      'u1',
+      U1,
+    )
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(result.id).toBe('c1')
@@ -119,7 +127,7 @@ describe('CommentsService mentions', () => {
   it('still sends COMMENT_ADDED to a post author who is not mentioned', async () => {
     repo.create.mockResolvedValue({ ...base, id: 'c1', mentionIds: ['j'] })
 
-    await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1')
+    await service.create('p1', { content: 'hi @Jane Doe', mentions: ['j'] }, 'u1', U1)
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(notificationsRepo.createMentions).toHaveBeenCalledTimes(1)
@@ -130,7 +138,7 @@ describe('CommentsService mentions', () => {
 
   describe('update', () => {
     const edit = (dto: { content?: string; mentions?: string[] }) =>
-      service.update('p1', 'c1', dto, 'u1')
+      service.update('p1', 'c1', dto, 'u1', U1)
 
     beforeEach(() => {
       repo.findById.mockResolvedValue({ ...base, id: 'c1' })
@@ -227,6 +235,50 @@ describe('CommentsService mentions', () => {
       expect(unhandled).not.toHaveBeenCalled()
       process.off('unhandledRejection', unhandled)
       warn.mockRestore()
+    })
+  })
+
+  describe('university scope', () => {
+    it('findAll answers 404 for a post outside the scope and reads no comments', async () => {
+      posts.assertPostInScope.mockRejectedValue(new NotFoundException('Post not found'))
+
+      await expect(service.findAll('p2', U1)).rejects.toThrow(NotFoundException)
+      expect(posts.assertPostInScope).toHaveBeenCalledWith('p2', U1)
+      expect(repo.findAll).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['a comment', {}],
+      ['a reply', { parentId: 'parent' }],
+    ])('create answers 404 for %s on a post outside the scope', async (_n, extra) => {
+      posts.getNotificationTarget.mockRejectedValue(new NotFoundException('Post not found'))
+
+      await expect(service.create('p2', { content: 'hi', ...extra }, 'u1', U1)).rejects.toThrow(
+        NotFoundException,
+      )
+      expect(posts.getNotificationTarget).toHaveBeenCalledWith('p2', U1)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
+
+    it('update answers 404 for a comment on a post outside the scope', async () => {
+      posts.getNotificationTarget.mockRejectedValue(new NotFoundException('Post not found'))
+
+      await expect(service.update('p2', 'c1', { content: 'edit' }, 'u1', U1)).rejects.toThrow(
+        NotFoundException,
+      )
+      expect(posts.getNotificationTarget).toHaveBeenCalledWith('p2', U1)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('remove answers 404 for a comment on a post outside the scope', async () => {
+      posts.assertPostInScope.mockRejectedValue(new NotFoundException('Post not found'))
+      repo.softDelete = jest.fn()
+
+      await expect(service.remove('p2', 'c1', 'u1', 'STUDENT', U1)).rejects.toThrow(
+        NotFoundException,
+      )
+      expect(posts.assertPostInScope).toHaveBeenCalledWith('p2', U1)
+      expect(repo.softDelete).not.toHaveBeenCalled()
     })
   })
 })

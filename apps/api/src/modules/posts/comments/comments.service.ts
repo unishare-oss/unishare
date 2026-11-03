@@ -3,6 +3,7 @@ import { Prisma, UserRole } from '@/generated/prisma/client'
 import { NotificationsService } from '../../notifications/notifications.service'
 import { FollowsService } from '../../follows/follows.service'
 import { PostsService } from '../posts.service'
+import { UniversityScope } from '@/common/university-scope'
 import { AuditService } from '../../audit/audit.service'
 import { AuditAction } from '../../audit/audit.actions'
 import { commentSelect, CommentsRepository } from './comments.repository'
@@ -45,15 +46,15 @@ export class CommentsService {
     private readonly followsService: FollowsService,
   ) {}
 
-  async findAll(postId: string) {
-    await this.postsService.assertCommentTargetExists(postId)
+  async findAll(postId: string, scope: UniversityScope) {
+    await this.postsService.assertPostInScope(postId, scope)
 
     const comments = await this.commentsRepository.findAll(postId)
     return this.withMentions(this.sanitizeCommentTree(this.buildCommentTree(comments)))
   }
 
-  async create(postId: string, dto: CreateCommentDto, userId: string) {
-    const post = await this.postsService.getNotificationTarget(postId)
+  async create(postId: string, dto: CreateCommentDto, userId: string, scope: UniversityScope) {
+    const post = await this.postsService.getNotificationTarget(postId, scope)
 
     if (dto.parentId) {
       const parentComment = await this.commentsRepository.findById(dto.parentId)
@@ -82,9 +83,15 @@ export class CommentsService {
     return comment
   }
 
-  async update(postId: string, commentId: string, dto: UpdateCommentDto, userId: string) {
-    // Same lookup as assertCommentTargetExists, plus the title a mention notification needs.
-    const post = await this.postsService.getNotificationTarget(postId)
+  async update(
+    postId: string,
+    commentId: string,
+    dto: UpdateCommentDto,
+    userId: string,
+    scope: UniversityScope,
+  ) {
+    // Same lookup as assertPostInScope, plus the title a mention notification needs.
+    const post = await this.postsService.getNotificationTarget(postId, scope)
 
     const comment = await this.commentsRepository.findById(commentId)
     if (!comment || comment.postId !== postId || comment.deletedAt) {
@@ -118,8 +125,14 @@ export class CommentsService {
     return result
   }
 
-  async remove(postId: string, commentId: string, userId: string, userRole: UserRole) {
-    await this.postsService.assertCommentTargetExists(postId)
+  async remove(
+    postId: string,
+    commentId: string,
+    userId: string,
+    userRole: UserRole,
+    scope: UniversityScope,
+  ) {
+    await this.postsService.assertPostInScope(postId, scope)
 
     const comment = await this.commentsRepository.findById(commentId)
     if (!comment || comment.postId !== postId || comment.deletedAt) {

@@ -8,6 +8,7 @@ import {
 import { UserRole } from '@/generated/prisma/client'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
+import { UniversityScope } from '@/common/university-scope'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
 import { FilesRepository } from './files.repository'
@@ -25,8 +26,13 @@ export class FilesService {
     private readonly ingestionService: IngestionService,
   ) {}
 
-  async confirmUpload(postId: string, dto: ConfirmFileUploadDto, userId: string) {
-    const post = await this.postsService.findOne(postId, { id: userId })
+  async confirmUpload(
+    postId: string,
+    dto: ConfirmFileUploadDto,
+    userId: string,
+    scope: UniversityScope,
+  ) {
+    const post = await this.postsService.findOne(postId, scope, { id: userId })
     if (!post.isOwner) throw new ForbiddenException('You do not own this post')
 
     if (!dto.key.startsWith(`posts/${userId}/`)) {
@@ -72,7 +78,8 @@ export class FilesService {
     return rest
   }
 
-  async getDownloadUrl(postId: string, fileId: string) {
+  async getDownloadUrl(postId: string, fileId: string, scope: UniversityScope) {
+    await this.postsService.assertPostInScope(postId, scope)
     const file = await this.filesRepository.findById(fileId)
     if (!file) throw new NotFoundException('File not found')
     if (file.postId !== postId) throw new NotFoundException('File not found')
@@ -80,7 +87,8 @@ export class FilesService {
     return { url }
   }
 
-  async recordDownload(postId: string, fileId: string) {
+  async recordDownload(postId: string, fileId: string, scope: UniversityScope) {
+    await this.postsService.assertPostInScope(postId, scope)
     const file = await this.filesRepository.findById(fileId)
     if (!file) throw new NotFoundException('File not found')
     if (file.postId !== postId) throw new NotFoundException('File not found')

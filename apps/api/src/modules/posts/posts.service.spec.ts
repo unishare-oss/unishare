@@ -5,6 +5,8 @@ import {
   PostPublicationStatus,
   PostStatus,
   PostType,
+  Prisma,
+  UserRole,
 } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsService } from './posts.service'
@@ -15,10 +17,16 @@ import { TagsService } from '../tags/tags.service'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
 import { AuditService } from '../audit/audit.service'
+import { UniversityScope } from '@/common/university-scope'
 
 const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const IMAGE = 'image/png'
+
+const ALL: UniversityScope = { kind: 'all' }
+const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
+const NONE: UniversityScope = { kind: 'none' }
+const IN_U1 = { course: { department: { faculty: { universityId: 'u1' } } } }
 
 const UNSUPPORTED_RESULT = {
   state: 'unsupported',
@@ -36,11 +44,20 @@ describe('PostsService', () => {
   beforeEach(async () => {
     prismaMock = {
       post: { findFirst: jest.fn() },
+      $queryRaw: jest.fn(),
       postChunk: { count: jest.fn().mockResolvedValue(0) },
     }
     embeddingMock = { enabled: true }
     repoMock = {
+      findAll: jest.fn().mockResolvedValue({ items: [] }),
       findById: jest.fn(),
+      findInScope: jest.fn(),
+      findByShortCode: jest.fn(),
+      findIdInScope: jest.fn(),
+      findSaved: jest.fn(),
+      findByIds: jest.fn().mockResolvedValue([]),
+      savePost: jest.fn(),
+      toggleReaction: jest.fn(),
       recordView: jest.fn().mockResolvedValue(undefined),
       update: jest.fn(),
     }
@@ -74,7 +91,7 @@ describe('PostsService', () => {
     it('throws when the post does not exist', async () => {
       prismaMock.post.findFirst.mockResolvedValue(null)
 
-      await expect(service.getAiIndexStatus('nope')).rejects.toThrow(NotFoundException)
+      await expect(service.getAiIndexStatus('nope', ALL)).rejects.toThrow(NotFoundException)
     })
 
     it('reports ready when every supported file is READY', async () => {
@@ -84,7 +101,7 @@ describe('PostsService', () => {
       ])
       prismaMock.postChunk.count.mockResolvedValue(120)
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result).toEqual({
         state: 'ready',
@@ -101,7 +118,7 @@ describe('PostsService', () => {
         { mimeType: DOCX, ingestStatus: IngestStatus.PENDING },
       ])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result.state).toBe('preparing')
       expect(result.supportedFiles).toBe(3)
@@ -112,7 +129,7 @@ describe('PostsService', () => {
       givenFiles([{ mimeType: PDF, ingestStatus: IngestStatus.PROCESSING }])
       prismaMock.postChunk.count.mockResolvedValue(32)
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result).toEqual({
         state: 'preparing',
@@ -129,7 +146,7 @@ describe('PostsService', () => {
         { mimeType: 'text/plain', ingestStatus: IngestStatus.PENDING },
       ])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result).toEqual({
         state: 'unsupported',
@@ -144,7 +161,7 @@ describe('PostsService', () => {
     it('reports unsupported when the post has no files at all', async () => {
       givenFiles([])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result.state).toBe('unsupported')
     })
@@ -155,7 +172,7 @@ describe('PostsService', () => {
         { mimeType: DOCX, ingestStatus: IngestStatus.FAILED },
       ])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result.state).toBe('failed')
       expect(result.readyFiles).toBe(0)
@@ -167,7 +184,7 @@ describe('PostsService', () => {
         { mimeType: DOCX, ingestStatus: IngestStatus.PENDING },
       ])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       // One failed file among several must not present as a total failure.
       expect(result.state).toBe('preparing')
@@ -180,7 +197,7 @@ describe('PostsService', () => {
       ])
       prismaMock.postChunk.count.mockResolvedValue(44)
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       // Nothing is left in flight, so this must settle rather than poll forever, and
       // retrieval genuinely works for the file that succeeded.
@@ -192,7 +209,7 @@ describe('PostsService', () => {
     it('does not sit on preparing when the only supported file is UNSUPPORTED', async () => {
       givenFiles([{ mimeType: PDF, ingestStatus: IngestStatus.UNSUPPORTED }])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result.state).toBe('failed')
     })
@@ -206,7 +223,7 @@ describe('PostsService', () => {
         { mimeType: IMAGE, ingestStatus: IngestStatus.PENDING },
       ])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result.state).toBe('ready')
       expect(result.supportedFiles).toBe(1)
@@ -220,7 +237,7 @@ describe('PostsService', () => {
       embeddingMock.enabled = false
       givenFiles([{ mimeType: PDF, ingestStatus: IngestStatus.PENDING }])
 
-      const result = await service.getAiIndexStatus('post-1')
+      const result = await service.getAiIndexStatus('post-1', ALL)
 
       expect(result).toEqual(UNSUPPORTED_RESULT)
       // Short-circuits before touching the database at all.
@@ -240,7 +257,7 @@ describe('PostsService', () => {
           files: [{ mimeType: PDF, ingestStatus: IngestStatus.PENDING }],
         })
 
-        const result = await service.getAiIndexStatus('post-1')
+        const result = await service.getAiIndexStatus('post-1', ALL)
 
         // The notice must not say "you can ask questions now" when every send returns 403.
         expect(result).toEqual(UNSUPPORTED_RESULT)
@@ -252,16 +269,155 @@ describe('PostsService', () => {
   describe('update', () => {
     it('stamps editedAt when the owner edits the post', async () => {
       const post = { id: 'post-1', type: PostType.NOTE, isOwner: true }
+      repoMock.findInScope.mockResolvedValue(post)
       repoMock.findById.mockResolvedValue(post)
       repoMock.update.mockResolvedValue(post)
 
-      await service.update('post-1', { title: 'New title' }, 'user-1')
+      await service.update('post-1', { title: 'New title' }, 'user-1', ALL)
 
       expect(repoMock.update).toHaveBeenCalledWith(
         'post-1',
         expect.objectContaining({ title: 'New title', editedAt: expect.any(Date) }),
         { id: 'user-1' },
       )
+    })
+  })
+
+  describe('university scope', () => {
+    it('findAll combines the scope with the existing filters in AND', async () => {
+      await service.findAll({ departmentId: 'd1' } as any, U1, { id: 'user-1' })
+
+      const [where] = repoMock.findAll.mock.calls[0]
+      expect(where.AND).toHaveLength(2)
+      expect(where.AND[0]).toMatchObject({ course: { departmentId: 'd1' } })
+      expect(where.AND[1]).toEqual(IN_U1)
+    })
+
+    it('findAll for a member with no university matches no post', async () => {
+      await service.findAll({} as any, NONE, { id: 'user-1' })
+
+      const [where] = repoMock.findAll.mock.calls[0]
+      expect(where.AND[1]).toEqual({ id: { in: [] } })
+    })
+
+    it('getSavedPosts passes the scope to the repository', async () => {
+      await service.getSavedPosts('user-1', U1, {} as any)
+
+      expect(repoMock.findSaved).toHaveBeenCalledWith({ id: 'user-1' }, U1, {})
+    })
+
+    it('findOne answers 404 for a post outside the scope', async () => {
+      repoMock.findInScope.mockResolvedValue(null)
+
+      await expect(service.findOne('p2', U1, { id: 'user-1' })).rejects.toThrow(NotFoundException)
+      expect(repoMock.findInScope).toHaveBeenCalledWith('p2', U1, { id: 'user-1' })
+      expect(repoMock.recordView).not.toHaveBeenCalled()
+    })
+
+    it('findOne answers 404 to a member with no university', async () => {
+      repoMock.findInScope.mockResolvedValue(null)
+
+      await expect(service.findOne('p1', NONE, { id: 'user-1' })).rejects.toThrow(NotFoundException)
+      expect(repoMock.findInScope).toHaveBeenCalledWith('p1', NONE, { id: 'user-1' })
+    })
+
+    it('findByShortCode answers 404 for a post outside the scope', async () => {
+      repoMock.findByShortCode.mockResolvedValue(null)
+
+      await expect(service.findByShortCode('abc', U1)).rejects.toThrow(NotFoundException)
+      expect(repoMock.findByShortCode).toHaveBeenCalledWith('abc', U1, undefined)
+    })
+
+    it('assertPostInScope answers 404 for a post outside the scope', async () => {
+      repoMock.findIdInScope.mockResolvedValue(null)
+
+      await expect(service.assertPostInScope('p2', U1)).rejects.toThrow(NotFoundException)
+      expect(repoMock.findIdInScope).toHaveBeenCalledWith('p2', U1)
+    })
+
+    it('savePost answers 404 for a post outside the scope and saves nothing', async () => {
+      repoMock.findIdInScope.mockResolvedValue(null)
+
+      await expect(service.savePost('p2', 'user-1', U1)).rejects.toThrow(NotFoundException)
+      expect(repoMock.findIdInScope).toHaveBeenCalledWith('p2', U1)
+      expect(repoMock.savePost).not.toHaveBeenCalled()
+    })
+
+    it('toggleReaction answers 404 for a post outside the scope and returns no post', async () => {
+      repoMock.findIdInScope.mockResolvedValue(null)
+
+      await expect(
+        service.toggleReaction('p2', { type: 'LIKE' } as any, 'user-1', U1),
+      ).rejects.toThrow(NotFoundException)
+      expect(repoMock.findIdInScope).toHaveBeenCalledWith('p2', U1)
+      expect(repoMock.toggleReaction).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['update', (s: PostsService) => s.update('p2', { title: 'x' }, 'user-1', U1)],
+      ['remove', (s: PostsService) => s.remove('p2', 'user-1', UserRole.STUDENT, U1)],
+      [
+        'regenerateSummary',
+        (s: PostsService) => s.regenerateSummary('p2', 'user-1', UserRole.STUDENT, U1),
+      ],
+    ])('%s answers 404, not 403, for a post outside the scope', async (_name, call) => {
+      repoMock.findInScope.mockResolvedValue(null)
+
+      await expect(call(service)).rejects.toThrow(NotFoundException)
+      expect(repoMock.findInScope).toHaveBeenCalledWith('p2', U1, expect.any(Object))
+      expect(repoMock.update).not.toHaveBeenCalled()
+    })
+
+    it('getAiIndexStatus looks the post up inside the scope', async () => {
+      prismaMock.post.findFirst.mockResolvedValue(null)
+
+      await expect(service.getAiIndexStatus('p2', U1)).rejects.toThrow(NotFoundException)
+      expect(prismaMock.post.findFirst.mock.calls[0][0].where).toEqual({
+        id: 'p2',
+        deletedAt: null,
+        AND: [IN_U1],
+      })
+    })
+
+    describe('searchPosts', () => {
+      const sqlOf = (call: unknown[]) => {
+        const [strings, ...values] = call as [TemplateStringsArray, ...unknown[]]
+        return Prisma.sql(strings, ...values)
+      }
+
+      beforeEach(() => {
+        prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ count: 0n }])
+      })
+
+      it('joins department and faculty and filters by the university in both queries', async () => {
+        await service.searchPosts('calc', U1)
+
+        expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2)
+        for (const call of prismaMock.$queryRaw.mock.calls) {
+          const query = sqlOf(call)
+          expect(query.sql).toContain('JOIN "department" d ON d.id = c."departmentId"')
+          expect(query.sql).toContain('JOIN "faculty" f ON f.id = d."facultyId"')
+          expect(query.sql).toContain('AND f."universityId" = ?')
+          expect(query.values).toContain('u1')
+        }
+      })
+
+      it('skips the join for an admin', async () => {
+        await service.searchPosts('calc', ALL)
+
+        for (const call of prismaMock.$queryRaw.mock.calls) {
+          const query = sqlOf(call)
+          expect(query.sql).not.toContain('"faculty"')
+          expect(query.sql).not.toContain('universityId')
+        }
+      })
+
+      it('returns an empty page without querying for a member with no university', async () => {
+        const result = await service.searchPosts('calc', NONE, 20, 1)
+
+        expect(result).toEqual({ results: [], total: 0, page: 1, limit: 20 })
+        expect(prismaMock.$queryRaw).not.toHaveBeenCalled()
+      })
     })
   })
 })

@@ -12,8 +12,10 @@ import {
   PostType,
   UserRole,
   PostPublicationStatus,
+  Prisma,
 } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
+import { postInScope, UniversityScope } from '@/common/university-scope'
 import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
@@ -101,7 +103,11 @@ export class PostsService {
     return created ?? post
   }
 
-  async findAll(query: ListPostsDto, user?: { role?: UserRole; id?: string }) {
+  async findAll(
+    query: ListPostsDto,
+    scope: UniversityScope,
+    user?: { role?: UserRole; id?: string },
+  ) {
     const userRole = user?.role
     const userId = user?.id
 
@@ -141,35 +147,43 @@ export class PostsService {
       status: canSeeAllStatuses && status ? status : PostStatus.APPROVED,
     }
 
-    return this.postsRepository.findAll(where, pagination, { id: userId, role: userRole })
+    return this.postsRepository.findAll({ AND: [where, postInScope(scope)] }, pagination, {
+      id: userId,
+      role: userRole,
+    })
   }
 
-  async findOne(id: string, viewer?: { id?: string; role?: UserRole }) {
-    const post = await this.postsRepository.findById(id, viewer)
+  async findOne(id: string, scope: UniversityScope, viewer?: { id?: string; role?: UserRole }) {
+    const post = await this.postsRepository.findInScope(id, scope, viewer)
     if (!post) throw new NotFoundException('Post not found')
     if (viewer?.id) void this.postsRepository.recordView(id, viewer.id)
     return post
   }
 
-  async findByShortCode(shortCode: string, viewer?: { id?: string; role?: UserRole }) {
-    const post = await this.postsRepository.findByShortCode(shortCode, viewer)
+  async findByShortCode(
+    shortCode: string,
+    scope: UniversityScope,
+    viewer?: { id?: string; role?: UserRole },
+  ) {
+    const post = await this.postsRepository.findByShortCode(shortCode, scope, viewer)
     if (!post) throw new NotFoundException('Post not found')
     return post
   }
 
-  async assertCommentTargetExists(id: string) {
-    const post = await this.postsRepository.findCommentTarget(id)
+  async assertPostInScope(id: string, scope: UniversityScope) {
+    const post = await this.postsRepository.findIdInScope(id, scope)
     if (!post) throw new NotFoundException('Post not found')
   }
 
-  async getNotificationTarget(id: string) {
-    const post = await this.postsRepository.findNotificationTarget(id)
+  async getNotificationTarget(id: string, scope: UniversityScope) {
+    const post = await this.postsRepository.findNotificationTarget(id, scope)
     if (!post) throw new NotFoundException('Post not found')
     return post
   }
 
-  async update(id: string, dto: UpdatePostDto, userId: string) {
-    const post = await this.findOne(id, { id: userId })
+  // Looked up in scope before the ownership check, so another university's post is a 404, not a 403.
+  async update(id: string, dto: UpdatePostDto, userId: string, scope: UniversityScope) {
+    const post = await this.findOne(id, scope, { id: userId })
     if (!post.isOwner) {
       throw new ForbiddenException('You do not own this post')
     }
@@ -201,9 +215,9 @@ export class PostsService {
     return (await this.postsRepository.findById(id, { id: userId })) ?? updatedPost
   }
 
-  async remove(id: string, userId: string, userRole: UserRole) {
+  async remove(id: string, userId: string, userRole: UserRole, scope: UniversityScope) {
     const viewer = { id: userId, role: userRole }
-    const post = await this.findOne(id, viewer)
+    const post = await this.findOne(id, scope, viewer)
 
     const isAdmin = userRole === UserRole.ADMIN
     if (!post.isOwner && !isAdmin) throw new ForbiddenException('You do not own this post')
@@ -221,7 +235,7 @@ export class PostsService {
   }
 
   async updateStatus(id: string, dto: UpdatePostStatusDto, viewer: { id: string; role: UserRole }) {
-    const post = await this.findOne(id, viewer)
+    const post = await this.findOne(id, { kind: 'all' }, viewer)
     if (!post.authorId) throw new NotFoundException('Post not found')
 
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
@@ -248,12 +262,13 @@ export class PostsService {
     return updated
   }
 
-  savePost(postId: string, userId: string) {
+  async savePost(postId: string, userId: string, scope: UniversityScope) {
+    await this.assertPostInScope(postId, scope)
     return this.postsRepository.savePost(postId, userId)
   }
 
-  async regenerateSummary(id: string, userId: string, role: UserRole) {
-    const post = await this.findOne(id, { id: userId, role })
+  async regenerateSummary(id: string, userId: string, role: UserRole, scope: UniversityScope) {
+    const post = await this.findOne(id, scope, { id: userId, role })
     if (!post.isOwner && role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
       throw new ForbiddenException('You do not own this post')
     }
@@ -268,8 +283,8 @@ export class PostsService {
     return this.postsRepository.unsavePost(postId, userId)
   }
 
-  getSavedPosts(userId: string, query: PaginationDto) {
-    return this.postsRepository.findSaved({ id: userId }, query)
+  getSavedPosts(userId: string, scope: UniversityScope, query: PaginationDto) {
+    return this.postsRepository.findSaved({ id: userId }, scope, query)
   }
 
   getReadingListPosts(
@@ -280,7 +295,14 @@ export class PostsService {
     return this.postsRepository.findByReadingList(listId, viewer ?? {}, query)
   }
 
-  toggleReaction(id: string, dto: ReactToPostDto, userId: string, role?: UserRole) {
+  async toggleReaction(
+    id: string,
+    dto: ReactToPostDto,
+    userId: string,
+    scope: UniversityScope,
+    role?: UserRole,
+  ) {
+    await this.assertPostInScope(id, scope)
     return this.postsRepository.toggleReaction(id, { id: userId, role }, dto.type)
   }
 
@@ -290,6 +312,7 @@ export class PostsService {
    */
   async searchPosts(
     query: string,
+    scope: UniversityScope,
     limit: number = 20,
     page: number = 1,
   ): Promise<{
@@ -298,11 +321,20 @@ export class PostsService {
     page: number
     limit: number
   }> {
-    if (!query || query.trim().length === 0) {
+    if (!query || query.trim().length === 0 || scope.kind === 'none') {
       return { results: [], total: 0, page, limit }
     }
 
     const searchQuery = query.trim()
+    const universityJoin =
+      scope.kind === 'university'
+        ? Prisma.sql`JOIN "department" d ON d.id = c."departmentId"
+      JOIN "faculty" f ON f.id = d."facultyId"`
+        : Prisma.empty
+    const inUniversity =
+      scope.kind === 'university'
+        ? Prisma.sql`AND f."universityId" = ${scope.universityId}`
+        : Prisma.empty
 
     // Use raw SQL only to get ordered IDs — avoids deserializing the Unsupported tsvector column.
     // Uses 'simple' dictionary (no stemming) so alphanumeric course codes like "csc217" are
@@ -312,6 +344,7 @@ export class PostsService {
         ts_rank(p."searchVector", plainto_tsquery('simple', ${searchQuery})) as relevance
       FROM "post" p
       LEFT JOIN "course" c ON c.id = p."courseId"
+      ${universityJoin}
       LEFT JOIN "post_tag" pt ON pt."postId" = p.id
       LEFT JOIN "tag" t ON t.id = pt."tagId"
       WHERE (
@@ -322,6 +355,7 @@ export class PostsService {
         AND p.status = ${'APPROVED'}
         AND p."publicationStatus" = ${'PUBLISHED'}
         AND p."deletedAt" IS NULL
+        ${inUniversity}
       ORDER BY p.id, relevance DESC, p."createdAt" DESC
       LIMIT ${limit}
       OFFSET ${(page - 1) * limit}
@@ -331,6 +365,7 @@ export class PostsService {
       SELECT COUNT(DISTINCT p.id) as count
       FROM "post" p
       LEFT JOIN "course" c ON c.id = p."courseId"
+      ${universityJoin}
       LEFT JOIN "post_tag" pt ON pt."postId" = p.id
       LEFT JOIN "tag" t ON t.id = pt."tagId"
       WHERE (
@@ -341,6 +376,7 @@ export class PostsService {
         AND p.status = ${'APPROVED'}
         AND p."publicationStatus" = ${'PUBLISHED'}
         AND p."deletedAt" IS NULL
+        ${inUniversity}
     `) as { count: bigint }[]
 
     const total = Number(totalResult[0]?.count ?? 0n)
@@ -572,7 +608,7 @@ export class PostsService {
    * invisible. Embedding is slow enough to land inside (~26s per 32-chunk batch on CPU-only
    * Ollama, so minutes for a large PDF), so the frontend needs a way to say so.
    */
-  async getAiIndexStatus(postId: string): Promise<AiIndexStatusDto> {
+  async getAiIndexStatus(postId: string, scope: UniversityScope): Promise<AiIndexStatusDto> {
     // Embedding disabled is a supported mode, and in it nothing will ever move a row off
     // PENDING: ingestFile returns before writing a status and the recovery sweep skips too.
     // Reporting 'preparing' would be a permanent lie AND would poll forever. 'unsupported' is
@@ -583,7 +619,7 @@ export class PostsService {
     }
 
     const post = await this.prisma.post.findFirst({
-      where: { id: postId, deletedAt: null },
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
       select: {
         publicationStatus: true,
         status: true,
