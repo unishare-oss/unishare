@@ -67,6 +67,12 @@ export class RetrievalService {
     private readonly embedding: EmbeddingService,
   ) {}
 
+  /**
+   * Searches one post's chunks, filtering on `c."postId"` alone, so it does no university check.
+   * Pass only the id of a post already loaded through `postInScope` (as `PostsService`'s chat
+   * gate does). A future search across posts must join department and faculty and bind
+   * `f."universityId"` as a parameter, like `PostsService.searchPosts`.
+   */
   async searchPost(
     postId: string,
     query: string,

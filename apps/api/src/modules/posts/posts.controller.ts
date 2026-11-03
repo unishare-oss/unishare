@@ -280,8 +280,12 @@ export class PostsController {
   @ApiOperation({ summary: 'Chat with a post using AI' })
   @ApiOkResponse({ type: AiChatResponseDto, description: 'AI response to the user message' })
   @ResponseMessage('AI response generated')
-  aiChat(@Param('id') id: string, @Body() dto: AiChatDto, @Session() session: UserSession) {
-    return this.postsService.chatWithPost(id, dto, session.user.id)
+  aiChat(
+    @Param('id') id: string,
+    @Body() dto: AiChatDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.chatWithPost(id, dto, scope)
   }
 
   /**
@@ -309,10 +313,10 @@ export class PostsController {
   async aiChatStream(
     @Param('id') id: string,
     @Body() dto: AiChatDto,
-    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
     @Res() res: Response,
   ) {
-    const stream = await this.postsService.chatWithPostStream(id, dto, session.user.id)
+    const stream = await this.postsService.chatWithPostStream(id, dto, scope)
     const iterator = stream[Symbol.asyncIterator]()
 
     // The first event is pulled BEFORE a single header goes out, and that ordering is the whole

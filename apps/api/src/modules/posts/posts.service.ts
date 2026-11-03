@@ -563,8 +563,12 @@ export class PostsService {
     return posts
   }
 
-  async chatWithPost(postId: string, dto: AiChatDto, _userId: string): Promise<AiChatResponse> {
-    await this.assertChatable(postId)
+  async chatWithPost(
+    postId: string,
+    dto: AiChatDto,
+    scope: UniversityScope,
+  ): Promise<AiChatResponse> {
+    await this.assertChatable(postId, scope)
     return this.aiSummaryService.chatWithPost(postId, dto.messages)
   }
 
@@ -579,16 +583,19 @@ export class PostsService {
   async chatWithPostStream(
     postId: string,
     dto: AiChatDto,
-    _userId: string,
+    scope: UniversityScope,
   ): Promise<AsyncIterable<AiChatStreamEvent>> {
-    await this.assertChatable(postId)
+    await this.assertChatable(postId, scope)
     return this.aiSummaryService.chatWithPostStream(postId, dto.messages)
   }
 
-  /** The access gate both chat paths share, so neither can be reachable on a post the other refuses. */
-  private async assertChatable(postId: string): Promise<void> {
+  /**
+   * The access gate both chat paths share, so neither can be reachable on a post the other refuses.
+   * Looked up in scope first, so another university's post is a 404 and no AI call is made.
+   */
+  private async assertChatable(postId: string, scope: UniversityScope): Promise<void> {
     const post = await this.prisma.post.findFirst({
-      where: { id: postId, deletedAt: null },
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
       select: { id: true, publicationStatus: true, status: true },
     })
     if (!post) throw new NotFoundException('Post not found')
