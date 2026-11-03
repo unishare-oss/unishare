@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import {
   ORGANIZATIONS_CLAIM,
   type UniauthMembership,
+  universityChange,
   universityForMemberships,
 } from '@/auth/uniauth-sign-in'
 import { PrismaService } from '@/prisma/prisma.service'
@@ -32,13 +33,17 @@ export class UniauthUserUpdatedService {
       ? (data[ORGANIZATIONS_CLAIM] as UniauthMembership[])
       : []
     const universityId = await universityForMemberships(this.prisma, memberships)
+    const stored = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { universityId: true },
+    })
     const profile = {
       ...(typeof data.name === 'string' && data.name && { name: data.name }),
       ...((typeof data.picture === 'string' || data.picture === null) && {
         image: data.picture || null,
       }),
       ...(typeof data.email_verified === 'boolean' && { emailVerified: data.email_verified }),
-      ...(universityId && { universityId }),
+      ...universityChange(stored?.universityId ?? null, universityId),
     }
     const email = typeof data.email === 'string' && data.email ? data.email.toLowerCase() : null
 

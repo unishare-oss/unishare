@@ -4,6 +4,9 @@ import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 import { Prisma } from '@/generated/prisma/client'
 
+/** The academic profile fields a member may write (the university comes from uniauth). */
+type AcademicProfileData = Omit<UpdateAcademicProfileDto, 'universityId'>
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -103,29 +106,18 @@ export class UsersRepository {
   findAcademicProfileOfUser(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      select: {
-        universityId: true,
-        departmentId: true,
-        department: { select: { faculty: { select: { universityId: true } } } },
-      },
-    })
-  }
-
-  findUniversityById(id: string) {
-    return this.prisma.university.findUnique({
-      where: { id },
-      select: { id: true },
+      select: { universityId: true },
     })
   }
 
   /**
-   * Writes only while the user's stored university and department still equal `expected`, so a
-   * concurrent profile change can't pair a department with another university. Null when they changed.
+   * Writes only while the user's stored university still equals `expected`, so a concurrent
+   * university change can't pair a department with another university. Null when it changed.
    */
   updateAcademicProfileIf(
     id: string,
-    expected: { universityId?: string | null; departmentId?: string | null },
-    dto: UpdateAcademicProfileDto,
+    expected: { universityId: string },
+    dto: AcademicProfileData,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.user.updateMany({ where: { id, ...expected }, data: dto })
@@ -134,7 +126,7 @@ export class UsersRepository {
     })
   }
 
-  updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
+  updateAcademicProfile(id: string, dto: AcademicProfileData) {
     return this.prisma.user.update({
       where: { id },
       data: dto,

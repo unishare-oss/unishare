@@ -6,6 +6,7 @@ import { AppRail } from '@/components/app-rail'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
+import { NoUniversityNotice } from '@/components/no-university-notice'
 import { BackgroundUploadManager } from '@/components/shared/background-upload-manager'
 import { useAuth } from '@/contexts/auth-context'
 import { useNotificationStream } from '@/hooks/use-notifications'
@@ -13,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { useUIStore } from '@/lib/store'
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, isLoading, isAuthenticated } = useAuth()
+  const { session, user, isLoading, isAuthenticated } = useAuth()
   const pathname = usePathname()
   const isChat = pathname.startsWith('/chat')
   const isChatRoom = /^\/chat\/.+/.test(pathname)
@@ -33,7 +34,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showLoader = isLoading || !minimumLoaderElapsed
 
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
-  const requiresDepartmentOnboarding = isAuthenticated && !!user && !user.department
+  const isGuest = !!(session?.user as { isAnonymous?: boolean | null } | undefined)?.isAnonymous
+  // A member's university comes only from uniauth; guests get theirs elsewhere.
+  const needsUniversity = !!user && !isGuest && !user.university
+  const requiresDepartmentOnboarding =
+    isAuthenticated && !!user && !user.department && !needsUniversity
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         aria-hidden={showLoader}
       >
-        {children}
+        {needsUniversity ? <NoUniversityNotice /> : children}
       </main>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
         {!isChatRoom && <MobileNav />}

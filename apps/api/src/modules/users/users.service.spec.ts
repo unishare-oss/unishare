@@ -12,7 +12,6 @@ describe('UsersService — updateAcademicProfile', () => {
   let service: UsersService
   let repo: {
     findDepartmentById: jest.Mock
-    findUniversityById: jest.Mock
     findAcademicProfileOfUser: jest.Mock
     updateAcademicProfile: jest.Mock
     updateAcademicProfileIf: jest.Mock
@@ -23,7 +22,6 @@ describe('UsersService — updateAcademicProfile', () => {
       findDepartmentById: jest
         .fn()
         .mockResolvedValue({ id: 'd1', faculty: { universityId: 'u1' } }),
-      findUniversityById: jest.fn((id: string) => Promise.resolve({ id })),
       findAcademicProfileOfUser: jest.fn().mockResolvedValue({ universityId: 'u1' }),
       updateAcademicProfile: jest.fn((id, dto) =>
         Promise.resolve({ id, enrollmentYear: null, ...dto }),
@@ -72,22 +70,6 @@ describe('UsersService — updateAcademicProfile', () => {
     expect(repo.updateAcademicProfileIf).not.toHaveBeenCalled()
   })
 
-  it('checks against the university sent in the same request', async () => {
-    await expect(
-      service.updateAcademicProfile('user1', { departmentId: 'd1', universityId: 'u2' }),
-    ).rejects.toThrow(BadRequestException)
-    expect(repo.findAcademicProfileOfUser).not.toHaveBeenCalled()
-
-    await service.updateAcademicProfile('user2', { departmentId: 'd1', universityId: 'u1' })
-    expect(repo.updateAcademicProfile).toHaveBeenCalledTimes(1)
-  })
-
-  it('rejects a department when the university is cleared in the same request', async () => {
-    await expect(
-      service.updateAcademicProfile('user1', { departmentId: 'd1', universityId: null }),
-    ).rejects.toThrow(BadRequestException)
-  })
-
   it('rejects a department when the user has no university', async () => {
     repo.findAcademicProfileOfUser.mockResolvedValue({ universityId: null })
     await expect(service.updateAcademicProfile('user1', { departmentId: 'd1' })).rejects.toThrow(
@@ -95,36 +77,19 @@ describe('UsersService — updateAcademicProfile', () => {
     )
   })
 
-  it('drops the stored department when the university changes to another one', async () => {
-    repo.findAcademicProfileOfUser.mockResolvedValue({
-      universityId: 'u1',
-      department: { faculty: { universityId: 'u1' } },
-    })
-    await service.updateAcademicProfile('user1', { universityId: 'u2' })
-    expect(repo.updateAcademicProfile).toHaveBeenCalledWith('user1', {
-      universityId: 'u2',
-      departmentId: null,
-    })
-
-    await service.updateAcademicProfile('user1', { universityId: null })
-    expect(repo.updateAcademicProfile).toHaveBeenLastCalledWith('user1', {
-      universityId: null,
-      departmentId: null,
-    })
+  it('400s on a universityId, which only uniauth sets', async () => {
+    for (const universityId of ['u1', null]) {
+      await expect(
+        service.updateAcademicProfile('user1', { departmentId: 'd1', universityId }),
+      ).rejects.toThrow('University comes from your uniauth account')
+    }
+    expect(repo.updateAcademicProfile).not.toHaveBeenCalled()
+    expect(repo.updateAcademicProfileIf).not.toHaveBeenCalled()
   })
 
-  it('keeps the stored department when the university stays the same', async () => {
-    repo.findAcademicProfileOfUser.mockResolvedValue({
-      universityId: 'u1',
-      departmentId: 'd1',
-      department: { faculty: { universityId: 'u1' } },
-    })
-    await service.updateAcademicProfile('user1', { universityId: 'u1' })
-    // Only while the department is still the one checked against the new university
-    expect(repo.updateAcademicProfileIf).toHaveBeenCalledWith(
-      'user1',
-      { departmentId: 'd1' },
-      { universityId: 'u1' },
-    )
+  it('saves only the enrollment year without reading the university', async () => {
+    await service.updateAcademicProfile('user1', { enrollmentYear: 2024 })
+    expect(repo.findAcademicProfileOfUser).not.toHaveBeenCalled()
+    expect(repo.updateAcademicProfile).toHaveBeenCalledWith('user1', { enrollmentYear: 2024 })
   })
 })

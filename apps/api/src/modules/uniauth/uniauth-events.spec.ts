@@ -191,6 +191,7 @@ describe('uniauth event callbacks', () => {
           image: null,
           emailVerified: true,
           universityId: 'kmutt',
+          departmentId: null,
           email: 'ada@kmutt.ac.th',
         },
       })
@@ -205,8 +206,22 @@ describe('uniauth event callbacks', () => {
       )
       expect(prisma.user.update).toHaveBeenLastCalledWith({
         where: { id: 'local-1' },
-        data: { name: 'Ada L.', image: null, emailVerified: true, universityId: 'kmutt' },
+        data: {
+          name: 'Ada L.',
+          image: null,
+          emailVerified: true,
+          universityId: 'kmutt',
+          departmentId: null,
+        },
       })
+    })
+
+    it('keeps the department when the university is unchanged', async () => {
+      prisma.user.findUnique.mockResolvedValue({ universityId: 'kmutt' })
+      await userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))
+      const written = prisma.user.update.mock.calls[0][0].data
+      expect(written).not.toHaveProperty('universityId')
+      expect(written).not.toHaveProperty('departmentId')
     })
 
     it('does nothing for someone who never used unishare', async () => {
