@@ -36,7 +36,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
   // A member's university comes only from uniauth; a guest picks the one it browses here.
-  const needsUniversity = !!user && !isGuest && !user.university
+  // Admins read every university, so they need none.
+  const needsUniversity = !!user && !isGuest && !user.university && user.role !== 'ADMIN'
   const guestNeedsUniversity = !!user && isGuest && !user.university
   const requiresDepartmentOnboarding =
     isAuthenticated && !!user && !user.department && !needsUniversity

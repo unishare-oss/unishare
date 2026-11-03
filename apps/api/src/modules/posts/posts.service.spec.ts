@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { NotFoundException } from '@nestjs/common'
+import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import {
   IngestStatus,
   PostPublicationStatus,
@@ -314,7 +314,7 @@ describe('PostsService', () => {
       await service.findAll({} as any, NONE, { id: 'user-1' })
 
       const [where] = repoMock.findAll.mock.calls[0]
-      expect(where.AND[1]).toEqual({ id: { in: [] } })
+      expect(where.AND[1]).toEqual({ course: { id: { in: [] } } })
     })
 
     it('getSavedPosts passes the scope to the repository', async () => {
@@ -414,7 +414,9 @@ describe('PostsService', () => {
         prismaMock.post.findFirst.mockResolvedValue(null)
 
         await expect(call(service, NONE)).rejects.toThrow(NotFoundException)
-        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([{ id: { in: [] } }])
+        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([
+          { course: { id: { in: [] } } },
+        ])
         expect(aiCall()).not.toHaveBeenCalled()
       })
 
@@ -532,6 +534,29 @@ describe('PostsService', () => {
 
       await expect(call(service)).rejects.toThrow(NotFoundException)
       expect(repoMock.findInScope).toHaveBeenCalledWith('p2', U1)
+    })
+  })
+
+  describe('create in scope', () => {
+    it("gives 404 for another university's course, before the department check", async () => {
+      repoMock.findCourseDepartmentInScope = jest.fn().mockResolvedValue(null)
+      repoMock.create = jest.fn()
+      await expect(
+        service.create({ courseId: 'c-other', title: 't' } as never, 'u1', 'd1', U1),
+      ).rejects.toThrow(NotFoundException)
+      expect(repoMock.findCourseDepartmentInScope).toHaveBeenCalledWith('c-other', U1)
+      expect(repoMock.create).not.toHaveBeenCalled()
+    })
+
+    it("still refuses a course in the user's university but another department", async () => {
+      repoMock.findCourseDepartmentInScope = jest
+        .fn()
+        .mockResolvedValue({ id: 'c2', departmentId: 'd2' })
+      repoMock.create = jest.fn()
+      await expect(
+        service.create({ courseId: 'c2', title: 't' } as never, 'u1', 'd1', U1),
+      ).rejects.toThrow(ForbiddenException)
+      expect(repoMock.create).not.toHaveBeenCalled()
     })
   })
 })

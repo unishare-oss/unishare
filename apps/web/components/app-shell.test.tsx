@@ -13,7 +13,11 @@ const mocks = vi.hoisted(() => ({
     isGuest: false,
   } as {
     session: { user: { isAnonymous?: boolean } } | null
-    user: { university: { id: string } | null; department: { id: string } | null } | null
+    user: {
+      university: { id: string } | null
+      department: { id: string } | null
+      role?: string
+    } | null
     isLoading: boolean
     isAuthenticated: boolean
     isGuest: boolean
@@ -125,6 +129,14 @@ describe('AppShell navigation layout', () => {
       renderPage()
       expect(screen.getByText('Page content')).toBeInTheDocument()
       expect(screen.queryByText('Guest picker')).not.toBeInTheDocument()
+    })
+
+    it('is not shown to an admin, who reads every university', () => {
+      signedIn(false)
+      mocks.auth.user = { university: null, department: { id: 'd1' }, role: 'ADMIN' }
+      renderPage()
+      expect(screen.queryByRole('link', { name: 'Pick your university' })).not.toBeInTheDocument()
+      expect(screen.getByText('Page content')).toBeInTheDocument()
     })
 
     it('shows the page once the member has a university', () => {

@@ -1,11 +1,16 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { headers } from 'next/headers'
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001'
 
 async function getUser(id: string) {
   try {
-    const res = await fetch(`${API_URL}/api/users/${id}`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_URL}/api/users/${id}`, {
+      // The API needs a session, and the answer is per viewer, so it is never cached.
+      headers: { cookie: (await headers()).get('cookie') ?? '' },
+      cache: 'no-store',
+    })
     if (!res.ok) return null
     const json = await res.json()
     return json.data ?? null

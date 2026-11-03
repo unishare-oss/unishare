@@ -3,7 +3,7 @@ import { PostStatus, PostType, Prisma, ReactionType, UserRole } from '@/generate
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { PrismaService } from '@/prisma/prisma.service'
-import { postInScope, UniversityScope } from '@/common/university-scope'
+import { courseInScope, postInScope, UniversityScope } from '@/common/university-scope'
 
 type ViewerContext = {
   id?: string
@@ -178,9 +178,10 @@ export class PostsRepository {
     return post ? mapPost(post, viewer) : null
   }
 
-  findCourseDepartmentById(courseId: string) {
-    return this.prisma.course.findUnique({
-      where: { id: courseId },
+  /** The course a post would go on, if the scope may read it. */
+  findCourseDepartmentInScope(courseId: string, scope: UniversityScope) {
+    return this.prisma.course.findFirst({
+      where: { AND: [{ id: courseId }, courseInScope(scope)] },
       select: { id: true, departmentId: true },
     })
   }

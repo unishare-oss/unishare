@@ -76,6 +76,13 @@ export class PostRequestsRepository {
     return mapRequest(r, userId)
   }
 
+  findIdInScope(id: string, scope: UniversityScope) {
+    return this.prisma.postRequest.findFirst({
+      where: { AND: [{ id }, { course: courseInScope(scope) }] },
+      select: { id: true },
+    })
+  }
+
   findCourseIdInScope(id: string, scope: UniversityScope) {
     return this.prisma.course.findFirst({
       where: { AND: [{ id }, courseInScope(scope)] },

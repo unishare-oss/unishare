@@ -15,6 +15,7 @@ import {
 import {
   ApiCreatedResponse,
   ApiExcludeEndpoint,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -72,9 +73,14 @@ export class PostsController {
 
   @Post()
   @ApiCreatedResponse({ type: PostDetailEntity })
+  @ApiNotFoundResponse({ description: 'Course not found in your university' })
   @ResponseMessage('Post created successfully')
-  create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
-    return this.postsService.create(dto, session.user.id, session.user.departmentId)
+  create(
+    @Body() dto: CreatePostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.create(dto, session.user.id, session.user.departmentId, scope)
   }
 
   @Get()
