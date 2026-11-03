@@ -9,19 +9,17 @@ function validate(value: unknown) {
 }
 
 describe('UpdateAcademicProfileDto', () => {
-  it('rejects an empty departmentId or universityId', async () => {
+  it('rejects an empty departmentId', async () => {
     await expect(validate({ departmentId: '' })).rejects.toBeInstanceOf(BadRequestException)
-    await expect(validate({ universityId: '' })).rejects.toBeInstanceOf(BadRequestException)
   })
 
   it('accepts ids and null, which clears them', async () => {
-    await expect(validate({ departmentId: 'd1', universityId: 'u1' })).resolves.toEqual({
-      departmentId: 'd1',
-      universityId: 'u1',
-    })
-    await expect(validate({ departmentId: null, universityId: null })).resolves.toEqual({
-      departmentId: null,
-      universityId: null,
-    })
+    await expect(validate({ departmentId: 'd1' })).resolves.toEqual({ departmentId: 'd1' })
+    await expect(validate({ departmentId: null })).resolves.toEqual({ departmentId: null })
+  })
+
+  it('keeps a universityId so the service can refuse it with 400 instead of dropping it', async () => {
+    await expect(validate({ universityId: 'u1' })).resolves.toEqual({ universityId: 'u1' })
+    await expect(validate({ universityId: null })).resolves.toEqual({ universityId: null })
   })
 })

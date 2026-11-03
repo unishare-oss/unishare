@@ -42,7 +42,8 @@ secret: update both within the overlap (7 days by default).
   carries the memberships (`urn:uniauth:organizations`) with the same rule as sign-in (a university only changes when a
   membership maps). Unishare can therefore use v1 events fully: set `identity_events_uri`. The version stored is the
   directory's if newer than the event's; a read older than the event answers 503 so uniauth retries. A tombstone read is the
-  existing deletion. An email another user holds is kept as it was; the rest still applies.
+  existing deletion. An email another user holds is kept as it was; the rest still applies. A changed university clears
+  the old department, at sign-in, on identity events and on the legacy user-updated notice.
 - `identity.suspended`: sessions end at once, new sessions are refused (`databaseHooks.session.create`) and a
   still-valid MCP bearer token gets `403 account_suspended` while `identityStatus = 'suspended'`. This is uniauth's account state; Unishare's own ban (`banned`), roles and content are never
   touched. `identity.reactivated` allows sign-in again (old sessions are not restored).

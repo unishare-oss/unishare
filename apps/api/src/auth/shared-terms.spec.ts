@@ -4,7 +4,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose'
 
 describe('verifiedSharedTerms', () => {
   let server: Server
-  let verify: typeof import('./shared-terms').verifiedSharedTerms
+  let verify: (token: string, subject: string) => Promise<unknown>
   let privateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey']
   let issuer: string
   const originalIssuer = process.env.UNIAUTH_ISSUER
@@ -26,7 +26,8 @@ describe('verifiedSharedTerms', () => {
     issuer = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/auth`
     process.env.UNIAUTH_ISSUER = issuer
     process.env.UNIAUTH_CLIENT_ID = 'unishare-shared-test'
-    verify = (await import('./shared-terms')).verifiedSharedTerms
+    const { sharedTerms, verifiedIdTokenClaims } = await import('./shared-terms')
+    verify = async (token, subject) => sharedTerms(await verifiedIdTokenClaims(token, subject))
   })
   afterAll(async () => {
     if (originalIssuer === undefined) delete process.env.UNIAUTH_ISSUER

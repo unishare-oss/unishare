@@ -3,14 +3,15 @@ import { uniauthConfig } from './uniauth-config'
 
 const keys = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
 
-export async function verifiedSharedTerms(token: string, subject: string) {
+/** The claims of a uniauth ID token, verified and bound to the account's subject. */
+export async function verifiedIdTokenClaims(token: string, subject: string) {
   const { payload } = await jwtVerify(token, keys, {
     issuer: uniauthConfig.issuer,
     audience: uniauthConfig.clientId,
     requiredClaims: ['exp', 'iat', 'sub'],
   })
   if (payload.sub !== subject || payload.events) throw new Error('Invalid UniAuth identity binding')
-  return sharedTerms(payload)
+  return payload
 }
 
 export function sharedTerms(profile: Record<string, unknown>) {
