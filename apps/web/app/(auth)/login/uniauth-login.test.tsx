@@ -18,7 +18,7 @@ vi.mock('@/src/lib/api/generated/universities/universities', () => ({
   useUniversitiesControllerFindAll: () => ({ data: [] }),
 }))
 vi.mock('@/src/lib/auth/client', () => ({
-  authClient: { signIn: { social: vi.fn() } },
+  authClient: { signIn: { social: vi.fn(), anonymous: vi.fn() } },
 }))
 
 // Imported after the mocks.
@@ -62,7 +62,7 @@ describe('login page', () => {
   it('offers uniauth sign-in and guest access, not the password form', () => {
     render(<LoginPage />)
     expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Continue as guest' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Continue as guest' })).toBeTruthy()
     expect(screen.queryByPlaceholderText('Password')).toBeNull()
   })
 
@@ -74,6 +74,13 @@ describe('login page', () => {
       callbackURL: `${window.location.origin}/feed`,
       errorCallbackURL: `${window.location.origin}/auth/return`,
     })
+  })
+
+  it('starts a guest (anonymous) session, since content needs one', async () => {
+    vi.mocked(authClient.signIn.anonymous).mockResolvedValue({ data: null, error: { status: 500 } })
+    render(<LoginPage />)
+    await userEvent.click(screen.getByRole('button', { name: 'Continue as guest' }))
+    expect(authClient.signIn.anonymous).toHaveBeenCalled()
   })
 
   it('explains real errors but stays quiet about login_required', () => {

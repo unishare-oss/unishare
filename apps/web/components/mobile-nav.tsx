@@ -27,6 +27,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  UserRound,
   Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,7 +36,9 @@ import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notif
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useState } from 'react'
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
+import { toast } from 'sonner'
 import { signOut } from '@/src/lib/auth/sign-out'
+import { signInWithUniauth } from '@/src/lib/auth/uniauth'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { Button } from '@/components/ui/button'
@@ -44,7 +47,9 @@ import { useUniversitiesControllerFindOne } from '@/src/lib/api/generated/univer
 const guestTabs = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/saved', label: 'Saved', icon: Bookmark },
-  { href: '/login', label: 'Sign In', icon: LogIn },
+  // Guests keep canvas boards and their bio.
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
+  { href: '/profile', label: 'Profile', icon: UserRound },
 ]
 
 const primaryAuthTabs = [
@@ -114,7 +119,7 @@ function DockItem({
 
 export function MobileNav() {
   const pathname = usePathname()
-  const { isAuthenticated, session } = useAuth()
+  const { isAuthenticated, isGuest, session } = useAuth()
   const user = session?.user
 
   const { data: notifications } = useNotificationsControllerFindAll({
@@ -327,15 +332,40 @@ export function MobileNav() {
             </Drawer>
           </>
         ) : (
-          guestTabs.map((tab) => (
-            <DockItem
-              key={tab.href}
-              href={tab.href}
-              label={tab.label}
-              icon={tab.icon}
-              isActive={pathname.startsWith(tab.href)}
-            />
-          ))
+          <>
+            {guestTabs.map((tab) => (
+              <DockItem
+                key={tab.href}
+                href={tab.href}
+                label={tab.label}
+                icon={tab.icon}
+                isActive={pathname.startsWith(tab.href)}
+              />
+            ))}
+            {/* Straight to uniauth: /login sends anyone with a session (a guest's too) away. */}
+            <button
+              type="button"
+              aria-label="Sign In"
+              className={cn(dockTileBase, dockTileIdle)}
+              onClick={() =>
+                signInWithUniauth({ returnTo: window.location.href }).catch(() =>
+                  toast.error('Could not start sign-in. Please try again.'),
+                )
+              }
+            >
+              <LogIn className="size-5" strokeWidth={1.5} />
+            </button>
+            {isGuest && (
+              <button
+                type="button"
+                aria-label="Leave guest mode"
+                className={cn(dockTileBase, dockTileIdle)}
+                onClick={handleSignOut}
+              >
+                <LogOut className="size-5" strokeWidth={1.5} />
+              </button>
+            )}
+          </>
         )}
       </div>
 

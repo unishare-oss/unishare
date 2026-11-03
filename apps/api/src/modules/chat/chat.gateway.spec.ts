@@ -3,6 +3,7 @@ import { ChatGateway } from './chat.gateway'
 import { ChatService } from './chat.service'
 import { PresenceService } from './presence.service'
 import { ChatRepository } from './chat.repository'
+import { auth } from '@/auth/auth.config'
 
 // Mock auth so gateway tests don't hit the DB or better-auth ESM issues
 jest.mock('@/auth/auth.config', () => ({
@@ -69,6 +70,32 @@ describe('ChatGateway', () => {
 
   it('should be defined', () => {
     expect(gateway).toBeDefined()
+  })
+
+  describe('handshake', () => {
+    const handshake = async (user: object | null) => {
+      let middleware!: (socket: unknown, next: (err?: Error) => void) => Promise<void>
+      gateway.afterInit({ use: (fn: typeof middleware) => (middleware = fn) } as never)
+      jest
+        .mocked(auth.api.getSession)
+        .mockResolvedValue((user ? { user, session: { id: 's1' } } : null) as never)
+      const next = jest.fn()
+      const socket = { id: 'socket-1', handshake: { headers: {} }, data: {} as { user?: unknown } }
+      await middleware(socket, next)
+      return { next, socket }
+    }
+
+    it('refuses a guest (anonymous session): guests cannot chat', async () => {
+      const { next, socket } = await handshake({ id: 'g1', isAnonymous: true })
+      expect(next).toHaveBeenCalledWith(expect.any(Error))
+      expect(socket.data.user).toBeUndefined()
+    })
+
+    it('accepts a member', async () => {
+      const { next, socket } = await handshake({ id: 'u1', isAnonymous: false })
+      expect(next).toHaveBeenCalledWith()
+      expect(socket.data.user).toEqual({ id: 'u1', isAnonymous: false })
+    })
   })
 
   describe('handleConnection', () => {

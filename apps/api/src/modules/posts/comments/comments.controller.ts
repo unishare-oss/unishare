@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { CommentsService } from './comments.service'
@@ -11,12 +12,12 @@ import { UpdateCommentDto } from './dto/update-comment.dto'
 import { CommentEntity } from './entities/comment.entity'
 
 @ApiTags('comments')
+@GuestReadOnly()
 @Controller('posts/:postId/comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: [CommentEntity] })
   @ResponseMessage('Comments fetched successfully')
   findAll(@Param('postId') postId: string, @UniversityScopeParam() scope: UniversityScope) {

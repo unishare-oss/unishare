@@ -32,4 +32,40 @@ describe('proxy', () => {
     const res = proxy(request('/d/tok123'))
     expect(res.headers.get('location')).toBe('https://share.psstee.me/login?next=%2Fd%2Ftok123')
   })
+
+  it('sends a signed-out visitor of any app page to login with a way back', () => {
+    for (const path of ['/feed', '/posts/p1', '/s/abc', '/departments', '/users/u1']) {
+      const res = proxy(request(path))
+      expect(res.headers.get('location')).toBe(
+        `https://share.psstee.me/login?next=${encodeURIComponent(path)}`,
+      )
+    }
+  })
+
+  it('leaves the landing, sign-in, legal pages, canvas boards and API rewrites public', () => {
+    for (const path of [
+      '/',
+      '/login',
+      '/auth/return',
+      '/privacy',
+      '/terms',
+      '/canvas/room1',
+      '/api/auth/get-session',
+      '/.well-known/openid-configuration',
+      '/robots.txt',
+    ]) {
+      expect(proxy(request(path)).headers.get('location')).toBeNull()
+    }
+  })
+
+  it('does not treat a lookalike of a public path as public', () => {
+    expect(proxy(request('/login-help')).headers.get('location')).toBe(
+      'https://share.psstee.me/login?next=%2Flogin-help',
+    )
+  })
+
+  it('lets a guest (any session cookie) into app pages', () => {
+    const res = proxy(request('/feed', '__Secure-unishare.session_token=tok'))
+    expect(res.headers.get('location')).toBeNull()
+  })
 })

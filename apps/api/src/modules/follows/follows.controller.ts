@@ -3,12 +3,14 @@ import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { FollowsService } from './follows.service'
 import { MentionableQueryDto } from './dto/mentionable-query.dto'
 import { MentionableUserEntity } from './entities/mentionable-user.entity'
 import { FollowUserEntity } from './entities/follow-user.entity'
 
 @ApiTags('follows')
+@GuestReadOnly()
 @Controller('users')
 export class FollowsController {
   constructor(private readonly followsService: FollowsService) {}

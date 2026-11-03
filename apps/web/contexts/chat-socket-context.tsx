@@ -33,7 +33,7 @@ export const ChatSocketContext = createContext<ChatSocketContextValue | null>(nu
 const HEARTBEAT_INTERVAL_MS = 30_000
 
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth()
+  const { session, isGuest } = useAuth()
   const router = useRouter()
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket | null>(null)
@@ -41,7 +41,8 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    if (!session) return
+    // Guests can't chat: the gateway refuses their handshake.
+    if (!session || isGuest) return
 
     // websocket-only: the HTTP long-polling fallback breaks behind a
     // round-robin load balancer without sticky sessions.
@@ -319,7 +320,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       clearInterval(heartbeat)
       socket.disconnect()
     }
-  }, [session, queryClient, router])
+  }, [session, isGuest, queryClient, router])
 
   const joinRoom = (roomId: string) => {
     joinedRoomsRef.current.add(roomId)

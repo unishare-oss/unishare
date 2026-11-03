@@ -58,6 +58,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         this.logger.warn(`Handshake rejected: No valid session for ${socket.id}`)
         return next(new Error('Unauthorized'))
       }
+      // Guests are read-only: no chatting, here or over HTTP.
+      if (session.user.isAnonymous) return next(new Error('Guests cannot chat'))
 
       this.logger.log(`Handshake authorized for user: ${session.user.id}`)
       socket.data.user = session.user

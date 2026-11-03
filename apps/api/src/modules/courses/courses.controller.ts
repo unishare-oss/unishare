@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Roles } from '@thallesp/nestjs-better-auth'
+import { Roles } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { CoursesService } from './courses.service'
@@ -14,6 +15,7 @@ import { CourseEntity, PaginatedCourseEntity } from './entities/course.entity'
 import { CourseModuleOutlineEntity } from './entities/course-module-outline.entity'
 
 @ApiTags('courses')
+@GuestReadOnly()
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
@@ -27,7 +29,6 @@ export class CoursesController {
   }
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: PaginatedCourseEntity })
   @ResponseMessage('Courses fetched successfully')
   findAll(@Query() query: ListCoursesDto, @UniversityScopeParam() scope: UniversityScope) {
@@ -36,7 +37,6 @@ export class CoursesController {
   }
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: CourseEntity })
   @ResponseMessage('Course fetched successfully')
   findOne(@Param('id') id: string, @UniversityScopeParam() scope: UniversityScope) {

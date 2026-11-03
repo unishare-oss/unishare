@@ -18,7 +18,7 @@ describe('buildVisibleNavigation', () => {
   it('returns only public destinations for guests', () => {
     expect(
       buildVisibleNavigation(false).flatMap((group) => group.items.map((item) => item.href)),
-    ).toEqual(['/feed', '/saved', '/departments'])
+    ).toEqual(['/feed', '/saved', '/departments', '/boards', '/profile'])
   })
 
   it('groups student destinations without admin links', () => {

@@ -16,9 +16,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import { memoryStorage } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
+import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { UserSession } from '@/auth/auth.config'
@@ -43,6 +44,7 @@ import {
 } from './entities/quiz.entity'
 
 @ApiTags('quizzes')
+@GuestReadOnly()
 @Controller('quizzes')
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
@@ -50,7 +52,6 @@ export class QuizzesController {
   // Static routes BEFORE parameterized routes
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: PaginatedQuizzesEntity })
   @ResponseMessage('Quizzes fetched successfully')
   listQuizzes(@Query() query: ListQuizzesDto, @UniversityScopeParam() scope: UniversityScope) {
@@ -158,7 +159,6 @@ export class QuizzesController {
   // Parameterized routes AFTER static routes
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: QuizEntity })
   @ResponseMessage('Quiz fetched successfully')
   getQuiz(@Param('id') quizId: string, @UniversityScopeParam() scope: UniversityScope) {

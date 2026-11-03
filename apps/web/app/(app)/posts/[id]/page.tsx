@@ -8,6 +8,7 @@ import {
   usePostsControllerRemove,
 } from '@/src/lib/api/generated/posts/posts'
 import { useUIStore, useFeedStyleStore } from '@/lib/store'
+import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
@@ -24,6 +25,7 @@ import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const { data: post } = usePostsControllerFindOne(id, { query: { select: (r) => r.data } })
   const markRead = useUIStore((s) => s.markRead)
   const feedStyle = useFeedStyleStore((s) => s.feedStyle)
@@ -108,9 +110,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               <PostSummary post={post} />
             </div>
           )}
-          <div className="mt-4">
-            <PostAiChat post={post} />
-          </div>
+          {/* Members only: guests are read-only and the API refuses them. */}
+          {isAuthenticated && (
+            <div className="mt-4">
+              <PostAiChat post={post} />
+            </div>
+          )}
           <div className="mt-8 detail-surface">
             <PostFiles post={post} />
           </div>

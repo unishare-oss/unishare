@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { PostRequestsService } from './post-requests.service'
@@ -17,6 +18,7 @@ import {
 } from './entities/post-request.entity'
 
 @ApiTags('post-requests')
+@GuestReadOnly()
 @Controller('post-requests')
 export class PostRequestsController {
   constructor(private readonly postRequestsService: PostRequestsService) {}
@@ -33,7 +35,6 @@ export class PostRequestsController {
   }
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: PaginatedPostRequestEntity })
   @ResponseMessage('Requests fetched successfully')
   findAll(
@@ -45,7 +46,6 @@ export class PostRequestsController {
   }
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: PostRequestDetailEntity })
   @ResponseMessage('Request fetched successfully')
   findOne(

@@ -29,6 +29,8 @@ import { uniauthAccountURL, uniauthPickUniversityURL } from '@/src/lib/auth/mode
 
 interface EditProfileFormProps {
   user: UserProfileEntity
+  /** A guest edits only the bio: it has no academic profile (the API refuses it). */
+  isGuest?: boolean
 }
 
 const editProfileSchema = z.object({
@@ -48,7 +50,7 @@ const editProfileSchema = z.object({
 
 type EditProfileValues = z.infer<typeof editProfileSchema>
 
-export function EditProfileForm({ user }: EditProfileFormProps) {
+export function EditProfileForm({ user, isGuest = false }: EditProfileFormProps) {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const queryClient = useQueryClient()
@@ -93,12 +95,13 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
             bio: values.bio || undefined,
           },
         }),
-        updateAcademic({
-          data: {
-            ...(departmentChanged && { departmentId: values.departmentId || null }),
-            enrollmentYear: values.enrollmentYear ? Number(values.enrollmentYear) : null,
-          },
-        }),
+        isGuest ||
+          updateAcademic({
+            data: {
+              ...(departmentChanged && { departmentId: values.departmentId || null }),
+              enrollmentYear: values.enrollmentYear ? Number(values.enrollmentYear) : null,
+            },
+          }),
       ])
 
       await queryClient.invalidateQueries({ queryKey: getUsersControllerGetMeQueryKey() })
@@ -158,99 +161,105 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
             )}
           />
 
-          {/* The university comes from the unicorp account at sign-in; it is picked there. */}
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1.5">
-              University
-            </p>
-            {university ? (
-              <>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm text-foreground truncate">{university.name}</p>
-                  <a
-                    href={uniauthAccountURL('/profile')}
-                    className="text-xs text-text-muted underline hover:text-foreground shrink-0"
-                  >
-                    Change on unicorp
-                  </a>
-                </div>
-                <p className="text-xs text-text-muted mt-1.5">From your unicorp account.</p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm text-text-secondary">
-                    You haven&rsquo;t picked your university yet.
-                  </p>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={uniauthPickUniversityURL('/profile')}>Pick your university</a>
-                  </Button>
-                </div>
-                <p className="text-xs text-text-muted mt-1.5">
-                  It&rsquo;s saved on your unicorp account and used across unicorp apps.
+          {!isGuest && (
+            <>
+              {/* The university comes from the unicorp account at sign-in; it is picked there. */}
+              <div className="min-w-0">
+                <p className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-1.5">
+                  University
                 </p>
-              </>
-            )}
-          </div>
+                {university ? (
+                  <>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm text-foreground truncate">{university.name}</p>
+                      <a
+                        href={uniauthAccountURL('/profile')}
+                        className="text-xs text-text-muted underline hover:text-foreground shrink-0"
+                      >
+                        Change on unicorp
+                      </a>
+                    </div>
+                    <p className="text-xs text-text-muted mt-1.5">From your unicorp account.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm text-text-secondary">
+                        You haven&rsquo;t picked your university yet.
+                      </p>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={uniauthPickUniversityURL('/profile')}>Pick your university</a>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-text-muted mt-1.5">
+                      It&rsquo;s saved on your unicorp account and used across unicorp apps.
+                    </p>
+                  </>
+                )}
+              </div>
 
-          <FormField
-            control={form.control}
-            name="departmentId"
-            render={({ field }) => (
-              <FormItem className="min-w-0">
-                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-                  Department
-                </label>
-                <FormControl>
-                  <Select
-                    // Empty while there's no university, so the placeholder explains why.
-                    value={university ? field.value || '_none' : ''}
-                    onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
-                    disabled={!university}
-                  >
-                    <SelectTrigger className="w-full min-w-0">
-                      <SelectValue
-                        placeholder={university ? 'None' : 'Pick your university first'}
+              <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem className="min-w-0">
+                    <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                      Department
+                    </label>
+                    <FormControl>
+                      <Select
+                        // Empty while there's no university, so the placeholder explains why.
+                        value={university ? field.value || '_none' : ''}
+                        onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
+                        disabled={!university}
+                      >
+                        <SelectTrigger className="w-full min-w-0">
+                          <SelectValue
+                            placeholder={university ? 'None' : 'Pick your university first'}
+                          />
+                        </SelectTrigger>
+                        <SelectContent
+                          position="popper"
+                          className="w-[var(--radix-select-trigger-width)]"
+                        >
+                          <SelectItem value="_none" className="text-text-muted">
+                            None
+                          </SelectItem>
+                          <DepartmentSelectItems departments={departments} />
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="enrollmentYear"
+                render={({ field }) => (
+                  <FormItem>
+                    <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
+                      Enrollment Year
+                    </label>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 2024"
+                        value={field.value}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        className="placeholder:text-text-muted/50"
                       />
-                    </SelectTrigger>
-                    <SelectContent
-                      position="popper"
-                      className="w-[var(--radix-select-trigger-width)]"
-                    >
-                      <SelectItem value="_none" className="text-text-muted">
-                        None
-                      </SelectItem>
-                      <DepartmentSelectItems departments={departments} />
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="enrollmentYear"
-            render={({ field }) => (
-              <FormItem>
-                <label className="font-mono text-[11px] uppercase tracking-wider text-text-muted block mb-1.5">
-                  Enrollment Year
-                </label>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="e.g. 2024"
-                    value={field.value}
-                    onChange={(e) => field.onChange(e.target.value)}
-                    className="placeholder:text-text-muted/50"
-                  />
-                </FormControl>
-                <p className="text-xs text-text-muted mt-1.5">Used to calculate your year level</p>
-                <FormMessage className="text-xs" />
-              </FormItem>
-            )}
-          />
+                    </FormControl>
+                    <p className="text-xs text-text-muted mt-1.5">
+                      Used to calculate your year level
+                    </p>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
 
           <div className="flex items-center justify-end gap-3">
             {success && <p className="text-xs text-green-500">Profile saved successfully</p>}
