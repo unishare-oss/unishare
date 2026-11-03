@@ -3,6 +3,8 @@ import { ApiTags, ApiForbiddenResponse, ApiCreatedResponse, ApiOkResponse } from
 import { Session, Roles } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import { UniversityScope } from '@/common/university-scope'
 import { ReportsService } from './reports.service'
 import { CreateReportDto } from './dto/create-report.dto'
 import { ListReportsDto } from './dto/list-reports.dto'
@@ -20,8 +22,9 @@ export class ReportsController {
     @Param('id') postId: string,
     @Body() dto: CreateReportDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.reportsService.createReport(postId, session.user.id, dto)
+    return this.reportsService.createReport(postId, session.user.id, dto, scope)
   }
 }
 
@@ -34,8 +37,11 @@ export class AdminReportsController {
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: PaginatedReportsEntity })
   @ApiForbiddenResponse({ description: 'Admin or moderator role required' })
-  async listReports(@Query() filters: ListReportsDto) {
-    return this.reportsService.listReports(filters)
+  async listReports(
+    @Query() filters: ListReportsDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.reportsService.listReports(filters, scope)
   }
 
   @Patch(':id/approve')
@@ -46,8 +52,9 @@ export class AdminReportsController {
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.reportsService.approveReport(reportId, session.user.id, body.reason)
+    return this.reportsService.approveReport(reportId, session.user.id, scope, body.reason)
   }
 
   @Patch(':id/reject')
@@ -58,7 +65,8 @@ export class AdminReportsController {
     @Param('id') reportId: string,
     @Body() body: { reason?: string },
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.reportsService.rejectReport(reportId, session.user.id, body.reason)
+    return this.reportsService.rejectReport(reportId, session.user.id, scope, body.reason)
   }
 }

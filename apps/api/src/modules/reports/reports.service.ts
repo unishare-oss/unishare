@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { Prisma } from '@/generated/prisma/client'
+import { postInScope, UniversityScope } from '@/common/university-scope'
 import { CreateReportDto } from './dto/create-report.dto'
 import { ListReportsDto } from './dto/list-reports.dto'
 import { AuditService } from '../audit/audit.service'
@@ -32,8 +33,12 @@ export class ReportsService {
     private readonly audit: AuditService,
   ) {}
 
-  async createReport(postId: string, userId: string, dto: CreateReportDto) {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } })
+  // Another university's post is a 404, the same as one that doesn't exist.
+  async createReport(postId: string, userId: string, dto: CreateReportDto, scope: UniversityScope) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId, AND: [postInScope(scope)] },
+      select: { id: true },
+    })
     if (!post) throw new NotFoundException('Post not found')
 
     const existing = await this.prisma.report.findUnique({
@@ -56,14 +61,21 @@ export class ReportsService {
 
   async listReports(
     filters: ListReportsDto,
+    scope: UniversityScope,
   ): Promise<{ reports: ReportWithRelations[]; total: number; page: number; limit: number }> {
     const limit = filters.limit || 20
     const page = filters.page || 1
     const skip = (page - 1) * limit
 
-    const where: Prisma.ReportWhereInput = {}
-    if (filters.status) where.status = filters.status
-    if (filters.reason) where.reason = filters.reason
+    // No `deletedAt` filter on the post: approving a report soft-deletes it, and the
+    // moderator's history still lists that report.
+    const where: Prisma.ReportWhereInput = {
+      AND: [
+        { post: postInScope(scope) },
+        ...(filters.status ? [{ status: filters.status }] : []),
+        ...(filters.reason ? [{ reason: filters.reason }] : []),
+      ],
+    }
 
     const [reports, total] = await Promise.all([
       this.prisma.report.findMany({
@@ -79,9 +91,9 @@ export class ReportsService {
     return { reports, total, page, limit }
   }
 
-  async approveReport(reportId: string, adminId: string, reason?: string) {
+  async approveReport(reportId: string, adminId: string, scope: UniversityScope, reason?: string) {
     const report = await this.prisma.report.findUnique({
-      where: { id: reportId },
+      where: { id: reportId, AND: [{ post: postInScope(scope) }] },
       include: { post: true },
     })
     if (!report) throw new NotFoundException('Report not found')
@@ -108,9 +120,9 @@ export class ReportsService {
     return updated
   }
 
-  async rejectReport(reportId: string, adminId: string, reason?: string) {
+  async rejectReport(reportId: string, adminId: string, scope: UniversityScope, reason?: string) {
     const report = await this.prisma.report.findUnique({
-      where: { id: reportId },
+      where: { id: reportId, AND: [{ post: postInScope(scope) }] },
       include: { post: true },
     })
     if (!report) throw new NotFoundException('Report not found')
