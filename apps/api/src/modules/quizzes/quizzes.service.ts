@@ -7,6 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { UserRole } from '@/generated/prisma/client'
+import { UniversityScope } from '@/common/university-scope'
 import { SUPPORTED_MIME_TYPES } from '@/modules/ai/extraction/document-extractor.service'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { AiSummaryService } from '../ai-summary/ai-summary.service'
@@ -35,12 +36,15 @@ export class QuizzesService {
     private readonly coursesService: CoursesService,
   ) {}
 
-  async listQuizzes(params: {
-    courseId?: string
-    departmentId?: string
-    page?: number
-    limit?: number
-  }) {
+  async listQuizzes(
+    params: {
+      courseId?: string
+      departmentId?: string
+      page?: number
+      limit?: number
+    },
+    scope: UniversityScope,
+  ) {
     const { courseId, departmentId, page = 1, limit = 20 } = params
     const skip = (page - 1) * limit
 
@@ -50,7 +54,7 @@ export class QuizzesService {
       ...(departmentId ? { course: { departmentId } } : {}),
     }
 
-    const [items, total] = await this.quizzesRepository.listQuizzes({ where, skip, limit })
+    const [items, total] = await this.quizzesRepository.listQuizzes({ where, scope, skip, limit })
     return { items, total, page, limit }
   }
 
@@ -58,6 +62,7 @@ export class QuizzesService {
     courseId: string,
     file: Express.Multer.File,
     generatedBy: string,
+    scope: UniversityScope,
     questionCount: number = 20,
   ): Promise<{ quizId: string; questions: QuizQuestion[] }> {
     if (!file) {
@@ -67,6 +72,9 @@ export class QuizzesService {
     if (!SUPPORTED_MIME_TYPES.includes(file.mimetype)) {
       throw new BadRequestException('Only PDF and Word documents are supported')
     }
+
+    // Before any extraction or AI call: another university's course is a 404.
+    await this.coursesService.findOne(courseId, scope)
 
     // Extract text from the uploaded file buffer
     let text: string
@@ -132,9 +140,10 @@ export class QuizzesService {
   async generateQuizFromPost(
     postId: string,
     generatedBy: string,
+    scope: UniversityScope,
     questionCount: number = 20,
   ): Promise<{ quizId: string; questions: QuizQuestion[] }> {
-    const post = await this.quizzesRepository.findPostForQuiz(postId)
+    const post = await this.quizzesRepository.findPostForQuiz(postId, scope)
 
     if (!post) throw new NotFoundException('Post not found')
     if (!post.summary?.trim()) {
@@ -185,9 +194,10 @@ export class QuizzesService {
    * the outline, so there is nothing to "skip"; the outline itself IS the set of modules to
    * generate for. A failure generating one module's quiz doesn't abort the rest of the batch.
    */
-  async generateQuizzesFromOutline(courseId: string, generatedBy: string) {
-    const course = await this.coursesService.findOne(courseId)
-    const outline = await this.coursesService.getOutline(courseId)
+  async generateQuizzesFromOutline(courseId: string, generatedBy: string, scope: UniversityScope) {
+    // Another university's course is a 404, so staff can't add quizzes to it.
+    const course = await this.coursesService.findOne(courseId, scope)
+    const outline = await this.coursesService.getOutline(courseId, scope)
 
     if (outline.length === 0) {
       throw new BadRequestException('This course has no outline yet')
@@ -243,8 +253,8 @@ export class QuizzesService {
     return { created, failed }
   }
 
-  async getQuiz(quizId: string, publishedOnly?: boolean) {
-    const quiz = await this.quizzesRepository.findQuizById(quizId)
+  async getQuiz(quizId: string, scope: UniversityScope, publishedOnly?: boolean) {
+    const quiz = await this.quizzesRepository.findQuizById(quizId, scope)
 
     if (!quiz) {
       throw new NotFoundException('Quiz not found')
@@ -261,9 +271,10 @@ export class QuizzesService {
     quizId: string,
     studentId: string,
     answers: { questionId: string; answerIndex: number | null }[],
+    scope: UniversityScope,
     timeSpentSec?: number,
   ) {
-    const quiz = await this.getQuiz(quizId, true)
+    const quiz = await this.getQuiz(quizId, scope, true)
 
     // O(1) lookups instead of O(n) find() per answer
     const questionMap = new Map(quiz.questions.map((q) => [q.id, q]))
@@ -301,8 +312,9 @@ export class QuizzesService {
     }
   }
 
-  async getSession(sessionId: string, userId: string) {
-    const session = await this.quizzesRepository.findSessionById(sessionId)
+  // Looked up in scope before the ownership check, so another university's session is a 404.
+  async getSession(sessionId: string, userId: string, scope: UniversityScope) {
+    const session = await this.quizzesRepository.findSessionById(sessionId, scope)
 
     if (!session) throw new NotFoundException('Session not found')
     if (session.studentId !== userId) throw new ForbiddenException('Access denied')
@@ -310,8 +322,8 @@ export class QuizzesService {
     return session
   }
 
-  async getStudentProgress(studentId: string, courseId?: string) {
-    const sessions = await this.quizzesRepository.findStudentSessions(studentId, courseId)
+  async getStudentProgress(studentId: string, scope: UniversityScope, courseId?: string) {
+    const sessions = await this.quizzesRepository.findStudentSessions(studentId, scope, courseId)
 
     const aggregatedStats = sessions.reduce(
       (acc: { totalAttempts: number; totalScore: number; bestScore: number }, s) => {
@@ -337,25 +349,25 @@ export class QuizzesService {
     return { stats, recentSessions: sessions }
   }
 
-  async deleteQuiz(quizId: string) {
-    const quiz = await this.quizzesRepository.findQuizById(quizId)
+  async deleteQuiz(quizId: string, scope: UniversityScope) {
+    const quiz = await this.quizzesRepository.findQuizById(quizId, scope)
     if (!quiz) throw new NotFoundException('Quiz not found')
     await this.quizzesRepository.deleteQuizCascade(quizId)
   }
 
-  async publishQuiz(quizId: string, role: UserRole) {
+  async publishQuiz(quizId: string, role: UserRole, scope: UniversityScope) {
     if (role !== UserRole.ADMIN && role !== UserRole.MODERATOR) {
       throw new ForbiddenException('Only admins and moderators can publish quizzes')
     }
 
-    const quiz = await this.quizzesRepository.findQuizById(quizId)
+    const quiz = await this.quizzesRepository.findQuizById(quizId, scope)
     if (!quiz) throw new NotFoundException('Quiz not found')
 
     return this.quizzesRepository.publishQuiz(quizId)
   }
 
-  async updateQuestion(questionId: string, data: Partial<QuizQuestion>) {
-    const question = await this.quizzesRepository.findQuestionById(questionId)
+  async updateQuestion(questionId: string, data: Partial<QuizQuestion>, scope: UniversityScope) {
+    const question = await this.quizzesRepository.findQuestionById(questionId, scope)
     if (!question) throw new NotFoundException('Question not found')
     return this.quizzesRepository.updateQuestion(questionId, data)
   }

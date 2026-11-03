@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { UserRole } from '@/generated/prisma/client'
+import { courseInScope, UniversityScope } from '@/common/university-scope'
 import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
 
@@ -27,16 +28,30 @@ export class ExamsRepository {
     })
   }
 
-  findById(id: string) {
-    return this.prisma.exam.findUnique({ where: { id }, include: EXAM_INCLUDE })
+  findById(id: string, scope: UniversityScope) {
+    return this.prisma.exam.findUnique({
+      where: { id, AND: [{ course: courseInScope(scope) }] },
+      include: EXAM_INCLUDE,
+    })
   }
 
-  findInRange(from: Date, to: Date, departmentId?: string, courseId?: string) {
+  findInRange(
+    from: Date,
+    to: Date,
+    scope: UniversityScope,
+    departmentId?: string,
+    courseId?: string,
+  ) {
     return this.prisma.exam.findMany({
       where: {
-        startsAt: { gte: from, lte: to },
-        ...(courseId ? { courseId } : {}),
-        ...(departmentId ? { course: { departmentId } } : {}),
+        AND: [
+          {
+            startsAt: { gte: from, lte: to },
+            ...(courseId ? { courseId } : {}),
+            ...(departmentId ? { course: { departmentId } } : {}),
+          },
+          { course: courseInScope(scope) },
+        ],
       },
       include: EXAM_INCLUDE,
       orderBy: { startsAt: 'asc' },

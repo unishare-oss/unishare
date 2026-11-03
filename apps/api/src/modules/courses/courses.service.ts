@@ -8,6 +8,7 @@ import { SUPPORTED_MIME_TYPES } from '@/modules/ai/extraction/document-extractor
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { PaginationDto } from '@/common/dto/pagination.dto'
+import { UniversityScope } from '@/common/university-scope'
 import { CoursesRepository } from './courses.repository'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
@@ -27,23 +28,28 @@ export class CoursesService {
     return this.coursesRepository.create(dto)
   }
 
-  findAll(pagination: PaginationDto, departmentId?: string, hasOutline?: boolean) {
-    return this.coursesRepository.findAll(pagination, departmentId, hasOutline)
+  findAll(
+    pagination: PaginationDto,
+    scope: UniversityScope,
+    departmentId?: string,
+    hasOutline?: boolean,
+  ) {
+    return this.coursesRepository.findAll(pagination, scope, departmentId, hasOutline)
   }
 
-  async findOne(id: string) {
-    const course = await this.coursesRepository.findById(id)
+  async findOne(id: string, scope: UniversityScope) {
+    const course = await this.coursesRepository.findById(id, scope)
     if (!course) throw new NotFoundException('Course not found')
     return course
   }
 
-  async update(id: string, dto: UpdateCourseDto) {
-    await this.findOne(id)
+  async update(id: string, dto: UpdateCourseDto, scope: UniversityScope) {
+    await this.findOne(id, scope)
     return this.coursesRepository.update(id, dto)
   }
 
-  async remove(id: string) {
-    await this.findOne(id)
+  async remove(id: string, scope: UniversityScope) {
+    await this.findOne(id, scope)
     const { posts, requests } = await this.coursesRepository.hasLinkedData(id)
     if (posts > 0 || requests > 0) {
       throw new ConflictException(
@@ -53,20 +59,29 @@ export class CoursesService {
     return this.coursesRepository.remove(id)
   }
 
-  async getOutline(courseId: string) {
-    await this.findOne(courseId)
+  async getOutline(courseId: string, scope: UniversityScope) {
+    await this.findOne(courseId, scope)
     return this.coursesRepository.findOutline(courseId)
   }
 
-  async replaceOutline(courseId: string, modules: CourseModuleOutlineEntryDto[]) {
-    await this.findOne(courseId)
+  async replaceOutline(
+    courseId: string,
+    modules: CourseModuleOutlineEntryDto[],
+    scope: UniversityScope,
+  ) {
+    await this.findOne(courseId, scope)
     await this.coursesRepository.replaceOutline(courseId, modules)
     return this.coursesRepository.findOutline(courseId)
   }
 
   /** Preview only — does not persist. The caller confirms via replaceOutline. */
-  async extractOutlineFromFile(courseId: string, key: string, mimeType: string) {
-    await this.findOne(courseId)
+  async extractOutlineFromFile(
+    courseId: string,
+    key: string,
+    mimeType: string,
+    scope: UniversityScope,
+  ) {
+    await this.findOne(courseId, scope)
 
     if (!SUPPORTED_MIME_TYPES.includes(mimeType)) {
       throw new BadRequestException('Only PDF and Word documents are supported')

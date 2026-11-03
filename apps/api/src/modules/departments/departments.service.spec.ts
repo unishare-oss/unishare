@@ -104,7 +104,7 @@ describe('DepartmentsService', () => {
         name: 'CS',
         facultyId: 'f1',
         faculty: { id: 'f1', name: 'F', universityId: 'u1' },
-        courses: [],
+        _count: { courses: 0 },
       })
     })
 

@@ -41,7 +41,9 @@ export class DepartmentsService {
   async findOne(id: string) {
     const department = await this.departmentsRepository.findById(id)
     if (!department) throw new NotFoundException('Department not found')
-    return department
+    // No course list here: it would skip course scoping. Courses come from the scoped GET /courses.
+    const { _count, ...dept } = department
+    return { ...dept, courseCount: _count.courses }
   }
 
   async update(id: string, dto: UpdateDepartmentDto) {

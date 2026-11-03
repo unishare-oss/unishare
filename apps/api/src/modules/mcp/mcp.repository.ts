@@ -56,7 +56,7 @@ export class McpRepository {
   async listCourses(session: McpAuthSession) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { departmentId: true },
+      select: { departmentId: true, role: true, universityId: true },
     })
 
     if (!user?.departmentId) {
@@ -67,7 +67,11 @@ export class McpRepository {
     pagination.page = 1
     pagination.limit = 100
 
-    const result = await this.coursesService.findAll(pagination, user.departmentId)
+    const result = await this.coursesService.findAll(
+      pagination,
+      universityScope(user),
+      user.departmentId,
+    )
     const courses = result.items.map((c) => ({
       id: c.id,
       code: c.code,

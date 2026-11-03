@@ -30,7 +30,7 @@ export class DepartmentsRepository {
   findById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },
-      include: { faculty: facultySelect, courses: { orderBy: { name: 'asc' } } },
+      include: { faculty: facultySelect, _count: { select: { courses: true } } },
     })
   }
 

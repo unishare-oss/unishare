@@ -1,12 +1,20 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
+import { courseInScope, postInScope, UniversityScope } from '@/common/university-scope'
 
 @Injectable()
 export class QuizzesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  listQuizzes(params: { where: object; skip: number; limit: number }) {
-    const { where, skip, limit } = params
+  listQuizzes(params: {
+    where: Prisma.QuizWhereInput
+    scope: UniversityScope
+    skip: number
+    limit: number
+  }) {
+    const { skip, limit } = params
+    const where = { AND: [params.where, { course: courseInScope(params.scope) }] }
     return Promise.all([
       this.prisma.quiz.findMany({
         where,
@@ -62,9 +70,9 @@ export class QuizzesRepository {
     return this.prisma.quizQuestion.createMany({ data: questions })
   }
 
-  findQuizById(quizId: string) {
+  findQuizById(quizId: string, scope: UniversityScope) {
     return this.prisma.quiz.findUnique({
-      where: { id: quizId },
+      where: { id: quizId, AND: [{ course: courseInScope(scope) }] },
       include: {
         questions: {
           select: {
@@ -80,9 +88,9 @@ export class QuizzesRepository {
     })
   }
 
-  findPostForQuiz(postId: string) {
+  findPostForQuiz(postId: string, scope: UniversityScope) {
     return this.prisma.post.findUnique({
-      where: { id: postId },
+      where: { id: postId, AND: [postInScope(scope)] },
       select: { id: true, title: true, summary: true, courseId: true },
     })
   }
@@ -112,9 +120,9 @@ export class QuizzesRepository {
     ])
   }
 
-  findSessionById(sessionId: string) {
+  findSessionById(sessionId: string, scope: UniversityScope) {
     return this.prisma.quizSession.findUnique({
-      where: { id: sessionId },
+      where: { id: sessionId, AND: [{ quiz: { course: courseInScope(scope) } }] },
       include: {
         quiz: { include: { questions: { orderBy: { createdAt: 'asc' } } } },
         questionAttempts: true,
@@ -122,11 +130,13 @@ export class QuizzesRepository {
     })
   }
 
-  findStudentSessions(studentId: string, courseId?: string) {
+  findStudentSessions(studentId: string, scope: UniversityScope, courseId?: string) {
     return this.prisma.quizSession.findMany({
       where: {
-        studentId,
-        quiz: courseId ? { courseId } : undefined,
+        AND: [
+          { studentId, quiz: courseId ? { courseId } : undefined },
+          { quiz: { course: courseInScope(scope) } },
+        ],
       },
       include: {
         quiz: { select: { id: true, title: true, courseId: true } },
@@ -153,8 +163,10 @@ export class QuizzesRepository {
     })
   }
 
-  findQuestionById(questionId: string) {
-    return this.prisma.quizQuestion.findUnique({ where: { id: questionId } })
+  findQuestionById(questionId: string, scope: UniversityScope) {
+    return this.prisma.quizQuestion.findUnique({
+      where: { id: questionId, AND: [{ quiz: { course: courseInScope(scope) } }] },
+    })
   }
 
   updateQuestion(questionId: string, data: object) {
