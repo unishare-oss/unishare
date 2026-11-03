@@ -224,6 +224,22 @@ describe('uniauth event callbacks', () => {
       expect(written).not.toHaveProperty('departmentId')
     })
 
+    it('clears the university and department when uniauth sends no memberships', async () => {
+      prisma.user.findUnique.mockResolvedValue({ universityId: 'kmutt' })
+      const removed = { ...data, 'urn:uniauth:organizations': [] }
+      await userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data: removed }))
+      const written = prisma.user.update.mock.calls[0][0].data
+      expect(written).toMatchObject({ universityId: null, departmentId: null })
+    })
+
+    it('keeps the university when the notice has no memberships claim', async () => {
+      prisma.user.findUnique.mockResolvedValue({ universityId: 'kmutt' })
+      const { 'urn:uniauth:organizations': _omit, ...noClaim } = data
+      await userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data: noClaim }))
+      const written = prisma.user.update.mock.calls[0][0].data
+      expect(written).not.toHaveProperty('universityId')
+    })
+
     it('does nothing for someone who never used unishare', async () => {
       prisma.account.findFirst.mockResolvedValue(null)
       await expect(userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))).resolves.toBe(
