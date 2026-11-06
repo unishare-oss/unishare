@@ -1,16 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-export class DeptCourseEntity {
-  @ApiProperty()
-  id: string
-
-  @ApiProperty()
-  code: string
-
-  @ApiProperty()
-  name: string
-}
-
 export class DepartmentFacultyEntity {
   @ApiProperty()
   id: string
@@ -34,9 +23,4 @@ export class DepartmentEntity {
 
   @ApiProperty({ type: DepartmentFacultyEntity })
   faculty: DepartmentFacultyEntity
-}
-
-export class DepartmentWithCoursesEntity extends DepartmentEntity {
-  @ApiProperty({ type: [DeptCourseEntity] })
-  courses: DeptCourseEntity[]
 }

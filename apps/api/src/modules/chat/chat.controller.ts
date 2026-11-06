@@ -1,8 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common'
 import { ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
-import { Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { Session } from '@thallesp/nestjs-better-auth'
+import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ChatService } from './chat.service'
 import { PresenceService } from './presence.service'
@@ -21,6 +34,7 @@ import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-mess
 import { ChatMemberGuard } from './guards/chat-member.guard'
 
 @ApiTags('chat')
+@GuestReadOnly()
 @Controller('chat')
 export class ChatController {
   constructor(
@@ -149,7 +163,9 @@ export class ChatController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOkResponse({ type: LinkPreviewResponseDto, description: 'Link preview metadata' })
   @ResponseMessage('Link preview fetched successfully')
-  getLinkPreview(@Query('url') url: string, @Session() _session: UserSession) {
+  getLinkPreview(@Query('url') url: string, @Session() session: UserSession) {
+    // A server-side fetch for chat; guests have no chat, and each new guest gets a fresh rate limit
+    if (session.user.isAnonymous) throw new ForbiddenException("Guests can't chat")
     return this.chatService.getLinkPreview(url)
   }
 

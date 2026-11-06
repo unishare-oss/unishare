@@ -12,6 +12,7 @@ import { memoryStorage } from 'multer'
 import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UserSession } from '@/auth/auth.config'
 import { CollabService } from '@/modules/collab/collab.service'
 import { StorageService } from './storage.service'
@@ -37,6 +38,10 @@ export class StorageController {
   @ResponseMessage('Presigned upload URL generated')
   @ApiOkResponse({ type: PresignedUploadEntity })
   async getPresignedUploadUrl(@Body() dto: PresignedUploadDto, @Session() session: UserSession) {
+    // Guests are read-only, except on canvas boards, which assertCanEdit decides below.
+    if (session.user.isAnonymous && dto.purpose !== 'board-attachment') {
+      throw new ForbiddenException("Guests can't change content")
+    }
     if (dto.purpose === 'board-attachment') {
       await this.collabService.assertCanEdit(dto.roomSlug!, session)
     }
@@ -52,6 +57,7 @@ export class StorageController {
     })
   }
 
+  @GuestReadOnly()
   @Post('multipart/create')
   @ResponseMessage('Multipart upload created')
   @ApiOkResponse({ type: MultipartUploadEntity })
@@ -60,6 +66,7 @@ export class StorageController {
     return this.storageService.createMultipartUpload(folder, dto.mimeType, dto.uploadType)
   }
 
+  @GuestReadOnly()
   @Post('multipart/upload-part')
   @ResponseMessage('Part uploaded')
   @ApiOkResponse({ type: UploadedPartEntity })
@@ -80,12 +87,14 @@ export class StorageController {
     return this.storageService.uploadPart(dto.key, dto.uploadId, dto.partNumber, file.buffer)
   }
 
+  @GuestReadOnly()
   @Post('multipart/complete')
   @ResponseMessage('Multipart upload completed')
   completeMultipartUpload(@Body() dto: CompleteMultipartUploadDto) {
     return this.storageService.completeMultipartUpload(dto.key, dto.uploadId)
   }
 
+  @GuestReadOnly()
   @Delete('multipart/abort')
   @ResponseMessage('Multipart upload aborted')
   abortMultipartUpload(@Body() dto: AbortMultipartUploadDto) {

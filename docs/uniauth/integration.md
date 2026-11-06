@@ -39,8 +39,9 @@ secret: update both within the overlap (7 days by default).
   Answers: 204 done/duplicate/stale/about nobody here, 401 unverifiable (uniauth retries), 400 unusable (final), 503 profile
   could not be fetched (uniauth retries).
 - `identity.updated`: name, email, avatar, verification and **university** are refreshed from the directory read, which
-  carries the memberships (`urn:uniauth:organizations`) with the same rule as sign-in (a university only changes when a
-  membership maps). Unishare can therefore use v1 events fully: set `identity_events_uri`. The version stored is the
+  carries the memberships (`urn:uniauth:organizations`) with the same rule as sign-in (a university changes when a
+  membership maps; an empty list, meaning the person has no university any more, clears it and the department; memberships
+  that map to nothing or a missing claim keep it). Unishare can therefore use v1 events fully: set `identity_events_uri`. The version stored is the
   directory's if newer than the event's; a read older than the event answers 503 so uniauth retries. A tombstone read is the
   existing deletion. An email another user holds is kept as it was; the rest still applies. A changed university clears
   the old department, at sign-in, on identity events and on the legacy user-updated notice.

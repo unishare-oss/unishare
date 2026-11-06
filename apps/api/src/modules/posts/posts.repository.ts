@@ -3,6 +3,7 @@ import { PostStatus, PostType, Prisma, ReactionType, UserRole } from '@/generate
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { PrismaService } from '@/prisma/prisma.service'
+import { courseInScope, postInScope, UniversityScope } from '@/common/university-scope'
 
 type ViewerContext = {
   id?: string
@@ -161,31 +162,40 @@ export class PostsRepository {
     return post ? mapPost(post, viewer) : null
   }
 
-  async findByShortCode(shortCode: string, viewer?: ViewerContext) {
+  async findInScope(id: string, scope: UniversityScope, viewer?: ViewerContext) {
     const post = await this.prisma.post.findUnique({
-      where: { shortCode, deletedAt: null },
+      where: { id, deletedAt: null, AND: [postInScope(scope)] },
       include: postInclude(viewer?.id),
     })
     return post ? mapPost(post, viewer) : null
   }
 
-  findCourseDepartmentById(courseId: string) {
-    return this.prisma.course.findUnique({
-      where: { id: courseId },
+  async findByShortCode(shortCode: string, scope: UniversityScope, viewer?: ViewerContext) {
+    const post = await this.prisma.post.findUnique({
+      where: { shortCode, deletedAt: null, AND: [postInScope(scope)] },
+      include: postInclude(viewer?.id),
+    })
+    return post ? mapPost(post, viewer) : null
+  }
+
+  /** The course a post would go on, if the scope may read it. */
+  findCourseDepartmentInScope(courseId: string, scope: UniversityScope) {
+    return this.prisma.course.findFirst({
+      where: { AND: [{ id: courseId }, courseInScope(scope)] },
       select: { id: true, departmentId: true },
     })
   }
 
-  findCommentTarget(id: string) {
+  findIdInScope(id: string, scope: UniversityScope) {
     return this.prisma.post.findUnique({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, AND: [postInScope(scope)] },
       select: { id: true },
     })
   }
 
-  findNotificationTarget(id: string) {
+  findNotificationTarget(id: string, scope: UniversityScope) {
     return this.prisma.post.findUnique({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, AND: [postInScope(scope)] },
       select: { id: true, authorId: true, title: true },
     })
   }
@@ -248,11 +258,17 @@ export class PostsRepository {
     })
   }
 
-  async findSaved(viewer: ViewerContext & { id: string }, pagination: PaginationDto) {
+  async findSaved(
+    viewer: ViewerContext & { id: string },
+    scope: UniversityScope,
+    pagination: PaginationDto,
+  ) {
     const result = await paginate(
       this.prisma.post,
       {
-        where: { savedBy: { some: { userId: viewer.id } }, deletedAt: null },
+        where: {
+          AND: [{ savedBy: { some: { userId: viewer.id } }, deletedAt: null }, postInScope(scope)],
+        },
         orderBy: { createdAt: 'desc' },
         include: postInclude(viewer.id),
       },
@@ -261,11 +277,18 @@ export class PostsRepository {
     return { ...result, items: result.items.map((p) => mapPost(p, viewer)) }
   }
 
-  async findByReadingList(listId: string, viewer: ViewerContext, pagination: PaginationDto) {
+  async findByReadingList(
+    listId: string,
+    scope: UniversityScope,
+    viewer: ViewerContext,
+    pagination: PaginationDto,
+  ) {
     const result = await paginate(
       this.prisma.post,
       {
-        where: { readingListItems: { some: { listId } }, deletedAt: null },
+        where: {
+          AND: [{ readingListItems: { some: { listId } }, deletedAt: null }, postInScope(scope)],
+        },
         orderBy: { createdAt: 'desc' },
         include: postInclude(viewer?.id),
       },

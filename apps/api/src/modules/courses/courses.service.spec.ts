@@ -1,9 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { CoursesService } from './courses.service'
 import { CoursesRepository } from './courses.repository'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { StorageService } from '@/modules/storage/storage.service'
+import { UniversityScope } from '@/common/university-scope'
+
+const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
 
 describe('CoursesService — outline', () => {
   let service: CoursesService
@@ -39,14 +42,23 @@ describe('CoursesService — outline', () => {
   describe('getOutline / replaceOutline', () => {
     it('404s when the course does not exist', async () => {
       repo.findById.mockResolvedValue(null)
-      await expect(service.getOutline('missing')).rejects.toThrow('Course not found')
+      await expect(service.getOutline('missing', U1)).rejects.toThrow('Course not found')
+    })
+
+    it('gives 404 for the outline of a course outside the scope', async () => {
+      repo.findById.mockResolvedValue(null)
+      await expect(service.getOutline('c1', U1)).rejects.toThrow(NotFoundException)
+      await expect(service.replaceOutline('c1', [], U1)).rejects.toThrow(NotFoundException)
+      expect(repo.findById).toHaveBeenCalledWith('c1', U1)
+      expect(repo.findOutline).not.toHaveBeenCalled()
+      expect(repo.replaceOutline).not.toHaveBeenCalled()
     })
 
     it('replaces the outline and returns the new set', async () => {
       const modules = [{ moduleNumber: 1, topics: ['a', 'b'] }]
       repo.findOutline.mockResolvedValue(modules)
 
-      const result = await service.replaceOutline('c1', modules)
+      const result = await service.replaceOutline('c1', modules, U1)
 
       expect(repo.replaceOutline).toHaveBeenCalledWith('c1', modules)
       expect(result).toEqual(modules)
@@ -55,9 +67,9 @@ describe('CoursesService — outline', () => {
 
   describe('extractOutlineFromFile', () => {
     it('rejects unsupported mime types before touching storage', async () => {
-      await expect(service.extractOutlineFromFile('c1', 'key', 'application/zip')).rejects.toThrow(
-        BadRequestException,
-      )
+      await expect(
+        service.extractOutlineFromFile('c1', 'key', 'application/zip', U1),
+      ).rejects.toThrow(BadRequestException)
       expect(storageService.getObjectBuffer).not.toHaveBeenCalled()
     })
 
@@ -65,9 +77,9 @@ describe('CoursesService — outline', () => {
       storageService.getObjectBuffer.mockResolvedValue(Buffer.from('irrelevant'))
       aiSummary.extractTextFromBuffer.mockResolvedValue('   ')
 
-      await expect(service.extractOutlineFromFile('c1', 'key', 'application/pdf')).rejects.toThrow(
-        'Could not extract text from the uploaded file',
-      )
+      await expect(
+        service.extractOutlineFromFile('c1', 'key', 'application/pdf', U1),
+      ).rejects.toThrow('Could not extract text from the uploaded file')
       expect(aiSummary.extractCourseOutline).not.toHaveBeenCalled()
     })
 
@@ -77,7 +89,7 @@ describe('CoursesService — outline', () => {
       const extracted = [{ moduleNumber: 1, topics: ['Intro'] }]
       aiSummary.extractCourseOutline.mockResolvedValue(extracted)
 
-      const result = await service.extractOutlineFromFile('c1', 'key', 'application/pdf')
+      const result = await service.extractOutlineFromFile('c1', 'key', 'application/pdf', U1)
 
       expect(result).toEqual(extracted)
       expect(repo.replaceOutline).not.toHaveBeenCalled()

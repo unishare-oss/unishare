@@ -6,7 +6,7 @@ import { DepartmentsService } from './departments.service'
 import { CreateDepartmentDto } from './dto/create-department.dto'
 import { FindDepartmentsDto } from './dto/find-departments.dto'
 import { UpdateDepartmentDto } from './dto/update-department.dto'
-import { DepartmentEntity, DepartmentWithCoursesEntity } from './entities/department.entity'
+import { DepartmentEntity } from './entities/department.entity'
 
 @ApiTags('departments')
 @Controller('departments')
@@ -31,7 +31,7 @@ export class DepartmentsController {
 
   @Get(':id')
   @OptionalAuth()
-  @ApiOkResponse({ type: DepartmentWithCoursesEntity })
+  @ApiOkResponse({ type: DepartmentEntity })
   @ResponseMessage('Department fetched successfully')
   findOne(@Param('id') id: string) {
     return this.departmentsService.findOne(id)

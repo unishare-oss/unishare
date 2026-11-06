@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button'
  * URL and then navigates to it. Only the formats the API reported are offered — a failed
  * preview render leaves no PDF, and a button that 404s is worse than no button.
  *
- * Deliberately not using the generated hook: this page is unauthenticated, and the generated
- * fetcher exists to carry a session.
+ * A plain same-origin fetch rather than the generated hook; the browser sends the session
+ * cookie the API scopes the deck by.
  */
 export function SharedDeckDownload({ token, formats }: { token: string; formats: string[] }) {
   const [pending, setPending] = useState<string | null>(null)

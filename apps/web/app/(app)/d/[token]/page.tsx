@@ -6,15 +6,15 @@ import { SharedDeckPreview } from '@/components/decks/shared-deck-preview'
 import { DeckPreviewUnavailable } from '@/components/decks/deck-preview'
 
 /**
- * A deck opened from a share link, by someone who may have no account.
+ * A deck opened from a share link.
  *
- * Server-rendered and unauthenticated, following the same shape as /s/[shortCode]: read
- * through the API, 404 on anything the API refuses. The API returns one message for a token
- * that is unknown, revoked or points at a deleted deck, so nothing here can leak which.
+ * Server-rendered, following the same shape as /s/[shortCode]: read through the API with the
+ * browser's cookie forwarded, 404 on anything the API refuses. The API only shows a shared deck
+ * to a signed-in user whose university may read it, and returns one message for a token that is
+ * unknown, revoked, out of scope or points at a deleted deck, so nothing here can leak which.
  *
- * Not under /decks on purpose. /decks lives in the (protected) group behind AuthGuard, and a
- * public page underneath it would either be bounced to a login or split that path across two
- * route groups for no reason.
+ * Signed-out visitors never get here: proxy.ts sends /d/* to login first and back afterwards.
+ * Not under /decks, which is owner-only and lives in the (protected) group.
  */
 
 type ApiEnvelope<T> = { success: boolean; message: string; data: T }
@@ -44,6 +44,7 @@ export default async function SharedDeckPage({ params }: { params: Promise<{ tok
   const res = await fetch(new URL(`/api/decks/shared/${token}`, getBaseUrl(h)), {
     // A revoked link has to stop working immediately, which a cached page would not.
     cache: 'no-store',
+    headers: { cookie: h.get('cookie') ?? '' },
   })
   if (!res.ok) notFound()
 

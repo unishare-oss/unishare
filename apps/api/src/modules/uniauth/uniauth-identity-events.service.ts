@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import {
   ORGANIZATIONS_CLAIM,
+  membershipsRemoved,
   universityChange,
   universityForMemberships,
 } from '@/auth/uniauth-sign-in'
@@ -38,7 +39,7 @@ const isUniqueViolation = (error: unknown) => (error as { code?: string } | null
  * identity version is higher than the one the user holds.
  *
  * - identity.updated: refresh name, email, avatar, verification AND university (from the directory's memberships, with
- *   the same rule as sign-in: a university only changes when a membership maps). The version stored is the directory's if
+ *   the same rule as sign-in: a university changes when a membership maps, and no memberships at all clears it). The version stored is the directory's if
  *   it is newer than the event's; if it is OLDER the read is not yet consistent (NotYetConsistent, answered 503).
  * - identity.suspended: ends the person's sessions at once; new sessions are refused while suspended. This is uniauth's
  *   account state: it never touches Unishare's own ban (`banned`), roles or content.
@@ -169,7 +170,7 @@ export class UniauthIdentityEventsService {
           ...(profile.name && { name: profile.name }),
           ...(email && !taken && { email, emailVerified: profile.emailVerified === true }),
           image: profile.image || null,
-          ...universityChange(current.universityId, universityId),
+          ...universityChange(current.universityId, universityId, membershipsRemoved(memberships)),
           identityVersion: version,
           identityStatus: profile.status === 'suspended' ? 'suspended' : 'active',
         },

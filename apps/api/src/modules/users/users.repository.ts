@@ -134,6 +134,22 @@ export class UsersRepository {
     })
   }
 
+  findUniversityById(id: string) {
+    return this.prisma.university.findUnique({ where: { id }, select: { id: true } })
+  }
+
+  /** Sets a guest's university only while it has none. Null when it already had one. */
+  setGuestUniversityIfUnset(id: string, universityId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { id, isAnonymous: true, universityId: null },
+        data: { universityId },
+      })
+      if (count === 0) return null
+      return tx.user.findUnique({ where: { id }, include: this.countInclude })
+    })
+  }
+
   updatePublicKey(id: string, publicKey: string) {
     return this.prisma.user.update({
       where: { id },

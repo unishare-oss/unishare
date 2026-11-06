@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
+import { courseInScope, UniversityScope } from '@/common/university-scope'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 
@@ -19,13 +20,23 @@ export class CoursesRepository {
     return mapCourse(course)
   }
 
-  async findAll(pagination: PaginationDto, departmentId?: string, hasOutline?: boolean) {
+  async findAll(
+    pagination: PaginationDto,
+    scope: UniversityScope,
+    departmentId?: string,
+    hasOutline?: boolean,
+  ) {
     const result = await paginate(
       this.prisma.course,
       {
         where: {
-          ...(departmentId ? { departmentId } : {}),
-          ...(hasOutline ? { moduleOutlines: { some: {} } } : {}),
+          AND: [
+            {
+              ...(departmentId ? { departmentId } : {}),
+              ...(hasOutline ? { moduleOutlines: { some: {} } } : {}),
+            },
+            courseInScope(scope),
+          ],
         },
         orderBy: { code: 'asc' },
         include: { department: true },
@@ -39,8 +50,11 @@ export class CoursesRepository {
     return this.prisma.course.findUnique({ where: { code_departmentId: { code, departmentId } } })
   }
 
-  async findById(id: string) {
-    const c = await this.prisma.course.findUnique({ where: { id }, include: { department: true } })
+  async findById(id: string, scope: UniversityScope) {
+    const c = await this.prisma.course.findUnique({
+      where: { id, AND: [courseInScope(scope)] },
+      include: { department: true },
+    })
     return c ? mapCourse(c) : null
   }
 

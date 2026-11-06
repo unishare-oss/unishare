@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { authClient } from '@/src/lib/auth/client'
 import { safeReturnPath, signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
 
 // Errors uniauth can hand back on the callback. login_required only comes from the silent
@@ -48,6 +50,21 @@ export function UniauthLogin() {
     await signInWithUniauth({ returnTo: `${window.location.origin}${next}` }).catch(() =>
       setLoading(false),
     )
+  }
+
+  // Content needs a session, so a guest gets an anonymous one; it then picks a university.
+  async function continueAsGuest() {
+    setLoading(true)
+    const failed = await authClient.signIn
+      .anonymous()
+      .then(({ error }) => !!error)
+      .catch(() => true)
+    if (failed) {
+      setLoading(false)
+      toast.error('Could not start a guest session. Please try again.')
+      return
+    }
+    window.location.assign(next)
   }
 
   if (checking) return null
@@ -113,12 +130,14 @@ export function UniauthLogin() {
             <div className="flex-1 h-px bg-border" />
           </div>
           <div className="flex justify-center mt-4">
-            <Link
-              href="/feed"
-              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+            <button
+              type="button"
+              onClick={continueAsGuest}
+              disabled={loading}
+              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150 disabled:opacity-50"
             >
               Continue as guest
-            </Link>
+            </button>
           </div>
         </div>
       </div>

@@ -63,10 +63,10 @@ const baseUser = {
   followerCount: 0,
 } as unknown as UserProfileEntity
 
-function renderForm(user: UserProfileEntity) {
+function renderForm(user: UserProfileEntity, isGuest = false) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
-      <EditProfileForm user={user} />
+      <EditProfileForm user={user} isGuest={isGuest} />
     </QueryClientProvider>,
   )
 }
@@ -142,5 +142,18 @@ describe('EditProfileForm department picker', () => {
     )
     expect(screen.queryByText('Profile saved successfully')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+  })
+
+  it('lets a guest edit only the bio: no university, department or year, and no academic save', async () => {
+    renderForm(baseUser, true)
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByText('Enrollment Year')).not.toBeInTheDocument()
+    expect(screen.queryByText('University')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByPlaceholderText('Tell others a bit about yourself...'), 'hi')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mocks.updateMe).toHaveBeenCalled())
+    expect(mocks.updateAcademic).not.toHaveBeenCalled()
+    expect(await screen.findByText('Profile saved successfully')).toBeInTheDocument()
   })
 })

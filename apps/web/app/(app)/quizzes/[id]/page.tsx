@@ -3,6 +3,8 @@
 import { useParams } from 'next/navigation'
 import { useQuizzesControllerGetQuiz } from '@/src/lib/api/generated/quizzes/quizzes'
 import { QuizGame } from '@/components/quiz/QuizGame'
+import { QuizGuestPrompt } from '@/components/quiz/quiz-guest-prompt'
+import { useAuth } from '@/contexts/auth-context'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
@@ -10,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 export default function QuizPage() {
   const params = useParams()
   const quizId = params.id as string
+  const { isGuest } = useAuth()
 
   const {
     data: response,
@@ -41,5 +44,6 @@ export default function QuizPage() {
     )
   }
 
-  return <QuizGame quiz={response} />
+  // Guests are read-only: the API refuses their submission, so don't start the game.
+  return isGuest ? <QuizGuestPrompt quiz={response} /> : <QuizGame quiz={response} />
 }

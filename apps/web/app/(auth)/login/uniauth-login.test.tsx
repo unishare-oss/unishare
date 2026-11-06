@@ -18,12 +18,13 @@ vi.mock('@/src/lib/api/generated/universities/universities', () => ({
   useUniversitiesControllerFindAll: () => ({ data: [] }),
 }))
 vi.mock('@/src/lib/auth/client', () => ({
-  authClient: { signIn: { social: vi.fn() } },
+  authClient: { signIn: { social: vi.fn(), anonymous: vi.fn() } },
 }))
 
 // Imported after the mocks.
 const { default: LoginPage } = await import('./page')
 const { authClient } = await import('@/src/lib/auth/client')
+const { toast } = await import('sonner')
 
 describe('login page', () => {
   beforeEach(() => {
@@ -62,7 +63,7 @@ describe('login page', () => {
   it('offers uniauth sign-in and guest access, not the password form', () => {
     render(<LoginPage />)
     expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Continue as guest' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Continue as guest' })).toBeTruthy()
     expect(screen.queryByPlaceholderText('Password')).toBeNull()
   })
 
@@ -74,6 +75,26 @@ describe('login page', () => {
       callbackURL: `${window.location.origin}/feed`,
       errorCallbackURL: `${window.location.origin}/auth/return`,
     })
+  })
+
+  it('starts a guest (anonymous) session, since content needs one', async () => {
+    vi.mocked(authClient.signIn.anonymous).mockResolvedValue({ data: null, error: { status: 500 } })
+    const toastError = vi.spyOn(toast, 'error')
+    render(<LoginPage />)
+    const guest = screen.getByRole('button', { name: 'Continue as guest' })
+    await userEvent.click(guest)
+    expect(authClient.signIn.anonymous).toHaveBeenCalled()
+    // An error answer frees the buttons and says so
+    expect(guest).toBeEnabled()
+    expect(toastError).toHaveBeenCalledWith('Could not start a guest session. Please try again.')
+  })
+
+  it('frees the buttons again when the guest sign-in request throws', async () => {
+    vi.mocked(authClient.signIn.anonymous).mockRejectedValue(new Error('offline'))
+    render(<LoginPage />)
+    const guest = screen.getByRole('button', { name: 'Continue as guest' })
+    await userEvent.click(guest)
+    expect(guest).toBeEnabled()
   })
 
   it('explains real errors but stays quiet about login_required', () => {

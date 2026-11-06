@@ -9,6 +9,7 @@ import { StorageService } from '@/modules/storage/storage.service'
 import { getFolderForPurpose } from '@/modules/storage/dto/presigned-upload.dto'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { PostType } from '@/generated/prisma/client'
+import { universityScope } from '@/common/university-scope'
 import {
   calculateOccupiedBounds,
   createExcalidrawElements,
@@ -55,7 +56,7 @@ export class McpRepository {
   async listCourses(session: McpAuthSession) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { departmentId: true },
+      select: { departmentId: true, role: true, universityId: true },
     })
 
     if (!user?.departmentId) {
@@ -66,7 +67,11 @@ export class McpRepository {
     pagination.page = 1
     pagination.limit = 100
 
-    const result = await this.coursesService.findAll(pagination, user.departmentId)
+    const result = await this.coursesService.findAll(
+      pagination,
+      universityScope(user),
+      user.departmentId,
+    )
     const courses = result.items.map((c) => ({
       id: c.id,
       code: c.code,
@@ -160,7 +165,7 @@ export class McpRepository {
   async createPost(session: McpAuthSession, input: CreatePostDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { departmentId: true },
+      select: { departmentId: true, role: true, universityId: true },
     })
 
     if (!user?.departmentId) {
@@ -183,6 +188,8 @@ export class McpRepository {
       },
       session.userId,
       user.departmentId,
+      // Another university's course is a 404 there, the same as on the website
+      universityScope(user),
     )
 
     const attachedFiles: Array<{
@@ -200,10 +207,12 @@ export class McpRepository {
         try {
           const { key, size, publicUrl } = await this.resolveFile(file, folder)
 
+          // The post was created by this same user a moment ago, so no scope check is needed.
           const confirmed = await this.filesService.confirmUpload(
             created.id,
             { key, name: file.fileName, size, mimeType: file.mimeType },
             session.userId,
+            { kind: 'all' },
           )
 
           attachedFiles.push({
@@ -281,14 +290,14 @@ export class McpRepository {
   async deletePost(session: McpAuthSession, input: DeletePostDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { role: true },
+      select: { role: true, universityId: true },
     })
 
     if (!user) {
       throw new NotFoundException('User not found')
     }
 
-    await this.postsService.remove(input.id, session.userId, user.role)
+    await this.postsService.remove(input.id, session.userId, user.role, universityScope(user))
     return { id: input.id, deleted: true }
   }
 }

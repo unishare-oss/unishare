@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Post, Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
+import { postInScope, UniversityScope } from '@/common/university-scope'
 
 @Injectable()
 export class TrendingService {
@@ -67,8 +68,11 @@ export class TrendingService {
    * Get trending posts with pagination.
    * Returns posts with highest trending scores, most recent first for ties.
    */
-  async getTrendingPosts(limit: number = 20, page: number = 1) {
+  async getTrendingPosts(scope: UniversityScope, limit: number = 20, page: number = 1) {
     const skip = (page - 1) * limit
+    const where: Prisma.PostWhereInput = {
+      AND: [{ publicationStatus: 'PUBLISHED', deletedAt: null }, postInScope(scope)],
+    }
 
     const include: Prisma.PostInclude = {
       author: {
@@ -106,18 +110,13 @@ export class TrendingService {
 
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
-        where: { publicationStatus: 'PUBLISHED', deletedAt: null },
+        where,
         orderBy: [{ trendingScore: 'desc' }, { createdAt: 'desc' }],
         skip,
         take: limit,
         include,
       }),
-      this.prisma.post.count({
-        where: {
-          publicationStatus: 'PUBLISHED',
-          deletedAt: null,
-        },
-      }),
+      this.prisma.post.count({ where }),
     ])
 
     return {

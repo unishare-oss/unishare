@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { APP_GUARD } from '@nestjs/core'
 import { SharedTermsGuard } from './auth/shared-terms.guard'
+import { GuestReadOnlyGuard } from './common/guards/guest-read-only.guard'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerModule } from '@nestjs/throttler'
@@ -125,6 +126,11 @@ import { BullMQOtel } from 'bullmq-otel'
     McpModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: SharedTermsGuard }],
+  // Global guards run in this order: the auth guard sets the session user the guest check reads.
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: SharedTermsGuard },
+    { provide: APP_GUARD, useClass: GuestReadOnlyGuard },
+  ],
 })
 export class AppModule {}

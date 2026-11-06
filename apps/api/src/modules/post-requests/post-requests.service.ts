@@ -9,6 +9,7 @@ import { CreatePostRequestDto } from './dto/create-post-request.dto'
 import { ListPostRequestsDto } from './dto/list-post-requests.dto'
 import { CreateFulfillmentSuggestionDto } from './dto/create-fulfillment-suggestion.dto'
 import { NotificationsService } from '../notifications/notifications.service'
+import { UniversityScope } from '@/common/university-scope'
 
 @Injectable()
 export class PostRequestsService {
@@ -17,32 +18,47 @@ export class PostRequestsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  create(dto: CreatePostRequestDto, authorId: string) {
+  // Another university's course is a 404, so nobody can open requests on it.
+  async create(dto: CreatePostRequestDto, authorId: string, scope: UniversityScope) {
+    const course = await this.postRequestsRepository.findCourseIdInScope(dto.courseId, scope)
+    if (!course) throw new NotFoundException('Course not found')
     return this.postRequestsRepository.create({ ...dto, authorId })
   }
 
-  findAll(query: ListPostRequestsDto, userId?: string) {
+  findAll(query: ListPostRequestsDto, scope: UniversityScope, userId?: string) {
     const { courseId, departmentId, status, ...pagination } = query
     const where = {
       ...(courseId && { courseId }),
       ...(status && { status }),
       ...(departmentId && { course: { departmentId } }),
     }
-    return this.postRequestsRepository.findAll(where, pagination, userId)
+    return this.postRequestsRepository.findAll(where, scope, pagination, userId)
   }
 
-  async findOne(id: string, userId?: string) {
-    const r = await this.postRequestsRepository.findById(id, userId)
+  // Every route by id goes through this first, so another university's request is a 404, and
+  // that comes before any ownership check.
+  async findOne(id: string, scope: UniversityScope, userId?: string) {
+    const r = await this.postRequestsRepository.findById(id, scope, userId)
     if (!r) throw new NotFoundException('Post request not found')
     return r
   }
 
-  toggleUpvote(id: string, userId: string) {
-    return this.postRequestsRepository.toggleUpvote(id, userId)
+  async toggleUpvote(id: string, userId: string, scope: UniversityScope) {
+    const inScope = await this.postRequestsRepository.findIdInScope(id, scope)
+    if (!inScope) throw new NotFoundException('Post request not found')
+    return this.postRequestsRepository.toggleUpvote(id, userId, scope)
   }
 
-  async suggest(requestId: string, dto: CreateFulfillmentSuggestionDto, userId: string) {
-    const request = await this.findOne(requestId, userId)
+  async suggest(
+    requestId: string,
+    dto: CreateFulfillmentSuggestionDto,
+    userId: string,
+    scope: UniversityScope,
+  ) {
+    const request = await this.findOne(requestId, scope, userId)
+    // A post the requester can't read can't be offered as the answer either.
+    const post = await this.postRequestsRepository.findPostIdInScope(dto.postId, scope)
+    if (!post) throw new NotFoundException('Post not found')
     if (request.status === 'FULFILLED') {
       throw new BadRequestException('This request is already fulfilled')
     }
@@ -65,17 +81,30 @@ export class PostRequestsService {
     return suggestion
   }
 
-  async removeSuggestion(requestId: string, suggestionId: string, userId: string) {
+  async removeSuggestion(
+    requestId: string,
+    suggestionId: string,
+    userId: string,
+    scope: UniversityScope,
+  ) {
+    await this.findOne(requestId, scope, userId)
     const suggestion = await this.postRequestsRepository.findSuggestion(suggestionId)
-    if (!suggestion) throw new NotFoundException('Suggestion not found')
+    if (!suggestion || suggestion.requestId !== requestId) {
+      throw new NotFoundException('Suggestion not found')
+    }
     if (suggestion.userId !== userId) {
       throw new ForbiddenException('You can only remove your own suggestions')
     }
     return this.postRequestsRepository.deleteSuggestion(suggestionId)
   }
 
-  async acceptSuggestion(requestId: string, suggestionId: string, userId: string) {
-    const request = await this.findOne(requestId, userId)
+  async acceptSuggestion(
+    requestId: string,
+    suggestionId: string,
+    userId: string,
+    scope: UniversityScope,
+  ) {
+    const request = await this.findOne(requestId, scope, userId)
     if (request.author?.id !== userId) {
       throw new ForbiddenException('Only the request author can accept a suggestion')
     }
@@ -100,8 +129,8 @@ export class PostRequestsService {
     return result
   }
 
-  async remove(id: string, userId: string) {
-    const r = await this.findOne(id, userId)
+  async remove(id: string, userId: string, scope: UniversityScope) {
+    const r = await this.findOne(id, scope, userId)
     if (r.author?.id !== userId) {
       throw new ForbiddenException('Only the author can delete this request')
     }

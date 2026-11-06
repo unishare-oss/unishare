@@ -2,19 +2,32 @@
 
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { useAuth } from '@/contexts/auth-context'
 
-export function AuthGuard({ children }: { children: ReactNode }) {
+export function AuthGuard({
+  children,
+  allowGuestsOn = [],
+}: {
+  children: ReactNode
+  /** Paths (and their subpaths) a guest may open too. */
+  allowGuestsOn?: string[]
+}) {
   const router = useRouter()
-  const { isLoading, isAuthenticated } = useAuth()
+  const pathname = usePathname()
+  const { isLoading, isAuthenticated, isGuest } = useAuth()
+  const guestAllowed =
+    isGuest && allowGuestsOn.some((p) => pathname === p || pathname.startsWith(p + '/'))
+  const allowed = isAuthenticated || guestAllowed
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login')
+    // A guest already has a session, and /login can't start a second guest one: they go back
+    // to browsing instead, where the rail offers Sign in.
+    if (!isLoading && !allowed) {
+      router.replace(isGuest ? '/feed' : '/login')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [allowed, isGuest, isLoading, router])
 
   if (isLoading) {
     return (
@@ -24,7 +37,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!isAuthenticated) return null
+  if (!allowed) return null
 
   return <>{children}</>
 }

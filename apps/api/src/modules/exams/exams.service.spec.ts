@@ -5,6 +5,10 @@ import { ExamsService } from './exams.service'
 import { ExamsRepository } from './exams.repository'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
+import { UniversityScope } from '@/common/university-scope'
+
+const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
+const ADMIN: UniversityScope = { kind: 'all' }
 
 describe('ExamsService', () => {
   let service: ExamsService
@@ -49,13 +53,13 @@ describe('ExamsService', () => {
   })
 
   describe('create', () => {
-    it('validates the course exists before creating', async () => {
+    it('validates the course is in scope before creating', async () => {
       coursesService.findOne.mockResolvedValue({ id: 'c1' })
       repo.create.mockResolvedValue({ id: 'e1' })
 
-      await service.create({ courseId: 'c1', title: 'Midterm', startsAt: '2026-10-01' }, 'u1')
+      await service.create({ courseId: 'c1', title: 'Midterm', startsAt: '2026-10-01' }, 'u1', U1)
 
-      expect(coursesService.findOne).toHaveBeenCalledWith('c1')
+      expect(coursesService.findOne).toHaveBeenCalledWith('c1', U1)
       expect(repo.create).toHaveBeenCalled()
     })
 
@@ -63,7 +67,7 @@ describe('ExamsService', () => {
       coursesService.findOne.mockRejectedValue(new NotFoundException('Course not found'))
 
       await expect(
-        service.create({ courseId: 'bad', title: 'Midterm', startsAt: '2026-10-01' }, 'u1'),
+        service.create({ courseId: 'bad', title: 'Midterm', startsAt: '2026-10-01' }, 'u1', U1),
       ).rejects.toThrow(NotFoundException)
       expect(repo.create).not.toHaveBeenCalled()
     })
@@ -80,17 +84,82 @@ describe('ExamsService', () => {
             endsAt: '2026-10-01T13:00:00Z',
           },
           'u1',
+          U1,
         ),
       ).rejects.toThrow(BadRequestException)
       expect(repo.create).not.toHaveBeenCalled()
     })
   })
 
+  describe('university scope', () => {
+    it('lists exams with the scope', async () => {
+      repo.findInRange.mockResolvedValue([])
+      await service.findInRange('2026-10-01', '2026-10-31', U1, 'd1')
+      expect(repo.findInRange).toHaveBeenCalledWith(
+        new Date('2026-10-01'),
+        new Date('2026-10-31'),
+        U1,
+        'd1',
+        undefined,
+      )
+    })
+
+    it('gives 404 for an exam outside the scope before checking the new course', async () => {
+      repo.findById.mockResolvedValue(null)
+      await expect(service.update('e1', { courseId: 'c2' }, U1)).rejects.toThrow(NotFoundException)
+      await expect(service.remove('e1', U1)).rejects.toThrow(NotFoundException)
+      expect(repo.findById).toHaveBeenCalledWith('e1', U1)
+      expect(coursesService.findOne).not.toHaveBeenCalled()
+      expect(repo.update).not.toHaveBeenCalled()
+      expect(repo.remove).not.toHaveBeenCalled()
+    })
+
+    it("gives 404 when creating an exam in another university's course", async () => {
+      // CoursesService.findOne misses for a course outside the scope.
+      coursesService.findOne.mockRejectedValue(new NotFoundException('Course not found'))
+      await expect(
+        service.create({ courseId: 'c2', title: 'Midterm', startsAt: '2026-10-01' }, 'u1', U1),
+      ).rejects.toThrow(NotFoundException)
+      expect(coursesService.findOne).toHaveBeenCalledWith('c2', U1)
+      expect(repo.create).not.toHaveBeenCalled()
+    })
+
+    it("gives 404 when moving an exam to another university's course", async () => {
+      repo.findById.mockResolvedValue({
+        id: 'e1',
+        startsAt: new Date('2026-10-01T09:00:00Z'),
+        endsAt: null,
+      })
+      coursesService.findOne.mockRejectedValue(new NotFoundException('Course not found'))
+      await expect(service.update('e1', { courseId: 'c2' }, U1)).rejects.toThrow(NotFoundException)
+      expect(coursesService.findOne).toHaveBeenCalledWith('c2', U1)
+      expect(repo.update).not.toHaveBeenCalled()
+    })
+
+    it('lets an admin create and move exams in any course', async () => {
+      coursesService.findOne.mockResolvedValue({ id: 'c2' })
+      repo.findById.mockResolvedValue({
+        id: 'e1',
+        startsAt: new Date('2026-10-01T09:00:00Z'),
+        endsAt: null,
+      })
+      await service.create(
+        { courseId: 'c2', title: 'Midterm', startsAt: '2026-10-01' },
+        'a1',
+        ADMIN,
+      )
+      await service.update('e1', { courseId: 'c2' }, ADMIN)
+      expect(coursesService.findOne).toHaveBeenCalledWith('c2', ADMIN)
+      expect(repo.create).toHaveBeenCalled()
+      expect(repo.update).toHaveBeenCalledWith('e1', { courseId: 'c2' })
+    })
+  })
+
   describe('update / remove', () => {
     it('throws NotFoundException when the exam does not exist', async () => {
       repo.findById.mockResolvedValue(null)
-      await expect(service.update('missing', { title: 'x' })).rejects.toThrow(NotFoundException)
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException)
+      await expect(service.update('missing', { title: 'x' }, U1)).rejects.toThrow(NotFoundException)
+      await expect(service.remove('missing', U1)).rejects.toThrow(NotFoundException)
     })
 
     it('validates the new end time against the existing start time when only endsAt changes', async () => {
@@ -101,7 +170,7 @@ describe('ExamsService', () => {
         course: { id: 'c1', departmentId: 'd1' },
       })
 
-      await expect(service.update('e1', { endsAt: '2026-10-01T08:00:00Z' })).rejects.toThrow(
+      await expect(service.update('e1', { endsAt: '2026-10-01T08:00:00Z' }, U1)).rejects.toThrow(
         BadRequestException,
       )
       expect(repo.update).not.toHaveBeenCalled()
@@ -116,7 +185,7 @@ describe('ExamsService', () => {
       })
       repo.update.mockResolvedValue({ id: 'e1' })
 
-      await service.update('e1', { title: 'Renamed' })
+      await service.update('e1', { title: 'Renamed' }, U1)
 
       expect(repo.update).toHaveBeenCalledWith('e1', { title: 'Renamed' })
     })

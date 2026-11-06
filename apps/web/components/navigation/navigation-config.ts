@@ -16,6 +16,7 @@ import {
   Puzzle,
   ScrollText,
   ShieldCheck,
+  UserRound,
   Users,
 } from 'lucide-react'
 
@@ -38,6 +39,9 @@ export const guestNavigation: NavigationItem[] = [
   { href: '/feed', label: 'Feed', icon: LayoutList },
   { href: '/saved', label: 'Saved', icon: Bookmark },
   { href: '/departments', label: 'Departments', icon: Building2 },
+  // Guests keep canvas boards and their bio.
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
+  { href: '/profile', label: 'Profile', icon: UserRound },
 ]
 
 const authenticatedGroups: NavigationGroup[] = [

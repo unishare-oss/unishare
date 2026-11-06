@@ -1,30 +1,31 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
+import { postInScope, UniversityScope, userInScope } from '@/common/university-scope'
 
 @Injectable()
 export class StatsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  countUsers() {
-    return this.prisma.user.count({ where: { isAnonymous: false } })
+  countUsers(scope: UniversityScope) {
+    return this.prisma.user.count({ where: { isAnonymous: false, AND: [userInScope(scope)] } })
   }
 
-  countPosts() {
-    return this.prisma.post.count({ where: { deletedAt: null } })
+  countPosts(scope: UniversityScope) {
+    return this.prisma.post.count({ where: { deletedAt: null, AND: [postInScope(scope)] } })
   }
 
-  countComments() {
-    return this.prisma.comment.count({ where: { deletedAt: null } })
+  countComments(scope: UniversityScope) {
+    return this.prisma.comment.count({ where: { deletedAt: null, post: postInScope(scope) } })
   }
 
-  countReactions() {
-    return this.prisma.reaction.count()
+  countReactions(scope: UniversityScope) {
+    return this.prisma.reaction.count({ where: { post: postInScope(scope) } })
   }
 
-  findTopPostsByViews() {
+  findTopPostsByViews(scope: UniversityScope) {
     return this.prisma.post.findMany({
-      where: { deletedAt: null, status: 'APPROVED' },
+      where: { deletedAt: null, status: 'APPROVED', AND: [postInScope(scope)] },
       orderBy: { views: 'desc' },
       take: 5,
       select: {
@@ -39,9 +40,9 @@ export class StatsRepository {
     })
   }
 
-  findTopPostsByReactions() {
+  findTopPostsByReactions(scope: UniversityScope) {
     return this.prisma.post.findMany({
-      where: { deletedAt: null, status: 'APPROVED' },
+      where: { deletedAt: null, status: 'APPROVED', AND: [postInScope(scope)] },
       orderBy: { reactions: { _count: 'desc' } },
       take: 5,
       select: {
@@ -56,7 +57,12 @@ export class StatsRepository {
     })
   }
 
-  findTopUsersByPostCount() {
+  // `universityId` is bound as a parameter. Users and the posts counted for them are both
+  // limited to the university; the post side joins course -> department -> faculty.
+  async findTopUsersByPostCount(scope: UniversityScope) {
+    if (scope.kind === 'none') return []
+    const universityId = scope.kind === 'university' ? scope.universityId : null
+
     return this.prisma.$queryRaw<
       {
         id: string
@@ -74,7 +80,19 @@ export class StatsRepository {
         ON p."authorId" = u.id
         AND p."deletedAt" IS NULL
         AND p."isAnonymous" = false
+        ${
+          universityId
+            ? Prisma.sql`AND EXISTS (
+                SELECT 1 FROM "course" c
+                JOIN "department" pd ON pd.id = c."departmentId"
+                JOIN "faculty" f ON f.id = pd."facultyId"
+                WHERE c.id = p."courseId" AND f."universityId" = ${universityId}
+              )`
+            : Prisma.empty
+        }
       LEFT JOIN "department" d ON d.id = u."departmentId"
+      WHERE u."isAnonymous" IS NOT TRUE
+      ${universityId ? Prisma.sql`AND u."universityId" = ${universityId}` : Prisma.empty}
       GROUP BY u.id, u.name, u.image, d.name
       ORDER BY "postCount" DESC
       LIMIT 5

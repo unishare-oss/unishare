@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import {
   ORGANIZATIONS_CLAIM,
   type UniauthMembership,
+  membershipsRemoved,
   universityChange,
   universityForMemberships,
 } from '@/auth/uniauth-sign-in'
@@ -29,9 +30,9 @@ export class UniauthUserUpdatedService {
     const userId = await resolveLocalUserId(this.prisma, sub)
     if (!userId) return true // never used unishare: nothing to refresh
 
-    const memberships = Array.isArray(data[ORGANIZATIONS_CLAIM])
-      ? (data[ORGANIZATIONS_CLAIM] as UniauthMembership[])
-      : []
+    // A missing claim is not "no memberships": only a sent, empty list clears the university
+    const claim = data[ORGANIZATIONS_CLAIM]
+    const memberships = Array.isArray(claim) ? (claim as UniauthMembership[]) : []
     const universityId = await universityForMemberships(this.prisma, memberships)
     const stored = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -43,7 +44,7 @@ export class UniauthUserUpdatedService {
         image: data.picture || null,
       }),
       ...(typeof data.email_verified === 'boolean' && { emailVerified: data.email_verified }),
-      ...universityChange(stored?.universityId ?? null, universityId),
+      ...universityChange(stored?.universityId ?? null, universityId, membershipsRemoved(claim)),
     }
     const email = typeof data.email === 'string' && data.email ? data.email.toLowerCase() : null
 

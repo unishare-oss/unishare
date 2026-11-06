@@ -8,6 +8,7 @@ import {
   ORGANIZATIONS_CLAIM,
   signInUniversity,
   universityChange,
+  membershipsRemoved,
   universityForMemberships,
 } from './uniauth-sign-in'
 
@@ -106,6 +107,13 @@ describe('signInUniversity', () => {
     ).resolves.toEqual({})
     await expect(signInUniversity(prisma, 'uni_kmutt', profile())).resolves.toEqual({})
   })
+
+  it('clears the university and department when uniauth sends no memberships', async () => {
+    await expect(signInUniversity(kmuttAndMfu(), 'uni_kmutt', claims([]))).resolves.toEqual({
+      universityId: null,
+      departmentId: null,
+    })
+  })
 })
 
 describe('copyFromUniauthIdToken', () => {
@@ -155,6 +163,20 @@ describe('universityChange', () => {
     expect(universityChange('u1', 'u2')).toEqual({ universityId: 'u2', departmentId: null })
     expect(universityChange('u1', 'u1')).toEqual({})
     expect(universityChange('u1', null)).toEqual({})
+  })
+
+  it('clears the university and department when the memberships were removed', () => {
+    expect(universityChange('u1', null, true)).toEqual({ universityId: null, departmentId: null })
+    expect(universityChange(null, null, true)).toEqual({}) // nothing to clear
+  })
+})
+
+describe('membershipsRemoved', () => {
+  it('is true only for a sent, empty list', () => {
+    expect(membershipsRemoved([])).toBe(true)
+    expect(membershipsRemoved([{ id: 'o', slug: 'kmutt', verified: true }])).toBe(false)
+    expect(membershipsRemoved(undefined)).toBe(false)
+    expect(membershipsRemoved(null)).toBe(false)
   })
 })
 

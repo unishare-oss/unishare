@@ -19,6 +19,9 @@ import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { DecksService } from './decks.service'
 import { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import {
@@ -34,6 +37,7 @@ import {
 import { DecksFrameAuthService } from './decks.frame-auth.service'
 
 @ApiTags('decks')
+@GuestReadOnly()
 @Controller('decks')
 export class DecksController {
   constructor(
@@ -62,10 +66,13 @@ export class DecksController {
     @Headers('x-forwarded-uri') forwardedUri?: string,
     @Headers('x-forwarded-method') forwardedMethod?: string,
   ): Promise<{ ok: true }> {
-    const userId = session?.user?.id
     // 401 rather than a redirect: the caller is a proxy, and a redirect body inside the frame
-    // would render the generator's own login page.
-    if (!userId) throw new UnauthorizedException('Sign in to open the deck editor')
+    // would render the generator's own login page. Guests are read-only and the editor hands
+    // out a generator session, so they get the same answer as a signed-out caller.
+    if (!session?.user?.id || session.user.isAnonymous) {
+      throw new UnauthorizedException('Sign in to open the deck editor')
+    }
+    const userId = session.user.id
 
     // Fail closed without X-Forwarded-Uri. Traefik always sends it, so its absence means the
     // caller is not the proxy -- and defaulting to '/' made the request look like a page load,
@@ -105,27 +112,29 @@ export class DecksController {
   }
 
   /**
-   * A shared deck, for a caller who may not be signed in.
+   * A shared deck, for a holder of its share token.
    *
-   * OptionalAuth because the share token IS the credential — requiring an account would defeat
-   * the point of sending a link to someone outside the university. Registered above the
-   * parameterized routes so `shared` is never read as a deck id.
+   * The token alone is not enough: the deck's owner or its source post must be in the
+   * requester's university, so one from elsewhere gets a 404 (signed out: 401). Registered
+   * above the parameterized routes so `shared` is never read as a deck id.
    */
   @Get('shared/:token')
-  @OptionalAuth()
   @ApiOkResponse({ type: SharedDeckEntity })
   @ResponseMessage('Shared deck fetched successfully')
-  getSharedDeck(@Param('token') token: string) {
-    return this.decksService.getSharedDeck(token)
+  getSharedDeck(@Param('token') token: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.decksService.getSharedDeck(token, scope)
   }
 
   @Get('shared/:token/download')
-  @OptionalAuth()
   @ApiOkResponse({ type: DeckDownloadEntity })
   @ApiQuery({ name: 'format', required: false, enum: ['pptx', 'pdf'] })
   @ResponseMessage('Download URL generated successfully')
-  getSharedDownloadUrl(@Param('token') token: string, @Query('format') format?: 'pptx' | 'pdf') {
-    return this.decksService.getSharedDownloadUrl(token, format === 'pdf' ? 'pdf' : 'pptx')
+  getSharedDownloadUrl(
+    @Param('token') token: string,
+    @UniversityScopeParam() scope: UniversityScope,
+    @Query('format') format?: 'pptx' | 'pdf',
+  ) {
+    return this.decksService.getSharedDownloadUrl(token, scope, format === 'pdf' ? 'pdf' : 'pptx')
   }
 
   @Get('templates')
