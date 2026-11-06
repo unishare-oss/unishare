@@ -1,4 +1,5 @@
-import { betterAuth } from 'better-auth'
+import { betterAuth, type BetterAuthPlugin } from 'better-auth'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { openAPI, admin, anonymous, genericOAuth } from 'better-auth/plugins'
 import { generateGuestDisplayName } from './guest-display-name'
@@ -18,6 +19,29 @@ import {
 } from './uniauth-sign-in'
 
 const isProduction = process.env.NODE_ENV === 'production'
+
+// Better Auth also signs in (or links) with an ID token posted straight from the client, because
+// discovery gives the uniauth provider its keys. Unishare never does that: sign-in is always the
+// redirect, which brings a fresh token. Refusing it stops a user replaying an older, still-valid
+// token (from /get-access-token) to bring back a university uniauth has since removed.
+const refuseClientIdTokens = {
+  id: 'refuse-client-id-tokens',
+  hooks: {
+    before: [
+      {
+        matcher: (ctx) =>
+          (ctx.path === '/sign-in/social' || ctx.path === '/link-social') && !!ctx.body?.idToken,
+        handler: createAuthMiddleware(async () => {
+          throw new APIError('BAD_REQUEST', {
+            code: 'ID_TOKEN_SIGN_IN_DISABLED',
+            message: 'Sign in through uniauth',
+          })
+        }),
+      },
+    ],
+  },
+} satisfies BetterAuthPlugin
+
 export const isMcpEnabled = process.env.MCP_ENABLED === 'true'
 
 if (isProduction) {
@@ -93,6 +117,7 @@ export const auth = betterAuth({
       emailDomainName: 'guest.unishare.app',
       generateName: () => generateGuestDisplayName(),
     }),
+    refuseClientIdTokens,
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,

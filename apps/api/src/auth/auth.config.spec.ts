@@ -11,4 +11,34 @@ describe('auth config', () => {
       expect.objectContaining({ body: expect.objectContaining({ code: 'FIELD_NOT_ALLOWED' }) }),
     )
   })
+
+  it.each([
+    [
+      'sign-in',
+      () => auth.api.signInSocial({ body: { provider: 'uniauth', idToken: { token: 'old' } } }),
+    ],
+    [
+      'link',
+      () =>
+        auth.api.linkSocialAccount({
+          body: { provider: 'uniauth', idToken: { token: 'old' } },
+          headers: new Headers(),
+        }),
+    ],
+  ])(
+    'refuses a %s with a client-posted ID token: only the redirect brings a fresh one',
+    async (_, call) => {
+      await expect(call()).rejects.toMatchObject({
+        body: expect.objectContaining({ code: 'ID_TOKEN_SIGN_IN_DISABLED' }),
+      })
+    },
+  )
+
+  it('still starts the normal redirect sign-in', async () => {
+    await expect(
+      auth.api.signInSocial({ body: { provider: 'uniauth', idToken: undefined } }),
+    ).rejects.not.toMatchObject({
+      body: expect.objectContaining({ code: 'ID_TOKEN_SIGN_IN_DISABLED' }),
+    })
+  })
 })
