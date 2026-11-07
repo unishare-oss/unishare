@@ -1,4 +1,4 @@
-import { ForbiddenException, BadRequestException } from '@nestjs/common'
+import { ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common'
 import type { ConfigService } from '@nestjs/config'
 import { McpRepository } from './mcp.repository'
 import type { McpAuthSession } from './dto/mcp-auth-session.dto'
@@ -30,6 +30,14 @@ jest.mock('@/modules/storage/storage.service', () => ({
   StorageService: class StorageService {},
 }))
 
+const member = { departmentId: 'dept-1', role: 'STUDENT', universityId: 'uni-1' }
+const createInput = {
+  title: 'Data Structures Lecture 1',
+  description: 'Introduction',
+  type: 'NOTE' as const,
+  courseId: 'course-1',
+}
+
 describe('McpRepository', () => {
   const collabService = {
     createRoom: jest.fn(),
@@ -44,6 +52,7 @@ describe('McpRepository', () => {
   }
   const coursesService = {
     findAll: jest.fn(),
+    findOne: jest.fn(),
   }
   const prisma = {
     user: {
@@ -139,6 +148,26 @@ describe('McpRepository', () => {
         }),
       ).rejects.toThrow(new ForbiddenException('Missing required scope: courses:read'))
       expect(coursesService.findAll).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      [
+        'an admin reads every university',
+        { role: 'ADMIN', universityId: 'uni-1' },
+        { kind: 'all' },
+      ],
+      [
+        'a user with no university reads nothing',
+        { role: 'STUDENT', universityId: null },
+        { kind: 'none' },
+      ],
+    ])('%s', async (_name, user, scope) => {
+      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1', ...user })
+      coursesService.findAll.mockResolvedValue({ items: [] })
+
+      await repository.listCourses({ userId: 'user-1', scopes: 'openid courses:read' })
+
+      expect(coursesService.findAll).toHaveBeenCalledWith(expect.anything(), scope, 'dept-1')
     })
 
     it('rejects if user has no department set', async () => {
@@ -395,7 +424,7 @@ describe('McpRepository', () => {
 
   describe('createPost', () => {
     it('creates a post for the authenticated user using provided courseId', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      prisma.user.findUnique.mockResolvedValue(member)
       const createdAt = new Date('2026-08-18T10:00:00.000Z')
       postsService.create.mockResolvedValue({
         id: 'post-1',
@@ -419,7 +448,11 @@ describe('McpRepository', () => {
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { departmentId: true },
+        select: { departmentId: true, role: true, universityId: true },
+      })
+      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', {
+        kind: 'university',
+        universityId: 'uni-1',
       })
       expect(postsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -446,7 +479,7 @@ describe('McpRepository', () => {
     })
 
     it('creates a post with attached files (base64 and text)', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      prisma.user.findUnique.mockResolvedValue(member)
       const createdAt = new Date('2026-08-18T10:00:00.000Z')
       postsService.create.mockResolvedValue({
         id: 'post-1',
@@ -526,6 +559,41 @@ describe('McpRepository', () => {
       expect(postsService.create).not.toHaveBeenCalled()
     })
 
+    it("answers 404 for another university's course and creates nothing", async () => {
+      prisma.user.findUnique.mockResolvedValue(member)
+      coursesService.findOne.mockRejectedValueOnce(new NotFoundException('Course not found'))
+
+      await expect(
+        repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput),
+      ).rejects.toThrow(NotFoundException)
+      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', {
+        kind: 'university',
+        universityId: 'uni-1',
+      })
+      expect(postsService.create).not.toHaveBeenCalled()
+    })
+
+    it('checks the course with no scope at all for a user with no university', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...member, universityId: null })
+      coursesService.findOne.mockRejectedValueOnce(new NotFoundException('Course not found'))
+
+      await expect(
+        repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput),
+      ).rejects.toThrow(NotFoundException)
+      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', { kind: 'none' })
+      expect(postsService.create).not.toHaveBeenCalled()
+    })
+
+    it('lets an admin create in any university course', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...member, role: 'ADMIN' })
+      postsService.create.mockResolvedValue({ id: 'post-1', createdAt: new Date() })
+
+      await repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput)
+
+      expect(coursesService.findOne).toHaveBeenCalledWith('course-1', { kind: 'all' })
+      expect(postsService.create).toHaveBeenCalled()
+    })
+
     it('rejects post creation if user has no department set', async () => {
       prisma.user.findUnique.mockResolvedValue({ departmentId: null, role: 'STUDENT' })
 
@@ -546,7 +614,7 @@ describe('McpRepository', () => {
     })
 
     it('attaches a presigned-uploaded file by key without touching uploadBuffer', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      prisma.user.findUnique.mockResolvedValue(member)
       postsService.create.mockResolvedValue({
         id: 'post-1',
         shortCode: 'p1234567',
@@ -607,7 +675,7 @@ describe('McpRepository', () => {
     })
 
     it('collects a failed file instead of aborting the whole post', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      prisma.user.findUnique.mockResolvedValue(member)
       postsService.create.mockResolvedValue({
         id: 'post-1',
         shortCode: 'p1234567',
@@ -711,6 +779,29 @@ describe('McpRepository', () => {
         universityId: 'uni-1',
       })
       expect(result).toEqual({ id: 'post-1', deleted: true })
+    })
+
+    it.each([
+      [
+        'an admin deletes in any university',
+        { role: 'ADMIN', universityId: 'uni-1' },
+        { kind: 'all' },
+      ],
+      [
+        'a user with no university reaches no post',
+        { role: 'STUDENT', universityId: null },
+        { kind: 'none' },
+      ],
+    ])('%s', async (_name, user, scope) => {
+      prisma.user.findUnique.mockResolvedValue(user)
+      postsService.remove.mockResolvedValue({ id: 'post-1' })
+
+      await repository.deletePost(
+        { userId: 'user-1', scopes: 'openid posts:write' },
+        { id: 'post-1' },
+      )
+
+      expect(postsService.remove).toHaveBeenCalledWith('post-1', 'user-1', user.role, scope)
     })
 
     it('rejects access without posts:write', async () => {

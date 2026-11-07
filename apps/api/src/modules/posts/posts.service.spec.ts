@@ -28,6 +28,8 @@ const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
 const NONE: UniversityScope = { kind: 'none' }
 const IN_U1 = { course: { department: { faculty: { universityId: 'u1' } } } }
 
+const chatDto = { messages: [{ role: 'user' as const, content: 'What is this about?' }] }
+
 const UNSUPPORTED_RESULT = {
   state: 'unsupported',
   indexedChunks: 0,
@@ -40,6 +42,11 @@ describe('PostsService', () => {
   let prismaMock: any
   let embeddingMock: { enabled: boolean }
   let repoMock: any
+  let aiSummaryMock: {
+    chatWithPost: jest.Mock
+    chatWithPostStream: jest.Mock
+    summarizePost: jest.Mock
+  }
 
   beforeEach(async () => {
     prismaMock = {
@@ -48,6 +55,11 @@ describe('PostsService', () => {
       postChunk: { count: jest.fn().mockResolvedValue(0) },
     }
     embeddingMock = { enabled: true }
+    aiSummaryMock = {
+      chatWithPost: jest.fn().mockResolvedValue({ reply: 'ok' }),
+      chatWithPostStream: jest.fn().mockResolvedValue([]),
+      summarizePost: jest.fn(),
+    }
     repoMock = {
       findAll: jest.fn().mockResolvedValue({ items: [] }),
       findById: jest.fn(),
@@ -70,7 +82,7 @@ describe('PostsService', () => {
         { provide: FollowsService, useValue: {} },
         { provide: TagsService, useValue: {} },
         { provide: PrismaService, useValue: prismaMock },
-        { provide: AiSummaryService, useValue: {} },
+        { provide: AiSummaryService, useValue: aiSummaryMock },
         { provide: EmbeddingService, useValue: embeddingMock },
         { provide: AuditService, useValue: { record: jest.fn() } },
       ],
@@ -366,6 +378,53 @@ describe('PostsService', () => {
       await expect(call(service)).rejects.toThrow(NotFoundException)
       expect(repoMock.findInScope).toHaveBeenCalledWith('p2', U1, expect.any(Object))
       expect(repoMock.update).not.toHaveBeenCalled()
+      expect(aiSummaryMock.summarizePost).not.toHaveBeenCalled()
+    })
+
+    describe.each([
+      [
+        'chatWithPost',
+        (s: PostsService, scope: UniversityScope) => s.chatWithPost('p2', chatDto, scope),
+      ],
+      [
+        'chatWithPostStream',
+        (s: PostsService, scope: UniversityScope) => s.chatWithPostStream('p2', chatDto, scope),
+      ],
+    ])('%s', (name, call) => {
+      const aiCall = () => aiSummaryMock[name as keyof typeof aiSummaryMock]
+
+      it('answers 404 for a post outside the university and makes no AI call', async () => {
+        prismaMock.post.findFirst.mockResolvedValue(null)
+
+        await expect(call(service, U1)).rejects.toThrow(NotFoundException)
+        expect(prismaMock.post.findFirst.mock.calls[0][0].where).toEqual({
+          id: 'p2',
+          deletedAt: null,
+          AND: [IN_U1],
+        })
+        expect(aiCall()).not.toHaveBeenCalled()
+      })
+
+      it('answers 404 to a member with no university and makes no AI call', async () => {
+        prismaMock.post.findFirst.mockResolvedValue(null)
+
+        await expect(call(service, NONE)).rejects.toThrow(NotFoundException)
+        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([{ id: { in: [] } }])
+        expect(aiCall()).not.toHaveBeenCalled()
+      })
+
+      it("lets an admin chat with any university's post", async () => {
+        prismaMock.post.findFirst.mockResolvedValue({
+          id: 'p2',
+          publicationStatus: PostPublicationStatus.PUBLISHED,
+          status: PostStatus.APPROVED,
+        })
+
+        await call(service, ALL)
+
+        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([{}])
+        expect(aiCall()).toHaveBeenCalledWith('p2', chatDto.messages)
+      })
     })
 
     it('getAiIndexStatus looks the post up inside the scope', async () => {

@@ -165,12 +165,15 @@ export class McpRepository {
   async createPost(session: McpAuthSession, input: CreatePostDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
-      select: { departmentId: true },
+      select: { departmentId: true, role: true, universityId: true },
     })
 
     if (!user?.departmentId) {
       throw new BadRequestException('Please set your department in UniShare before creating posts')
     }
+
+    // Another university's course is a 404, checked before PostsService's department rule.
+    await this.coursesService.findOne(input.courseId, universityScope(user))
 
     const created = await this.postsService.create(
       {
