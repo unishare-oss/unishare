@@ -27,4 +27,9 @@ describe('proxy', () => {
       'https://share.psstee.me/login?next=%2Fprofile%3Ftab%3Dsaved',
     )
   })
+
+  it('sends a signed-out visitor of a share link to login first', () => {
+    const res = proxy(request('/d/tok123'))
+    expect(res.headers.get('location')).toBe('https://share.psstee.me/login?next=%2Fd%2Ftok123')
+  })
 })

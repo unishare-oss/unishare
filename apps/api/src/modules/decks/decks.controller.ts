@@ -19,6 +19,8 @@ import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { DecksService } from './decks.service'
 import { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import {
@@ -105,18 +107,18 @@ export class DecksController {
   }
 
   /**
-   * A shared deck, for a caller who may not be signed in.
+   * A shared deck, for a holder of its share token.
    *
-   * OptionalAuth because the share token IS the credential — requiring an account would defeat
-   * the point of sending a link to someone outside the university. Registered above the
-   * parameterized routes so `shared` is never read as a deck id.
+   * The token alone is not enough: the deck's owner or its source post must be in the
+   * requester's university, so a signed-out caller or one from elsewhere gets a 404. Registered
+   * above the parameterized routes so `shared` is never read as a deck id.
    */
   @Get('shared/:token')
   @OptionalAuth()
   @ApiOkResponse({ type: SharedDeckEntity })
   @ResponseMessage('Shared deck fetched successfully')
-  getSharedDeck(@Param('token') token: string) {
-    return this.decksService.getSharedDeck(token)
+  getSharedDeck(@Param('token') token: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.decksService.getSharedDeck(token, scope)
   }
 
   @Get('shared/:token/download')
@@ -124,8 +126,12 @@ export class DecksController {
   @ApiOkResponse({ type: DeckDownloadEntity })
   @ApiQuery({ name: 'format', required: false, enum: ['pptx', 'pdf'] })
   @ResponseMessage('Download URL generated successfully')
-  getSharedDownloadUrl(@Param('token') token: string, @Query('format') format?: 'pptx' | 'pdf') {
-    return this.decksService.getSharedDownloadUrl(token, format === 'pdf' ? 'pdf' : 'pptx')
+  getSharedDownloadUrl(
+    @Param('token') token: string,
+    @UniversityScopeParam() scope: UniversityScope,
+    @Query('format') format?: 'pptx' | 'pdf',
+  ) {
+    return this.decksService.getSharedDownloadUrl(token, scope, format === 'pdf' ? 'pdf' : 'pptx')
   }
 
   @Get('templates')

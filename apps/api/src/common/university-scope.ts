@@ -1,6 +1,6 @@
 import { Prisma, UserRole } from '@/generated/prisma/client'
 
-/** The posts a request may read: every university's, one university's, or none. */
+/** The content a request may read: every university's, one university's, or none. */
 export type UniversityScope =
   { kind: 'all' } | { kind: 'university'; universityId: string } | { kind: 'none' }
 
@@ -23,6 +23,32 @@ export function postInScope(scope: UniversityScope): Prisma.PostWhereInput {
       return {}
     case 'university':
       return { course: { department: { faculty: { universityId: scope.universityId } } } }
+    case 'none':
+      return { id: { in: [] } }
+  }
+}
+
+/** Prisma filter for the courses a scope may read, and through `course`, everything on them. */
+export function courseInScope(scope: UniversityScope): Prisma.CourseWhereInput {
+  switch (scope.kind) {
+    case 'all':
+      return {}
+    case 'university':
+      return { department: { faculty: { universityId: scope.universityId } } }
+    case 'none':
+      return { id: { in: [] } }
+  }
+}
+
+/** Prisma filter for the decks a scope may read: the owner's or the source post's university. */
+export function deckInScope(scope: UniversityScope): Prisma.DeckWhereInput {
+  switch (scope.kind) {
+    case 'all':
+      return {}
+    case 'university':
+      return {
+        OR: [{ owner: { universityId: scope.universityId } }, { sourcePost: postInScope(scope) }],
+      }
     case 'none':
       return { id: { in: [] } }
   }

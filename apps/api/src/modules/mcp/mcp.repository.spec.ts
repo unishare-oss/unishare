@@ -83,7 +83,11 @@ describe('McpRepository', () => {
 
   describe('listCourses', () => {
     it('lists courses for the authenticated user department', async () => {
-      prisma.user.findUnique.mockResolvedValue({ departmentId: 'dept-1' })
+      prisma.user.findUnique.mockResolvedValue({
+        departmentId: 'dept-1',
+        role: 'STUDENT',
+        universityId: 'uni-1',
+      })
       coursesService.findAll.mockResolvedValue({
         items: [
           {
@@ -107,10 +111,11 @@ describe('McpRepository', () => {
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { departmentId: true },
+        select: { departmentId: true, role: true, universityId: true },
       })
       expect(coursesService.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ page: 1, limit: 100 }),
+        { kind: 'university', universityId: 'uni-1' },
         'dept-1',
       )
       expect(result).toEqual({

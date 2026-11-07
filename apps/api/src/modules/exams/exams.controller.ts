@@ -3,6 +3,8 @@ import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { ExamsService } from './exams.service'
 import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
@@ -18,30 +20,42 @@ export class ExamsController {
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiCreatedResponse({ type: ExamEntity })
   @ResponseMessage('Exam created successfully')
-  create(@Body() dto: CreateExamDto, @Session() session: UserSession) {
-    return this.examsService.create(dto, session.user.id)
+  create(
+    @Body() dto: CreateExamDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.examsService.create(dto, session.user.id, scope)
   }
 
   @Get()
   @ApiOkResponse({ type: [ExamEntity] })
   @ResponseMessage('Exams fetched successfully')
-  findAll(@Query() query: ListExamsDto, @Session() session: UserSession) {
+  findAll(
+    @Query() query: ListExamsDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
     const departmentId = query.departmentId ?? session.user.departmentId ?? undefined
-    return this.examsService.findInRange(query.from, query.to, departmentId, query.courseId)
+    return this.examsService.findInRange(query.from, query.to, scope, departmentId, query.courseId)
   }
 
   @Patch(':id')
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: ExamEntity })
   @ResponseMessage('Exam updated successfully')
-  update(@Param('id') id: string, @Body() dto: UpdateExamDto) {
-    return this.examsService.update(id, dto)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateExamDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.examsService.update(id, dto, scope)
   }
 
   @Delete(':id')
   @Roles(['ADMIN', 'MODERATOR'])
   @ResponseMessage('Exam deleted successfully')
-  remove(@Param('id') id: string) {
-    return this.examsService.remove(id)
+  remove(@Param('id') id: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.examsService.remove(id, scope)
   }
 }

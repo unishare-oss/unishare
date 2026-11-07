@@ -36,7 +36,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
   const isGuest = !!(session?.user as { isAnonymous?: boolean | null } | undefined)?.isAnonymous
   // A member's university comes only from uniauth; guests get theirs elsewhere.
-  const needsUniversity = !!user && !isGuest && !user.university
+  const isAdmin = user?.role === 'ADMIN'
+  const needsUniversity = !!user && !isGuest && !isAdmin && !user.university
   const requiresDepartmentOnboarding =
     isAuthenticated && !!user && !user.department && !needsUniversity
 

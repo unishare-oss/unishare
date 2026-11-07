@@ -19,6 +19,8 @@ import { ApiBody, ApiConsumes, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { UserSession } from '@/auth/auth.config'
 import { QuizzesService } from './quizzes.service'
 import {
@@ -51,25 +53,33 @@ export class QuizzesController {
   @OptionalAuth()
   @ApiOkResponse({ type: PaginatedQuizzesEntity })
   @ResponseMessage('Quizzes fetched successfully')
-  listQuizzes(@Query() query: ListQuizzesDto) {
-    return this.quizzesService.listQuizzes(query)
+  listQuizzes(@Query() query: ListQuizzesDto, @UniversityScopeParam() scope: UniversityScope) {
+    return this.quizzesService.listQuizzes(query, scope)
   }
 
   @Get('student/:studentId/progress')
   @ApiOkResponse({ type: StudentProgressEntity })
   @ResponseMessage('Student progress fetched successfully')
-  getStudentProgress(@Param('studentId') studentId: string, @Session() session: UserSession) {
+  getStudentProgress(
+    @Param('studentId') studentId: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
     if (session.user.id !== studentId && session.user.role !== 'ADMIN') {
       throw new ForbiddenException('Access denied')
     }
-    return this.quizzesService.getStudentProgress(studentId)
+    return this.quizzesService.getStudentProgress(studentId, scope)
   }
 
   @Get('sessions/:sessionId')
   @ApiOkResponse({ type: QuizSessionEntity })
   @ResponseMessage('Session fetched successfully')
-  getSession(@Param('sessionId') sessionId: string, @Session() session: UserSession) {
-    return this.quizzesService.getSession(sessionId, session.user.id)
+  getSession(
+    @Param('sessionId') sessionId: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.quizzesService.getSession(sessionId, session.user.id, scope)
   }
 
   @Post('generate')
@@ -93,11 +103,13 @@ export class QuizzesController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: GenerateQuestionsDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
     return this.quizzesService.generateQuizFromMaterial(
       dto.courseId,
       file,
       session.user.id,
+      scope,
       dto.questionCount ?? 20,
     )
   }
@@ -106,10 +118,15 @@ export class QuizzesController {
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: GenerateQuizResponseEntity })
   @ResponseMessage('Quiz generated successfully')
-  generateFromPost(@Body() dto: GenerateFromPostDto, @Session() session: UserSession) {
+  generateFromPost(
+    @Body() dto: GenerateFromPostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
     return this.quizzesService.generateQuizFromPost(
       dto.postId,
       session.user.id,
+      scope,
       dto.questionCount ?? 20,
     )
   }
@@ -118,16 +135,24 @@ export class QuizzesController {
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: GenerateBulkResponseEntity })
   @ResponseMessage('Bulk quiz generation complete')
-  generateBulk(@Body() dto: GenerateBulkDto, @Session() session: UserSession) {
-    return this.quizzesService.generateQuizzesFromOutline(dto.courseId, session.user.id)
+  generateBulk(
+    @Body() dto: GenerateBulkDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.quizzesService.generateQuizzesFromOutline(dto.courseId, session.user.id, scope)
   }
 
   @Put('questions/:id')
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: QuizQuestionEntity })
   @ResponseMessage('Question updated successfully')
-  updateQuestion(@Param('id') questionId: string, @Body() dto: UpdateQuestionDto) {
-    return this.quizzesService.updateQuestion(questionId, dto)
+  updateQuestion(
+    @Param('id') questionId: string,
+    @Body() dto: UpdateQuestionDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.quizzesService.updateQuestion(questionId, dto, scope)
   }
 
   // Parameterized routes AFTER static routes
@@ -136,16 +161,16 @@ export class QuizzesController {
   @OptionalAuth()
   @ApiOkResponse({ type: QuizEntity })
   @ResponseMessage('Quiz fetched successfully')
-  getQuiz(@Param('id') quizId: string) {
-    return this.quizzesService.getQuiz(quizId, true)
+  getQuiz(@Param('id') quizId: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.quizzesService.getQuiz(quizId, scope, true)
   }
 
   @Delete(':id')
   @Roles(['ADMIN', 'MODERATOR'])
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseMessage('Quiz deleted successfully')
-  deleteQuiz(@Param('id') quizId: string) {
-    return this.quizzesService.deleteQuiz(quizId)
+  deleteQuiz(@Param('id') quizId: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.quizzesService.deleteQuiz(quizId, scope)
   }
 
   @Post(':id/submit')
@@ -155,11 +180,13 @@ export class QuizzesController {
     @Param('id') quizId: string,
     @Body() dto: SubmitQuizDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
     return this.quizzesService.submitQuizAttempt(
       quizId,
       session.user.id,
       dto.answers,
+      scope,
       dto.timeSpentSec,
     )
   }
@@ -168,7 +195,11 @@ export class QuizzesController {
   @Roles(['ADMIN', 'MODERATOR'])
   @ApiOkResponse({ type: QuizEntity })
   @ResponseMessage('Quiz published successfully')
-  publishQuiz(@Param('id') quizId: string, @Session() session: UserSession) {
-    return this.quizzesService.publishQuiz(quizId, session.user.role as UserRole)
+  publishQuiz(
+    @Param('id') quizId: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.quizzesService.publishQuiz(quizId, session.user.role as UserRole, scope)
   }
 }

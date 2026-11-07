@@ -12,6 +12,7 @@ import { nanoid } from 'nanoid'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { DeckStatus, UserRole, type Deck } from '@/generated/prisma/client'
+import { deckInScope, UniversityScope } from '@/common/university-scope'
 import type { CreateDeckDto, ListDecksDto, UpdateDeckDto } from './dto'
 import { DECK_EDITOR, type DeckEditor, type DeckProgress } from './deck-generator.port'
 import {
@@ -183,8 +184,8 @@ export class DecksService {
    * and the generation options are all withheld — a share link is for reading the deck, and
    * what this does return is visible on the slides anyway.
    */
-  async getSharedDeck(token: string) {
-    const deck = await this.requireShared(token)
+  async getSharedDeck(token: string, scope: UniversityScope) {
+    const deck = await this.requireShared(token, scope)
 
     return {
       title: deck.title,
@@ -198,8 +199,12 @@ export class DecksService {
   }
 
   /** The file behind a share token. Same presigned URL the owner gets, same short expiry. */
-  async getSharedDownloadUrl(token: string, format: 'pptx' | 'pdf' = 'pptx') {
-    const deck = await this.requireShared(token)
+  async getSharedDownloadUrl(
+    token: string,
+    scope: UniversityScope,
+    format: 'pptx' | 'pdf' = 'pptx',
+  ) {
+    const deck = await this.requireShared(token, scope)
     return this.presignDownload(deck, format)
   }
 
@@ -214,11 +219,12 @@ export class DecksService {
    * Resolves a share token, or refuses.
    *
    * A revoked token, a token for a deleted deck and a token that never existed are one error
-   * with one message: distinguishing them tells a stranger which guesses were close.
+   * with one message: distinguishing them tells a stranger which guesses were close. A deck
+   * whose owner and source post are both outside the requester's university gets it too.
    */
-  private async requireShared(token: string) {
+  private async requireShared(token: string, scope: UniversityScope) {
     const deck = await this.prisma.deck.findFirst({
-      where: { shareToken: token, deletedAt: null },
+      where: { shareToken: token, deletedAt: null, AND: [deckInScope(scope)] },
     })
     if (!deck) throw new NotFoundException('This share link is no longer valid')
 

@@ -32,7 +32,7 @@ describe('PostsRepository university scope', () => {
     expect(whereOf(prisma.post.findUnique)).toEqual({
       id: 'p1',
       deletedAt: null,
-      AND: [{ id: { in: [] } }],
+      AND: [{ course: { id: { in: [] } } }],
     })
   })
 
@@ -60,5 +60,19 @@ describe('PostsRepository university scope', () => {
     }
     expect(whereOf(prisma.post.findMany)).toEqual(expected)
     expect(whereOf(prisma.post.count)).toEqual(expected)
+  })
+
+  it('findByReadingList keeps only the posts in scope, for the page and the count', async () => {
+    await repository.findByReadingList('list-1', U1, {}, {})
+    const expected = {
+      AND: [{ readingListItems: { some: { listId: 'list-1' } }, deletedAt: null }, IN_U1],
+    }
+    expect(whereOf(prisma.post.findMany)).toEqual(expected)
+    expect(whereOf(prisma.post.count)).toEqual(expected)
+  })
+
+  it('findByReadingList shows nothing to a member with no university', async () => {
+    await repository.findByReadingList('list-1', NONE, {}, {})
+    expect(whereOf(prisma.post.findMany).AND[1]).toEqual({ course: { id: { in: [] } } })
   })
 })

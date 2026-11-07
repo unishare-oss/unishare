@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
 
-const PROTECTED_PATHS = ['/my-posts', '/profile', '/posts/new', '/admin']
+// /d: a shared deck opens only for a signed-in member of a university allowed to read it.
+const PROTECTED_PATHS = ['/my-posts', '/profile', '/posts/new', '/admin', '/d']
 
 /** Must match advanced.cookiePrefix in the API's auth config. */
 const COOKIE_PREFIX = 'unishare'

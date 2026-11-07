@@ -289,10 +289,11 @@ export class PostsService {
 
   getReadingListPosts(
     listId: string,
+    scope: UniversityScope,
     query: PaginationDto,
     viewer?: { id?: string; role?: UserRole },
   ) {
-    return this.postsRepository.findByReadingList(listId, viewer ?? {}, query)
+    return this.postsRepository.findByReadingList(listId, scope, viewer ?? {}, query)
   }
 
   async toggleReaction(
