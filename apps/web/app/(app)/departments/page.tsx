@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button'
 import { uniauthPickUniversityURL } from '@/src/lib/auth/mode'
 
 export default function DepartmentsPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated: isMember, isGuest, isLoading: authLoading } = useAuth()
+  // A guest browses its picked university like a member; only signed-out sees every one.
+  const isAuthenticated = isMember || isGuest
   const { departments, isLoading, noUniversity } = useMyDepartments()
   const { data: universities, isLoading: universitiesLoading } = useUniversitiesControllerFindAll({
     // Only for signed-out visitors, once the session has loaded

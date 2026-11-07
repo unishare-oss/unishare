@@ -27,12 +27,13 @@ import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ThrottleBucket } from '@/common/decorators/throttle-bucket.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
-import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
+import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { formatSseEvent, SSE_HEADERS } from '@/common/utils/sse'
 import { UserSession } from '@/auth/auth.config'
 import { PostsService } from './posts.service'
@@ -59,6 +60,7 @@ class TagPostDto {
 }
 
 @ApiTags('posts')
+@GuestReadOnly()
 @Controller('posts')
 export class PostsController {
   private readonly logger = new Logger(PostsController.name)
@@ -76,7 +78,6 @@ export class PostsController {
   }
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: PaginatedPostEntity })
   @ResponseMessage('Posts fetched successfully')
   findAll(
@@ -102,7 +103,6 @@ export class PostsController {
   }
 
   @Get('s/:shortCode')
-  @OptionalAuth()
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
   findByShortCode(
@@ -117,7 +117,6 @@ export class PostsController {
   }
 
   @Get('search')
-  @OptionalAuth()
   @ApiOkResponse({ description: 'Search results with pagination' })
   @ResponseMessage('Search completed successfully')
   search(
@@ -132,7 +131,6 @@ export class PostsController {
   }
 
   @Get('trending')
-  @OptionalAuth()
   @ApiQuery({
     name: 'page',
     type: Number,
@@ -179,7 +177,6 @@ export class PostsController {
   }
 
   @Get(':id/ai-index-status')
-  @OptionalAuth()
   @ApiOperation({ summary: 'Progress of document indexing for AI chat' })
   @ApiOkResponse({ type: AiIndexStatusDto })
   @ResponseMessage('AI index status fetched successfully')
@@ -188,7 +185,6 @@ export class PostsController {
   }
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
   findOne(

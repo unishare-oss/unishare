@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AppRail } from '@/components/app-rail'
+import { MobileNav } from '@/components/mobile-nav'
 import { useUIStore } from '@/lib/store'
 
 const mocks = vi.hoisted(() => ({
   pathname: '/feed',
   authenticated: true,
+  guest: false,
+  signInWithUniauth: vi.fn(() => Promise.resolve()),
   role: 'STUDENT',
   unreadChat: 4,
   notificationCount: 2,
@@ -22,9 +25,11 @@ vi.mock('next/image', () => ({
 vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({
     isAuthenticated: mocks.authenticated,
-    session: mocks.authenticated
-      ? { user: { name: 'Ada', role: mocks.role, universityId: 'u1' } }
-      : null,
+    isGuest: mocks.guest,
+    session:
+      mocks.authenticated || mocks.guest
+        ? { user: { name: 'Ada', role: mocks.role, universityId: 'u1', isAnonymous: mocks.guest } }
+        : null,
   }),
 }))
 vi.mock('@/hooks/use-unread-chat-count', () => ({ useUnreadChatCount: () => mocks.unreadChat }))
@@ -41,12 +46,18 @@ vi.mock('@/src/lib/api/generated/universities/universities', () => ({
   useUniversitiesControllerFindOne: () => ({ data: { shortName: 'UNI' } }),
 }))
 vi.mock('@/src/lib/auth/client', () => ({ authClient: { signOut: vi.fn() } }))
+vi.mock('@/src/lib/auth/uniauth', () => ({
+  signInWithUniauth: mocks.signInWithUniauth,
+  signOutOfUniauth: vi.fn(),
+}))
 vi.mock('@/components/feedback/feedback-dialog', () => ({ FeedbackDialog: () => null }))
 
 describe('responsive navigation', () => {
   beforeEach(() => {
     mocks.pathname = '/feed'
     mocks.authenticated = true
+    mocks.guest = false
+    mocks.signInWithUniauth.mockClear()
     mocks.role = 'STUDENT'
     mocks.unreadChat = 4
     mocks.notificationCount = 2
@@ -70,7 +81,43 @@ describe('responsive navigation', () => {
     mocks.authenticated = false
     render(<AppRail />)
     expect(screen.queryByRole('link', { name: 'Create post' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Sign In' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument()
+  })
+
+  describe('a guest (anonymous session)', () => {
+    beforeEach(() => {
+      mocks.authenticated = false
+      mocks.guest = true
+    })
+
+    it('gets the guest navigation on desktop, not the account menu', () => {
+      render(<AppRail />)
+      expect(screen.getByText('Explore')).toBeInTheDocument()
+      expect(screen.queryByText('Workspace')).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Notifications/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Account menu/ })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Leave guest mode' })).toBeInTheDocument()
+      // Guests keep canvas boards and their bio.
+      expect(screen.getByRole('link', { name: 'Boards' })).toHaveAttribute('href', '/boards')
+      expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile')
+    })
+
+    it('signs in on uniauth straight from the desktop rail, not via /login', async () => {
+      render(<AppRail />)
+      await userEvent.click(screen.getByRole('button', { name: 'Sign In' }))
+      expect(mocks.signInWithUniauth).toHaveBeenCalledWith({ returnTo: window.location.href })
+    })
+
+    it('gets the guest dock on mobile, with no create button, and signs in on uniauth', async () => {
+      render(<MobileNav />)
+      expect(screen.getByRole('link', { name: 'Feed' })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Create post' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Chat' })).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Boards' })).toHaveAttribute('href', '/boards')
+      expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile')
+      await userEvent.click(screen.getByRole('button', { name: 'Sign In' }))
+      expect(mocks.signInWithUniauth).toHaveBeenCalledWith({ returnTo: window.location.href })
+    })
   })
 
   it('condenses admin links into a flyout while collapsed', async () => {

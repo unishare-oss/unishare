@@ -2,12 +2,14 @@ import { Controller, Post, Get, Patch, Param, Body, Query } from '@nestjs/common
 import { ApiTags, ApiForbiddenResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger'
 import { Session, Roles } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { ReportsService } from './reports.service'
 import { CreateReportDto } from './dto/create-report.dto'
 import { ListReportsDto } from './dto/list-reports.dto'
 import { PaginatedReportsEntity, ReportDetail } from './entities/report.entity'
 
 @ApiTags('reports')
+@GuestReadOnly()
 @Controller('posts')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

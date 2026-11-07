@@ -3,6 +3,7 @@ import { ApiTags, ApiOkResponse, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ChatService } from './chat.service'
 import { PresenceService } from './presence.service'
@@ -21,6 +22,7 @@ import { ChatMessageEntity, PaginatedMessagesEntity } from './entities/chat-mess
 import { ChatMemberGuard } from './guards/chat-member.guard'
 
 @ApiTags('chat')
+@GuestReadOnly()
 @Controller('chat')
 export class ChatController {
   constructor(

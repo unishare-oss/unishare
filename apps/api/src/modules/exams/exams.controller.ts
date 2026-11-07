@@ -3,6 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { ExamsService } from './exams.service'
@@ -12,6 +13,7 @@ import { ListExamsDto } from './dto/list-exams.dto'
 import { ExamEntity } from './entities/exam.entity'
 
 @ApiTags('exams')
+@GuestReadOnly()
 @Controller('exams')
 export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}

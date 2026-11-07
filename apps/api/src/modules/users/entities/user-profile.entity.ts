@@ -38,11 +38,13 @@ export class UserProfileEntity {
   @ApiProperty()
   name: string
 
-  @ApiProperty()
-  email: string
+  /** Only on the viewer's own profile. */
+  @ApiPropertyOptional()
+  email?: string
 
-  @ApiProperty()
-  emailVerified: boolean
+  /** Only on the viewer's own profile. */
+  @ApiPropertyOptional()
+  emailVerified?: boolean
 
   @ApiPropertyOptional({ nullable: true, type: String })
   image: string | null

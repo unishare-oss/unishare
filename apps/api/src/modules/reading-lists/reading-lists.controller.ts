@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session } from '@thallesp/nestjs-better-auth'
+import { Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
@@ -14,6 +15,7 @@ import { PostsService } from '../posts/posts.service'
 import { UserRole } from '@/generated/prisma/enums'
 
 @ApiTags('reading-lists')
+@GuestReadOnly()
 @Controller('reading-lists')
 export class ReadingListsController {
   constructor(
@@ -36,7 +38,6 @@ export class ReadingListsController {
   }
 
   @Get('user/:userId/public')
-  @OptionalAuth()
   @ApiOkResponse({ type: [ReadingListEntity] })
   @ResponseMessage('Public reading lists fetched')
   findPublicByUser(
@@ -47,7 +48,6 @@ export class ReadingListsController {
   }
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: ReadingListEntity })
   @ResponseMessage('Reading list fetched')
   findOne(
@@ -59,7 +59,6 @@ export class ReadingListsController {
   }
 
   @Get(':id/posts')
-  @OptionalAuth()
   @ResponseMessage('Reading list posts fetched')
   async getListPosts(
     @Param('id') id: string,

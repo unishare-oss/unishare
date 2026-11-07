@@ -14,7 +14,9 @@ export const NO_UNIVERSITY_MESSAGE = 'Pick your university first.'
  * department; a signed-in user without a university gets none (`noUniversity`).
  */
 export function useMyDepartments({ staleTime }: { staleTime?: number } = {}) {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated: isMember, isGuest, isLoading: authLoading } = useAuth()
+  // A guest has a university (its pick), like a member.
+  const isAuthenticated = isMember || isGuest
   const universityId = user?.university?.id
   const enabled = !authLoading && (!isAuthenticated || !!universityId)
 

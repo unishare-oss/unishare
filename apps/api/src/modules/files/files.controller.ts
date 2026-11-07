@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth, Session, UserSession } from '@thallesp/nestjs-better-auth'
+import { Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
 import type { UniversityScope } from '@/common/university-scope'
 import { FilesService } from './files.service'
@@ -11,12 +12,12 @@ import { DownloadUrlEntity } from './entities/download-url.entity'
 import { FileEntity } from './entities/file.entity'
 
 @ApiTags('files')
+@GuestReadOnly()
 @Controller('posts/:postId/files')
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Get(':fileId/url')
-  @OptionalAuth()
   @ApiOkResponse({ type: DownloadUrlEntity })
   @ResponseMessage('Download URL generated')
   getDownloadUrl(
@@ -28,7 +29,6 @@ export class FilesController {
   }
 
   @Post(':fileId/download')
-  @OptionalAuth()
   @ResponseMessage('Download recorded')
   recordDownload(
     @Param('postId') postId: string,
