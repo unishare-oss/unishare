@@ -493,6 +493,7 @@ describe('McpRepository', () => {
           mimeType: 'image/png',
         }),
         'user-1',
+        { kind: 'all' },
       )
       expect(result.post.files).toEqual([
         {
@@ -587,6 +588,7 @@ describe('McpRepository', () => {
           mimeType: 'application/pdf',
         },
         'user-1',
+        { kind: 'all' },
       )
       expect(result.post.files).toEqual([
         {
@@ -691,7 +693,7 @@ describe('McpRepository', () => {
 
   describe('deletePost', () => {
     it('deletePost deletes post authored by the authenticated user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'STUDENT' })
+      prisma.user.findUnique.mockResolvedValue({ role: 'STUDENT', universityId: 'uni-1' })
       postsService.remove.mockResolvedValue({ id: 'post-1' })
 
       const result = await repository.deletePost(
@@ -699,7 +701,10 @@ describe('McpRepository', () => {
         { id: 'post-1' },
       )
 
-      expect(postsService.remove).toHaveBeenCalledWith('post-1', 'user-1', 'STUDENT')
+      expect(postsService.remove).toHaveBeenCalledWith('post-1', 'user-1', 'STUDENT', {
+        kind: 'university',
+        universityId: 'uni-1',
+      })
       expect(result).toEqual({ id: 'post-1', deleted: true })
     })
 
@@ -714,13 +719,16 @@ describe('McpRepository', () => {
     })
 
     it('propagates error from PostsService when deletion fails', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'STUDENT' })
+      prisma.user.findUnique.mockResolvedValue({ role: 'STUDENT', universityId: 'uni-1' })
       postsService.remove.mockRejectedValue(new Error('You do not own this post'))
 
       await expect(
         repository.deletePost({ userId: 'user-1', scopes: 'openid posts:write' }, { id: 'post-1' }),
       ).rejects.toThrow('You do not own this post')
-      expect(postsService.remove).toHaveBeenCalledWith('post-1', 'user-1', 'STUDENT')
+      expect(postsService.remove).toHaveBeenCalledWith('post-1', 'user-1', 'STUDENT', {
+        kind: 'university',
+        universityId: 'uni-1',
+      })
     })
   })
 })

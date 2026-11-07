@@ -3,6 +3,8 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Session, UserSession } from '@thallesp/nestjs-better-auth'
 import { UserRole } from '@/generated/prisma/client'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { CommentsService } from './comments.service'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { UpdateCommentDto } from './dto/update-comment.dto'
@@ -17,8 +19,8 @@ export class CommentsController {
   @OptionalAuth()
   @ApiOkResponse({ type: [CommentEntity] })
   @ResponseMessage('Comments fetched successfully')
-  findAll(@Param('postId') postId: string) {
-    return this.commentsService.findAll(postId)
+  findAll(@Param('postId') postId: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.commentsService.findAll(postId, scope)
   }
 
   @Post()
@@ -28,8 +30,9 @@ export class CommentsController {
     @Param('postId') postId: string,
     @Body() dto: CreateCommentDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.commentsService.create(postId, dto, session.user.id)
+    return this.commentsService.create(postId, dto, session.user.id, scope)
   }
 
   @Post(':commentId/replies')
@@ -40,6 +43,7 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @Body() dto: CreateCommentDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
     return this.commentsService.create(
       postId,
@@ -48,6 +52,7 @@ export class CommentsController {
         parentId: commentId,
       },
       session.user.id,
+      scope,
     )
   }
 
@@ -59,8 +64,9 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @Body() dto: UpdateCommentDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.commentsService.update(postId, commentId, dto, session.user.id)
+    return this.commentsService.update(postId, commentId, dto, session.user.id, scope)
   }
 
   @Delete(':commentId')
@@ -70,12 +76,14 @@ export class CommentsController {
     @Param('postId') postId: string,
     @Param('commentId') commentId: string,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
     return this.commentsService.remove(
       postId,
       commentId,
       session.user.id,
       session.user.role as UserRole,
+      scope,
     )
   }
 }
