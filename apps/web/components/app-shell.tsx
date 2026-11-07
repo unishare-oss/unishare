@@ -35,7 +35,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showLoader = isLoading || !minimumLoaderElapsed
 
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
-  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
 
   // A member's university comes only from uniauth; a guest picks the one it browses here.
   const isAdmin = user?.role === 'ADMIN'
