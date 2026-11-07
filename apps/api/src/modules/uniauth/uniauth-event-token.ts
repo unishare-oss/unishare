@@ -2,16 +2,15 @@ import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
 import { uniauthConfig } from '@/auth/uniauth-config'
 
 export const LOGOUT_EVENT = 'http://schemas.openid.net/event/backchannel-logout'
-export const USER_DELETED_EVENT = 'urn:uniauth:event:user-deleted'
-export const USER_UPDATED_EVENT = 'urn:uniauth:event:user-updated'
-const EVENTS = [LOGOUT_EVENT, USER_DELETED_EVENT, USER_UPDATED_EVENT]
+/** uniauth's retired account notices (replaced by v1 identity events): a token carrying one is never a logout. */
+const RETIRED_EVENTS = ['urn:uniauth:event:user-deleted', 'urn:uniauth:event:user-updated']
 
-/** uniauth's signing keys, fetched lazily and cached: ONE key set shared by the legacy and the v1 event verifiers. */
+/** uniauth's signing keys, fetched lazily and cached: ONE key set shared by back-channel logout and v1 identity events. */
 export const jwks = createRemoteJWKSet(new URL(`${uniauthConfig.issuer}/jwks`))
 
 /**
  * The core of every uniauth event check: signed with uniauth's key, issued by it, for one of `audience` (the login client
- * for the legacy notices, the machine client for v1 identity events), not expired. Null if any of that fails.
+ * for back-channel logout, the machine client for v1 identity events), not expired. Null if any of that fails.
  */
 export async function verifyUniauthJwt(
   token: string,
@@ -25,12 +24,11 @@ export async function verifyUniauthJwt(
 }
 
 /**
- * Verifies a server-to-server event token from uniauth (back-channel logout, account
- * deletion, profile update) and returns its subject, the uniauth user id, with the event's
- * data. Only the signature, issuer and audience are trusted, and the token must carry exactly
- * the expected event: a logout token is never accepted as a deletion, or the other way round.
- * Tokens with a nonce are refused so an ID token can't be replayed as either (Back-Channel
- * Logout §2.6).
+ * Verifies a server-to-server event token from uniauth for the login client (back-channel
+ * logout) and returns its subject, the uniauth user id, with the event's data. Only the
+ * signature, issuer and audience are trusted, and the token must carry exactly the expected
+ * event: one that also carries a retired account notice is refused. Tokens with a nonce are
+ * refused so an ID token can't be replayed as one (Back-Channel Logout §2.6).
  */
 export async function verifyUniauthEventData(
   token: string,
@@ -41,7 +39,8 @@ export async function verifyUniauthEventData(
   const events = payload.events as Record<string, unknown> | undefined
   const data = events?.[event]
   if (!events || !data || typeof data !== 'object' || 'nonce' in payload) return null
-  if (EVENTS.some((other) => other !== event && other in events)) return null
+  if ([LOGOUT_EVENT, ...RETIRED_EVENTS].some((other) => other !== event && other in events))
+    return null
   return typeof payload.sub === 'string'
     ? {
         sub: payload.sub,
@@ -49,9 +48,4 @@ export async function verifyUniauthEventData(
         data: data as Record<string, unknown>,
       }
     : null
-}
-
-/** verifyUniauthEventData for events that carry no data: just the uniauth user id. */
-export async function verifyUniauthEvent(token: string, event: string): Promise<string | null> {
-  return (await verifyUniauthEventData(token, event))?.sub ?? null
 }

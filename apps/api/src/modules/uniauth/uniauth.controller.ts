@@ -16,8 +16,6 @@ import type { UserSession } from '@/auth/auth.config'
 import { BackchannelLogoutDto } from './dto/backchannel-logout.dto'
 import { UniauthEventDto } from './dto/uniauth-event.dto'
 import { UniauthLogoutService } from './uniauth-logout.service'
-import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
-import { UniauthUserUpdatedService } from './uniauth-user-updated.service'
 import { UniauthThemeService } from './uniauth-theme.service'
 import { UniauthIdentityEventsService } from './uniauth-identity-events.service'
 import { ThemePreferenceDto, ThemePreferenceEntity } from './dto/theme-preference.dto'
@@ -27,8 +25,6 @@ import { ThemePreferenceDto, ThemePreferenceEntity } from './dto/theme-preferenc
 export class UniauthController {
   constructor(
     private readonly logout: UniauthLogoutService,
-    private readonly userDeleted: UniauthUserDeletedService,
-    private readonly userUpdated: UniauthUserUpdatedService,
     private readonly themes: UniauthThemeService,
     private readonly identityEvents: UniauthIdentityEventsService,
   ) {}
@@ -68,34 +64,10 @@ export class UniauthController {
     return null
   }
 
-  /** Called by uniauth (server-to-server) when the user deletes their uniauth account. */
-  @Post('user-deleted')
-  @AllowAnonymous()
-  @HttpCode(200)
-  @Header('Cache-Control', 'no-store')
-  async userDeletedNotice(@Body() dto: UniauthEventDto) {
-    if (!(await this.userDeleted.handle(dto.token))) {
-      throw new BadRequestException('invalid token')
-    }
-    return null
-  }
-
-  /** Called by uniauth (server-to-server) when the user's profile or universities change. */
-  @Post('user-updated')
-  @AllowAnonymous()
-  @HttpCode(200)
-  @Header('Cache-Control', 'no-store')
-  async userUpdatedNotice(@Body() dto: UniauthEventDto) {
-    if (!(await this.userUpdated.handle(dto.token))) {
-      throw new BadRequestException('invalid token')
-    }
-    return null
-  }
-
   /**
    * v1 identity events from uniauth (versioned, deduplicated; docs/uniauth/integration.md). 204 when done, duplicate, stale
    * or about nobody here; 401 for a token it cannot verify (uniauth retries); 400 for a verified token it cannot use (final);
-   * 503 when it could not finish (uniauth retries). The two legacy notices above stay until uniauth stops sending them.
+   * 503 when it could not finish (uniauth retries).
    */
   @Post('identity-events')
   @AllowAnonymous()
