@@ -35,12 +35,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showLoader = isLoading || !minimumLoaderElapsed
 
   const [profileModalDismissed, setProfileModalDismissed] = useState(false)
+  const [profileModalDismissed, setProfileModalDismissed] = useState(false)
+
   // A member's university comes only from uniauth; a guest picks the one it browses here.
-  const needsUniversity = !!user && !isGuest && !user.university
+  const isAdmin = user?.role === 'ADMIN'
+  const needsUniversity = !!user && !isGuest && !isAdmin && !user.university
   const guestNeedsUniversity = !!user && isGuest && !user.university
+
   const requiresDepartmentOnboarding =
     isAuthenticated && !!user && !user.department && !needsUniversity
-
+  
   return (
     <div className="min-h-screen bg-background">
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>

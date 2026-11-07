@@ -3,8 +3,11 @@ import type { PrismaService } from '@/prisma/prisma.service'
 import type { AuditService } from '../audit/audit.service'
 import { UniauthLogoutService } from './uniauth-logout.service'
 import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
-import { UniauthUserUpdatedService } from './uniauth-user-updated.service'
-import { LOGOUT_EVENT, USER_DELETED_EVENT, USER_UPDATED_EVENT } from './uniauth-event-token'
+import { LOGOUT_EVENT } from './uniauth-event-token'
+
+// uniauth's retired account notices: still refused when they ride along in a logout token.
+const RETIRED_DELETED = 'urn:uniauth:event:user-deleted'
+const RETIRED_UPDATED = 'urn:uniauth:event:user-updated'
 
 const issuer = 'http://auth.test/api/auth'
 const clientId = 'unishare-client'
@@ -32,13 +35,11 @@ describe('uniauth event callbacks', () => {
   let prisma: {
     account: { findFirst: jest.Mock }
     session: { deleteMany: jest.Mock }
-    user: { update: jest.Mock; findUnique: jest.Mock }
-    university: { findMany: jest.Mock }
+    user: { findUnique: jest.Mock }
   }
   let logout: UniauthLogoutService
   let userDeleted: UniauthUserDeletedService
   let audit: { record: jest.Mock }
-  let userUpdated: UniauthUserUpdatedService
 
   beforeAll(async () => {
     const pair = await generateKeyPair('EdDSA', { crv: 'Ed25519' })
@@ -57,13 +58,7 @@ describe('uniauth event callbacks', () => {
       account: { findFirst: jest.fn().mockResolvedValue({ userId: 'local-1' }) },
       session: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
       user: {
-        update: jest.fn().mockResolvedValue({}),
         findUnique: jest.fn().mockResolvedValue({ name: 'Ada', role: 'STUDENT' }),
-      },
-      university: {
-        findMany: jest.fn(async ({ where }: { where: { slug: { in: string[] } } }) =>
-          where.slug.in.includes('kmutt') ? [{ id: 'kmutt', slug: 'kmutt' }] : [],
-        ),
       },
     }
     logout = new UniauthLogoutService(prisma as unknown as PrismaService)
@@ -72,15 +67,10 @@ describe('uniauth event callbacks', () => {
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
     )
-    userUpdated = new UniauthUserUpdatedService(prisma as unknown as PrismaService)
   })
 
-  function token(
-    event: string,
-    claims: Record<string, unknown> = {},
-    opts: { aud?: string; data?: Record<string, unknown> } = {},
-  ) {
-    return new SignJWT({ events: { [event]: opts.data ?? {} }, ...claims })
+  function token(event: string, claims: Record<string, unknown> = {}, opts: { aud?: string } = {}) {
+    return new SignJWT({ events: { [event]: {} }, ...claims })
       .setProtectedHeader({ alg: 'EdDSA', kid: 'k1' })
       .setIssuer(issuer)
       .setAudience(opts.aud ?? clientId)
@@ -122,14 +112,20 @@ describe('uniauth event callbacks', () => {
       expect(prisma.session.deleteMany).not.toHaveBeenCalled()
     })
 
-    it('does not treat a deletion notice as a logout', async () => {
-      await expect(logout.handle(await token(USER_DELETED_EVENT))).resolves.toBe(false)
+    it('does not take a retired account notice as a logout, alone or alongside one', async () => {
+      await expect(logout.handle(await token(RETIRED_DELETED))).resolves.toBe(false)
+      await expect(
+        logout.handle(
+          await token(LOGOUT_EVENT, { events: { [LOGOUT_EVENT]: {}, [RETIRED_UPDATED]: {} } }),
+        ),
+      ).resolves.toBe(false)
+      expect(prisma.session.deleteMany).not.toHaveBeenCalled()
     })
   })
 
-  describe('account deleted in uniauth', () => {
+  describe('local deletion (v1 identity.deleted)', () => {
     it("deletes the user's sessions, accounts and data", async () => {
-      await expect(userDeleted.handle(await token(USER_DELETED_EVENT))).resolves.toBe(true)
+      await userDeleted.deleteLocalUser('ua_1')
       expect(prisma.account.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({ where: { providerId: 'uniauth', accountId: 'ua_1' } }),
       )
@@ -146,99 +142,9 @@ describe('uniauth event callbacks', () => {
       )
     })
 
-    it('accepts but does nothing for someone who never used unishare', async () => {
-      prisma.account.findFirst.mockResolvedValue(null)
-      await expect(userDeleted.handle(await token(USER_DELETED_EVENT))).resolves.toBe(true)
-      expect(mockInternalAdapter.deleteUser).not.toHaveBeenCalled()
-    })
-
-    it('never deletes on a logout token, a mixed token, or one for another app', async () => {
-      await expect(userDeleted.handle(await token(LOGOUT_EVENT))).resolves.toBe(false)
-      await expect(
-        userDeleted.handle(
-          await token(USER_DELETED_EVENT, {
-            events: { [USER_DELETED_EVENT]: {}, [LOGOUT_EVENT]: {} },
-          }),
-        ),
-      ).resolves.toBe(false)
-      await expect(
-        userDeleted.handle(await token(USER_DELETED_EVENT, {}, { aud: 'unigym' })),
-      ).resolves.toBe(false)
-      await expect(
-        userDeleted.handle(await token(USER_DELETED_EVENT, { nonce: 'n' })),
-      ).resolves.toBe(false)
-      expect(mockInternalAdapter.deleteUser).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('profile updated in uniauth', () => {
-    const data = {
-      email: 'Ada@KMUTT.ac.th',
-      email_verified: true,
-      name: 'Ada L.',
-      picture: null,
-      'urn:uniauth:organizations': [{ id: 'org-1', slug: 'kmutt', verified: true }],
-    }
-
-    it('refreshes name, avatar (cleared), email and university', async () => {
-      await expect(userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))).resolves.toBe(
-        true,
-      )
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'local-1' },
-        data: {
-          name: 'Ada L.',
-          image: null,
-          emailVerified: true,
-          universityId: 'kmutt',
-          departmentId: null,
-          email: 'ada@kmutt.ac.th',
-        },
-      })
-    })
-
-    it('keeps the old email when the new one belongs to someone else', async () => {
-      prisma.user.update
-        .mockRejectedValueOnce(Object.assign(new Error('unique'), { code: 'P2002' }))
-        .mockResolvedValueOnce({})
-      await expect(userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))).resolves.toBe(
-        true,
-      )
-      expect(prisma.user.update).toHaveBeenLastCalledWith({
-        where: { id: 'local-1' },
-        data: {
-          name: 'Ada L.',
-          image: null,
-          emailVerified: true,
-          universityId: 'kmutt',
-          departmentId: null,
-        },
-      })
-    })
-
-    it('keeps the department when the university is unchanged', async () => {
-      prisma.user.findUnique.mockResolvedValue({ universityId: 'kmutt' })
-      await userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))
-      const written = prisma.user.update.mock.calls[0][0].data
-      expect(written).not.toHaveProperty('universityId')
-      expect(written).not.toHaveProperty('departmentId')
-    })
-
     it('does nothing for someone who never used unishare', async () => {
       prisma.account.findFirst.mockResolvedValue(null)
-      await expect(userUpdated.handle(await token(USER_UPDATED_EVENT, {}, { data }))).resolves.toBe(
-        true,
-      )
-      expect(prisma.user.update).not.toHaveBeenCalled()
-    })
-
-    it('never takes a logout or deletion token as an update', async () => {
-      await expect(userUpdated.handle(await token(LOGOUT_EVENT))).resolves.toBe(false)
-      await expect(userUpdated.handle(await token(USER_DELETED_EVENT))).resolves.toBe(false)
-      await expect(userDeleted.handle(await token(USER_UPDATED_EVENT, {}, { data }))).resolves.toBe(
-        false,
-      )
-      expect(prisma.user.update).not.toHaveBeenCalled()
+      await userDeleted.deleteLocalUser('ua_1')
       expect(mockInternalAdapter.deleteUser).not.toHaveBeenCalled()
     })
   })

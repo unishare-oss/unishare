@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
 
-// Content needs a session, so every page is signed-in only except these. `/api`, `/mcp` and
-// `/.well-known` are rewrites to the API, which answers for itself (and hosts sign-in);
-// `/canvas` boards are joined anonymously; the rest are the landing, sign-in and legal pages.
 const PUBLIC_PATHS = [
   '/',
   '/login',
@@ -21,7 +18,6 @@ const PUBLIC_PATHS = [
   '/site.webmanifest',
 ]
 
-/** Must match advanced.cookiePrefix in the API's auth config. */
 const COOKIE_PREFIX = 'unishare'
 
 function isPublic(pathname: string) {
@@ -34,7 +30,6 @@ export function proxy(request: NextRequest) {
 
   if (!hasSession && !isPublic(pathname)) {
     const login = new URL('/login', request.url)
-    // The login page checks uniauth silently (or starts a guest session) and returns here.
     login.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(login)
   }

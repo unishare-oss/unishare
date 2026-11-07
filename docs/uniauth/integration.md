@@ -43,15 +43,16 @@ secret: update both within the overlap (7 days by default).
   membership maps). Unishare can therefore use v1 events fully: set `identity_events_uri`. The version stored is the
   directory's if newer than the event's; a read older than the event answers 503 so uniauth retries. A tombstone read is the
   existing deletion. An email another user holds is kept as it was; the rest still applies. A changed university clears
-  the old department, at sign-in, on identity events and on the legacy user-updated notice.
+  the old department, at sign-in and on identity events.
 - `identity.suspended`: sessions end at once, new sessions are refused (`databaseHooks.session.create`) and a
   still-valid MCP bearer token gets `403 account_suspended` while `identityStatus = 'suspended'`. This is uniauth's account state; Unishare's own ban (`banned`), roles and content are never
   touched. `identity.reactivated` allows sign-in again (old sessions are not restored).
 - `identity.deleted`: exactly the existing deletion (`UniauthUserDeletedService.deleteLocalUser`, with its audit record);
   deletion behavior is unchanged. An older update arriving afterwards cannot bring the person back.
 - **Guests** (Better Auth anonymous users) have no uniauth account, so no event, resync or report row can concern them.
-- Back-channel logout and the legacy `user-updated` / `user-deleted` notices are unchanged and keep working; uniauth stops
-  sending them to a client only once its v1 events are fully set up.
+- Back-channel logout is unchanged. The legacy `user-updated` / `user-deleted` notices are gone: profile changes and
+  deletions arrive only as v1 events (or through reconciliation), so every environment needs `identity_events_uri` and the
+  machine credential. Clear the legacy URLs on the uniauth environment.
 - Concurrency: the user row is locked (`SELECT ... FOR UPDATE`) while a change applies, so an older event never overwrites a
   newer one. Receipts older than 14 days are pruned daily (cron lock).
 - **Reconciliation** (once across the pods, never overlapping; `UNIAUTH_RECONCILE_HOURS` is validated) reads uniauth's change feed from a saved cursor (events only for accounts Unishare knows, in commit
