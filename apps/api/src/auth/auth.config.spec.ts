@@ -35,10 +35,45 @@ describe('auth config', () => {
   )
 
   it('still starts the normal redirect sign-in', async () => {
-    await expect(
-      auth.api.signInSocial({ body: { provider: 'uniauth', idToken: undefined } }),
-    ).rejects.not.toMatchObject({
-      body: expect.objectContaining({ code: 'ID_TOKEN_SIGN_IN_DISABLED' }),
-    })
+    // A uniauth that answers discovery, so the provider is set up as in production. The config
+    // is loaded fresh because discovery runs once, when it is created.
+    const issuer = 'http://uniauth.test/api/auth'
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      Response.json({
+        issuer,
+        authorization_endpoint: `${issuer}/oauth2/authorize`,
+        token_endpoint: `${issuer}/oauth2/token`,
+        jwks_uri: `${issuer}/jwks`,
+        id_token_signing_alg_values_supported: ['RS256'],
+      }),
+    )
+    try {
+      let redirectAuth!: typeof auth
+      await jest.isolateModulesAsync(async () => {
+        redirectAuth = (await import('./auth.config')).auth
+      })
+      // The sign-in state is kept in the database; there is none here.
+      const ctx = await redirectAuth.$context
+      jest
+        .spyOn(ctx.internalAdapter, 'createVerificationValue')
+        .mockImplementation(async (data) => ({
+          id: 'v1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...data,
+        }))
+
+      const result = await redirectAuth.api.signInSocial({
+        body: { provider: 'uniauth', callbackURL: '/' },
+      })
+
+      expect(result).toMatchObject({ redirect: true })
+      const url = new URL((result as { url: string }).url)
+      expect(`${url.origin}${url.pathname}`).toBe(`${issuer}/oauth2/authorize`)
+      expect(url.searchParams.get('client_id')).toBe('unishare-test')
+      expect(url.searchParams.get('state')).toBeTruthy()
+    } finally {
+      fetchSpy.mockRestore()
+    }
   })
 })
