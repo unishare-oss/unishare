@@ -4,7 +4,7 @@
 
 Pasting an image onto an Excalidraw board shows it immediately but it's gone on reload. Root
 cause: `ExcalidrawWrapper`'s `onChange` only reads the `elements` argument
-(`apps/web/src/components/canvas/excalidraw-wrapper.tsx:79-84`) — Excalidraw's binary file data
+(`apps/web/components/canvas/excalidraw-wrapper.tsx:79-84`) — Excalidraw's binary file data
 (the `files: BinaryFiles` map, keyed by `fileId`, holding each pasted image's `dataURL`) is never
 captured. Only `elements` are synced over the collab socket
 (`apps/web/contexts/collab-context.tsx:119`) and only `elements` are persisted server-side
@@ -126,9 +126,9 @@ newly-joining client can fetch+decrypt each image from S3 before/while Excalidra
 
 - `apps/web/src/lib/crypto.ts` — raw-bytes encrypt/decrypt (images use ArrayBuffers, not strings like `encryptMessage`/`decryptMessage`), room-key raw export/import for the URL fragment
 - `apps/web/contexts/collab-context.tsx` — hold the room key (from fragment or newly generated), encrypt before `emitSceneUpdate`, decrypt in `scene-update`/`room-joined` handlers, expose key + `encrypted` state
-- `apps/web/src/components/canvas/excalidraw-wrapper.tsx` — capture `files` from `onChange`, track not-yet-uploaded fileIds (debounced, mirroring Excalidraw's own `FileManager` dirty-tracking), encrypt+upload new ones, `addFiles()` to hydrate on load
+- `apps/web/components/canvas/excalidraw-wrapper.tsx` — capture `files` from `onChange`, track not-yet-uploaded fileIds (debounced, mirroring Excalidraw's own `FileManager` dirty-tracking), encrypt+upload new ones, `addFiles()` to hydrate on load
 - `apps/web/components/boards/create-room-dialog.tsx` — generate room key on submit, navigate to `/canvas/{slug}#key=...`
-- `apps/web/src/components/canvas/canvas-header.tsx` — include fragment when copying the share link
+- `apps/web/components/canvas/canvas-header.tsx` — include fragment when copying the share link
 - `apps/web/components/boards/share-to-chat-popover.tsx`, `apps/web/components/boards/room-card.tsx` — same, wherever a room URL is built for sharing
 - A small UX affordance for opening an encrypted room's `/canvas/{slug}` URL with no `#key` (e.g. pasted without the fragment) — show "you need the full link" instead of silently failing to decrypt
 

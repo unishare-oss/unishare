@@ -31,8 +31,8 @@ vi.mock('socket.io-client', () => ({
 }))
 vi.mock('next/navigation', () => ({ useParams: () => ({ slug: 'test-board' }) }))
 vi.mock('next/dynamic', () => ({ default: () => () => <div data-testid="canvas" /> }))
-vi.mock('@/src/components/canvas/canvas-header', () => ({ CanvasHeader: () => null }))
-vi.mock('@/src/components/canvas/cursor-overlay', () => ({ CursorOverlay: () => null }))
+vi.mock('@/components/canvas/canvas-header', () => ({ CanvasHeader: () => null }))
+vi.mock('@/components/canvas/cursor-overlay', () => ({ CursorOverlay: () => null }))
 vi.mock('@/src/lib/indexeddb', () => ({ getPrivateKey: vi.fn() }))
 vi.mock('sonner', () => ({
   toast: { warning: vi.fn(), error: vi.fn(), dismiss: vi.fn(), success: vi.fn() },
