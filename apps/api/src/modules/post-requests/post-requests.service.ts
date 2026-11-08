@@ -44,7 +44,8 @@ export class PostRequestsService {
   }
 
   async toggleUpvote(id: string, userId: string, scope: UniversityScope) {
-    await this.findOne(id, scope, userId)
+    const inScope = await this.postRequestsRepository.findIdInScope(id, scope)
+    if (!inScope) throw new NotFoundException('Post request not found')
     return this.postRequestsRepository.toggleUpvote(id, userId, scope)
   }
 

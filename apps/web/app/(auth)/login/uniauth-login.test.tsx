@@ -24,6 +24,7 @@ vi.mock('@/src/lib/auth/client', () => ({
 // Imported after the mocks.
 const { default: LoginPage } = await import('./page')
 const { authClient } = await import('@/src/lib/auth/client')
+const { toast } = await import('sonner')
 
 describe('login page', () => {
   beforeEach(() => {
@@ -78,9 +79,22 @@ describe('login page', () => {
 
   it('starts a guest (anonymous) session, since content needs one', async () => {
     vi.mocked(authClient.signIn.anonymous).mockResolvedValue({ data: null, error: { status: 500 } })
+    const toastError = vi.spyOn(toast, 'error')
     render(<LoginPage />)
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as guest' }))
+    const guest = screen.getByRole('button', { name: 'Continue as guest' })
+    await userEvent.click(guest)
     expect(authClient.signIn.anonymous).toHaveBeenCalled()
+    // An error answer frees the buttons and says so
+    expect(guest).toBeEnabled()
+    expect(toastError).toHaveBeenCalledWith('Could not start a guest session. Please try again.')
+  })
+
+  it('frees the buttons again when the guest sign-in request throws', async () => {
+    vi.mocked(authClient.signIn.anonymous).mockRejectedValue(new Error('offline'))
+    render(<LoginPage />)
+    const guest = screen.getByRole('button', { name: 'Continue as guest' })
+    await userEvent.click(guest)
+    expect(guest).toBeEnabled()
   })
 
   it('explains real errors but stays quiet about login_required', () => {

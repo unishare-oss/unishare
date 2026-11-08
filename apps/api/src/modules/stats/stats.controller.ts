@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import { UniversityScope } from '@/common/university-scope'
 import { StatsService } from './stats.service'
 import { StatsEntity } from './entities/stats.entity'
 
@@ -12,7 +14,7 @@ export class StatsController {
   @Get()
   @ApiOkResponse({ type: StatsEntity })
   @ResponseMessage('Stats fetched successfully')
-  getStats() {
-    return this.statsService.getStats()
+  getStats(@UniversityScopeParam() scope: UniversityScope) {
+    return this.statsService.getStats(scope)
   }
 }

@@ -55,8 +55,11 @@ export function UniauthLogin() {
   // Content needs a session, so a guest gets an anonymous one; it then picks a university.
   async function continueAsGuest() {
     setLoading(true)
-    const { error } = await authClient.signIn.anonymous()
-    if (error) {
+    const failed = await authClient.signIn
+      .anonymous()
+      .then(({ error }) => !!error)
+      .catch(() => true)
+    if (failed) {
       setLoading(false)
       toast.error('Could not start a guest session. Please try again.')
       return

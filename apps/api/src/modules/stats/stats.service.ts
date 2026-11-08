@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common'
+import { UniversityScope } from '@/common/university-scope'
 import { StatsRepository } from './stats.repository'
 
 @Injectable()
 export class StatsService {
   constructor(private readonly statsRepository: StatsRepository) {}
 
-  async getStats() {
+  // Counted within the requester's university; admins (scope `all`) get platform-wide counts.
+  async getStats(scope: UniversityScope) {
     const [
       totalUsers,
       totalPosts,
@@ -15,13 +17,13 @@ export class StatsService {
       topPostsByReactions,
       topUsers,
     ] = await Promise.all([
-      this.statsRepository.countUsers(),
-      this.statsRepository.countPosts(),
-      this.statsRepository.countComments(),
-      this.statsRepository.countReactions(),
-      this.statsRepository.findTopPostsByViews(),
-      this.statsRepository.findTopPostsByReactions(),
-      this.statsRepository.findTopUsersByPostCount(),
+      this.statsRepository.countUsers(scope),
+      this.statsRepository.countPosts(scope),
+      this.statsRepository.countComments(scope),
+      this.statsRepository.countReactions(scope),
+      this.statsRepository.findTopPostsByViews(scope),
+      this.statsRepository.findTopPostsByReactions(scope),
+      this.statsRepository.findTopUsersByPostCount(scope),
     ])
 
     return {

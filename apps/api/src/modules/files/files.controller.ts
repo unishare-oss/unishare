@@ -29,6 +29,7 @@ export class FilesController {
   }
 
   @Post(':fileId/download')
+  @GuestReadOnly(false)
   @ResponseMessage('Download recorded')
   recordDownload(
     @Param('postId') postId: string,

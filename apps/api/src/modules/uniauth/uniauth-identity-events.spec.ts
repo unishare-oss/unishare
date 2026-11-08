@@ -452,6 +452,25 @@ describe('uniauth v1 identity events', () => {
     expect(prisma.users.get('u1')!.universityId).toBe('uni-kmutt') // nothing maps: unchanged
   })
 
+  it('clears the university and department when the directory lists no memberships', async () => {
+    addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
+    directory.read.mockResolvedValue(
+      profile('ua1', { version: 2, 'urn:uniauth:organizations': [] }),
+    )
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({ universityId: null, departmentId: null })
+  })
+
+  it('keeps the university when the directory sends no memberships claim at all', async () => {
+    addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
+    directory.read.mockResolvedValue(profile('ua1', { version: 2, name: 'Renamed' }))
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({
+      universityId: 'uni-kmutt',
+      departmentId: 'dept-cs',
+    })
+  })
+
   it('keeps the department when the university is unchanged', async () => {
     addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
     directory.read.mockResolvedValue(

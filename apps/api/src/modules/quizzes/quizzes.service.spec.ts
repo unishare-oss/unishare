@@ -223,6 +223,18 @@ describe('QuizzesService — university scope', () => {
     expect(repo.publishQuiz).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['deleteQuiz', (s: QuizzesService) => s.deleteQuiz('q1', { kind: 'all' })],
+    ['publishQuiz', (s: QuizzesService) => s.publishQuiz('q1', UserRole.ADMIN, { kind: 'all' })],
+  ])('%s lets an admin act on any university', async (name, call) => {
+    repo.findQuizById.mockResolvedValue({ id: 'q1' })
+    await call(service)
+    expect(repo.findQuizById).toHaveBeenCalledWith('q1', { kind: 'all' })
+    expect(name === 'deleteQuiz' ? repo.deleteQuizCascade : repo.publishQuiz).toHaveBeenCalledWith(
+      'q1',
+    )
+  })
+
   it('gives 404, not 403, for a session outside the scope', async () => {
     await expect(service.getSession('s1', 'student-1', U1)).rejects.toBeInstanceOf(
       NotFoundException,

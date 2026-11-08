@@ -15,6 +15,7 @@ import {
 import {
   ApiCreatedResponse,
   ApiExcludeEndpoint,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -72,9 +73,14 @@ export class PostsController {
 
   @Post()
   @ApiCreatedResponse({ type: PostDetailEntity })
+  @ApiNotFoundResponse({ description: 'Course not found in your university' })
   @ResponseMessage('Post created successfully')
-  create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
-    return this.postsService.create(dto, session.user.id, session.user.departmentId)
+  create(
+    @Body() dto: CreatePostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.create(dto, session.user.id, session.user.departmentId, scope)
   }
 
   @Get()
@@ -240,8 +246,9 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: UpdatePostStatusDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.postsService.updateStatus(id, dto, {
+    return this.postsService.updateStatus(id, dto, scope, {
       id: session.user.id,
       role: session.user.role as UserRole,
     })
@@ -372,8 +379,19 @@ export class PostsController {
   @Post(':id/tags')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Tags added successfully')
-  addTags(@Param('id') id: string, @Body() dto: TagPostDto, @Session() session: UserSession) {
-    return this.postsService.tagPost(id, dto.tags, session.user.id, session.user.role as UserRole)
+  addTags(
+    @Param('id') id: string,
+    @Body() dto: TagPostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.tagPost(
+      id,
+      dto.tags,
+      session.user.id,
+      session.user.role as UserRole,
+      scope,
+    )
   }
 
   @Delete(':id/tags/:tagId')
@@ -382,7 +400,14 @@ export class PostsController {
     @Param('id') id: string,
     @Param('tagId') tagId: string,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.postsService.untagPost(id, tagId, session.user.id, session.user.role as UserRole)
+    return this.postsService.untagPost(
+      id,
+      tagId,
+      session.user.id,
+      session.user.role as UserRole,
+      scope,
+    )
   }
 }

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { NotFoundException } from '@nestjs/common'
+import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import {
   IngestStatus,
   PostPublicationStatus,
@@ -42,6 +42,8 @@ describe('PostsService', () => {
   let prismaMock: any
   let embeddingMock: { enabled: boolean }
   let repoMock: any
+  let notificationsMock: { notifyPostStatus: jest.Mock; notifyFollowersNewPost: jest.Mock }
+  let followsMock: { getFollowers: jest.Mock }
   let aiSummaryMock: {
     chatWithPost: jest.Mock
     chatWithPostStream: jest.Mock
@@ -72,14 +74,17 @@ describe('PostsService', () => {
       toggleReaction: jest.fn(),
       recordView: jest.fn().mockResolvedValue(undefined),
       update: jest.fn(),
+      updateStatus: jest.fn().mockResolvedValue({ id: 'p2' }),
     }
+    notificationsMock = { notifyPostStatus: jest.fn(), notifyFollowersNewPost: jest.fn() }
+    followsMock = { getFollowers: jest.fn().mockResolvedValue([]) }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostsService,
         { provide: PostsRepository, useValue: repoMock },
-        { provide: NotificationsService, useValue: {} },
-        { provide: FollowsService, useValue: {} },
+        { provide: NotificationsService, useValue: notificationsMock },
+        { provide: FollowsService, useValue: followsMock },
         { provide: TagsService, useValue: {} },
         { provide: PrismaService, useValue: prismaMock },
         { provide: AiSummaryService, useValue: aiSummaryMock },
@@ -309,7 +314,7 @@ describe('PostsService', () => {
       await service.findAll({} as any, NONE, { id: 'user-1' })
 
       const [where] = repoMock.findAll.mock.calls[0]
-      expect(where.AND[1]).toEqual({ id: { in: [] } })
+      expect(where.AND[1]).toEqual({ course: { id: { in: [] } } })
     })
 
     it('getSavedPosts passes the scope to the repository', async () => {
@@ -409,7 +414,9 @@ describe('PostsService', () => {
         prismaMock.post.findFirst.mockResolvedValue(null)
 
         await expect(call(service, NONE)).rejects.toThrow(NotFoundException)
-        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([{ id: { in: [] } }])
+        expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([
+          { course: { id: { in: [] } } },
+        ])
         expect(aiCall()).not.toHaveBeenCalled()
       })
 
@@ -477,6 +484,79 @@ describe('PostsService', () => {
         expect(result).toEqual({ results: [], total: 0, page: 1, limit: 20 })
         expect(prismaMock.$queryRaw).not.toHaveBeenCalled()
       })
+    })
+  })
+
+  describe('moderation in scope', () => {
+    const moderator = { id: 'mod-1', role: UserRole.MODERATOR }
+    const approve = { status: PostStatus.APPROVED } as const
+
+    it.each([
+      ['another university', U1],
+      ['no university', NONE],
+    ])(
+      'updateStatus answers 404 to a moderator with %s and changes nothing',
+      async (_name, scope) => {
+        repoMock.findInScope.mockResolvedValue(null)
+
+        await expect(service.updateStatus('p2', approve, scope, moderator)).rejects.toThrow(
+          NotFoundException,
+        )
+        expect(repoMock.findInScope).toHaveBeenCalledWith('p2', scope, moderator)
+        expect(repoMock.updateStatus).not.toHaveBeenCalled()
+        expect(notificationsMock.notifyPostStatus).not.toHaveBeenCalled()
+        expect(aiSummaryMock.summarizePost).not.toHaveBeenCalled()
+      },
+    )
+
+    it("lets an admin approve any university's post", async () => {
+      const admin = { id: 'admin-1', role: UserRole.ADMIN }
+      repoMock.findInScope.mockResolvedValue({
+        id: 'p2',
+        authorId: 'author-1',
+        title: 'T',
+        status: PostStatus.PENDING,
+        author: { name: 'A' },
+      })
+
+      await service.updateStatus('p2', approve, ALL, admin)
+
+      expect(repoMock.findInScope).toHaveBeenCalledWith('p2', ALL, admin)
+      expect(repoMock.updateStatus).toHaveBeenCalledWith('p2', PostStatus.APPROVED, admin)
+      expect(aiSummaryMock.summarizePost).toHaveBeenCalledWith('p2')
+    })
+
+    it.each([
+      ['tagPost', (s: PostsService) => s.tagPost('p2', ['x'], 'mod-1', UserRole.MODERATOR, U1)],
+      ['untagPost', (s: PostsService) => s.untagPost('p2', 't1', 'mod-1', UserRole.MODERATOR, U1)],
+    ])("%s answers 404 to a moderator for another university's post", async (_name, call) => {
+      repoMock.findInScope.mockResolvedValue(null)
+
+      await expect(call(service)).rejects.toThrow(NotFoundException)
+      expect(repoMock.findInScope).toHaveBeenCalledWith('p2', U1)
+    })
+  })
+
+  describe('create in scope', () => {
+    it("gives 404 for another university's course, before the department check", async () => {
+      repoMock.findCourseDepartmentInScope = jest.fn().mockResolvedValue(null)
+      repoMock.create = jest.fn()
+      await expect(
+        service.create({ courseId: 'c-other', title: 't' } as never, 'u1', 'd1', U1),
+      ).rejects.toThrow(NotFoundException)
+      expect(repoMock.findCourseDepartmentInScope).toHaveBeenCalledWith('c-other', U1)
+      expect(repoMock.create).not.toHaveBeenCalled()
+    })
+
+    it("still refuses a course in the user's university but another department", async () => {
+      repoMock.findCourseDepartmentInScope = jest
+        .fn()
+        .mockResolvedValue({ id: 'c2', departmentId: 'd2' })
+      repoMock.create = jest.fn()
+      await expect(
+        service.create({ courseId: 'c2', title: 't' } as never, 'u1', 'd1', U1),
+      ).rejects.toThrow(ForbiddenException)
+      expect(repoMock.create).not.toHaveBeenCalled()
     })
   })
 })

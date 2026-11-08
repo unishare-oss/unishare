@@ -9,6 +9,13 @@ class MarkedController {
   handle() {}
 }
 
+@GuestReadOnly()
+@Controller('files')
+class ExemptMethodController {
+  @GuestReadOnly(false)
+  handle() {}
+}
+
 @Controller('users')
 class UnmarkedController {
   handle() {}
@@ -41,6 +48,10 @@ describe('GuestReadOnlyGuard', () => {
     for (const method of ['GET', 'HEAD', 'OPTIONS']) {
       expect(guard.canActivate(context(MarkedController, method, guest))).toBe(true)
     }
+  })
+
+  it('lets a guest call a method marked @GuestReadOnly(false) on a marked controller', () => {
+    expect(guard.canActivate(context(ExemptMethodController, 'POST', guest))).toBe(true)
   })
 
   it('leaves unmarked controllers to their own rules', () => {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { headers } from 'next/headers'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001'
@@ -7,7 +8,11 @@ const APP_URL = process.env.APP_URL ?? 'https://share.psstee.me'
 
 async function getPost(id: string): Promise<PostDetailEntity | null> {
   try {
-    const res = await fetch(`${API_URL}/api/posts/${id}`, { next: { revalidate: 60 } })
+    const res = await fetch(`${API_URL}/api/posts/${id}`, {
+      // The API needs a session, and the answer is per viewer, so it is never cached.
+      headers: { cookie: (await headers()).get('cookie') ?? '' },
+      cache: 'no-store',
+    })
     if (!res.ok) return null
     const json = await res.json()
     return json.data ?? null

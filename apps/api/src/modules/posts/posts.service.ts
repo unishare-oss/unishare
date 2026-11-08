@@ -59,12 +59,18 @@ export class PostsService {
     }
   }
 
-  async create(dto: CreatePostDto, userId: string, departmentId?: string | null) {
+  async create(
+    dto: CreatePostDto,
+    userId: string,
+    departmentId: string | null | undefined,
+    scope: UniversityScope,
+  ) {
     if (!departmentId) {
       throw new BadRequestException('Please set your department before creating a post')
     }
 
-    const course = await this.postsRepository.findCourseDepartmentById(dto.courseId)
+    // Another university's course is a 404, the same as on every read
+    const course = await this.postsRepository.findCourseDepartmentInScope(dto.courseId, scope)
     if (!course) throw new NotFoundException('Course not found')
 
     if (course.departmentId !== departmentId) {
@@ -234,8 +240,15 @@ export class PostsService {
     return deleted
   }
 
-  async updateStatus(id: string, dto: UpdatePostStatusDto, viewer: { id: string; role: UserRole }) {
-    const post = await this.findOne(id, { kind: 'all' }, viewer)
+  // A moderator's scope is their university: another university's post is a 404 before anything
+  // changes, is notified or is summarized. Admins have scope `all`.
+  async updateStatus(
+    id: string,
+    dto: UpdatePostStatusDto,
+    scope: UniversityScope,
+    viewer: { id: string; role: UserRole },
+  ) {
+    const post = await this.findOne(id, scope, viewer)
     if (!post.authorId) throw new NotFoundException('Post not found')
 
     const updated = await this.postsRepository.updateStatus(id, dto.status, viewer)
@@ -395,14 +408,16 @@ export class PostsService {
   /**
    * Tag a post with multiple tags
    * Creates tags if they don't exist
+   * Another university's post is a 404 before the author check, moderators included.
    */
   async tagPost(
     postId: string,
     tagNames: string[],
     userId: string,
     userRole: UserRole,
+    scope: UniversityScope,
   ): Promise<any> {
-    const post = await this.postsRepository.findById(postId)
+    const post = await this.postsRepository.findInScope(postId, scope)
     if (!post) throw new NotFoundException('Post not found')
     if (
       post.authorId !== userId &&
@@ -434,15 +449,16 @@ export class PostsService {
   }
 
   /**
-   * Remove a tag from a post
+   * Remove a tag from a post. Looked up in scope first, like `tagPost`.
    */
   async untagPost(
     postId: string,
     tagId: string,
     userId: string,
     userRole: UserRole,
+    scope: UniversityScope,
   ): Promise<void> {
-    const post = await this.postsRepository.findById(postId)
+    const post = await this.postsRepository.findInScope(postId, scope)
     if (!post) throw new NotFoundException('Post not found')
     if (
       post.authorId !== userId &&
