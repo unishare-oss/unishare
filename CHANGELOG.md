@@ -1,3 +1,21 @@
+## [0.35.4](https://github.com/unishare-oss/unishare/compare/v0.35.3...v0.35.4) (2026-11-01)
+
+### Bug Fixes
+
+- **web:** change the profile picture on unicorp ([d21f67e](https://github.com/unishare-oss/unishare/commit/d21f67ec51fdb6c22d9c45efd571465cec83932c))
+
+## [0.35.3](https://github.com/unishare-oss/unishare/compare/v0.35.2...v0.35.3) (2026-10-27)
+
+### Bug Fixes
+
+- **deps:** patch dependency security vulnerabilities ([44f20cd](https://github.com/unishare-oss/unishare/commit/44f20cd488f0d0526a0b258e206d2972ddee020b))
+
+## [0.35.2](https://github.com/unishare-oss/unishare/compare/v0.35.1...v0.35.2) (2026-10-27)
+
+### Bug Fixes
+
+- **notifications:** key comment notifications by COMMENT_ADDED ([cd7d223](https://github.com/unishare-oss/unishare/commit/cd7d223278f17169ec529181e02e9939cdbd7b3a)), closes [#195](https://github.com/unishare-oss/unishare/issues/195)
+
 ## [0.35.1](https://github.com/unishare-oss/unishare/compare/v0.35.0...v0.35.1) (2026-10-26)
 
 ### Bug Fixes
