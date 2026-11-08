@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CreateRequestDialog } from '@/components/requests/create-request-dialog'
 import { ChevronUp, Trash2, CheckCircle2, Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -269,6 +270,7 @@ function RequestCard({
   onUpvote: () => void
   onDelete: () => void
 }) {
+  const router = useRouter()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const isOwner = currentUserId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
@@ -348,7 +350,7 @@ function RequestCard({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                window.location.href = `/posts/${request.fulfilledByPost!.id}`
+                router.push(`/posts/${request.fulfilledByPost!.id}`)
               }}
               className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
             >

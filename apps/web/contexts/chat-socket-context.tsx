@@ -285,8 +285,8 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       const { roomId, userId } = payload
       if (userId === session?.user?.id) {
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
-        // Redirect handled in the component via the invalidation + navigation
-        window.location.href = '/chat'
+        // replace, not push, so Back doesn't return to the room we were removed from
+        router.replace('/chat')
       } else {
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
