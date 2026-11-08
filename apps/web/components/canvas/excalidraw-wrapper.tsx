@@ -32,6 +32,7 @@ function ExcalidrawWrapperInner() {
     initialElements,
     initialFiles,
     roomKey,
+    excalidrawAPI,
     setExcalidrawAPI,
     isViewOnly,
     broadcastedVersionsRef,
@@ -150,18 +151,18 @@ function ExcalidrawWrapperInner() {
   // Hydrate images already on the board when we join (initialFiles) and any pasted by a
   // collaborator afterward (file-added). Both go through the same fetch+decrypt path.
   useEffect(() => {
-    if (!initialFiles) return
-    const api = excalidrawAPIRef.current
-    if (!api) return
+    // Excalidraw creates its editor only after its locale loads, so the API usually arrives
+    // after initialFiles; depend on the state (not the ref) so this re-runs when it does.
+    if (!initialFiles || !excalidrawAPI) return
     void (async () => {
       const hydrated = (await Promise.all(initialFiles.map(hydrateFile))).filter(
         (f): f is BinaryFileData => f !== null,
       )
       for (const f of initialFiles) persistedFileIdsRef.current.add(f.fileId)
-      if (hydrated.length > 0) api.addFiles(hydrated)
+      if (hydrated.length > 0) excalidrawAPI.addFiles(hydrated)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialFiles]) // hydrateFile intentionally excluded — only re-run when the file list itself changes
+  }, [initialFiles, excalidrawAPI]) // hydrateFile excluded — re-run only for a new file list or API
 
   useEffect(() => {
     const handleRemoteFile = (file: RemoteFile) => {
