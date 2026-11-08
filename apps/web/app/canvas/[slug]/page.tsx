@@ -23,6 +23,7 @@ const ExcalidrawWrapper = dynamic(() => import('@/components/canvas/excalidraw-w
 type JoinState =
   'joining' | 'joined' | 'not-found' | 'private' | 'password-required' | 'key-missing'
 
+/** Board route: joins the room (password and encryption key included), then mounts the collab canvas. */
 export default function CanvasPage() {
   const { slug } = useParams<{ slug: string }>()
   const [joinState, setJoinState] = useState<JoinState>('joining')
@@ -267,6 +268,7 @@ export default function CanvasPage() {
   )
 }
 
+/** Shows a connecting screen until the room is joined, then the header, editor and cursors. */
 function CanvasInner() {
   const { connectionStatus } = useCollab()
   const { emitCursorMove } = useCollabPresence()

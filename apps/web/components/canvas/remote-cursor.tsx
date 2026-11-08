@@ -7,6 +7,7 @@ interface RemoteCursorProps {
   color: string
 }
 
+/** One collaborator's cursor arrow and name label. */
 export function RemoteCursor({ x, y, name, color }: RemoteCursorProps) {
   return (
     <div className="absolute select-none" style={{ left: x, top: y, pointerEvents: 'none' }}>

@@ -26,6 +26,7 @@ import type { RemoteExcalidrawElement } from '@excalidraw/excalidraw/data/reconc
 const renderTopRightUI = () => null
 const uiOptions = { canvasActions: { toggleTheme: false } }
 
+/** The Excalidraw editor wired to the collab room: syncs elements, uploads and loads images. */
 function ExcalidrawWrapperInner() {
   const {
     slug,
@@ -234,5 +235,6 @@ function ExcalidrawWrapperInner() {
   )
 }
 
+/** Memoised so parent re-renders don't re-render the editor. */
 export const ExcalidrawWrapper = memo(ExcalidrawWrapperInner)
 export default ExcalidrawWrapper

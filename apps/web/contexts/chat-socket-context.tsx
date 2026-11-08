@@ -32,6 +32,7 @@ export const ChatSocketContext = createContext<ChatSocketContextValue | null>(nu
 
 const HEARTBEAT_INTERVAL_MS = 30_000
 
+/** Opens the /chat socket for signed-in members and keeps chat queries in sync with its events. */
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { session, isGuest } = useAuth()
   const router = useRouter()

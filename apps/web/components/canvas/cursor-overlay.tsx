@@ -6,6 +6,7 @@ import { PRESENCE_COLORS } from '@/src/lib/presence'
 import { sceneToOverlay } from '@/src/lib/cursor-coords'
 import { RemoteCursor } from './remote-cursor'
 
+/** Draws collaborators' cursors over the canvas, following scroll and zoom. */
 export function CursorOverlay() {
   const { remoteCursors, excalidrawAPI } = useCollabPresence()
   const containerRef = useRef<HTMLDivElement>(null)

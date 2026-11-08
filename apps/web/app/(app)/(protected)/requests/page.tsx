@@ -40,6 +40,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 const ALL = '__all__'
 const YEARS = [1, 2, 3, 4, 5, 6]
 
+/** Lists content requests with filters, and lets people create, upvote and delete them. */
 export default function RequestsPage() {
   const { session, isAuthenticated } = useAuth()
   const userId = session?.user?.id
@@ -259,6 +260,7 @@ export default function RequestsPage() {
   )
 }
 
+/** One request row: upvotes, details, the post that fulfilled it, and owner actions. */
 function RequestCard({
   request,
   currentUserId,

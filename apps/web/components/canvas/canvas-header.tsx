@@ -49,6 +49,7 @@ function getInitials(name: string): string {
 
 const MAX_VISIBLE_AVATARS = 3
 
+/** Stacked avatars of everyone currently in the board, with an overflow count. */
 function ParticipantAvatars() {
   const { participants, socketId } = useCollabPresence()
 
@@ -108,6 +109,7 @@ function ParticipantAvatars() {
   )
 }
 
+/** Menu to export the board as PNG or PDF, or post it to Unishare. */
 function ExportDropdown() {
   const { slug } = useParams<{ slug: string }>()
   const { excalidrawAPI, isAnonymous } = useCollab()
@@ -190,6 +192,7 @@ const VISIBILITY_OPTIONS: { value: RoomVisibility; label: string; description: s
   { value: 'PRIVATE', label: 'Private', description: 'Only signed-in users can access' },
 ]
 
+/** Owner-only settings for the board's visibility and password. */
 function SettingsPopover() {
   const { ownerId, userId } = useCollab()
   const { slug } = useParams<{ slug: string }>()
@@ -405,6 +408,7 @@ function SettingsPopover() {
   )
 }
 
+/** Top bar of a board: link back to the feed, participants, settings, export and copy-link. */
 export function CanvasHeader() {
   const handleCopyLink = async () => {
     try {
