@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/auth-context'
 
 interface TagSuggestion {
   id: string
@@ -151,6 +152,8 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
 }
 
 export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderProps) {
+  // Guests browse read-only.
+  const { isAuthenticated } = useAuth()
   return (
     <header className="sticky top-0 z-20 bg-card px-6 py-4 flex items-center justify-between gap-4">
       <h1 className="text-lg font-extrabold tracking-tight text-foreground shrink-0">Feed</h1>
@@ -162,13 +165,15 @@ export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHea
             onTagSelect={onTagSelect}
           />
         </div>
-        <Link
-          href="/posts/new"
-          className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border-strong shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-amber-hover active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 shrink-0"
-        >
-          <Plus className="size-4" strokeWidth={1.5} />
-          <span className="hidden sm:inline">New Post</span>
-        </Link>
+        {isAuthenticated && (
+          <Link
+            href="/posts/new"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border-strong shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-amber-hover active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 shrink-0"
+          >
+            <Plus className="size-4" strokeWidth={1.5} />
+            <span className="hidden sm:inline">New Post</span>
+          </Link>
+        )}
       </div>
     </header>
   )

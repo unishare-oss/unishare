@@ -3,6 +3,7 @@ import { getQueueToken } from '@nestjs/bullmq'
 import { PrismaService } from '@/prisma/prisma.service'
 import { StorageService } from '@/modules/storage/storage.service'
 import { UserRole } from '@/generated/prisma/client'
+import { UniversityScope } from '@/common/university-scope'
 import { DecksService } from './decks.service'
 import { DECK_EDITOR } from './deck-generator.port'
 import {
@@ -201,6 +202,7 @@ describe('DecksService', () => {
    * wrong: handing it to the wrong person, and failing to take it back.
    */
   describe('sharing', () => {
+    const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
     const ready = {
       id: 'deck-1',
       ownerId: 'user-1',
@@ -251,7 +253,7 @@ describe('DecksService', () => {
     it('withholds the prompt and the owner from a shared view', async () => {
       // The whole reason getSharedDeck does not return a DeckEntity.
       prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 'live-token' })
-      const shared = await service.getSharedDeck('live-token')
+      const shared = await service.getSharedDeck('live-token', U1)
       expect(shared).not.toHaveProperty('prompt')
       expect(shared).not.toHaveProperty('ownerId')
       expect(shared).not.toHaveProperty('error')
@@ -261,20 +263,20 @@ describe('DecksService', () => {
     it('offers only the formats that exist', async () => {
       // A failed preview render leaves pdfKey null while the pptx is fine.
       prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', pdfKey: null })
-      expect((await service.getSharedDeck('t')).formats).toEqual(['pptx'])
+      expect((await service.getSharedDeck('t', U1)).formats).toEqual(['pptx'])
 
       prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't', pdfKey: 'k.pdf' })
-      expect((await service.getSharedDeck('t')).formats).toEqual(['pptx', 'pdf'])
+      expect((await service.getSharedDeck('t', U1)).formats).toEqual(['pptx', 'pdf'])
     })
 
     it('refuses an unknown or revoked token', async () => {
       prisma.deck.findFirst.mockResolvedValue(null)
-      await expect(service.getSharedDeck('nope')).rejects.toThrow(/no longer valid/)
+      await expect(service.getSharedDeck('nope', U1)).rejects.toThrow(/no longer valid/)
     })
 
     it('never resolves a token on a soft-deleted deck', async () => {
       prisma.deck.findFirst.mockResolvedValue(null)
-      await expect(service.getSharedDeck('t')).rejects.toThrow()
+      await expect(service.getSharedDeck('t', U1)).rejects.toThrow()
       expect(prisma.deck.findFirst.mock.calls[0][0].where).toMatchObject({ deletedAt: null })
     })
 
@@ -290,7 +292,7 @@ describe('DecksService', () => {
         status: 'GENERATING',
         key: 'previous.pptx',
       })
-      const shared = await service.getSharedDeck('t')
+      const shared = await service.getSharedDeck('t', U1)
       expect(shared.formats).toContain('pptx')
     })
 
@@ -301,7 +303,7 @@ describe('DecksService', () => {
         status: 'FAILED',
         key: 'previous.pptx',
       })
-      await expect(service.getSharedDeck('t')).resolves.toBeDefined()
+      await expect(service.getSharedDeck('t', U1)).resolves.toBeDefined()
     })
 
     it('says a deck is still generating when there is genuinely no file', async () => {
@@ -313,12 +315,47 @@ describe('DecksService', () => {
         key: null,
         pdfKey: null,
       })
-      await expect(service.getSharedDeck('t')).rejects.toThrow(/still being generated/)
+      await expect(service.getSharedDeck('t', U1)).rejects.toThrow(/still being generated/)
+    })
+
+    it("resolves a token only for a deck whose owner or source post is in the requester's university", async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.getSharedDeck('t', U1)).rejects.toThrow(/no longer valid/)
+      await expect(service.getSharedDownloadUrl('t', U1)).rejects.toThrow(/no longer valid/)
+      const scoped = {
+        shareToken: 't',
+        deletedAt: null,
+        AND: [
+          {
+            OR: [
+              { owner: { universityId: 'u1' } },
+              { sourcePost: { course: { department: { faculty: { universityId: 'u1' } } } } },
+            ],
+          },
+        ],
+      }
+      expect(prisma.deck.findFirst.mock.calls[0][0].where).toEqual(scoped)
+      expect(prisma.deck.findFirst.mock.calls[1][0].where).toEqual(scoped)
+    })
+
+    it('resolves no token for a signed-out viewer or one with no university', async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.getSharedDeck('t', { kind: 'none' })).rejects.toThrow(/no longer valid/)
+      expect(prisma.deck.findFirst.mock.calls[0][0].where.AND).toEqual([{ id: { in: [] } }])
+    })
+
+    it("leaves the owner's own reads unscoped", async () => {
+      prisma.deck.findFirst.mockResolvedValue(null)
+      await expect(service.getDeck('deck-1', 'user-1')).rejects.toThrow(/Deck not found/)
+      expect(prisma.deck.findFirst.mock.calls[0][0].where).toEqual({
+        id: 'deck-1',
+        deletedAt: null,
+      })
     })
 
     it('presigns a download for a valid token', async () => {
       prisma.deck.findFirst.mockResolvedValue({ ...ready, shareToken: 't' })
-      const res = await service.getSharedDownloadUrl('t', 'pptx')
+      const res = await service.getSharedDownloadUrl('t', U1, 'pptx')
       expect(res.url).toBe('https://signed.example/deck')
       expect(storage.generatePresignedDownloadUrl).toHaveBeenCalledWith(
         'k.pptx',

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, BookOpen, HelpCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import {
   useQuizzesControllerListQuizzes,
@@ -40,9 +40,7 @@ export default function QuizzesPage() {
   const [departmentId, setDepartmentId] = useState<string>('')
   const [courseId, setCourseId] = useState<string>('')
 
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data, staleTime: 1000 * 60 * 5 },
-  })
+  const { departments } = useMyDepartments({ staleTime: 1000 * 60 * 5 })
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { departmentId: departmentId || undefined, limit: 100 },
@@ -115,7 +113,7 @@ export default function QuizzesPage() {
           <QuizBrowseFilters
             departmentId={departmentId}
             courseId={effectiveCourseId}
-            departments={departments ?? []}
+            departments={departments}
             courses={courses}
             onDepartmentChange={setDepartmentId}
             onCourseChange={setCourseId}

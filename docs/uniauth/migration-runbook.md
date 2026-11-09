@@ -39,7 +39,8 @@ normal. No primary key is ever rewritten.
    0, run `docs/uniauth/sql/account-provider-unique.sql` by hand (`psql "$DATABASE_URL" -f …`, no wrapping transaction). It refuses
    to run if duplicates exist and builds the index concurrently; `DROP INDEX "account_providerId_accountId_key"` undoes it. The app
    works without it.
-2. Deploy the API with the new receiver. The legacy notices keep working; nothing is delivered to the new endpoint yet.
+2. Deploy the API with the new receiver. Nothing is delivered to it yet. (The API no longer has the legacy notice
+   endpoints, so until step 3 profile changes reach Unishare only at sign-in.)
 3. In the uniauth dashboard: add a machine credential to the Unishare environment (`directory:read`, `identity:events`), set
    `identity_events_uri`, run **Connection check**, store the secret as `UNIAUTH_DIRECTORY_CLIENT_*`, redeploy.
    (Unishare can use v1 events fully: the directory carries university memberships, so an update also refreshes the university.)
@@ -58,8 +59,7 @@ normal. No primary key is ever rewritten.
 
 Each step is independent and loses nothing:
 
-1. **Stop using v1 events**: clear `identity_events_uri` on the uniauth environment (the legacy notices resume for the login
-   client), unset `UNIAUTH_DIRECTORY_CLIENT_*`, redeploy. Pending deliveries stay queued in uniauth and may be replayed or
+1. **Stop using v1 events**: clear `identity_events_uri` on the uniauth environment, unset `UNIAUTH_DIRECTORY_CLIENT_*`, redeploy. Pending deliveries stay queued in uniauth and may be replayed or
    dropped; receipts and the cursor are kept.
 2. **Roll back the code**: the previous API image ignores the new columns and tables. Do not drop them.
 3. **Constraint**: `DROP INDEX "account_providerId_accountId_key";` only if it blocks something (it was applied by hand, so

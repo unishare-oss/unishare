@@ -1,4 +1,5 @@
-import { betterAuth } from 'better-auth'
+import { betterAuth, type BetterAuthPlugin } from 'better-auth'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { openAPI, admin, anonymous, genericOAuth } from 'better-auth/plugins'
 import { generateGuestDisplayName } from './guest-display-name'
@@ -9,14 +10,38 @@ import { clientIp, createAuditHooks, recordSafely } from './audit-hooks'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
-import { verifiedSharedTerms } from './shared-terms'
+import { verifiedIdTokenClaims } from './shared-terms'
 import {
+  copyFromUniauthIdToken,
   mapUniauthProfile,
   uniauthSidFromIdToken,
   withoutAvatarPlaceholder,
 } from './uniauth-sign-in'
 
 const isProduction = process.env.NODE_ENV === 'production'
+
+// Better Auth also signs in (or links) with an ID token posted straight from the client, because
+// discovery gives the uniauth provider its keys. Unishare never does that: sign-in is always the
+// redirect, which brings a fresh token. Refusing it stops a user replaying an older, still-valid
+// token (from /get-access-token) to bring back a university uniauth has since removed.
+const refuseClientIdTokens = {
+  id: 'refuse-client-id-tokens',
+  hooks: {
+    before: [
+      {
+        matcher: (ctx) =>
+          (ctx.path === '/sign-in/social' || ctx.path === '/link-social') && !!ctx.body?.idToken,
+        handler: createAuthMiddleware(async () => {
+          throw new APIError('BAD_REQUEST', {
+            code: 'ID_TOKEN_SIGN_IN_DISABLED',
+            message: 'Sign in through uniauth',
+          })
+        }),
+      },
+    ],
+  },
+} satisfies BetterAuthPlugin
+
 export const isMcpEnabled = process.env.MCP_ENABLED === 'true'
 
 if (isProduction) {
@@ -73,9 +98,10 @@ export const auth = betterAuth({
           pkce: true,
           requireIdTokenVerification: true,
           scopes: ['openid', 'profile', 'email', 'offline_access'],
-          // Name, avatar and university are uniauth's: refreshed on every sign-in.
+          // Name, avatar and university are uniauth's: refreshed on every sign-in (the
+          // university by the session hook below).
           overrideUserInfo: true,
-          mapProfileToUser: mapUniauthProfile(prisma),
+          mapProfileToUser: mapUniauthProfile,
           // The web app's silent check signs in with additionalParams { prompt: 'none' }:
           // uniauth answers instantly (signed in) or with login_required.
         },
@@ -91,6 +117,7 @@ export const auth = betterAuth({
       emailDomainName: 'guest.unishare.app',
       generateName: () => generateGuestDisplayName(),
     }),
+    refuseClientIdTokens,
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,
@@ -151,10 +178,11 @@ export const auth = betterAuth({
         input: false,
         returned: true,
       },
+      // Only uniauth sets it (sign-in and identity events), never update-user.
       universityId: {
         type: 'string',
         required: false,
-        input: true,
+        input: false,
         returned: true,
       },
       unicorpTermsVersion: { type: 'number', required: false, input: false, returned: true },
@@ -177,17 +205,20 @@ export const auth = betterAuth({
           // Suspended on uniauth: no new sessions (uniauth refuses the sign-in too; this closes the gap until its event).
           const holder = await prisma.user.findUnique({
             where: { id: session.userId },
-            select: { identityStatus: true },
+            select: { identityStatus: true, universityId: true },
           })
           if (holder?.identityStatus === 'suspended') return false
           const accounts = ctx ? await ctx.context.internalAdapter.findAccounts(session.userId) : []
           const uniauth = accounts.find((a) => a.providerId === UNIAUTH_PROVIDER_ID)
           const uniauthSid = uniauthSidFromIdToken(uniauth?.idToken)
-          // input:false profile fields are intentionally filtered by Better Auth; copy verified evidence explicitly.
-          if (uniauth?.idToken) {
-            const evidence = await verifiedSharedTerms(uniauth.idToken, uniauth.accountId)
-            await prisma.user.update({ where: { id: session.userId }, data: evidence })
-          }
+          // input:false profile fields are intentionally filtered by Better Auth; copy verified
+          // evidence and the university explicitly.
+          await copyFromUniauthIdToken(
+            prisma,
+            { id: session.userId, universityId: holder?.universityId ?? null },
+            uniauth,
+            verifiedIdTokenClaims,
+          )
           return { data: uniauthSid ? { ...session, uniauthSid } : session }
         },
         // Guests get a session per visit and are not worth a row each; a real sign-in is.

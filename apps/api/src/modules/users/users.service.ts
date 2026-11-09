@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
@@ -37,14 +38,14 @@ export class UsersService {
       this.followsService.countFollowing(id),
       viewerId && viewerId !== id ? this.followsService.isFollowing(viewerId, id) : null,
     ])
-    return this.toProfileView(user, followerCount, followingCount, isFollowing)
+    return this.toProfileView(user, viewerId === id, followerCount, followingCount, isFollowing)
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
     // Name and avatar are the uniauth identity's, refreshed at every sign-in, and edited on
     // uniauth's /account page. Only unishare-owned fields change here.
     const user = await this.usersRepository.updateProfile(id, { bio: dto.bio })
-    return this.toProfileView(user)
+    return this.toProfileView(user, true)
   }
 
   /** Compatibility endpoint: shared acceptance can only be recorded by UniAuth. */
@@ -57,7 +58,12 @@ export class UsersService {
       })
   }
 
-  async updatePublicKey(id: string, publicKey: string) {
+  /** Chat keys: guests can't chat, so they get none. */
+  async updatePublicKey(
+    { id, isAnonymous }: { id: string; isAnonymous?: boolean | null },
+    publicKey: string,
+  ) {
+    if (isAnonymous) throw new ForbiddenException("Guests can't chat")
     return this.usersRepository.updatePublicKey(id, publicKey)
   }
 
@@ -91,7 +97,11 @@ export class UsersService {
     return user
   }
 
-  async updateKeyBackup(id: string, keyBackup: string) {
+  async updateKeyBackup(
+    { id, isAnonymous }: { id: string; isAnonymous?: boolean | null },
+    keyBackup: string,
+  ) {
+    if (isAnonymous) throw new ForbiddenException("Guests can't chat")
     return this.usersRepository.updateKeyBackup(id, keyBackup)
   }
 
@@ -105,52 +115,100 @@ export class UsersService {
     return this.usersRepository.clearKeyBackup(id)
   }
 
-  async updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
-    if (
-      dto.departmentId === undefined &&
-      dto.enrollmentYear === undefined &&
-      dto.universityId === undefined
-    ) {
+  /** A guest picks the one university it browses, once; members get theirs from uniauth. */
+  async setGuestUniversity(
+    user: { id: string; isAnonymous?: boolean | null },
+    universityId: string,
+  ) {
+    if (!user.isAnonymous) throw new ForbiddenException('Only guests pick a university here')
+    const university = await this.usersRepository.findUniversityById(universityId)
+    if (!university) throw new NotFoundException('University not found')
+    const updated = await this.usersRepository.setGuestUniversityIfUnset(user.id, universityId)
+    if (!updated) throw new ConflictException('You already picked a university')
+    return this.toProfileView(updated, true)
+  }
+
+  async updateAcademicProfile(
+    { id, isAnonymous }: { id: string; isAnonymous?: boolean | null },
+    dto: UpdateAcademicProfileDto,
+  ) {
+    // A department is what lets someone post (PostsService.create), and guests are read-only.
+    if (isAnonymous) throw new ForbiddenException('Guests have no academic profile')
+    const { universityId, ...data } = dto
+    if (universityId !== undefined) {
+      throw new BadRequestException('University comes from your uniauth account')
+    }
+    if (data.departmentId === undefined && data.enrollmentYear === undefined) {
       throw new BadRequestException(
-        'At least one field is required: departmentId, universityId or enrollmentYear',
+        'At least one field is required: departmentId or enrollmentYear',
       )
     }
 
-    if (dto.departmentId !== undefined && dto.departmentId !== null) {
-      const department = await this.usersRepository.findDepartmentById(dto.departmentId)
+    // The university the department was checked against; the write only applies if it still holds
+    let expected: { universityId: string } | undefined
+    if (data.departmentId) {
+      const department = await this.usersRepository.findDepartmentById(data.departmentId)
       if (!department) throw new NotFoundException('Department not found')
+
+      const stored = (await this.usersRepository.findAcademicProfileOfUser(id))?.universityId
+      if (!stored || department.faculty.universityId !== stored) {
+        throw new BadRequestException('Department is not in your university')
+      }
+      expected = { universityId: stored }
     }
 
-    if (dto.universityId !== undefined && dto.universityId !== null) {
-      const university = await this.usersRepository.findUniversityById(dto.universityId)
-      if (!university) throw new NotFoundException('University not found')
-    }
-
-    const user = await this.usersRepository.updateAcademicProfile(id, dto)
-    return this.toProfileView(user)
+    const user = expected
+      ? await this.usersRepository.updateAcademicProfileIf(id, expected, data)
+      : await this.usersRepository.updateAcademicProfile(id, data)
+    if (!user) throw new ConflictException('Your profile changed while saving. Try again.')
+    return this.toProfileView(user, true)
   }
 
+  /**
+   * The profile fields UserProfileEntity documents, picked one by one: the row also holds the
+   * chat key backup, ban and terms state, which must never reach a response, and GET /users/:id
+   * shows any member's profile to any other, so the email is only on the viewer's own.
+   */
   private toProfileView(
     user: {
+      id: string
+      name: string
+      email: string
+      emailVerified: boolean
+      image: string | null
+      bio: string | null
+      role: string
+      createdAt: Date
+      publicKey: string | null
       enrollmentYear: number | null
       departmentId?: string | null
-      universityId?: string | null
+      department?: unknown
+      university?: unknown
       _count?: { posts: number; comments: number; savedPosts: number }
-      [key: string]: unknown
     },
+    /** The viewer's own profile: only then are the email fields included. */
+    self: boolean,
     followerCount = 0,
     followingCount = 0,
     isFollowing: boolean | null = null,
   ) {
-    const { _count, departmentId, universityId, ...rest } = user
-
-    const shouldShowUpdateMajorPopup = !departmentId || user.enrollmentYear === null
+    const shouldShowUpdateMajorPopup = !user.departmentId || user.enrollmentYear === null
     const base = {
-      ...rest,
+      id: user.id,
+      name: user.name,
+      ...(self && { email: user.email, emailVerified: user.emailVerified }),
+      image: user.image,
+      bio: user.bio,
+      role: user.role,
+      department: user.department ?? null,
+      university: user.university ?? null,
+      enrollmentYear: user.enrollmentYear,
+      createdAt: user.createdAt,
+      publicKey: user.publicKey,
       shouldShowUpdateMajorPopup,
-      postCount: _count?.posts ?? 0,
-      commentCount: _count?.comments ?? 0,
-      savedCount: _count?.savedPosts ?? 0,
+      postCount: user._count?.posts ?? 0,
+      commentCount: user._count?.comments ?? 0,
+      savedCount: user._count?.savedPosts ?? 0,
       followerCount,
       followingCount,
       isFollowing,

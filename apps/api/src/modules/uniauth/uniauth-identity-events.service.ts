@@ -1,5 +1,10 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
-import { ORGANIZATIONS_CLAIM, universityForMemberships } from '@/auth/uniauth-sign-in'
+import {
+  ORGANIZATIONS_CLAIM,
+  membershipsRemoved,
+  universityChange,
+  universityForMemberships,
+} from '@/auth/uniauth-sign-in'
 import type { Prisma, PrismaClient } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { resolveLocalUserId } from '../mcp/mcp-token.verifier'
@@ -34,7 +39,7 @@ const isUniqueViolation = (error: unknown) => (error as { code?: string } | null
  * identity version is higher than the one the user holds.
  *
  * - identity.updated: refresh name, email, avatar, verification AND university (from the directory's memberships, with
- *   the same rule as sign-in: a university only changes when a membership maps). The version stored is the directory's if
+ *   the same rule as sign-in: a university changes when a membership maps, and no memberships at all clears it). The version stored is the directory's if
  *   it is newer than the event's; if it is OLDER the read is not yet consistent (NotYetConsistent, answered 503).
  * - identity.suspended: ends the person's sessions at once; new sessions are refused while suspended. This is uniauth's
  *   account state: it never touches Unishare's own ban (`banned`), roles or content.
@@ -125,7 +130,7 @@ export class UniauthIdentityEventsService {
       const user = await this.lockedUser(tx, userId)
       if (!user) return 'ignored'
       if (user.identityVersion !== null && version <= user.identityVersion) return 'stale'
-      await this.write(tx, userId, user.email, version, change)
+      await this.write(tx, userId, user, version, change)
       return 'applied'
     })
   }
@@ -135,14 +140,14 @@ export class UniauthIdentityEventsService {
     await tx.$queryRaw`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`
     return tx.user.findUnique({
       where: { id: userId },
-      select: { identityVersion: true, email: true },
+      select: { identityVersion: true, email: true, universityId: true },
     })
   }
 
   private async write(
     tx: Prisma.TransactionClient,
     userId: string,
-    currentEmail: string,
+    current: { email: string; universityId: string | null },
     version: number,
     change: Change,
   ) {
@@ -152,7 +157,7 @@ export class UniauthIdentityEventsService {
       // An email another unishare user holds is for a person to reconcile; the rest of the profile still applies.
       const taken =
         change.skipEmail ||
-        (!!email && email !== currentEmail && (await tx.user.count({ where: { email } })) > 0)
+        (!!email && email !== current.email && (await tx.user.count({ where: { email } })) > 0)
       if (taken)
         this.logger.warn(`Kept the old email of ${userId}: ${email} belongs to another user`)
       const memberships = profile[ORGANIZATIONS_CLAIM]
@@ -165,7 +170,7 @@ export class UniauthIdentityEventsService {
           ...(profile.name && { name: profile.name }),
           ...(email && !taken && { email, emailVerified: profile.emailVerified === true }),
           image: profile.image || null,
-          ...(universityId && { universityId }),
+          ...universityChange(current.universityId, universityId, membershipsRemoved(memberships)),
           identityVersion: version,
           identityStatus: profile.status === 'suspended' ? 'suspended' : 'active',
         },
@@ -221,7 +226,7 @@ export class UniauthIdentityEventsService {
       const user = await this.lockedUser(tx, userId)
       if (!user) return 'gone'
       if (user.identityVersion !== null && state.version <= user.identityVersion) return 'stale'
-      await this.write(tx, userId, user.email, state.version, { kind: 'profile', profile: state })
+      await this.write(tx, userId, user, state.version, { kind: 'profile', profile: state })
       return 'applied'
     })
   }

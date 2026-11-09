@@ -28,6 +28,7 @@ interface FakeUser {
   identityVersion: number | null
   identityStatus: string
   universityId?: string | null
+  departmentId?: string | null
 }
 
 /** An in-memory stand-in for the few Prisma calls the services make, with real createMany/skipDuplicates semantics. */
@@ -119,10 +120,8 @@ function fakePrisma() {
       }),
     },
     university: {
-      findMany: jest.fn(async ({ where }: { where: { uniauthOrgId: { in: string[] } } }) =>
-        where.uniauthOrgId.in
-          .filter((o) => o.startsWith('org-'))
-          .map((o) => ({ id: `uni-${o}`, uniauthOrgId: o })),
+      findMany: jest.fn(async ({ where }: { where: { slug: { in: string[] } } }) =>
+        where.slug.in.filter((s) => s === 'kmutt').map((s) => ({ id: `uni-${s}`, slug: s })),
       ),
     },
     $queryRaw: jest.fn(async () => []),
@@ -433,23 +432,60 @@ describe('uniauth v1 identity events', () => {
   })
 
   it('maps the directory memberships onto the university like sign-in, and leaves it alone when none maps', async () => {
-    addUser('u1', 'ua1', { universityId: 'old-uni' })
+    addUser('u1', 'ua1', { universityId: 'old-uni', departmentId: 'old-dept' })
     directory.read.mockResolvedValue(
       profile('ua1', {
         version: 2,
-        'urn:uniauth:organizations': [{ id: 'org-kmutt', verified: true }],
+        'urn:uniauth:organizations': [{ id: 'org-kmutt', slug: 'kmutt', verified: true }],
       }),
     )
     await service.handle(await token('ua1', event('identity.updated', 2)))
-    expect(prisma.users.get('u1')).toMatchObject({ universityId: 'uni-org-kmutt' })
+    // A department from the old university doesn't carry over
+    expect(prisma.users.get('u1')).toMatchObject({ universityId: 'uni-kmutt', departmentId: null })
     directory.read.mockResolvedValue(
       profile('ua1', {
         version: 3,
-        'urn:uniauth:organizations': [{ id: 'unknown-org', verified: true }],
+        'urn:uniauth:organizations': [{ id: 'unknown-org', slug: 'unknown', verified: true }],
       }),
     )
     await service.handle(await token('ua1', event('identity.updated', 3)))
-    expect(prisma.users.get('u1')!.universityId).toBe('uni-org-kmutt') // nothing maps: unchanged
+    expect(prisma.users.get('u1')!.universityId).toBe('uni-kmutt') // nothing maps: unchanged
+  })
+
+  it('clears the university and department when the directory lists no memberships', async () => {
+    addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
+    directory.read.mockResolvedValue(
+      profile('ua1', { version: 2, 'urn:uniauth:organizations': [] }),
+    )
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({ universityId: null, departmentId: null })
+  })
+
+  it('keeps the university when the directory sends no memberships claim at all', async () => {
+    addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
+    directory.read.mockResolvedValue(profile('ua1', { version: 2, name: 'Renamed' }))
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({
+      universityId: 'uni-kmutt',
+      departmentId: 'dept-cs',
+    })
+  })
+
+  it('keeps the department when the university is unchanged', async () => {
+    addUser('u1', 'ua1', { universityId: 'uni-kmutt', departmentId: 'dept-cs' })
+    directory.read.mockResolvedValue(
+      profile('ua1', {
+        version: 2,
+        name: 'Renamed',
+        'urn:uniauth:organizations': [{ id: 'org-kmutt', slug: 'kmutt', verified: true }],
+      }),
+    )
+    await service.handle(await token('ua1', event('identity.updated', 2)))
+    expect(prisma.users.get('u1')).toMatchObject({
+      name: 'Renamed',
+      universityId: 'uni-kmutt',
+      departmentId: 'dept-cs',
+    })
   })
 
   it('keeps the old email and applies the rest when the new email is raced onto another user', async () => {

@@ -10,8 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import type { DepartmentEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
-export type ApiDept = { id: string; name: string; courseCount: number }
+export type ApiDept = DepartmentEntity
 
 interface DeptPanelProps {
   depts: ApiDept[]
@@ -78,14 +79,17 @@ export function DeptPanel({
                       selectedDeptId === dept.id ? 'bg-amber' : 'bg-transparent',
                     )}
                   />
-                  <span
-                    className={cn(
-                      'text-sm truncate',
-                      selectedDeptId === dept.id ? 'font-medium text-amber' : 'text-foreground',
-                    )}
-                  >
-                    {dept.name}
-                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className={cn(
+                        'text-sm truncate',
+                        selectedDeptId === dept.id ? 'font-medium text-amber' : 'text-foreground',
+                      )}
+                    >
+                      {dept.name}
+                    </span>
+                    <span className="text-xs text-text-muted truncate">{dept.faculty.name}</span>
+                  </div>
                 </div>
                 <div className="flex items-center ml-2 shrink-0">
                   <span className="font-mono text-xs text-text-muted group-hover:invisible">

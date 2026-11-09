@@ -20,7 +20,10 @@ interface AuthContextValue {
   session: Session | null
   user: UserProfileEntity | null
   isLoading: boolean
+  /** A member: signed in with a real account. False for guests, who browse read-only. */
   isAuthenticated: boolean
+  /** Signed in with an anonymous (guest) session. */
+  isGuest: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -51,8 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       select: (res) => res.data,
     },
   })
+  const isGuest = !!(session?.user as { isAnonymous?: boolean | null } | undefined)?.isAnonymous
+
   useEffect(() => {
-    if (!user) return
+    // Guests can't chat, so they get no encryption keys.
+    if (!user || isGuest) return
 
     const init = async () => {
       const privateKey = await getPrivateKey(user.id)
@@ -66,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     init().catch(console.error)
-  }, [user, queryClient])
+  }, [user, isGuest, queryClient])
 
   // A signed-out visitor who is already signed in to uniauth (from another app)
   // is signed in here too — one invisible prompt=none round-trip per browser session.
@@ -76,12 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.unicorpTermsVersion === 1 && user.unicorpTermsAcceptedAt)
       sessionStorage.removeItem('unishare:shared-terms-refresh')
     if (sessionPending || session || silentCheckDone()) return
-    if (window.location.pathname.startsWith('/login')) return
+    // /login and the /auth/* pages run their own uniauth round trip.
+    if (/^\/(login|auth\/)/.test(window.location.pathname)) return
     signInWithUniauth({ returnTo: window.location.href, silent: true }).catch(console.error)
   }, [session, sessionPending])
 
   const isLoading = sessionPending || (!!session?.user && userPending)
-  const isAuthenticated = !!session?.user
+  const isAuthenticated = !!session?.user && !isGuest
   // Signed-in users need the shared UniAuth record; app-only history remains separate.
   const sessionUser = session?.user as
     | {
@@ -104,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         isLoading,
         isAuthenticated,
+        isGuest,
       }}
     >
       {needsConsent ? <ConsentGate /> : children}

@@ -9,7 +9,8 @@ import {
   getPostRequestsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/post-requests/post-requests'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 import {
   Dialog,
   DialogContent,
@@ -55,7 +56,7 @@ export function CreateRequestDialog() {
     formState: { errors },
   } = useForm<FormValues>()
 
-  const { data: depts } = useDepartmentsControllerFindAll({ query: { select: (r) => r.data } })
+  const { departments: depts } = useMyDepartments()
 
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100, ...(dept !== ALL && { departmentId: dept }) },
@@ -139,11 +140,7 @@ export function CreateRequestDialog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>All depts</SelectItem>
-                  {(depts ?? []).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
+                  <DepartmentSelectItems departments={depts} />
                 </SelectContent>
               </Select>
             </div>

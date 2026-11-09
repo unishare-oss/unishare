@@ -19,7 +19,7 @@ import {
 } from '@/components/calendar/add-exam-modal'
 import { useAuth } from '@/contexts/auth-context'
 import { useFeedStyleStore } from '@/lib/store'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 import {
   useExamsControllerFindAll,
   useExamsControllerCreate,
@@ -75,13 +75,11 @@ export default function CalendarPage() {
   const [editingExamId, setEditingExamId] = useState<string | null>(null)
   const [form, setForm] = useState<ExamFormState>(EMPTY_EXAM_FORM)
 
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments } = useMyDepartments()
   const deptOptions = useMemo(
     () => [
       { value: '', label: 'All departments' },
-      ...(departments ?? []).map((d) => ({ value: d.id, label: d.name })),
+      ...departments.map((d) => ({ value: d.id, label: d.name })),
     ],
     [departments],
   )

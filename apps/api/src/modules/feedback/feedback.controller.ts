@@ -3,6 +3,8 @@ import { ApiCreatedResponse, ApiForbiddenResponse, ApiOkResponse, ApiTags } from
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import { UserSession } from '@/auth/auth.config'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
 import { FeedbackService } from './feedback.service'
 import { CreateFeedbackDto } from './dto/create-feedback.dto'
 import { ListFeedbackDto } from './dto/list-feedback.dto'
@@ -32,7 +34,7 @@ export class AdminFeedbackController {
   @ApiOkResponse({ type: PaginatedFeedbackEntity })
   @ApiForbiddenResponse({ description: 'Admin or moderator role required' })
   @ResponseMessage('Feedback fetched')
-  async findAll(@Query() filters: ListFeedbackDto) {
-    return this.feedbackService.findAll(filters)
+  async findAll(@Query() filters: ListFeedbackDto, @UniversityScopeParam() scope: UniversityScope) {
+    return this.feedbackService.findAll(filters, scope)
   }
 }

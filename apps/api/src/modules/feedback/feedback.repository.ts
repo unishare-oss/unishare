@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
-import { FeedbackType } from '@/generated/prisma/client'
+import { FeedbackType, Prisma } from '@/generated/prisma/client'
+import { UniversityScope, userInScope } from '@/common/university-scope'
 
 @Injectable()
 export class FeedbackRepository {
@@ -19,11 +20,17 @@ export class FeedbackRepository {
     })
   }
 
-  async findAll(filters: { type?: FeedbackType; page: number; limit: number }) {
+  async findAll(
+    filters: { type?: FeedbackType; page: number; limit: number },
+    scope: UniversityScope,
+  ) {
     const { type, page, limit } = filters
     const skip = (page - 1) * limit
 
-    const where = type ? { type } : {}
+    const where: Prisma.FeedbackWhereInput = {
+      // Feedback belongs to its sender's university; signed-out feedback is for admins only
+      AND: [type ? { type } : {}, scope.kind === 'all' ? {} : { user: userInScope(scope) }],
+    }
 
     const [items, total] = await Promise.all([
       this.prisma.feedback.findMany({

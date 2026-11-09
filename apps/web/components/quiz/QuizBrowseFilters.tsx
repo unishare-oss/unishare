@@ -8,12 +8,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
+import type { DepartmentEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { X } from 'lucide-react'
-
-interface Department {
-  id: string
-  name: string
-}
 
 interface Course {
   id: string
@@ -24,7 +21,7 @@ interface Course {
 interface QuizBrowseFiltersProps {
   departmentId: string
   courseId: string
-  departments: Department[]
+  departments: DepartmentEntity[]
   courses: Course[]
   onDepartmentChange: (v: string) => void
   onCourseChange: (v: string) => void
@@ -49,11 +46,7 @@ export function QuizBrowseFilters({
           <SelectValue placeholder="All departments" />
         </SelectTrigger>
         <SelectContent>
-          {departments.map((d) => (
-            <SelectItem key={d.id} value={d.id}>
-              {d.name}
-            </SelectItem>
-          ))}
+          <DepartmentSelectItems departments={departments} />
         </SelectContent>
       </Select>
 

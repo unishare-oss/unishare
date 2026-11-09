@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SearchSelect } from '@/components/ui/search-select'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 
 export interface ExamFormState {
@@ -56,16 +56,14 @@ export function AddExamModal({
   editMode,
   submitting,
 }: AddExamModalProps) {
-  const { data: departments } = useDepartmentsControllerFindAll({
-    query: { select: (r) => r.data },
-  })
+  const { departments } = useMyDepartments()
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100, ...(value.departmentId ? { departmentId: value.departmentId } : {}) },
     { query: { select: (r) => r.data } },
   )
 
   const deptOptions = useMemo(
-    () => (departments ?? []).map((d) => ({ value: d.id, label: d.name })),
+    () => departments.map((d) => ({ value: d.id, label: d.name })),
     [departments],
   )
   const courseOptions = useMemo(

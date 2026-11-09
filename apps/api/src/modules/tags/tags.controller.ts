@@ -1,12 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common'
 import { ApiQuery, ApiTags } from '@nestjs/swagger'
-import { OptionalAuth } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { TagsService } from './tags.service'
 
 @ApiTags('tags')
+@GuestReadOnly()
 @Controller('tags')
-@OptionalAuth()
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 

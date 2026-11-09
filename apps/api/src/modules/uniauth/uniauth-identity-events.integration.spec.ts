@@ -97,7 +97,7 @@ describeDb('uniauth identity events against a real database', () => {
 
   it('suspension ends sessions without touching the local ban; memberships map onto the university', async () => {
     await prisma.university.create({
-      data: { id: `it-${run}-uni`, name: `Uni ${run}`, shortName: 'U', uniauthOrgId: `org-${run}` },
+      data: { id: `it-${run}-uni`, name: `Uni ${run}`, shortName: 'U', slug: `it-${run}` },
     })
     const p = await person('susp', { banned: true, banReason: 'local decision' })
     await service.apply(ev(p.sub, 'identity.suspended', 2), { userId: p.id })
@@ -114,8 +114,8 @@ describeDb('uniauth identity events against a real database', () => {
       profile: at(p.sub, {
         version: 3,
         'urn:uniauth:organizations': [
-          { id: `org-${run}`, verified: true },
-          { id: 'unknown', verified: true },
+          { id: `org-${run}`, slug: `it-${run}`, verified: true },
+          { id: 'unknown', slug: `unknown-${run}`, verified: true },
         ],
       }),
       userId: p.id,

@@ -4,6 +4,9 @@ import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
 import { Prisma } from '@/generated/prisma/client'
 
+/** The academic profile fields a member may write (the university comes from uniauth). */
+type AcademicProfileData = Omit<UpdateAcademicProfileDto, 'universityId'>
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -96,22 +99,54 @@ export class UsersRepository {
   findDepartmentById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, faculty: { select: { universityId: true } } },
     })
   }
 
-  findUniversityById(id: string) {
-    return this.prisma.university.findUnique({
+  findAcademicProfileOfUser(id: string) {
+    return this.prisma.user.findUnique({
       where: { id },
-      select: { id: true },
+      select: { universityId: true },
     })
   }
 
-  updateAcademicProfile(id: string, dto: UpdateAcademicProfileDto) {
+  /**
+   * Writes only while the user's stored university still equals `expected`, so a concurrent
+   * university change can't pair a department with another university. Null when it changed.
+   */
+  updateAcademicProfileIf(
+    id: string,
+    expected: { universityId: string },
+    dto: AcademicProfileData,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({ where: { id, ...expected }, data: dto })
+      if (count === 0) return null
+      return tx.user.findUnique({ where: { id }, include: this.countInclude })
+    })
+  }
+
+  updateAcademicProfile(id: string, dto: AcademicProfileData) {
     return this.prisma.user.update({
       where: { id },
       data: dto,
       include: this.countInclude,
+    })
+  }
+
+  findUniversityById(id: string) {
+    return this.prisma.university.findUnique({ where: { id }, select: { id: true } })
+  }
+
+  /** Sets a guest's university only while it has none. Null when it already had one. */
+  setGuestUniversityIfUnset(id: string, universityId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { id, isAnonymous: true, universityId: null },
+        data: { universityId },
+      })
+      if (count === 0) return null
+      return tx.user.findUnique({ where: { id }, include: this.countInclude })
     })
   }
 

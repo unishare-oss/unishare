@@ -19,7 +19,9 @@ import {
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/lib/store'
 import { UserAvatar } from '@/components/shared/user-avatar'
+import { toast } from 'sonner'
 import { signOut } from '@/src/lib/auth/sign-out'
+import { signInWithUniauth } from '@/src/lib/auth/uniauth'
 import { useAuth } from '@/contexts/auth-context'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
@@ -93,6 +95,33 @@ function SidebarLink({
   )
 }
 
+function SidebarButton({
+  label,
+  icon: Icon,
+  collapsed,
+  onClick,
+}: {
+  label: string
+  icon: React.ElementType
+  collapsed: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={cn(
+        'flex min-h-11 w-full items-center gap-3 rounded-xl border-2 border-transparent px-3 text-text-muted outline-none transition-[color,background-color] duration-200 motion-reduce:transition-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        collapsed && 'w-11 justify-center px-0',
+      )}
+    >
+      <Icon className="size-5 shrink-0" strokeWidth={1.5} />
+      {!collapsed && <span className="truncate text-sm font-semibold">{label}</span>}
+    </button>
+  )
+}
+
 function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
   const pathname = usePathname()
   const active = items.some((item) => isRouteActive(pathname, item.href))
@@ -143,7 +172,7 @@ function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
 }
 
 export function AppRail() {
-  const { session, isAuthenticated } = useAuth()
+  const { session, isAuthenticated, isGuest } = useAuth()
   const user = session?.user
   const collapsed = useUIStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useUIStore((state) => state.toggleSidebar)
@@ -244,7 +273,7 @@ export function AppRail() {
         </nav>
 
         <div className="shrink-0 space-y-1 border-t-2 border-border p-3">
-          {user ? (
+          {isAuthenticated && user ? (
             <>
               <SidebarLink
                 item={{ href: '/notifications', label: 'Notifications', icon: Bell }}
@@ -311,10 +340,28 @@ export function AppRail() {
               </DropdownMenu>
             </>
           ) : (
-            <SidebarLink
-              item={{ href: '/login', label: 'Sign In', icon: LogIn }}
-              collapsed={collapsed}
-            />
+            <>
+              {/* Straight to uniauth: the app shell only shows to guests here, and /login
+                  sends anyone with a session (a guest's too) back to the feed. */}
+              <SidebarButton
+                label="Sign In"
+                icon={LogIn}
+                collapsed={collapsed}
+                onClick={() =>
+                  signInWithUniauth({ returnTo: window.location.href }).catch(() =>
+                    toast.error('Could not start sign-in. Please try again.'),
+                  )
+                }
+              />
+              {isGuest && (
+                <SidebarButton
+                  label="Leave guest mode"
+                  icon={LogOut}
+                  collapsed={collapsed}
+                  onClick={handleSignOut}
+                />
+              )}
+            </>
           )}
         </div>
       </aside>

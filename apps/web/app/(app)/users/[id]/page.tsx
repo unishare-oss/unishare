@@ -50,7 +50,7 @@ function StatButton({
 
 function PublicProfileHeader({
   user,
-  isSelf,
+  canFollow,
   onFollow,
   onUnfollow,
   isPending,
@@ -58,7 +58,7 @@ function PublicProfileHeader({
   onOpenFollowing,
 }: {
   user: UserProfileEntity
-  isSelf: boolean
+  canFollow: boolean
   onFollow: () => void
   onUnfollow: () => void
   isPending: boolean
@@ -74,7 +74,7 @@ function PublicProfileHeader({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>
-            {!isSelf && (
+            {canFollow && (
               <Button
                 size="sm"
                 variant={user.isFollowing ? 'outline' : 'default'}
@@ -198,7 +198,7 @@ function UserLists({ userId }: { userId: string }) {
 
 export default function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { user: me } = useAuth()
+  const { user: me, isAuthenticated } = useAuth()
   const qc = useQueryClient()
   const [followDialog, setFollowDialog] = useState<FollowDialog>(null)
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts')
@@ -281,7 +281,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
             <>
               <PublicProfileHeader
                 user={user}
-                isSelf={isSelf}
+                // Guests can't follow (the API refuses them), nor can you follow yourself.
+                canFollow={isAuthenticated && !isSelf}
                 onFollow={() => follow({ id })}
                 onUnfollow={() => unfollow({ id })}
                 isPending={followPending || unfollowPending}

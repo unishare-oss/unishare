@@ -18,9 +18,11 @@ import { UniauthAccountCard } from '@/components/profile/uniauth-account-card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
+import { useAuth } from '@/contexts/auth-context'
 
 function ProfileContent({ user }: { user: UserProfileEntity }) {
   const [activeTab, setActiveTab] = useState<Tab>('MY POSTS')
+  const { isGuest } = useAuth()
 
   const { data: myPostsData, isLoading: myPostsLoading } = usePostsControllerFindAll(
     { authorId: user.id, limit: 100 },
@@ -37,9 +39,10 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
   return (
     <>
       <ProfileHeaderCard user={user} />
-      <EditProfileForm user={user} />
-      <UniauthAccountCard />
-      <DangerZoneCard />
+      <EditProfileForm user={user} isGuest={isGuest} />
+      {/* A guest has no unicorp account, chat keys or account to delete: only the bio. */}
+      {!isGuest && <UniauthAccountCard />}
+      {!isGuest && <DangerZoneCard />}
       <ProfileTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}

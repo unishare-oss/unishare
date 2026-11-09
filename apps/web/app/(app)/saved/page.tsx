@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
-import Link from 'next/link'
 import { LogIn } from 'lucide-react'
 import { usePostsControllerGetSavedPosts } from '@/src/lib/api/generated/posts/posts'
 import { useReadingListsControllerGetListPosts } from '@/src/lib/api/generated/reading-lists/reading-lists'
+import { toast } from 'sonner'
 import { useUIStore } from '@/lib/store'
+import { signInWithUniauth } from '@/src/lib/auth/uniauth'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { PostFeed } from '@/components/feed/post-feed'
@@ -57,13 +58,19 @@ export default function SavedPage() {
           <p className="text-sm text-text-muted">
             Saved posts are stored locally and won&apos;t sync across devices.
           </p>
-          <Link
-            href="/login"
+          {/* Only guests reach this page signed out of an account, and /login refuses a guest. */}
+          <button
+            type="button"
+            onClick={() =>
+              signInWithUniauth({ returnTo: window.location.href }).catch(() =>
+                toast.error('Could not start sign-in. Please try again.'),
+              )
+            }
             className="flex items-center gap-1.5 text-sm font-medium text-amber hover:underline shrink-0"
           >
             <LogIn className="size-3.5" strokeWidth={1.5} />
             Sign in to sync
-          </Link>
+          </button>
         </div>
       )}
       <div className="flex flex-1">

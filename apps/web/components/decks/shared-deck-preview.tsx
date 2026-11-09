@@ -13,8 +13,8 @@ import { DeckPreviewUnavailable } from '@/components/decks/deck-preview'
  * as the owner's DeckPreview, for the same reason: the layouts are React components inside
  * the generator, so anything drawn here would be an approximation that drifts.
  *
- * Fetches the presigned URL itself rather than using a generated hook. This page is
- * unauthenticated and the generated fetcher exists to carry a session.
+ * Fetches the presigned URL itself rather than using a generated hook: a same-origin fetch,
+ * so the browser sends the session cookie the API scopes the deck by.
  */
 export function SharedDeckPreview({ token }: { token: string }) {
   const [url, setUrl] = useState<string | null>(null)

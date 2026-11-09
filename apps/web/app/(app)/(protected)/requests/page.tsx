@@ -14,7 +14,8 @@ import type {
   PostRequestsControllerFindAllParams,
 } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useDepartmentsControllerFindAll } from '@/src/lib/api/generated/departments/departments'
+import { useMyDepartments } from '@/hooks/use-my-departments'
+import { DepartmentSelectItems } from '@/components/departments/department-select-items'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -28,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CreateRequestDialog } from '@/components/requests/create-request-dialog'
 import { ChevronUp, Trash2, CheckCircle2, Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,6 +40,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 const ALL = '__all__'
 const YEARS = [1, 2, 3, 4, 5, 6]
 
+/** Lists content requests with filters, and lets people create, upvote and delete them. */
 export default function RequestsPage() {
   const { session, isAuthenticated } = useAuth()
   const userId = session?.user?.id
@@ -49,7 +52,7 @@ export default function RequestsPage() {
   const [courseFilter, setCourseFilter] = useState<string>(ALL)
   const [page, setPage] = useState(1)
 
-  const { data: depts } = useDepartmentsControllerFindAll({ query: { select: (r) => r.data } })
+  const { departments: depts } = useMyDepartments()
   const { data: coursesData } = useCoursesControllerFindAll(
     { limit: 100 },
     { query: { select: (r) => r.data } },
@@ -161,11 +164,7 @@ export default function RequestsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All depts</SelectItem>
-              {(depts ?? []).map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
+              <DepartmentSelectItems departments={depts} />
             </SelectContent>
           </Select>
 
@@ -261,6 +260,7 @@ export default function RequestsPage() {
   )
 }
 
+/** One request row: upvotes, details, the post that fulfilled it, and owner actions. */
 function RequestCard({
   request,
   currentUserId,
@@ -272,6 +272,7 @@ function RequestCard({
   onUpvote: () => void
   onDelete: () => void
 }) {
+  const router = useRouter()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const isOwner = currentUserId === request.author?.id
   const isFulfilled = request.status === 'FULFILLED'
@@ -351,7 +352,7 @@ function RequestCard({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                window.location.href = `/posts/${request.fulfilledByPost!.id}`
+                router.push(`/posts/${request.fulfilledByPost!.id}`)
               }}
               className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
             >

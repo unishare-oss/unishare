@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
 import { computeEnrollmentYearForLevel } from '@/common/utils/academic-year'
+import { UniversityScope } from '@/common/university-scope'
 import { ExamsRepository } from './exams.repository'
 import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
@@ -21,25 +22,40 @@ export class ExamsService {
     private readonly config: ConfigService,
   ) {}
 
-  async create(dto: CreateExamDto, createdBy: string) {
-    await this.coursesService.findOne(dto.courseId)
+  // Another university's course is a 404, so staff can't add exams to it.
+  async create(dto: CreateExamDto, createdBy: string, scope: UniversityScope) {
+    await this.coursesService.findOne(dto.courseId, scope)
     this.assertValidTimeRange(dto.startsAt, dto.endsAt)
     return this.examsRepository.create(dto, createdBy)
   }
 
-  async findInRange(from: string, to: string, departmentId?: string, courseId?: string) {
-    return this.examsRepository.findInRange(new Date(from), new Date(to), departmentId, courseId)
+  async findInRange(
+    from: string,
+    to: string,
+    scope: UniversityScope,
+    departmentId?: string,
+    courseId?: string,
+  ) {
+    return this.examsRepository.findInRange(
+      new Date(from),
+      new Date(to),
+      scope,
+      departmentId,
+      courseId,
+    )
   }
 
-  async findOne(id: string) {
-    const exam = await this.examsRepository.findById(id)
+  async findOne(id: string, scope: UniversityScope) {
+    const exam = await this.examsRepository.findById(id, scope)
     if (!exam) throw new NotFoundException('Exam not found')
     return exam
   }
 
-  async update(id: string, dto: UpdateExamDto) {
-    const existing = await this.findOne(id)
-    if (dto.courseId !== undefined) await this.coursesService.findOne(dto.courseId)
+  async update(id: string, dto: UpdateExamDto, scope: UniversityScope) {
+    const existing = await this.findOne(id, scope)
+    if (dto.courseId !== undefined) {
+      await this.coursesService.findOne(dto.courseId, scope)
+    }
 
     const startsAt = dto.startsAt ?? existing.startsAt.toISOString()
     const endsAt = dto.endsAt !== undefined ? dto.endsAt : (existing.endsAt?.toISOString() ?? null)
@@ -48,8 +64,8 @@ export class ExamsService {
     return this.examsRepository.update(id, dto)
   }
 
-  async remove(id: string) {
-    await this.findOne(id)
+  async remove(id: string, scope: UniversityScope) {
+    await this.findOne(id, scope)
     await this.examsRepository.remove(id)
   }
 

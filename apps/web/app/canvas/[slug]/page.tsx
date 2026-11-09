@@ -7,21 +7,23 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DoorClosed, KeyRound, Loader2, Lock, ShieldAlert } from 'lucide-react'
-import { CanvasHeader } from '@/src/components/canvas/canvas-header'
-import { CursorOverlay } from '@/src/components/canvas/cursor-overlay'
+import { CanvasHeader } from '@/components/canvas/canvas-header'
+import { CursorOverlay } from '@/components/canvas/cursor-overlay'
 import { CollabProvider, useCollab, useCollabPresence } from '@/contexts/collab-context'
 import { backupOwnerRoomKey, getRoomKeyFromLocation } from '@/src/lib/board-crypto'
 import { toast } from 'sonner'
 import { exportRoomKeyRaw } from '@/src/lib/crypto'
+import { signInWithUniauth } from '@/src/lib/auth/uniauth'
 import { useBoardKeysStore } from '@/lib/store'
 
-const ExcalidrawWrapper = dynamic(() => import('@/src/components/canvas/excalidraw-wrapper'), {
+const ExcalidrawWrapper = dynamic(() => import('@/components/canvas/excalidraw-wrapper'), {
   ssr: false,
 })
 
 type JoinState =
   'joining' | 'joined' | 'not-found' | 'private' | 'password-required' | 'key-missing'
 
+/** Board route: joins the room (password and encryption key included), then mounts the collab canvas. */
 export default function CanvasPage() {
   const { slug } = useParams<{ slug: string }>()
   const [joinState, setJoinState] = useState<JoinState>('joining')
@@ -133,8 +135,16 @@ export default function CanvasPage() {
         <Lock className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-semibold text-foreground">This board is private</h1>
         <p className="text-sm text-muted-foreground">Sign in to access this board.</p>
-        <Button asChild variant="default">
-          <Link href="/login">Sign In</Link>
+        {/* Straight to uniauth: canvas visitors usually hold a guest session, which /login refuses. */}
+        <Button
+          variant="default"
+          onClick={() =>
+            signInWithUniauth({ returnTo: window.location.href }).catch(() =>
+              toast.error('Could not start sign-in. Please try again.'),
+            )
+          }
+        >
+          Sign In
         </Button>
       </div>
     )
@@ -258,6 +268,7 @@ export default function CanvasPage() {
   )
 }
 
+/** Shows a connecting screen until the room is joined, then the header, editor and cursors. */
 function CanvasInner() {
   const { connectionStatus } = useCollab()
   const { emitCursorMove } = useCollabPresence()

@@ -3,6 +3,7 @@ import { PostRequestStatus, Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
 import { paginate } from '@/common/utils/paginate'
 import { PaginationDto } from '@/common/dto/pagination.dto'
+import { courseInScope, postInScope, UniversityScope } from '@/common/university-scope'
 
 const suggestionInclude = {
   user: { select: { id: true, name: true, image: true } },
@@ -48,11 +49,16 @@ function mapRequest(r: any, userId?: string) {
 export class PostRequestsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(where: Prisma.PostRequestWhereInput, pagination: PaginationDto, userId?: string) {
+  async findAll(
+    where: Prisma.PostRequestWhereInput,
+    scope: UniversityScope,
+    pagination: PaginationDto,
+    userId?: string,
+  ) {
     const result = await paginate(
       this.prisma.postRequest,
       {
-        where,
+        where: { AND: [where, { course: courseInScope(scope) }] },
         include: requestInclude(userId),
         orderBy: [{ createdAt: 'desc' }],
       },
@@ -61,13 +67,34 @@ export class PostRequestsRepository {
     return { ...result, items: result.items.map((r) => mapRequest(r, userId)) }
   }
 
-  async findById(id: string, userId?: string) {
+  async findById(id: string, scope: UniversityScope, userId?: string) {
     const r = await this.prisma.postRequest.findUnique({
-      where: { id },
+      where: { id, AND: [{ course: courseInScope(scope) }] },
       include: requestDetailInclude(userId),
     })
     if (!r) return null
     return mapRequest(r, userId)
+  }
+
+  findIdInScope(id: string, scope: UniversityScope) {
+    return this.prisma.postRequest.findFirst({
+      where: { AND: [{ id }, { course: courseInScope(scope) }] },
+      select: { id: true },
+    })
+  }
+
+  findCourseIdInScope(id: string, scope: UniversityScope) {
+    return this.prisma.course.findFirst({
+      where: { AND: [{ id }, courseInScope(scope)] },
+      select: { id: true },
+    })
+  }
+
+  findPostIdInScope(id: string, scope: UniversityScope) {
+    return this.prisma.post.findFirst({
+      where: { AND: [{ id, deletedAt: null }, postInScope(scope)] },
+      select: { id: true },
+    })
   }
 
   create(data: Prisma.PostRequestUncheckedCreateInput) {
@@ -79,7 +106,7 @@ export class PostRequestsRepository {
       .then((r) => mapRequest(r, data.authorId))
   }
 
-  async toggleUpvote(requestId: string, userId: string) {
+  async toggleUpvote(requestId: string, userId: string, scope: UniversityScope) {
     const existing = await this.prisma.postRequestUpvote.findUnique({
       where: { userId_requestId: { userId, requestId } },
     })
@@ -90,7 +117,7 @@ export class PostRequestsRepository {
     } else {
       await this.prisma.postRequestUpvote.create({ data: { userId, requestId } })
     }
-    return this.findById(requestId, userId)
+    return this.findById(requestId, scope, userId)
   }
 
   findSuggestion(id: string) {

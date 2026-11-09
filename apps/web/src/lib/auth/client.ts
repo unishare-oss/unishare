@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/react'
-import { inferAdditionalFields, adminClient } from 'better-auth/client/plugins'
+import { inferAdditionalFields, adminClient, anonymousClient } from 'better-auth/client/plugins'
 import { ac, roles } from '../permissions'
 
 export const authClient = createAuthClient({
@@ -11,9 +11,11 @@ export const authClient = createAuthClient({
       user: {
         role: { type: 'string', input: false },
         departmentId: { type: 'string', input: false },
-        universityId: { type: 'string', input: true, required: false },
+        universityId: { type: 'string', input: false, required: false },
       },
     }),
     adminClient({ ac, roles }),
+    // Guests: content reads need a session, so a guest browses with an anonymous one.
+    anonymousClient(),
   ],
 })

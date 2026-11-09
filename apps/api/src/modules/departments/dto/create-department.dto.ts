@@ -7,4 +7,8 @@ export class CreateDepartmentDto {
   @MinLength(2)
   @MaxLength(100)
   name: string
+
+  @ApiProperty()
+  @IsString()
+  facultyId: string
 }

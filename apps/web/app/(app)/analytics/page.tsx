@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { pluralize } from '@/lib/utils'
 import { Eye, FileText, MessageSquare, SmilePlus, Users } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/auth-context'
 
 function StatCard({
   label,
@@ -49,13 +50,19 @@ function TableSkeleton({ rows = 5 }: { rows?: number }) {
 }
 
 export default function AnalyticsPage() {
+  const { user } = useAuth()
+  // GET /stats counts the viewer's university; only admins get the whole platform.
+  const subtitle =
+    user?.role === 'ADMIN'
+      ? 'Platform overview and top content'
+      : "Your university's overview and top content"
   const { data: stats, isLoading } = useStatsControllerGetStats({
     query: { select: (r) => r.data },
   })
 
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <PageHeader title="Analytics" subtitle="Platform overview and top content" />
+      <PageHeader title="Analytics" subtitle={subtitle} />
 
       <div className="p-6 space-y-8">
         {/* Overview cards */}

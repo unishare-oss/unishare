@@ -21,7 +21,7 @@ export function silentCheckDone() {
   return document.cookie.split('; ').some((c) => c.startsWith(`${CHECKED_COOKIE}=`))
 }
 
-/** Where to go back to if uniauth answers with an error (see app/(auth)/auth/return). */
+/** Where to go back to if uniauth answers with an error (see app/auth/return). */
 const RETURN_KEY = 'unishare:uniauth-return-to'
 
 /** Reads and clears the page a sign-in attempt started from. */
@@ -35,6 +35,24 @@ export function takeReturnTo(): string | null {
       : null
   } catch {
     return null
+  }
+}
+
+/**
+ * `value` if it is a path on this app, else /feed. It decides a redirect, so it is checked the
+ * way the browser will read it: URL parsing drops tabs and newlines, turns `\` into `/` and
+ * resolves `.` and `..`, so `/\n/host`, `/\host` or `/.//host` would leave the site. The parsed
+ * path is checked too: `//host` passes the origin check but is another site to the browser.
+ */
+export function safeReturnPath(value: string | null | undefined) {
+  if (!value?.startsWith('/')) return '/feed'
+  try {
+    const url = new URL(value, window.location.origin)
+    return url.origin === window.location.origin && !url.pathname.startsWith('//')
+      ? url.pathname + url.search + url.hash
+      : '/feed'
+  } catch {
+    return '/feed'
   }
 }
 
@@ -59,8 +77,9 @@ export async function signInWithUniauth({
   } catch {
     // Without storage an error just lands on /feed.
   }
-  // Better Auth 1.7 registers genericOAuth providers as social providers.
-  await authClient.signIn.social({
+  // Better Auth 1.7 registers genericOAuth providers as social providers. A failed request
+  // resolves with `error` instead of rejecting; throw it so callers' catch runs.
+  const { error } = await authClient.signIn.social({
     provider: 'uniauth',
     callbackURL: returnTo,
     // Every error goes through /auth/return: login_required quietly returns to returnTo,
@@ -68,6 +87,7 @@ export async function signInWithUniauth({
     errorCallbackURL: `${window.location.origin}/auth/return`,
     ...(silent && { additionalParams: { prompt: 'none' } }),
   })
+  if (error) throw new Error(error.message ?? 'Sign-in could not start')
 }
 
 /**

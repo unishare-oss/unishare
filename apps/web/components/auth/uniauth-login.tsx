@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
+import { authClient } from '@/src/lib/auth/client'
+import { safeReturnPath, signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
 
 // Errors uniauth can hand back on the callback. login_required only comes from the silent
 // check and is not an error from the user's point of view.
@@ -16,15 +18,11 @@ const errorMessages: Record<string, string> = {
     'This email already has a Unishare account that is not linked to uniauth yet. Contact support.',
 }
 
-/** A same-origin path to return to (the proxy passes the protected page as ?next=). */
-function safeNext(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/feed'
-}
-
 /** AUTH_MODE=uniauth login: one button to uniauth's central sign-in, plus guest access. */
 export function UniauthLogin() {
   const params = useSearchParams()
-  const next = safeNext(params.get('next'))
+  // The proxy passes the protected page as ?next=.
+  const next = safeReturnPath(params.get('next'))
   const error = params.get('error')
   // Someone signed in on another app reaches a protected page signed out here: check
   // uniauth silently first and only show the button if they aren't signed in there.
@@ -52,6 +50,21 @@ export function UniauthLogin() {
     await signInWithUniauth({ returnTo: `${window.location.origin}${next}` }).catch(() =>
       setLoading(false),
     )
+  }
+
+  // Content needs a session, so a guest gets an anonymous one; it then picks a university.
+  async function continueAsGuest() {
+    setLoading(true)
+    const failed = await authClient.signIn
+      .anonymous()
+      .then(({ error }) => !!error)
+      .catch(() => true)
+    if (failed) {
+      setLoading(false)
+      toast.error('Could not start a guest session. Please try again.')
+      return
+    }
+    window.location.assign(next)
   }
 
   if (checking) return null
@@ -117,12 +130,14 @@ export function UniauthLogin() {
             <div className="flex-1 h-px bg-border" />
           </div>
           <div className="flex justify-center mt-4">
-            <Link
-              href="/feed"
-              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+            <button
+              type="button"
+              onClick={continueAsGuest}
+              disabled={loading}
+              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150 disabled:opacity-50"
             >
               Continue as guest
-            </Link>
+            </button>
           </div>
         </div>
       </div>

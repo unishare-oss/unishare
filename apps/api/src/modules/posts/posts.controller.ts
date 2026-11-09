@@ -15,6 +15,7 @@ import {
 import {
   ApiCreatedResponse,
   ApiExcludeEndpoint,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -25,12 +26,15 @@ import type { Response } from 'express'
 import { Throttle } from '@nestjs/throttler'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { ThrottleBucket } from '@/common/decorators/throttle-bucket.decorator'
-import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
+import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import type { UniversityScope } from '@/common/university-scope'
+import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { IsArray, IsString, MinLength, MaxLength, Matches, ArrayMaxSize } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
 import { UserRole } from '@/generated/prisma/client'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
+import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { formatSseEvent, SSE_HEADERS } from '@/common/utils/sse'
 import { UserSession } from '@/auth/auth.config'
 import { PostsService } from './posts.service'
@@ -57,6 +61,7 @@ class TagPostDto {
 }
 
 @ApiTags('posts')
+@GuestReadOnly()
 @Controller('posts')
 export class PostsController {
   private readonly logger = new Logger(PostsController.name)
@@ -68,17 +73,25 @@ export class PostsController {
 
   @Post()
   @ApiCreatedResponse({ type: PostDetailEntity })
+  @ApiNotFoundResponse({ description: 'Course not found in your university' })
   @ResponseMessage('Post created successfully')
-  create(@Body() dto: CreatePostDto, @Session() session: UserSession) {
-    return this.postsService.create(dto, session.user.id, session.user.departmentId)
+  create(
+    @Body() dto: CreatePostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.create(dto, session.user.id, session.user.departmentId, scope)
   }
 
   @Get()
-  @OptionalAuth()
   @ApiOkResponse({ type: PaginatedPostEntity })
   @ResponseMessage('Posts fetched successfully')
-  findAll(@Query() query: ListPostsDto, @Session() session: UserSession) {
-    return this.postsService.findAll(query, {
+  findAll(
+    @Query() query: ListPostsDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.findAll(query, scope, {
       role: session?.user?.role as UserRole | undefined,
       id: session?.user?.id,
     })
@@ -87,37 +100,43 @@ export class PostsController {
   @Get('saved')
   @ApiOkResponse({ type: PaginatedPostEntity })
   @ResponseMessage('Saved posts fetched successfully')
-  getSavedPosts(@Query() query: PaginationDto, @Session() session: UserSession) {
-    return this.postsService.getSavedPosts(session.user.id, query)
+  getSavedPosts(
+    @Query() query: PaginationDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.getSavedPosts(session.user.id, scope, query)
   }
 
   @Get('s/:shortCode')
-  @OptionalAuth()
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
-  findByShortCode(@Param('shortCode') shortCode: string, @Session() session: UserSession) {
-    return this.postsService.findByShortCode(shortCode, {
+  findByShortCode(
+    @Param('shortCode') shortCode: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.findByShortCode(shortCode, scope, {
       role: session?.user?.role as UserRole | undefined,
       id: session?.user?.id,
     })
   }
 
   @Get('search')
-  @OptionalAuth()
   @ApiOkResponse({ description: 'Search results with pagination' })
   @ResponseMessage('Search completed successfully')
   search(
     @Query('q') q: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '20',
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
     const pageNum = parseInt(page, 10) || 1
     const limitNum = parseInt(limit, 10) || 20
-    return this.postsService.searchPosts(q, limitNum, pageNum)
+    return this.postsService.searchPosts(q, scope, limitNum, pageNum)
   }
 
   @Get('trending')
-  @OptionalAuth()
   @ApiQuery({
     name: 'page',
     type: Number,
@@ -153,27 +172,33 @@ export class PostsController {
     },
   })
   @ResponseMessage('Trending posts fetched successfully')
-  async getTrendingPosts(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
+  async getTrendingPosts(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
     const pageNum = parseInt(page, 10) || 1
     const limitNum = parseInt(limit, 10) || 20
-    return this.trendingService.getTrendingPosts(limitNum, pageNum)
+    return this.trendingService.getTrendingPosts(scope, limitNum, pageNum)
   }
 
   @Get(':id/ai-index-status')
-  @OptionalAuth()
   @ApiOperation({ summary: 'Progress of document indexing for AI chat' })
   @ApiOkResponse({ type: AiIndexStatusDto })
   @ResponseMessage('AI index status fetched successfully')
-  getAiIndexStatus(@Param('id') id: string) {
-    return this.postsService.getAiIndexStatus(id)
+  getAiIndexStatus(@Param('id') id: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.postsService.getAiIndexStatus(id, scope)
   }
 
   @Get(':id')
-  @OptionalAuth()
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post fetched successfully')
-  findOne(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.findOne(id, {
+  findOne(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.findOne(id, scope, {
       role: session?.user?.role as UserRole | undefined,
       id: session?.user?.id,
     })
@@ -181,8 +206,12 @@ export class PostsController {
 
   @Post(':id/save')
   @ResponseMessage('Post saved successfully')
-  savePost(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.savePost(id, session.user.id)
+  savePost(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.savePost(id, session.user.id, scope)
   }
 
   @Delete(':id/save')
@@ -194,8 +223,19 @@ export class PostsController {
   @Post(':id/react')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Reaction updated')
-  react(@Param('id') id: string, @Body() dto: ReactToPostDto, @Session() session: UserSession) {
-    return this.postsService.toggleReaction(id, dto, session.user.id, session.user.role as UserRole)
+  react(
+    @Param('id') id: string,
+    @Body() dto: ReactToPostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.toggleReaction(
+      id,
+      dto,
+      session.user.id,
+      scope,
+      session.user.role as UserRole,
+    )
   }
 
   @Patch(':id/status')
@@ -206,8 +246,9 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: UpdatePostStatusDto,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.postsService.updateStatus(id, dto, {
+    return this.postsService.updateStatus(id, dto, scope, {
       id: session.user.id,
       role: session.user.role as UserRole,
     })
@@ -216,14 +257,23 @@ export class PostsController {
   @Patch(':id')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Post updated successfully')
-  update(@Param('id') id: string, @Body() dto: UpdatePostDto, @Session() session: UserSession) {
-    return this.postsService.update(id, dto, session.user.id)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdatePostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.update(id, dto, session.user.id, scope)
   }
 
   @Delete(':id')
   @ResponseMessage('Post deleted successfully')
-  remove(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.remove(id, session.user.id, session.user.role as UserRole)
+  remove(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.remove(id, session.user.id, session.user.role as UserRole, scope)
   }
 
   @Post(':id/ai-chat')
@@ -233,8 +283,12 @@ export class PostsController {
   @ApiOperation({ summary: 'Chat with a post using AI' })
   @ApiOkResponse({ type: AiChatResponseDto, description: 'AI response to the user message' })
   @ResponseMessage('AI response generated')
-  aiChat(@Param('id') id: string, @Body() dto: AiChatDto, @Session() session: UserSession) {
-    return this.postsService.chatWithPost(id, dto, session.user.id)
+  aiChat(
+    @Param('id') id: string,
+    @Body() dto: AiChatDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.chatWithPost(id, dto, scope)
   }
 
   /**
@@ -262,10 +316,10 @@ export class PostsController {
   async aiChatStream(
     @Param('id') id: string,
     @Body() dto: AiChatDto,
-    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
     @Res() res: Response,
   ) {
-    const stream = await this.postsService.chatWithPostStream(id, dto, session.user.id)
+    const stream = await this.postsService.chatWithPostStream(id, dto, scope)
     const iterator = stream[Symbol.asyncIterator]()
 
     // The first event is pulled BEFORE a single header goes out, and that ordering is the whole
@@ -309,15 +363,35 @@ export class PostsController {
   @Post(':id/summarize')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Summary generation started')
-  summarize(@Param('id') id: string, @Session() session: UserSession) {
-    return this.postsService.regenerateSummary(id, session.user.id, session.user.role as UserRole)
+  summarize(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.regenerateSummary(
+      id,
+      session.user.id,
+      session.user.role as UserRole,
+      scope,
+    )
   }
 
   @Post(':id/tags')
   @ApiOkResponse({ type: PostDetailEntity })
   @ResponseMessage('Tags added successfully')
-  addTags(@Param('id') id: string, @Body() dto: TagPostDto, @Session() session: UserSession) {
-    return this.postsService.tagPost(id, dto.tags, session.user.id, session.user.role as UserRole)
+  addTags(
+    @Param('id') id: string,
+    @Body() dto: TagPostDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.tagPost(
+      id,
+      dto.tags,
+      session.user.id,
+      session.user.role as UserRole,
+      scope,
+    )
   }
 
   @Delete(':id/tags/:tagId')
@@ -326,7 +400,14 @@ export class PostsController {
     @Param('id') id: string,
     @Param('tagId') tagId: string,
     @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.postsService.untagPost(id, tagId, session.user.id, session.user.role as UserRole)
+    return this.postsService.untagPost(
+      id,
+      tagId,
+      session.user.id,
+      session.user.role as UserRole,
+      scope,
+    )
   }
 }
