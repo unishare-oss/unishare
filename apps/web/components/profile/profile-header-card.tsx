@@ -27,8 +27,8 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
       <div className="flex items-start gap-5">
         <div className="relative group shrink-0 w-[72px] h-[72px]">
           <UserAvatar name={user.name} image={user.image} size="lg" priority />
-          {/* The picture is the unicorp account's: it's changed there, and /auth/refresh's
-              silent sign-in brings the new one back. */}
+          {/* The picture is the unicorp account's: it's changed there and reaches unishare at
+              the next sign-in or identity event. */}
           <a
             href={uniauthAccountURL('/profile')}
             className="absolute inset-0 w-full h-full rounded-[6px] bg-surface-dark/50 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 flex items-center justify-center"
