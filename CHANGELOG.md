@@ -1,3 +1,35 @@
+# [0.36.0](https://github.com/unishare-oss/unishare/compare/v0.35.4...v0.36.0) (2026-11-09)
+
+### Bug Fixes
+
+- address review comments on university faculties ([0d92980](https://github.com/unishare-oss/unishare/commit/0d92980c9144165568ad26e14874b2f5fbb817d5))
+- address review findings on university faculties ([#203](https://github.com/unishare-oss/unishare/issues/203)) ([d7cf051](https://github.com/unishare-oss/unishare/commit/d7cf05121c6e0fab4e07c224d85c363fa020eb98))
+- **api:** scope feedback and post creation, apply review fixes ([d4a4b5d](https://github.com/unishare-oss/unishare/commit/d4a4b5df1ddfc3f7bb38cca977ec0e09adf230c4))
+- **auth:** clear the university when uniauth lists no memberships ([48ddab7](https://github.com/unishare-oss/unishare/commit/48ddab7b338252c793e31fe191b97bc846930890))
+- **auth:** refuse client-posted ID tokens on sign-in and link ([e98593e](https://github.com/unishare-oss/unishare/commit/e98593e9345aaba29c3f6376615ea26ab0b9ebc7))
+- **boards:** load existing board images once Excalidraw is ready ([#219](https://github.com/unishare-oss/unishare/issues/219)) ([60de086](https://github.com/unishare-oss/unishare/commit/60de08674ad71aed4ce2020116676e5eee6b2b7b))
+- close link previews to guests and harden guest sign-in ([8e5f206](https://github.com/unishare-oss/unishare/commit/8e5f20683c3e57e9c9c4fbbb26b60c5c70579c64))
+- **deps:** patch dependency security vulnerabilities ([8550f94](https://github.com/unishare-oss/unishare/commit/8550f944660191362397455612b3c42a3480c6e1))
+- **web:** address code review on US-21 ([dc70502](https://github.com/unishare-oss/unishare/commit/dc705027c49934012d58c415bf9839a8135ed6f6))
+- **web:** change the profile picture on unicorp ([6cc3ec0](https://github.com/unishare-oss/unishare/commit/6cc3ec056ef73e69f8306856f0db4f9de2bc4b74))
+- **web:** handle sign-in errors and parse return paths ([6d52206](https://github.com/unishare-oss/unishare/commit/6d522064e52618a137219321dff8cde336d00135))
+- **web:** let /auth/return finish for signed-in users; picker button on departments ([f261866](https://github.com/unishare-oss/unishare/commit/f26186639ab36bc49d6cc6573a2e3c1c612bf6bb))
+- **web:** refuse return paths that normalize to // ([22988d3](https://github.com/unishare-oss/unishare/commit/22988d32d61a57e735e33e6d366dd5dabf787654))
+
+### Features
+
+- **api:** departments belong to a faculty of a university ([5496df5](https://github.com/unishare-oss/unishare/commit/5496df598820eca6de8d463848236f1daf2f8e49))
+- **api:** keep AI chat and MCP inside the university ([#213](https://github.com/unishare-oss/unishare/issues/213)) ([ee91992](https://github.com/unishare-oss/unishare/commit/ee91992e7cbe1b0c001224bcec0503f999f81832))
+- **api:** limit moderators to their own university ([30e2ced](https://github.com/unishare-oss/unishare/commit/30e2cedf9429970a6de46b5351448b8d44b84d34))
+- **api:** scope course content to the university ([#212](https://github.com/unishare-oss/unishare/issues/212)) ([83fbfe5](https://github.com/unishare-oss/unishare/commit/83fbfe51946543475507155c7c0ecc75a4b7b1f8))
+- **api:** show posts only inside their university ([#211](https://github.com/unishare-oss/unishare/issues/211)) ([390c630](https://github.com/unishare-oss/unishare/commit/390c6309da7eae78b6dd6cf78039400db2cb99ad))
+- **auth:** link universities by UniAuth slug (US-12) ([610d540](https://github.com/unishare-oss/unishare/commit/610d54052ab59e1e1d6c2668c9e10c4277fd2475))
+- **auth:** take the university only from uniauth ([#210](https://github.com/unishare-oss/unishare/issues/210)) ([4308724](https://github.com/unishare-oss/unishare/commit/43087249f0cbd2d2d5a2edc2e84be15c2cd6a013))
+- let guests browse one university read-only ([#214](https://github.com/unishare-oss/unishare/issues/214)) ([108a3ba](https://github.com/unishare-oss/unishare/commit/108a3ba41564b185da2849cf1ca1e07361e9c87b))
+- **seed:** add Mae Fah Luang University schools, majors and courses ([4fd5ab8](https://github.com/unishare-oss/unishare/commit/4fd5ab87f200c79d9be8d38a2ce89dd4f1f57406))
+- **web:** show only your university's majors, grouped by faculty ([6893277](https://github.com/unishare-oss/unishare/commit/6893277f48e841e99c3a969f6ca25090899f16cc))
+- **web:** show where to pick a university and refresh on return (US-21) ([54215b6](https://github.com/unishare-oss/unishare/commit/54215b6702b19437cd48403a5b239174b9654587))
+
 ## [0.35.4](https://github.com/unishare-oss/unishare/compare/v0.35.3...v0.35.4) (2026-11-01)
 
 ### Bug Fixes
