@@ -32,6 +32,7 @@ export const ChatSocketContext = createContext<ChatSocketContextValue | null>(nu
 
 const HEARTBEAT_INTERVAL_MS = 30_000
 
+/** Opens the /chat socket for signed-in members and keeps chat queries in sync with its events. */
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { session, isGuest } = useAuth()
   const router = useRouter()
@@ -285,8 +286,14 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       const { roomId, userId } = payload
       if (userId === session?.user?.id) {
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })
-        // Redirect handled in the component via the invalidation + navigation
-        window.location.href = '/chat'
+        // Drop the room's cache: a soft navigation keeps it, and a stale copy would let the
+        // room render again from history. Refetching then fails, showing "Conversation not found".
+        queryClient.removeQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
+        queryClient.removeQueries({
+          queryKey: getChatControllerGetMessagesInfiniteQueryKey(roomId),
+        })
+        // replace, not push, so Back doesn't return to the room we were removed from
+        router.replace('/chat')
       } else {
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomQueryKey(roomId) })
         queryClient.invalidateQueries({ queryKey: getChatControllerGetRoomsQueryKey() })

@@ -2,6 +2,7 @@
 
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 
+/** Downloads the board as a PNG named after its slug. */
 export async function exportPng(api: ExcalidrawImperativeAPI, slug: string): Promise<void> {
   const { exportToBlob } = await import('@excalidraw/excalidraw')
   const blob = await exportToBlob({
@@ -18,6 +19,7 @@ export async function exportPng(api: ExcalidrawImperativeAPI, slug: string): Pro
   URL.revokeObjectURL(url)
 }
 
+/** Downloads the board as a single-page PDF sized to the drawing. */
 export async function exportPdf(api: ExcalidrawImperativeAPI, slug: string): Promise<void> {
   const { exportToBlob } = await import('@excalidraw/excalidraw')
   // Use PNG-in-PDF approach for maximum compatibility (jsPDF svg() can have issues with complex Excalidraw SVGs)
@@ -55,6 +57,7 @@ export async function exportPdf(api: ExcalidrawImperativeAPI, slug: string): Pro
   pdf.save(`unishare-board-${slug}.pdf`)
 }
 
+/** Renders the board to a PNG blob with a light background. */
 export async function exportPngBlob(api: ExcalidrawImperativeAPI): Promise<Blob> {
   const { exportToBlob } = await import('@excalidraw/excalidraw')
   return exportToBlob({
@@ -65,6 +68,7 @@ export async function exportPngBlob(api: ExcalidrawImperativeAPI): Promise<Blob>
   })
 }
 
+/** Opens the new-post page in a new tab with the board attached as a PNG. */
 export async function postToUniShare(api: ExcalidrawImperativeAPI, slug: string): Promise<void> {
   const blob = await exportPngBlob(api)
 
