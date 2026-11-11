@@ -1,120 +1,132 @@
 import type { ElementType } from 'react'
 import {
   BarChart2,
+  Bell,
   Bookmark,
+  BookOpen,
   BrainCircuit,
   Building2,
   CalendarDays,
   FileText,
   Flag,
+  Globe,
+  Home,
   LayoutGrid,
-  LayoutList,
   MessageSquare,
   MessageSquareHeart,
   MessageSquarePlus,
+  Palette,
   Presentation,
-  Puzzle,
   ScrollText,
   ShieldCheck,
   UserRound,
   Users,
 } from 'lucide-react'
 
-export type NavigationGroupId = 'primary' | 'workspace' | 'discover' | 'admin'
-
 export interface NavigationItem {
   href: string
   label: string
   shortLabel?: string
   icon: ElementType
+  /** Active on this path and everything below it. Defaults to href. */
+  matchPrefix?: string
 }
 
-export interface NavigationGroup {
-  id: NavigationGroupId
-  label: string
-  items: NavigationItem[]
+const todayItem: NavigationItem = { href: '/feed', label: 'Today', icon: Home }
+const campusItem: NavigationItem = { href: '/feed?tab=campus', label: 'Campus', icon: Globe }
+const profileItem: NavigationItem = { href: '/profile', label: 'Profile', icon: UserRound }
+
+/** Courses goes to the student's department course list until US-56 adds course pages. */
+export function coursesHref(departmentId?: string | null): string {
+  return departmentId ? `/departments/${departmentId}` : '/departments'
 }
 
-export const guestNavigation: NavigationItem[] = [
-  { href: '/feed', label: 'Feed', icon: LayoutList },
-  { href: '/saved', label: 'Saved', icon: Bookmark },
-  { href: '/departments', label: 'Departments', icon: Building2 },
-  // Guests keep canvas boards and their bio.
+/** Desktop sidebar: Today, Courses, Campus, Profile. Guests see the same four. */
+export function mainNavigation(departmentId?: string | null): NavigationItem[] {
+  return [
+    todayItem,
+    {
+      href: coursesHref(departmentId),
+      label: 'Courses',
+      icon: BookOpen,
+      matchPrefix: '/departments',
+    },
+    campusItem,
+    profileItem,
+  ]
+}
+
+/** Phone bottom tab bar: the same four destinations, with Profile labelled Me. */
+export function mobileTabNavigation(departmentId?: string | null): NavigationItem[] {
+  return mainNavigation(departmentId).map((item) =>
+    item.href === profileItem.href ? { ...item, label: 'Me' } : item,
+  )
+}
+
+/** Signed-in items below the main four in the desktop sidebar. */
+export const sidebarNavigation: NavigationItem[] = [
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/boards', label: 'Boards', icon: LayoutGrid },
-  { href: '/profile', label: 'Profile', icon: UserRound },
+  { href: '/saved', label: 'Saved', icon: Bookmark },
 ]
 
-const authenticatedGroups: NavigationGroup[] = [
-  {
-    id: 'primary',
-    label: 'Primary',
-    items: [
-      { href: '/feed', label: 'Feed', icon: LayoutList },
-      { href: '/chat', label: 'Chat', icon: MessageSquare },
-      { href: '/boards', label: 'Boards', icon: LayoutGrid },
-    ],
-  },
-  {
-    id: 'workspace',
-    label: 'Workspace',
-    items: [
-      { href: '/my-posts', label: 'My Posts', icon: FileText },
-      { href: '/saved', label: 'Saved', icon: Bookmark },
-      { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
-    ],
-  },
-  {
-    id: 'discover',
-    label: 'Discover',
-    items: [
-      { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-      { href: '/departments', label: 'Departments', icon: Building2 },
-      { href: '/analytics', label: 'Analytics', icon: BarChart2 },
-      { href: '/quizzes', label: 'Quizzes', icon: Puzzle },
-      { href: '/decks', label: 'Decks', icon: Presentation },
-    ],
-  },
+/** Profile → "Your stuff", shown on every screen size. */
+export const yourStuffNavigation: NavigationItem[] = [
+  { href: '/my-posts', label: 'My Posts', icon: FileText },
+  { href: '/requests', label: 'Requests', icon: MessageSquarePlus },
+  { href: '/decks', label: 'Decks', icon: Presentation },
+  { href: '/analytics', label: 'Analytics', icon: BarChart2 },
 ]
 
-const adminItems: NavigationItem[] = [
-  { href: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
-  { href: '/admin/reports', label: 'Reports', icon: Flag },
-  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquareHeart },
-  {
-    href: '/admin/departments',
-    label: 'Manage Departments',
-    shortLabel: 'Departments',
-    icon: Building2,
-  },
-  { href: '/admin/quizzes', label: 'Generate Quiz', shortLabel: 'Quiz', icon: BrainCircuit },
+/** Phone only: these sit in the sidebar on desktop, so Profile lists them on phones. */
+export const phoneOnlyStuffNavigation: NavigationItem[] = [
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/boards', label: 'Boards', icon: LayoutGrid },
+  { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/appearance', label: 'Appearance', icon: Palette },
 ]
 
-export function buildVisibleNavigation(
-  authenticated: boolean,
-  role?: string | null,
-): NavigationGroup[] {
-  if (!authenticated) {
-    return [{ id: 'primary', label: 'Explore', items: guestNavigation }]
+/** Moderation group for moderators and admins. Admins also get user management and the audit log. */
+export function buildModerationNavigation(role?: string | null): NavigationItem[] {
+  if (role !== 'ADMIN' && role !== 'MODERATOR') return []
+  const items: NavigationItem[] = [
+    { href: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
+    { href: '/admin/reports', label: 'Reports', icon: Flag },
+    { href: '/admin/feedback', label: 'Feedback', icon: MessageSquareHeart },
+    {
+      href: '/admin/departments',
+      label: 'Manage Departments',
+      shortLabel: 'Departments',
+      icon: Building2,
+    },
+    { href: '/admin/quizzes', label: 'Generate Quiz', shortLabel: 'Quiz', icon: BrainCircuit },
+  ]
+  if (role === 'ADMIN') {
+    items.push(
+      { href: '/admin/users', label: 'Users', icon: Users },
+      { href: '/admin/audit', label: 'Audit Log', shortLabel: 'Audit', icon: ScrollText },
+    )
   }
-
-  const groups = authenticatedGroups.map((group) => ({ ...group, items: [...group.items] }))
-  if (role === 'ADMIN' || role === 'MODERATOR') {
-    groups.push({
-      id: 'admin',
-      label: 'Admin',
-      items:
-        role === 'ADMIN'
-          ? [
-              ...adminItems,
-              { href: '/admin/users', label: 'Users', icon: Users },
-              { href: '/admin/audit', label: 'Audit Log', shortLabel: 'Audit', icon: ScrollText },
-            ]
-          : [...adminItems],
-    })
-  }
-  return groups
+  return items
 }
 
 export function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+/** Today and Campus both live on /feed, so the `tab` query tells them apart. */
+/** `tab` is undefined until the client has read the URL; Today and Campus then stay unmarked. */
+export function isNavItemActive(
+  pathname: string,
+  tab: string | null | undefined,
+  item: NavigationItem,
+) {
+  const [path, query] = item.href.split('?')
+  if (!isRouteActive(pathname, item.matchPrefix ?? path)) return false
+  if (path === '/feed' && tab === undefined) return false
+  const onCampus = pathname === '/feed' && tab === 'campus'
+  if (query) return onCampus
+  return path === '/feed' ? !onCampus : true
 }

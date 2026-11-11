@@ -248,7 +248,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   ]
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title={user?.name ?? 'Profile'} />
       <div className="flex-1 bg-card">
         <div className="max-w-[700px] mx-auto px-6 py-8">

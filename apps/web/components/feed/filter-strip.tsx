@@ -52,6 +52,8 @@ interface FilterStripProps {
   onModuleChange: (moduleNumber: number | null) => void
   sortType?: SortType
   onSortChange?: (sort: SortType) => void
+  /** Campus hides the department, year, course and module filters. */
+  campus?: boolean
 }
 
 const ALL = '__all__'
@@ -69,6 +71,7 @@ export function FilterStrip({
   onModuleChange,
   sortType = 'recent',
   onSortChange,
+  campus = false,
 }: FilterStripProps) {
   const { departments, loaded: departmentsLoaded, noUniversity } = useMyDepartments()
   const selectedDept = departments.find((d) => d.id === selectedDeptId)
@@ -105,11 +108,10 @@ export function FilterStrip({
       })()
     : 'All courses'
 
-  const activeFilterCount = [
-    selectedYear !== null,
-    !!selectedCourseId,
-    selectedModuleNumber !== null,
-  ].filter(Boolean).length
+  const activeFilterCount = campus
+    ? 0
+    : [selectedYear !== null, !!selectedCourseId, selectedModuleNumber !== null].filter(Boolean)
+        .length
 
   function handleDeptChange(value: string) {
     const deptId = value === ALL ? '' : value
@@ -147,10 +149,11 @@ export function FilterStrip({
     onModuleChange: handleModuleChange,
     sortType,
     onSortChange,
+    campus,
   }
 
   return (
-    <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col">
+    <div className="sticky top-[calc(var(--mobile-topbar-h,0px)+4.25rem)] md:top-17 z-10 border-b border-border bg-card flex flex-col">
       {/* Mobile: type tabs + Filters sheet button in a single row */}
       <div className="md:hidden flex items-center">
         <div className="flex items-center overflow-x-auto flex-1 px-2 scrollbar-none">

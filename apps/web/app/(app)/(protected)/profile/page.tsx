@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
+import { YourStuff } from '@/components/profile/your-stuff'
 import { UniauthAccountCard } from '@/components/profile/uniauth-account-card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -40,6 +41,7 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
     <>
       <ProfileHeaderCard user={user} />
       <EditProfileForm user={user} isGuest={isGuest} />
+      {!isGuest && <YourStuff />}
       {/* A guest has no unicorp account, chat keys or account to delete: only the bio. */}
       {!isGuest && <UniauthAccountCard />}
       {!isGuest && <DangerZoneCard />}
@@ -96,7 +98,7 @@ export default function ProfilePage() {
   })
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Profile" action={<SignOutButton />} />
       <div className="flex-1 bg-card">
         <div className="max-w-[700px] mx-auto px-6 py-8">

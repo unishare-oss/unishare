@@ -18,7 +18,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, large, action, titleSlot }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-20 bg-card border-b border-border px-6 py-4">
+    <header className="sticky top-[var(--mobile-topbar-h,0px)] z-20 bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between gap-3">
         {/* min-w-0 + truncate so a long dynamic title (a generated deck's, say) shortens
             instead of wrapping and growing this sticky bar. Short literal titles are

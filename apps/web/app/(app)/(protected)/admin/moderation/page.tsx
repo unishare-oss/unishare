@@ -48,7 +48,7 @@ export default function ModerationPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <ModerationHeader
         pendingCount={pendingCount}
         activeFilter={activeFilter}

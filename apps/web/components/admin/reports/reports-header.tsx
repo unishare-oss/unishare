@@ -14,7 +14,7 @@ interface ReportsHeaderProps {
 
 export function ReportsHeader({ pendingCount, activeFilter, onFilterChange }: ReportsHeaderProps) {
   return (
-    <header className="sticky top-0 z-20 bg-card border-b border-border px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <header className="sticky top-[var(--mobile-topbar-h,0px)] z-20 bg-card border-b border-border px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <h1 className="text-[22px] font-semibold text-foreground">Reports</h1>
         <p className="font-mono text-[13px] text-text-muted mt-0.5">

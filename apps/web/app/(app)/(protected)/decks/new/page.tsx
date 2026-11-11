@@ -7,7 +7,7 @@ import { DeckCreateForm } from '@/components/decks/deck-create-form'
 
 export default function NewDeckPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader
         title="New deck"
         subtitle="Describe the topic and pick a look. Generation runs in the background."

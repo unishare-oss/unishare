@@ -100,7 +100,7 @@ export default function AdminDepartmentsPage() {
   const selectedDept = depts?.find((d) => d.id === effectiveDeptId)
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Departments & Courses" large />
 
       <div className="flex flex-1 flex-col md:flex-row bg-card overflow-hidden">

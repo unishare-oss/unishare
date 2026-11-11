@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
-import { AppRail } from '@/components/app-rail'
+import { Suspense, useEffect, useState, type ReactNode } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { AcademicProfileModal } from '@/components/academic-profile-modal'
@@ -43,17 +43,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const requiresDepartmentOnboarding =
     isAuthenticated && !!user && !user.department && !needsUniversity
-  
+
   return (
     <div className="min-h-screen bg-background">
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        <AppRail />
+        <WithCurrentTab>{(tab) => <AppSidebar tab={tab} />}</WithCurrentTab>
       </div>
       <main
         className={cn(
           showLoader ? 'invisible pointer-events-none' : '',
           'transition-[margin] duration-200 motion-reduce:transition-none',
           sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[232px]',
+          // Clears the glass top bar on phones and tells sticky headers where it ends; the chat room has none.
+          !isChatRoom &&
+            'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0 max-md:[--mobile-topbar-h:calc(3.5rem+env(safe-area-inset-top))]',
           isChat
             ? 'h-screen overflow-hidden'
             : // Bottom padding clears the floating mobile dock (h-16 + 12px inset + breathing room).
@@ -70,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </main>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        {!isChatRoom && <MobileNav />}
+        {!isChatRoom && <WithCurrentTab>{(tab) => <MobileNav tab={tab} />}</WithCurrentTab>}
       </div>
 
       {!showLoader && requiresDepartmentOnboarding && !profileModalDismissed && (
@@ -85,5 +88,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
     </div>
+  )
+}
+
+function ReadCurrentTab({ children }: { children: (tab: string | null | undefined) => ReactNode }) {
+  return <>{children(useSearchParams().get('tab'))}</>
+}
+
+/**
+ * Reads ?tab= inside its own Suspense boundary. Until the client knows the tab (undefined), the
+ * fallback renders the same nav with neither Today nor Campus marked active, so static pages
+ * still send the navigation from the server and never mark the wrong item.
+ */
+function WithCurrentTab({ children }: { children: (tab: string | null | undefined) => ReactNode }) {
+  return (
+    <Suspense fallback={children(undefined)}>
+      <ReadCurrentTab>{children}</ReadCurrentTab>
+    </Suspense>
   )
 }
