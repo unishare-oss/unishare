@@ -409,9 +409,9 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       {creatingDMForUserId === user.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <Loader2 className="h-4 w-4 animate-spin text-brand-edge" />
                       ) : (
-                        <Users className="h-4 w-4 text-primary" />
+                        <Users className="h-4 w-4 text-brand-edge" />
                       )}
                     </div>
                   </button>

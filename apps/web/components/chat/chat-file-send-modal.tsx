@@ -93,7 +93,7 @@ export function ChatFileSendModal({
           className={`flex items-center gap-3 p-4 rounded-xl border ${tooLarge ? 'border-destructive/50 bg-destructive/5' : 'border-border bg-muted/30'}`}
         >
           <div
-            className={`flex items-center justify-center w-12 h-12 rounded-lg shrink-0 ${tooLarge ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}
+            className={`flex items-center justify-center w-12 h-12 rounded-lg shrink-0 ${tooLarge ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-brand-edge'}`}
           >
             <FileIcon className="size-6" />
           </div>

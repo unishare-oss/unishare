@@ -56,7 +56,7 @@ export function DropdownFilters({
             className={cn(
               'flex items-center justify-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 py-2 rounded-md border transition-colors duration-150',
               sortType === 'recent'
-                ? 'border-amber bg-amber/10 text-amber font-medium'
+                ? 'border-amber bg-amber/10 text-foreground font-medium'
                 : 'border-border text-text-muted hover:text-foreground hover:border-foreground/20',
             )}
           >
@@ -68,7 +68,7 @@ export function DropdownFilters({
             className={cn(
               'flex items-center justify-center gap-1.5 font-mono text-xs uppercase tracking-wider px-3 py-2 rounded-md border transition-colors duration-150',
               sortType === 'trending'
-                ? 'border-amber bg-amber/10 text-amber font-medium'
+                ? 'border-amber bg-amber/10 text-foreground font-medium'
                 : 'border-border text-text-muted hover:text-foreground hover:border-foreground/20',
             )}
           >

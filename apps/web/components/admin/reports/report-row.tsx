@@ -21,7 +21,7 @@ function StatusIcon({ status }: { status: ReportDetailStatus }) {
     return <CheckCircle2 className="size-4 text-success" strokeWidth={1.5} />
   if (status === 'REJECTED')
     return <XCircle className="size-4 text-destructive" strokeWidth={1.5} />
-  return <Clock className="size-4 text-amber" strokeWidth={1.5} />
+  return <Clock className="size-4 text-brand-edge" strokeWidth={1.5} />
 }
 
 interface ReportRowProps {
@@ -59,7 +59,7 @@ export function ReportRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             {report.post?.type && <TypeBadge type={report.post.type} />}
-            <span className="font-mono text-[13px] text-amber font-medium">
+            <span className="font-mono text-[13px] text-foreground font-medium">
               {report.post?.course.code}
             </span>
             <span className="text-text-muted text-[13px]">·</span>
@@ -111,7 +111,7 @@ export function ReportRow({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="font-mono text-xs text-amber hover:underline"
+              className="font-mono text-xs text-sky hover:underline"
             >
               View post →
             </a>

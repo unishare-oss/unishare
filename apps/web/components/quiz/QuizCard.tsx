@@ -107,7 +107,7 @@ export function QuizCard({
                     'w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm font-bold shrink-0 transition-colors',
                     !showFeedback &&
                       !isSelected &&
-                      'border-muted-foreground/30 text-muted-foreground group-hover:border-primary group-hover:text-primary',
+                      'border-muted-foreground/30 text-muted-foreground group-hover:border-primary group-hover:text-foreground',
                     !showFeedback &&
                       isSelected &&
                       'border-primary bg-primary text-primary-foreground',
@@ -140,7 +140,7 @@ export function QuizCard({
       {/* Explanation */}
       {showFeedback && question.explanation && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1">
-          <p className="text-sm font-semibold text-primary">Explanation</p>
+          <p className="text-sm font-semibold text-foreground">Explanation</p>
           <p className="text-sm text-muted-foreground">{question.explanation}</p>
         </div>
       )}

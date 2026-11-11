@@ -106,7 +106,7 @@ export function TemplatePicker({ disabled }: { disabled?: boolean }) {
                     >
                       {selected && (
                         <Check
-                          className="absolute right-3 top-3 size-4 text-primary"
+                          className="absolute right-3 top-3 size-4 text-brand-edge"
                           strokeWidth={2}
                           aria-hidden="true"
                         />

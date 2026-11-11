@@ -84,7 +84,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         {submitted ? (
           <div className="flex flex-col items-center text-center py-6 gap-3">
             <div className="w-12 h-12 rounded-full bg-amber/15 flex items-center justify-center">
-              <MessageSquareHeart className="size-6 text-amber" strokeWidth={1.5} />
+              <MessageSquareHeart className="size-6 text-brand-edge" strokeWidth={1.5} />
             </div>
             <DialogHeader>
               <DialogTitle>Thank you!</DialogTitle>
@@ -122,14 +122,14 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                     <Icon
                       className={cn(
                         'size-4',
-                        selectedType === value ? 'text-amber' : 'text-text-muted',
+                        selectedType === value ? 'text-foreground' : 'text-text-muted',
                       )}
                       strokeWidth={1.5}
                     />
                     <p
                       className={cn(
                         'text-sm font-medium',
-                        selectedType === value ? 'text-amber' : 'text-foreground',
+                        selectedType === value ? 'text-foreground' : 'text-foreground',
                       )}
                     >
                       {label}

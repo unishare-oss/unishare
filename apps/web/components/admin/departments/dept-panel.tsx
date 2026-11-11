@@ -82,8 +82,8 @@ export function DeptPanel({
                   <div className="flex flex-col min-w-0">
                     <span
                       className={cn(
-                        'text-sm truncate',
-                        selectedDeptId === dept.id ? 'font-medium text-amber' : 'text-foreground',
+                        'text-sm truncate text-foreground',
+                        selectedDeptId === dept.id && 'font-semibold',
                       )}
                     >
                       {dept.name}

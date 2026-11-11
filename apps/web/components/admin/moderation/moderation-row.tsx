@@ -26,7 +26,7 @@ function formatBytes(bytes: number): string {
 function StatusIcon({ status }: { status: string }) {
   const iconMap: Record<string, React.ReactNode> = {
     APPROVED: <CheckCircle2 className="size-4 text-success" strokeWidth={1.5} />,
-    PENDING: <Clock className="size-4 text-amber" strokeWidth={1.5} />,
+    PENDING: <Clock className="size-4 text-brand-edge" strokeWidth={1.5} />,
     REJECTED: <XCircle className="size-4 text-destructive" strokeWidth={1.5} />,
   }
   return <div className="absolute left-4 top-5">{iconMap[status] ?? null}</div>
@@ -160,7 +160,7 @@ export function ModerationRow({
                 href={post.externalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-amber hover:text-amber-hover font-medium mb-4"
+                className="inline-flex items-center gap-1.5 text-sm text-sky hover:text-sky font-medium mb-4"
               >
                 <Link2 className="size-3.5" strokeWidth={1.5} />
                 External Link

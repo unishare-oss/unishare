@@ -13,7 +13,7 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 -z-10 opacity-[0.035]"
         style={{
           backgroundImage:
-            'linear-gradient(var(--border-strong) 1px, transparent 1px), linear-gradient(90deg, var(--border-strong) 1px, transparent 1px)',
+            'linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }}
       />
@@ -50,11 +50,7 @@ export function LandingHero() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="h-12 rounded-full px-7 text-[15px] font-black shadow-[3px_3px_0_0_var(--shadow-color)]"
-              >
+              <Button asChild size="lg" className="h-12 rounded-full px-7 text-[15px] font-black">
                 <Link href="/login">
                   Get started — free <ArrowRight className="size-4" />
                 </Link>
@@ -86,7 +82,7 @@ export function LandingHero() {
 
           <div className="relative lg:pl-4">
             <HeroIllustration />
-            <div className="mx-auto mt-4 flex max-w-[520px] items-center gap-2 rounded-2xl border-2 border-border-strong bg-card p-2 shadow-[4px_4px_0_0_var(--shadow-color)] lg:hidden">
+            <div className="mx-auto mt-4 flex max-w-[520px] items-center gap-2 rounded-2xl border-2 border-border bg-card p-2 lg:hidden">
               <div className="flex flex-1 items-center gap-2 rounded-xl bg-muted px-3 py-2.5">
                 <Search className="size-4 text-text-muted" />
                 <span className="text-sm text-text-muted">Search “trees traversal”...</span>

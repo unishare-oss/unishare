@@ -13,7 +13,7 @@ export function renderWithMentions(
     mentions.map((mention) => mention.name),
   ).map((part, index) =>
     part.mention ? (
-      <span key={index} className="font-semibold text-primary">
+      <span key={index} className="rounded-sm bg-brand-soft px-1 font-semibold text-foreground">
         {part.text}
       </span>
     ) : (

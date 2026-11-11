@@ -168,7 +168,7 @@ export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHea
         {isAuthenticated && (
           <Link
             href="/posts/new"
-            className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border-strong shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-amber-hover active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 shrink-0"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border shadow-press-brand hover:bg-amber-hover active:translate-y-1 active:shadow-none transition-all duration-150 shrink-0"
           >
             <Plus className="size-4" strokeWidth={1.5} />
             <span className="hidden sm:inline">New Post</span>

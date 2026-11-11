@@ -25,7 +25,7 @@ export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: 
             className={cn(
               'font-mono text-xs uppercase tracking-wider px-4 py-3 transition-colors duration-150 border-b-2',
               activeTab === tab
-                ? 'border-amber text-amber font-medium'
+                ? 'border-amber text-foreground font-medium'
                 : 'border-transparent text-text-muted hover:text-foreground',
             )}
           >

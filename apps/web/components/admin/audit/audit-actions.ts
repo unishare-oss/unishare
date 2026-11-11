@@ -55,7 +55,7 @@ const ACTIONS: Record<string, ActionMeta> = {
 export const TONE_CLASS: Record<Tone, string> = {
   destructive: 'text-destructive',
   success: 'text-success',
-  amber: 'text-amber',
+  amber: 'bg-brand-soft font-medium text-foreground',
   muted: 'text-text-muted',
 }
 

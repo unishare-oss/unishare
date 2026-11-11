@@ -115,7 +115,7 @@ export default function AdminUsersPage() {
               className={cn(
                 'relative px-3 py-1.5 font-mono text-xs uppercase tracking-wider rounded-[6px] transition-colors',
                 roleFilter === r
-                  ? 'bg-amber/10 text-amber'
+                  ? 'bg-amber/10 text-foreground'
                   : 'text-text-muted hover:text-foreground hover:bg-muted',
               )}
             >

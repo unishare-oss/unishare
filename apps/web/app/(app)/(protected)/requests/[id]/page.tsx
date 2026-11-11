@@ -149,7 +149,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   className={cn(
                     'flex flex-col items-center gap-0.5 p-1.5 rounded-[6px] transition-colors',
                     request.isUpvoted
-                      ? 'text-amber bg-amber/10'
+                      ? 'text-foreground bg-amber/10'
                       : 'text-text-muted hover:text-foreground hover:bg-muted',
                     !userId && 'cursor-default opacity-50',
                   )}
@@ -170,7 +170,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                   <span
                     className={cn(
                       'inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border',
-                      isFulfilled ? 'border-success/50 text-success' : 'border-amber/50 text-amber',
+                      isFulfilled
+                        ? 'border-success/50 text-success'
+                        : 'border-amber/50 bg-brand-soft font-semibold text-foreground',
                     )}
                   >
                     {isFulfilled ? (
@@ -197,7 +199,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 {isFulfilled && request.fulfilledByPost && (
                   <a
                     href={`/posts/${request.fulfilledByPost.id}`}
-                    className="mt-2 inline-flex items-center gap-1 text-xs text-amber hover:underline"
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-sky hover:underline"
                   >
                     <CheckCircle2 className="size-3" />
                     Fulfilled by:{' '}

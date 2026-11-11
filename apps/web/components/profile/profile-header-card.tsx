@@ -62,7 +62,7 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
           </div>
           {user.yearLevel != null && (
             <p
-              className="font-mono text-[13px] text-amber mt-2 cursor-help"
+              className="font-mono text-[13px] text-foreground mt-2 cursor-help"
               title="Based on enrollment year + academic calendar"
             >
               Year {user.yearLevel} Student

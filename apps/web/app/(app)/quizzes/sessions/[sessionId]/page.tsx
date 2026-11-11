@@ -54,7 +54,7 @@ export default function SessionResultsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+          <Loader2 className="w-12 h-12 animate-spin mx-auto text-brand-edge" />
           <p className="text-muted-foreground">Loading results...</p>
         </div>
       </div>

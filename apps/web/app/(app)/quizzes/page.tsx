@@ -94,14 +94,14 @@ export default function QuizzesPage() {
         <TabsList variant="line" className="w-full">
           <TabsTrigger
             value="browse"
-            className="flex-1 data-[state=active]:text-primary data-[state=active]:after:bg-primary"
+            className="flex-1 data-[state=active]:text-foreground data-[state=active]:after:bg-primary"
           >
             Browse
           </TabsTrigger>
           {isAuthenticated && (
             <TabsTrigger
               value="history"
-              className="flex-1 data-[state=active]:text-primary data-[state=active]:after:bg-primary"
+              className="flex-1 data-[state=active]:text-foreground data-[state=active]:after:bg-primary"
             >
               My History
             </TabsTrigger>

@@ -105,7 +105,7 @@ export function ChatInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+              className="h-10 w-10 shrink-0 text-muted-foreground hover:text-brand-edge hover:bg-primary/10"
               title="Send image"
               aria-label="Send image"
               onClick={() => fileInputRef.current?.click()}
@@ -118,7 +118,7 @@ export function ChatInput({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            className="h-10 w-10 shrink-0 text-muted-foreground hover:text-brand-edge hover:bg-primary/10"
             title="Attach file"
             aria-label="Attach file"
             onClick={() => attachInputRef.current?.click()}

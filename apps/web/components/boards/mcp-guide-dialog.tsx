@@ -154,7 +154,7 @@ export function McpGuideDialog({ open, onOpenChange }: McpGuideDialogProps) {
                   className={cn(
                     'font-mono text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-[6px] border transition-colors whitespace-nowrap',
                     provider === p.key
-                      ? 'border-amber bg-amber-subtle text-amber font-semibold'
+                      ? 'border-amber bg-amber-subtle text-foreground font-semibold'
                       : 'border-border bg-card text-text-muted hover:text-foreground hover:bg-muted',
                   )}
                 >

@@ -64,7 +64,7 @@ export default function AuditLogPage() {
               className={cn(
                 'px-3 py-1.5 font-mono text-xs uppercase tracking-wider rounded-[6px] transition-colors',
                 category === f.value
-                  ? 'bg-amber/10 text-amber'
+                  ? 'bg-amber/10 text-foreground'
                   : 'text-text-muted hover:text-foreground hover:bg-muted',
               )}
             >

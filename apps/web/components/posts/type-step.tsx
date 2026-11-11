@@ -130,7 +130,7 @@ export function TypeStep({ postType, onSelect }: TypeStepProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-4 text-amber shrink-0" />
+              <AlertTriangle className="size-4 text-brand-edge shrink-0" />
               Academic Integrity Notice
             </AlertDialogTitle>
             <AlertDialogDescription asChild>

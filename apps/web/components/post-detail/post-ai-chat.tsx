@@ -260,7 +260,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-start gap-1.5">
                               {msg.offTopic && (
-                                <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-amber" />
+                                <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-brand-edge" />
                               )}
                               {/* Only the assistant's replies are markdown. A user's message is
                                   echoed back verbatim, and rendering THEIR text as markup would
@@ -315,7 +315,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                     className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
                   >
                     <AlertCircle
-                      className="size-3.5 shrink-0 mt-0.5 text-amber"
+                      className="size-3.5 shrink-0 mt-0.5 text-brand-edge"
                       strokeWidth={1.5}
                       aria-hidden="true"
                     />
@@ -333,7 +333,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                     className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-text-muted"
                   >
                     <AlertCircle
-                      className="size-3.5 shrink-0 mt-0.5 text-amber"
+                      className="size-3.5 shrink-0 mt-0.5 text-brand-edge"
                       strokeWidth={1.5}
                       aria-hidden="true"
                     />

@@ -8,7 +8,7 @@ export function LandingHowItWorks() {
           <p className="font-mono text-xs font-bold uppercase tracking-widest text-text-muted">
             When there&apos;s no folder
           </p>
-          <p className="mt-1 font-mono text-xs font-bold uppercase tracking-widest text-amber">
+          <p className="mt-1 font-mono text-xs font-bold uppercase tracking-widest text-foreground">
             — we built our own campus
           </p>
           <h2 className="mt-3 text-balance text-3xl font-black tracking-tight sm:text-4xl">

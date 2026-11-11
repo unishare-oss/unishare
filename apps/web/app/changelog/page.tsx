@@ -101,7 +101,7 @@ export default function ChangelogPage() {
                     href={release.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-2xl font-semibold text-amber hover:underline"
+                    className="text-2xl font-semibold text-brand-edge hover:underline"
                   >
                     {release.version}
                   </a>
@@ -115,12 +115,15 @@ export default function ChangelogPage() {
                     components={{
                       h2: ({ node, ...props }) => (
                         <h3
-                          className="text-lg font-bold mt-4 mb-3 px-3 py-2 rounded-md bg-amber/10 text-amber border-l-2 border-amber"
+                          className="text-lg font-bold mt-4 mb-3 px-3 py-2 rounded-md bg-amber/10 text-foreground border-l-2 border-amber"
                           {...props}
                         />
                       ),
                       h3: ({ node, ...props }) => (
-                        <h4 className="text-base font-semibold mt-3 mb-2 text-amber" {...props} />
+                        <h4
+                          className="text-base font-semibold mt-3 mb-2 text-foreground"
+                          {...props}
+                        />
                       ),
                       p: ({ node, ...props }) => <p className="mb-2" {...props} />,
                       ul: ({ node, ...props }) => (
@@ -131,7 +134,7 @@ export default function ChangelogPage() {
                       ),
                       li: ({ node, ...props }) => <li className="mb-1" {...props} />,
                       a: ({ node, ...props }) => (
-                        <a className="text-amber hover:underline" {...props} />
+                        <a className="text-sky hover:underline" {...props} />
                       ),
                       code: ({ node, ...props }) => (
                         <code

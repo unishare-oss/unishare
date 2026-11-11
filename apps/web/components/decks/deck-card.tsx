@@ -31,7 +31,7 @@ export function DeckCard({ deck }: { deck: DeckEntity }) {
         className="flex items-start gap-4 p-4 group hover:bg-accent flex-1 transition-colors motion-reduce:transition-none"
       >
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-          <Presentation className="w-5 h-5 text-primary" strokeWidth={1.5} aria-hidden="true" />
+          <Presentation className="w-5 h-5 text-brand-edge" strokeWidth={1.5} aria-hidden="true" />
         </div>
 
         <div className="flex-1 min-w-0 space-y-2">

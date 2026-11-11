@@ -83,7 +83,7 @@ export function PostSource({
                 className={cn(
                   'w-full text-left px-4 py-3 text-sm transition-colors',
                   selectedPostId === p.value
-                    ? 'bg-amber/10 text-amber'
+                    ? 'bg-amber/10 text-foreground'
                     : 'text-foreground hover:bg-muted',
                 )}
               >
@@ -95,7 +95,7 @@ export function PostSource({
 
         {selectedPostId && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="size-3.5 text-amber" strokeWidth={1.5} />
+            <BookOpen className="size-3.5 text-brand-edge" strokeWidth={1.5} />
             <span className="truncate">
               Selected: <span className="text-foreground">{selectedPostLabel}</span>
             </span>

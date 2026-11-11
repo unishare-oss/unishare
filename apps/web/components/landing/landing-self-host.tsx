@@ -7,7 +7,7 @@ export function LandingSelfHost() {
     <section id="self-host" className="mx-auto max-w-[1200px] px-4 py-14 sm:px-6 sm:py-16">
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
         <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-widest text-amber">
+          <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
             Self-host • Open source
           </p>
           <h2 className="mt-2 text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -47,7 +47,7 @@ export function LandingSelfHost() {
           </div>
         </div>
 
-        <div className="rounded-[20px] border-2 border-border-strong bg-card p-3 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-4">
+        <div className="rounded-[20px] border-2 border-border bg-card p-3 sm:p-4">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <span className="size-3 rounded-full bg-destructive" />
             <span className="size-3 rounded-full bg-amber" />
@@ -86,10 +86,10 @@ export function LandingSelfHost() {
               <div>
                 <p className="text-white/40"># 3. Go</p>
                 <p>
-                  <span className="text-amber">→</span> web: http://localhost:3000
+                  <span className="text-foreground">→</span> web: http://localhost:3000
                 </p>
                 <p>
-                  <span className="text-amber">→</span> api: http://localhost:3001/docs
+                  <span className="text-foreground">→</span> api: http://localhost:3001/docs
                 </p>
               </div>
             </div>

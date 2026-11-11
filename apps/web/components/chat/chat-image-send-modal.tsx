@@ -72,7 +72,7 @@ export function ChatImageSendModal({
       <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
         <DialogHeader className="px-4 pt-4 pb-0">
           <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
-            <ImageIcon className="size-4 text-primary" />
+            <ImageIcon className="size-4 text-brand-edge" />
             Send Photo
           </DialogTitle>
         </DialogHeader>
@@ -85,7 +85,7 @@ export function ChatImageSendModal({
               <img src={objectUrl} alt="Preview" className="max-h-72 max-w-full object-contain" />
               {uploading && (
                 <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-sm">
-                  <Loader2 className="size-8 animate-spin text-primary" />
+                  <Loader2 className="size-8 animate-spin text-brand-edge" />
                 </div>
               )}
             </div>

@@ -145,7 +145,9 @@ export function PdfToolbar({
             variant="ghost"
             size="icon-sm"
             title={title}
-            className={cn(activeToolId === id && 'bg-amber/15 text-amber ring-2 ring-amber/50')}
+            className={cn(
+              activeToolId === id && 'bg-brand-soft text-foreground ring-2 ring-amber/50',
+            )}
             onClick={() => {
               if (!annotationProvides) return
               annotationProvides.setActiveTool(activeToolId === id ? null : id)

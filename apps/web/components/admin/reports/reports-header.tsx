@@ -29,7 +29,7 @@ export function ReportsHeader({ pendingCount, activeFilter, onFilterChange }: Re
             className={cn(
               'font-mono text-xs uppercase tracking-wider px-3 py-1.5 rounded-[6px] transition-colors duration-150 flex items-center gap-2',
               activeFilter === filter
-                ? 'bg-amber-subtle text-amber font-medium'
+                ? 'bg-amber-subtle text-foreground font-medium'
                 : 'text-text-muted hover:text-foreground hover:bg-muted',
             )}
           >

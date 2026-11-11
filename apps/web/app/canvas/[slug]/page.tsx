@@ -234,7 +234,7 @@ export default function CanvasPage() {
         aria-live="polite"
         aria-label="Connecting to collaboration room"
       >
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-brand-edge" />
         <p className="text-sm font-semibold text-foreground">Connecting to room...</p>
       </div>
     )
@@ -281,7 +281,7 @@ function CanvasInner() {
         aria-live="polite"
         aria-label="Connecting to collaboration room"
       >
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-brand-edge" />
         <p className="text-sm font-semibold text-foreground">Connecting to room...</p>
       </div>
     )

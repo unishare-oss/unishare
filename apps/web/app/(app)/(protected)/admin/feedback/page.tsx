@@ -91,7 +91,7 @@ export default function AdminFeedbackPage() {
                     {isBug ? (
                       <Bug className="size-3.5 text-destructive" strokeWidth={1.5} />
                     ) : (
-                      <MessageSquareHeart className="size-3.5 text-amber" strokeWidth={1.5} />
+                      <MessageSquareHeart className="size-3.5 text-brand-edge" strokeWidth={1.5} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ export default function AdminFeedbackPage() {
                       <span
                         className={cn(
                           'font-mono text-[10px] uppercase tracking-wider',
-                          isBug ? 'text-destructive' : 'text-amber',
+                          isBug ? 'text-destructive' : 'text-foreground',
                         )}
                       >
                         {isBug ? 'Bug Report' : 'Feedback'}

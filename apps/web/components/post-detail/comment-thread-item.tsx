@@ -83,7 +83,7 @@ function getCommentLayerStyle(depth: number): CommentLayerStyle {
   const palette = [
     {
       accentClassName: 'bg-amber',
-      badgeClassName: 'text-amber',
+      badgeClassName: 'text-foreground',
     },
     {
       accentClassName: 'bg-info',
@@ -192,7 +192,7 @@ export function CommentThreadItem({
                 {isOriginalPosterComment && (
                   <Badge
                     variant="outline"
-                    className="h-5 rounded-full border-amber/30 bg-amber-subtle/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber"
+                    className="h-5 rounded-full border-amber/30 bg-brand-soft px-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground"
                   >
                     OP
                   </Badge>
@@ -237,7 +237,7 @@ export function CommentThreadItem({
               >
                 {isDeletedComment
                   ? comment.content
-                  : renderWithMentions(comment.content, comment.mentions, 'text-primary')}
+                  : renderWithMentions(comment.content, comment.mentions, 'text-foreground')}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (

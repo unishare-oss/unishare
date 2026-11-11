@@ -88,7 +88,7 @@ function StatCard({
   return (
     <Card className="card-pop">
       <CardContent className="pt-6 pb-5 text-center space-y-2">
-        <div className="flex justify-center text-primary">{icon}</div>
+        <div className="flex justify-center text-foreground">{icon}</div>
         <p className="text-2xl font-bold">{value}</p>
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
         {sub && <p className="text-xs text-muted-foreground">{sub}</p>}

@@ -8,7 +8,7 @@ import type { AuditLogEntity } from '@/src/lib/api/generated/unishareAPI.schemas
 import { TONE_CLASS, actionMeta, describeEntry, targetHref } from './audit-actions'
 
 const ROLE_CLASS: Record<string, string> = {
-  ADMIN: 'text-amber',
+  ADMIN: 'text-foreground',
   MODERATOR: 'text-blue-400',
 }
 
@@ -117,7 +117,7 @@ export function AuditRow({ entry, expanded, onToggle, onFilterActor }: AuditRowP
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="font-mono text-xs text-amber hover:underline mr-2"
+                className="font-mono text-xs text-sky hover:underline mr-2"
               >
                 View target →
               </a>

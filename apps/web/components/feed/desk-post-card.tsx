@@ -56,10 +56,10 @@ export function DeskPostCard({ post, index = 0, trending = false }: DeskPostCard
   return (
     <article
       className={cn(
-        'desk-paper relative h-full bg-card border border-border-strong/50 px-5 pt-7 pb-4',
+        'desk-paper relative h-full bg-card border border-border px-5 pt-7 pb-4',
         post.type === 'NOTE' && 'desk-ruled',
         post.type === 'EXERCISE' && 'desk-grid',
-        trending && 'outline-solid outline-2 outline-offset-[3px] outline-border-strong',
+        trending && 'outline-solid outline-2 outline-offset-[3px] outline-edge',
       )}
       style={{ '--stagger': index, '--tilt': `${tilt}deg` } as CSSProperties}
     >
@@ -139,7 +139,7 @@ export function DeskPostCard({ post, index = 0, trending = false }: DeskPostCard
                 e.stopPropagation()
                 router.push(`/feed?tag=${encodeURIComponent(tag.name)}`)
               }}
-              className="relative z-[1] font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-muted/70 text-text-muted border border-border hover:border-amber hover:text-amber transition-colors"
+              className="relative z-[1] font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-muted/70 text-text-muted border border-border hover:border-amber hover:text-foreground transition-colors"
             >
               {tag.name}
             </button>
@@ -189,7 +189,7 @@ export function DeskPostCard({ post, index = 0, trending = false }: DeskPostCard
       </div>
 
       {/* Dashed divider + stat row */}
-      <div className="flex items-center gap-4 border-t-[1.5px] border-dashed border-border-strong/30 pt-2.5">
+      <div className="flex items-center gap-4 border-t-[1.5px] border-dashed border-border pt-2.5">
         <span className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-foreground">
           <ReactionIcon className={cn('size-3.5', meta.text)} strokeWidth={2.25} />
           {reactionTotal}

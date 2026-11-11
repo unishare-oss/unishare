@@ -5,7 +5,7 @@ import { GithubIcon } from './github-icon'
 
 export function LandingFooter() {
   return (
-    <footer className="border-t-2 border-border-strong bg-card">
+    <footer className="border-t-2 border-border bg-card">
       <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">
         <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
           <div>
@@ -15,7 +15,7 @@ export function LandingFooter() {
                 alt=""
                 width={28}
                 height={28}
-                className="rounded-[7px] border border-border-strong/10"
+                className="rounded-[7px] border border-border"
               />
               <span className="font-mono text-base font-black tracking-tight">Unishare</span>
             </Link>
@@ -28,14 +28,14 @@ export function LandingFooter() {
                 href="https://github.com/unishare-oss/unishare"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex size-9 items-center justify-center rounded-xl border-2 border-border-strong bg-card shadow-[2px_2px_0_0_var(--shadow-color)] hover:translate-y-px hover:shadow-[1px_1px_0_0_var(--shadow-color)]"
+                className="inline-flex size-9 items-center justify-center rounded-xl border-2 border-border bg-card hover:translate-y-px"
                 aria-label="GitHub"
               >
                 <GithubIcon className="size-4" />
               </a>
               <Link
                 href="/changelog"
-                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-border-strong bg-card px-3 py-2 font-mono text-xs font-bold shadow-[2px_2px_0_0_var(--shadow-color)]"
+                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-border bg-card px-3 py-2 font-mono text-xs font-bold"
               >
                 Changelog
               </Link>
@@ -160,8 +160,8 @@ export function LandingFooter() {
                 </span>
               </li>
             </ul>
-            <div className="mt-4 rounded-xl border-2 border-border-strong bg-amber-subtle p-3">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-amber">
+            <div className="mt-4 rounded-xl border-2 border-border bg-amber-subtle p-3">
+              <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
                 Stay in the loop
               </p>
               <p className="mt-1 text-xs leading-relaxed text-text-secondary">

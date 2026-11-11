@@ -3,14 +3,171 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+/* Unishare design tokens (design system tokens.json). Light values on :root:root, dark values on
+   :root:root.dark. The doubled :root gives them specificity (0,2,0), above unitheme's single-class
+   palettes (.theme-*), so they win on purpose, not by import order. The dark block is one class
+   higher again, so it beats the light block. For now the app is plain light/dark: the unitheme
+   picker no longer changes colours. */
+:root:root {
+  color-scheme: light;
   --font-scale: 1;
-  --radius: 14px;
+
+  --bg: #f5f6fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f8;
+  --ink: #14213d;
+  --line: #dde2ee;
+  --edge: #c9d0e0;
+  --brand: #ff8a1f;
+  --brand-edge: #d4650a;
+  --brand-soft: #fff0e0;
+  --on-brand: #1c1305;
+  --sky: #2f6fe0;
+  --sky-soft: #e6efff;
+  --sky-edge: #1f53b3;
+  --ok: #1d9a55;
+  --ok-soft: #e2f6ea;
+  --ok-edge: #157a42;
+  --bad: #e0484d;
+  --bad-soft: #fde8e8;
+  --bad-edge: #b3353a;
+  --ice: #2f9be0;
+  --hero: #14213d;
+  --on-hero: #ffffff;
+  --hero-muted: #aab4d0;
+  --hero-line: #2b3a60;
+  --m0: #e3e7f1;
+  --m1: #ffd3a3;
+  --m2: #9cc0f7;
+  --m3: #3d7fe6;
+  --m4: #1b3f91;
+  --hl: rgba(255, 196, 0, 0.32);
+  --glass: rgba(245, 246, 251, 0.78);
+  --noto-limb: #14213d;
+  --noto-shadow: #14213d;
+  /* The design system's `muted` text colour. `--muted` itself keeps its shadcn meaning (a quiet
+     fill, = --surface-2), so use --muted-foreground / text-muted-foreground for muted text. */
+  --muted-foreground: #5b6785;
+
+  --press: 0 4px 0 #dde2ee;
+  --press-brand: 0 4px 0 #d4650a;
+  --press-sm: 0 3px 0 #dde2ee;
+  --press-bad: 0 4px 0 var(--bad-edge);
+  --lift: 0 10px 28px rgba(20, 33, 61, 0.1);
+
+  /* Radius, easing and font stacks are defined once here; @theme inline maps them to Tailwind's
+     names. */
+  --r-s: 12px;
+  --r: 18px;
+  --r-l: 24px;
+  --r-pill: 999px;
+  --radius: 18px;
+
+  --curve-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --curve-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --curve-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --stack-display: var(--font-baloo), ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --stack-body: var(--font-lexend), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --stack-read: var(--font-literata), Georgia, 'Times New Roman', serif;
+  --stack-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
+
+  /* shadcn variables, pointed at the tokens so existing components pick up the new look. */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--sky);
+  --chart-1: var(--brand);
+  --chart-2: var(--sky);
+  --chart-3: var(--ok);
+  --chart-4: var(--bad);
+  --chart-5: var(--muted-foreground);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--sky);
+
+  /* Older app variables (from unitheme), pointed at the tokens. */
+  --amber: var(--brand);
+  --amber-hover: var(--brand-edge);
+  --amber-subtle: var(--brand-soft);
+  --success: var(--ok);
+  --info: var(--sky);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --surface-dark: var(--hero);
+  --card-dark: var(--surface-2);
+}
+
+:root:root.dark {
+  color-scheme: dark;
+
+  --bg: #0e1424;
+  --surface: #161f35;
+  --surface-2: #1e2943;
+  --ink: #edf1fb;
+  --line: #2a3654;
+  --edge: #080c18;
+  --brand: #ff9a3c;
+  --brand-edge: #b8600f;
+  --brand-soft: #3a2816;
+  --on-brand: #1c1305;
+  --sky: #6aa2f7;
+  --sky-soft: #1c2c4d;
+  --sky-edge: #0b1a36;
+  --ok: #3cc479;
+  --ok-soft: #14301f;
+  --ok-edge: #0d2416;
+  --bad: #ff6b70;
+  --bad-soft: #3a1a1c;
+  --bad-edge: #2a0f11;
+  --ice: #5cb7f2;
+  --hero: #1f2c4f;
+  --on-hero: #ffffff;
+  --hero-muted: #a6b1cf;
+  --hero-line: #33436e;
+  --m0: #26314d;
+  --m1: #6b4a26;
+  --m2: #2f528f;
+  --m3: #4f8ff0;
+  --m4: #a9c8ff;
+  --hl: rgba(255, 170, 60, 0.28);
+  --glass: rgba(14, 20, 36, 0.78);
+  --noto-limb: #e6ebf7;
+  --noto-shadow: #000000;
+  --muted-foreground: #9aa6c3;
+
+  --press: 0 4px 0 #2a3654;
+  --press-brand: 0 4px 0 #b8600f;
+  --press-sm: 0 3px 0 #2a3654;
+  --lift: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
-  --font-sans: var(--font-space-grotesk), sans-serif;
-  --font-mono: var(--font-fira-code), monospace;
+  /* Each Tailwind name points at a stack defined once on :root. */
+  --font-sans: var(--stack-body);
+  --font-body: var(--stack-body);
+  --font-display: var(--stack-display);
+  --font-read: var(--stack-read);
+  --font-mono: var(--stack-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -57,10 +214,53 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
 
-  --color-border-strong: var(--border-strong);
   --color-type-note: var(--type-note);
   --color-type-exam: var(--type-exam);
   --color-type-exercise: var(--type-exercise);
+
+  /* Design system tokens */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-line: var(--line);
+  --color-edge: var(--edge);
+  --color-brand: var(--brand);
+  --color-brand-edge: var(--brand-edge);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-sky-edge: var(--sky-edge);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-edge: var(--ok-edge);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-bad-edge: var(--bad-edge);
+  --color-ice: var(--ice);
+  --color-hero: var(--hero);
+  --color-on-hero: var(--on-hero);
+  --color-hero-muted: var(--hero-muted);
+  --color-hero-line: var(--hero-line);
+  --color-m0: var(--m0);
+  --color-m1: var(--m1);
+  --color-m2: var(--m2);
+  --color-m3: var(--m3);
+  --color-m4: var(--m4);
+  --color-hl: var(--hl);
+  --color-glass: var(--glass);
+  --radius-s: var(--r-s);
+  --radius-card: var(--r);
+  --radius-l: var(--r-l);
+  --shadow-press: var(--press);
+  --shadow-press-brand: var(--press-brand);
+  --shadow-press-bad: var(--press-bad);
+  --shadow-press-sm: var(--press-sm);
+  --shadow-lift: var(--lift);
+  --ease-out: var(--curve-out);
+  --ease-in-out: var(--curve-in-out);
+  --ease-pop: var(--curve-pop);
 }
 
 @layer base {
@@ -68,7 +268,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-semibold;
+    @apply bg-background text-foreground;
   }
 }
 
@@ -158,29 +358,21 @@
   }
 }
 
-/* Tactile "chunky" card — hard offset shadow on light themes, degrades to a
-   strong border on dark themes (shadow-color: transparent). Registered as
-   utilities (not @layer components) so they win over the border/shadow
-   utilities already present on <Card>. */
+/* Material card: a line border, no offset shadow. Registered as utilities (not
+   @layer components) so they win over the border/shadow utilities already on <Card>. */
 @utility card-pop {
-  border: 2px solid var(--border-strong);
-  box-shadow: 4px 4px 0 0 var(--shadow-color);
+  border: 1px solid var(--line);
 }
 
-/* Interactive variant: lifts toward the cursor on hover. */
+/* Interactive variant: one soft lift on hover (the design system's only card shadow). */
 @utility card-pop-hover {
   transition:
-    transform 0.15s ease,
     box-shadow 0.15s ease,
     background-color 0.15s ease,
     border-color 0.15s ease;
   &:hover {
-    transform: translate(-1px, -1px);
-    box-shadow: 5px 5px 0 0 var(--shadow-color);
-  }
-  &:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 0 var(--shadow-color);
+    box-shadow: var(--lift);
+    border-color: var(--edge);
   }
 }
 
@@ -206,27 +398,18 @@
 /* Chunky arcade card: thick border, big hard shadow, lifts on hover and
    presses down on click. Staggered entrance via --stagger (set inline). */
 @utility arcade-card {
-  border: 3px solid var(--border-strong);
-  box-shadow: 6px 6px 0 0 var(--shadow-color);
-  transition:
-    transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.14s ease;
+  border: 1px solid var(--line);
+  transition: box-shadow 0.14s ease;
   animation: arcade-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   animation-delay: calc(var(--stagger, 0) * 70ms);
   &:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0 0 var(--shadow-color);
-  }
-  &:active {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0 0 var(--shadow-color);
+    box-shadow: var(--lift);
   }
 }
 
-/* Small stat chip with a soft hard-shadow. */
+/* Small stat chip with a line border. */
 @utility arcade-stat {
-  border: 2px solid var(--border-strong);
-  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--shadow-color) 30%, transparent);
+  border: 1px solid var(--line);
 }
 
 @utility arcade-trending {
@@ -322,26 +505,24 @@
    restyles components that already draw their own bordered box. */
 @layer components {
   [data-detail-style='arcade'] .detail-surface {
-    border: 3px solid var(--border-strong);
+    border: 1px solid var(--line);
     border-radius: 1rem;
     background: var(--card);
-    box-shadow: 6px 6px 0 0 var(--shadow-color);
     padding: 1.25rem;
   }
   [data-detail-style='arcade'] .detail-box {
-    border-width: 2px;
-    border-color: var(--border-strong);
+    border-width: 1px;
+    border-color: var(--line);
     border-radius: 1rem;
-    box-shadow: 4px 4px 0 0 var(--shadow-color);
   }
   [data-detail-style='desk'] .detail-surface {
-    border: 1px solid color-mix(in srgb, var(--border-strong) 50%, transparent);
+    border: 1px solid var(--line);
     background: var(--card);
     box-shadow: 0 14px 24px -12px color-mix(in srgb, var(--foreground) 35%, transparent);
     padding: 1.25rem;
   }
   [data-detail-style='desk'] .detail-box {
-    border-color: color-mix(in srgb, var(--border-strong) 50%, transparent);
+    border-color: var(--line);
     box-shadow: 0 8px 16px -10px color-mix(in srgb, var(--foreground) 30%, transparent);
   }
 }
@@ -440,11 +621,6 @@
   }
 }
 
-/* Font Size Scaling */
-:root {
-  --font-scale: 1;
-}
-
 /* Deck progress bar.
  *
  * Two animations, because the numbers behind this bar are real but they arrive in jumps: the
@@ -522,7 +698,7 @@ html {
 
 /* Landing hero: the file stack deals in; a hovered card moves to the front. */
 .hero-card {
-  box-shadow: 6px 6px 0 0 var(--shadow-color);
+  box-shadow: var(--lift);
   cursor: pointer;
   transition:
     transform 450ms cubic-bezier(0.77, 0, 0.175, 1),
@@ -532,7 +708,6 @@ html {
 
 .hero-card[data-front] {
   cursor: default;
-  box-shadow: 8px 8px 0 0 var(--shadow-color);
 }
 
 .hero-chip {

@@ -27,8 +27,8 @@ export function PostSummary({ post }: PostSummaryProps) {
       <div className="detail-box rounded-lg border border-border bg-muted/40 mt-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <CollapsibleTrigger className="flex items-center gap-1.5 group cursor-pointer flex-1 text-left">
-            <Sparkles className="size-3.5 text-amber" strokeWidth={1.5} />
-            <span className="font-mono text-[11px] font-medium text-amber uppercase tracking-wide">
+            <Sparkles className="size-3.5 text-brand-edge" strokeWidth={1.5} />
+            <span className="font-mono text-[11px] font-medium text-foreground uppercase tracking-wide">
               AI Summary
             </span>
             <motion.span

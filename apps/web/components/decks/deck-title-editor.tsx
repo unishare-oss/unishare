@@ -85,7 +85,7 @@ export function DeckTitleEditor({ deck }: { deck: DeckEntity }) {
         type="button"
         onClick={startEditing}
         // The heading's own typography comes from PageHeader; this only adds the affordance.
-        className="group/title inline-flex max-w-full items-center gap-2 text-left hover:text-primary transition-colors motion-reduce:transition-none"
+        className="group/title inline-flex max-w-full items-center gap-2 text-left hover:text-foreground transition-colors motion-reduce:transition-none"
         aria-label={`Rename ${deck.title ?? 'this deck'}`}
       >
         <span className="truncate">{deck.title ?? 'Untitled deck'}</span>

@@ -85,7 +85,7 @@ export default function BoardsPage() {
               onClick={() => setMcpGuideOpen(true)}
               className="border-border text-foreground"
             >
-              <Sparkles className="size-3.5 mr-1.5 text-primary" strokeWidth={1.5} />
+              <Sparkles className="size-3.5 mr-1.5 text-brand-edge" strokeWidth={1.5} />
               Connect AI (MCP)
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)}>

@@ -212,7 +212,7 @@ export default function AdminGenerateQuizPage() {
                     Module {c.moduleNumber} — {c.questionsCount} questions
                   </span>
                   <button
-                    className="text-amber hover:underline"
+                    className="text-sky hover:underline"
                     onClick={() => router.push(`/quizzes/${c.quizId}`)}
                   >
                     View
