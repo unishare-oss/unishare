@@ -12,8 +12,8 @@ export const semesterSchema = z.string().refine((value) => {
 
 export const moduleNumberSchema = z.string().refine((value) => {
   const moduleNumber = Number(value)
-  return value !== '' && !Number.isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 20
-}, 'Module number must be between 1 and 20')
+  return value !== '' && !Number.isNaN(moduleNumber) && moduleNumber >= 1 && moduleNumber <= 3
+}, 'Module must be between 1 and 3')
 
 export const examYearSchema = z.string().refine((value) => {
   const parsedExamYear = Number(value)

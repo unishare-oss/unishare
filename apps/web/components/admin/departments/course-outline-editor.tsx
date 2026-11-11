@@ -13,6 +13,9 @@ import {
 } from '@/src/lib/api/generated/courses/courses'
 import { uploadCourseOutlineFile } from '@/lib/courses/upload-course-outline-file'
 
+// A course has at most three modules; the API rejects anything higher.
+const MAX_MODULES = 3
+
 interface OutlineModule {
   moduleNumber: number
   topicsText: string // one topic per line while editing
@@ -88,9 +91,12 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
     }
   }
 
+  // The lowest module number in 1..3 that the outline doesn't use yet, or undefined when all three exist.
+  const nextFreeModuleNumber = [1, 2, 3].find((n) => !modules.some((m) => m.moduleNumber === n))
+
   function addModule() {
-    const nextNumber = (modules.at(-1)?.moduleNumber ?? 0) + 1
-    setModules([...modules, { moduleNumber: nextNumber, topicsText: '' }])
+    if (nextFreeModuleNumber === undefined) return
+    setModules([...modules, { moduleNumber: nextFreeModuleNumber, topicsText: '' }])
   }
 
   function removeModule(index: number) {
@@ -154,6 +160,7 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
               <Input
                 type="number"
                 min={1}
+                max={MAX_MODULES}
                 value={m.moduleNumber}
                 onChange={(e) => updateModule(i, { moduleNumber: Number(e.target.value) })}
                 className="h-[38px] w-20 shrink-0"
@@ -176,16 +183,18 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
             </div>
           ))}
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={addModule}
-            className="self-start"
-          >
-            <Plus className="size-3.5" strokeWidth={1.5} />
-            Add module
-          </Button>
+          {nextFreeModuleNumber !== undefined && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addModule}
+              className="self-start"
+            >
+              <Plus className="size-3.5" strokeWidth={1.5} />
+              Add module
+            </Button>
+          )}
         </div>
       )}
 

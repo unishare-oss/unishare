@@ -6,7 +6,7 @@ import { CourseModuleOutlineEntryDto } from './course-module-outline-entry.dto'
 export class ReplaceCourseOutlineDto {
   @ApiProperty({ type: [CourseModuleOutlineEntryDto] })
   @IsArray()
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => CourseModuleOutlineEntryDto)
   modules: CourseModuleOutlineEntryDto[]

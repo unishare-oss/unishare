@@ -3,7 +3,7 @@ import {
   deriveSemester,
   guessFromFileName,
   missingFields,
-  newestWeekWithNotes,
+  newestModuleWithNotes,
 } from './share-defaults'
 
 const courses = [
@@ -12,12 +12,24 @@ const courses = [
 ]
 
 describe('guessFromFileName', () => {
-  it('reads course, week and title from a tidy name', () => {
-    expect(guessFromFileName('CSC213_week4_lecture_notes.pdf', courses)).toEqual({
+  it('reads course, module and title from a tidy name', () => {
+    expect(guessFromFileName('CSC213_Module2_Heaps.pdf', courses)).toEqual({
       courseId: 'c1',
-      moduleNumber: 4,
-      title: 'Week 4 lecture notes',
+      moduleNumber: 2,
+      title: 'Module 2 Heaps',
     })
+  })
+
+  it('does not treat a week as a module', () => {
+    expect(guessFromFileName('CSC213_Week10.pdf', courses)).toEqual({
+      courseId: 'c1',
+      title: 'Week 10',
+    })
+  })
+
+  it('guesses a module from mod or M prefixes', () => {
+    expect(guessFromFileName('CSC213 mod 3.pdf', courses).moduleNumber).toBe(3)
+    expect(guessFromFileName('CSC213_M1.pdf', courses).moduleNumber).toBe(1)
   })
 
   it('reads an exam with a spaced course code and a year', () => {
@@ -44,8 +56,8 @@ describe('guessFromFileName', () => {
     expect(guessFromFileName('latest_notes.pdf', courses).type).toBeUndefined()
   })
 
-  it('accepts hyphenated codes and ignores weeks above 15', () => {
-    const guess = guessFromFileName('csc-213 week 20.pdf', courses)
+  it('accepts hyphenated codes and ignores modules above 3', () => {
+    const guess = guessFromFileName('csc-213 module 4.pdf', courses)
     expect(guess.courseId).toBe('c1')
     expect(guess.moduleNumber).toBeUndefined()
   })
@@ -68,10 +80,14 @@ describe('deriveSemester', () => {
   })
 })
 
-describe('newestWeekWithNotes', () => {
-  it('returns the highest week, or undefined for none', () => {
-    expect(newestWeekWithNotes([{ moduleNumber: 3 }, { moduleNumber: 9 }, {}])).toBe(9)
-    expect(newestWeekWithNotes([])).toBeUndefined()
+describe('newestModuleWithNotes', () => {
+  it('returns the highest module, or undefined for none', () => {
+    expect(newestModuleWithNotes([{ moduleNumber: 1 }, { moduleNumber: 3 }, {}])).toBe(3)
+    expect(newestModuleWithNotes([])).toBeUndefined()
+  })
+
+  it('ignores modules outside 1 to 3 from older notes', () => {
+    expect(newestModuleWithNotes([{ moduleNumber: 9 }, { moduleNumber: 2 }])).toBe(2)
   })
 })
 
@@ -96,7 +112,7 @@ describe('missingFields', () => {
     expect(missingFields({ ...base, selectedCourse: '', moduleNum: '', title: 'a' }, 0)).toEqual([
       'file',
       'course',
-      'week',
+      'a module',
       'title',
     ])
   })

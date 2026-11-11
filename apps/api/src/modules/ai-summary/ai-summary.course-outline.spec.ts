@@ -59,6 +59,18 @@ describe('AiSummaryService.extractCourseOutline', () => {
     await expect(service.extractCourseOutline('text')).rejects.toThrow('invalid moduleNumber')
   })
 
+  it('rejects a module numbered above 3', async () => {
+    llmMock.chat.mockResolvedValue(JSON.stringify([{ moduleNumber: 4, topics: ['x'] }]))
+    await expect(service.extractCourseOutline('text')).rejects.toThrow('invalid moduleNumber')
+  })
+
+  it('rejects an outline with more than 3 modules', async () => {
+    llmMock.chat.mockResolvedValue(
+      JSON.stringify([1, 2, 3, 1].map((n) => ({ moduleNumber: n, topics: ['x'] }))),
+    )
+    await expect(service.extractCourseOutline('text')).rejects.toThrow('more than 3 modules')
+  })
+
   it('rejects a module with non-array topics', async () => {
     llmMock.chat.mockResolvedValue(JSON.stringify([{ moduleNumber: 1, topics: 'not an array' }]))
     await expect(service.extractCourseOutline('text')).rejects.toThrow('invalid topics')

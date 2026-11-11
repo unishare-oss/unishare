@@ -16,6 +16,7 @@ import {
 } from '@/src/lib/api/generated/posts/posts'
 import { TagInput } from '@/components/TagInput'
 import { getTypeMeta } from '@/components/feed/feed-card-meta'
+import { PageRail } from '@/components/page-rail'
 import {
   ACCEPTED_FILE_TYPES,
   FileRow,
@@ -40,14 +41,14 @@ import {
   deriveSemester,
   guessFromFileName,
   missingFields,
-  newestWeekWithNotes,
+  newestModuleWithNotes,
 } from '@/lib/posts/share-defaults'
 import { uploadPostFile } from '@/lib/posts/upload-post-file'
 import { useUploadStore } from '@/lib/store'
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 const BG_THRESHOLD = 10 * 1024 * 1024 // files above this upload in the background after Share
-const WEEKS = Array.from({ length: 15 }, (_, i) => i + 1)
+const MODULES = [1, 2, 3]
 // Past exam stays switched off until it is decided; see the US-59 SPEC.
 const TYPE_CHOICES: { value: PostType; label: string; disabled?: boolean }[] = [
   { value: 'NOTE', label: 'Note' },
@@ -65,7 +66,7 @@ interface FileEntry {
 }
 
 const FROM_FILE = 'from the file name'
-const NEWEST_WEEK = 'newest week with notes'
+const NEWEST_MODULE = 'newest module with notes'
 
 function Hint({ text }: { text?: string }) {
   if (!text) return null
@@ -175,7 +176,7 @@ export function ShareForm() {
     { courseId: values.selectedCourse, type: 'NOTE' },
     { query: { enabled: !!values.selectedCourse, select: (r) => r.data } },
   )
-  const newestWeek = newestWeekWithNotes(notesData?.items ?? [])
+  const newestModule = newestModuleWithNotes(notesData?.items ?? [])
 
   const counted = entries.filter((e) => e.status === 'ready')
   const uploading = entries.filter((e) => e.status === 'uploading')
@@ -244,14 +245,14 @@ export function ShareForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstFile, authLoading, coursesLoading, courses])
 
-  // Week defaults to the newest week with notes when the file name gave none.
+  // Module defaults to the newest module with notes when the file name gave none.
   useEffect(() => {
-    if (!newestWeek || edited.current.has('moduleNum')) return
-    if (!values.moduleNum || hints.moduleNum === NEWEST_WEEK) {
-      guess('moduleNum', String(newestWeek), NEWEST_WEEK)
+    if (!newestModule || edited.current.has('moduleNum')) return
+    if (!values.moduleNum || hints.moduleNum === NEWEST_MODULE) {
+      guess('moduleNum', String(newestModule), NEWEST_MODULE)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newestWeek, values.selectedCourse])
+  }, [newestModule, values.selectedCourse])
 
   // Year follows the course (or the student's own year) until the student sets it.
   const yearDefault = course?.yearLevel ?? me?.yearLevel ?? 1
@@ -387,366 +388,372 @@ export function ShareForm() {
     problemText
   ) : (
     <>
-      Shares to <b>{course?.code}</b> · Week {values.moduleNum}
+      Shares to <b>{course?.code}</b> · Module {values.moduleNum}
       {values.isAnonymous && ' · anonymously'}
     </>
   )
 
-  return (
-    <div className="mx-auto grid max-w-[1000px] gap-8 px-6 py-8 min-[1180px]:max-w-[1100px] min-[1180px]:grid-cols-[minmax(0,640px)_320px]">
-      <div className="min-w-0">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={ACCEPTED_FILE_TYPES}
-          className="hidden"
-          onChange={(e) => {
-            const picked = Array.from(e.target.files ?? [])
-            if (picked.length > 0) addFiles(picked)
-            e.target.value = ''
-          }}
-        />
+  const page = (
+    <div className="min-w-0">
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={ACCEPTED_FILE_TYPES}
+        className="hidden"
+        onChange={(e) => {
+          const picked = Array.from(e.target.files ?? [])
+          if (picked.length > 0) addFiles(picked)
+          e.target.value = ''
+        }}
+      />
 
-        <section
-          aria-label="Add files"
-          onDragOver={(e) => {
-            e.preventDefault()
-            setIsDragging(true)
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false)
-          }}
-          onDrop={(e) => {
-            e.preventDefault()
-            setIsDragging(false)
-            addFiles(Array.from(e.dataTransfer.files))
-          }}
-          className={cn(
-            'rounded-xl border-2 border-dashed text-center transition-colors duration-150',
-            isDragging ? 'border-brand bg-brand-soft' : 'border-edge bg-surface',
-            hasFiles ? 'flex items-center justify-between gap-3 px-4 py-3 text-left' : 'px-6 py-12',
-          )}
+      <section
+        aria-label="Add files"
+        onDragOver={(e) => {
+          e.preventDefault()
+          setIsDragging(true)
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false)
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setIsDragging(false)
+          addFiles(Array.from(e.dataTransfer.files))
+        }}
+        className={cn(
+          'rounded-xl border-2 border-dashed text-center transition-colors duration-150',
+          isDragging ? 'border-brand bg-brand-soft' : 'border-edge bg-surface',
+          hasFiles ? 'flex items-center justify-between gap-3 px-4 py-3 text-left' : 'px-6 py-12',
+        )}
+      >
+        {hasFiles ? (
+          <p className="text-sm text-ink">
+            <b>Add more files</b>{' '}
+            <span className="text-text-muted">· They go into the same post</span>
+          </p>
+        ) : (
+          <>
+            <Upload className="mx-auto mb-3 size-7 text-brand-edge" strokeWidth={1.5} />
+            <p className="text-base font-semibold text-ink">Drop your file here</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-text-muted">
+              PDF, slides, Word, spreadsheets, photos, code, zip or video, up to 50 MB each
+            </p>
+          </>
+        )}
+        <Button
+          type="button"
+          variant="quiet"
+          size="sm"
+          className={hasFiles ? '' : 'mt-4'}
+          onClick={() => inputRef.current?.click()}
         >
-          {hasFiles ? (
-            <p className="text-sm text-ink">
-              <b>Add more files</b>{' '}
-              <span className="text-text-muted">· They go into the same post</span>
-            </p>
-          ) : (
-            <>
-              <Upload className="mx-auto mb-3 size-7 text-brand-edge" strokeWidth={1.5} />
-              <p className="text-base font-semibold text-ink">Drop your file here</p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-text-muted">
-                PDF, slides, Word, spreadsheets, photos, code, zip or video, up to 50 MB each
-              </p>
-            </>
-          )}
-          <Button
-            type="button"
-            variant="quiet"
-            size="sm"
-            className={hasFiles ? '' : 'mt-4'}
-            onClick={() => inputRef.current?.click()}
-          >
-            Choose files
-          </Button>
-        </section>
-
-        {hasFiles && (
-          <div className="mt-3 flex flex-col gap-2">
-            {entries.map((entry) => (
-              <FileRow
-                key={entry.id}
-                name={entry.file.name}
-                size={entry.file.size}
-                mimeType={entry.file.type}
-                disabled={submitting}
-                onRemove={() => removeEntry(entry.id)}
-                status={
-                  entry.status === 'uploading'
-                    ? { kind: 'uploading', text: 'Uploading…' }
-                    : entry.status === 'error'
-                      ? {
-                          kind: 'error',
-                          text: entry.reason ?? 'Upload failed',
-                          onRetry: () => void startUpload(entry.id, entry.file),
-                        }
-                      : entry.status === 'rejected'
-                        ? { kind: 'error', text: entry.reason ?? '' }
-                        : undefined
-                }
-              />
-            ))}
-          </div>
-        )}
-
-        {hasFiles && firstFile && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void handleShare()
-            }}
-            className="mt-6 flex flex-col gap-6"
-          >
-            <p className="flex items-start gap-2 rounded-lg bg-sky-soft px-3 py-2.5 text-sm text-ink">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-sky" aria-hidden />
-              <span>
-                {filledCount > 0 ? (
-                  <>
-                    We filled in {filledCount} {filledCount === 1 ? 'thing' : 'things'} from “
-                    <b>{firstFile.name}</b>”. Check them, then share.
-                  </>
-                ) : (
-                  <>
-                    We couldn’t tell much from “<b>{firstFile.name}</b>”, so pick the course and
-                    week below.
-                  </>
-                )}
-              </span>
-            </p>
-
-            <fieldset>
-              <legend className="mb-2 text-sm font-semibold text-ink">
-                What is it?
-                <Hint text={hints.postType} />
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {TYPE_CHOICES.map((choice) => (
-                  <Chip
-                    key={choice.value}
-                    pressed={values.postType === choice.value}
-                    disabled={choice.disabled}
-                    onClick={() => change('postType', choice.value)}
-                  >
-                    {choice.label}
-                  </Chip>
-                ))}
-              </div>
-              {values.postType === 'EXERCISE' && (
-                <label className="mt-3 flex items-start gap-2.5 rounded-lg bg-surface-2 px-3 py-2.5 text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 shrink-0 accent-brand"
-                    checked={!!values.homeworkConfirmed}
-                    onChange={(e) => change('homeworkConfirmed', e.target.checked)}
-                  />
-                  This isn&apos;t homework that&apos;s still being graded, and I&apos;m allowed to
-                  share it.
-                </label>
-              )}
-            </fieldset>
-
-            <div>
-              <Label htmlFor="share-course" hint={hints.selectedCourse}>
-                Course
-              </Label>
-              {!departmentId ? (
-                <p className="text-sm text-text-muted">
-                  Please{' '}
-                  <a href="/profile" className="text-sky underline underline-offset-2">
-                    set your department
-                  </a>{' '}
-                  in your profile to select a course.
-                </p>
-              ) : coursesLoading ? (
-                <div className="h-[42px] animate-pulse rounded-md bg-surface-2" />
-              ) : (
-                <SearchSelect
-                  id="share-course"
-                  options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))}
-                  value={values.selectedCourse}
-                  onChange={(id) => change('selectedCourse', id)}
-                  placeholder="Search your department's courses…"
-                />
-              )}
-              <p className="mt-2 text-xs text-text-muted">
-                Year {values.year} · Semester {values.semester}. Set from the course and
-                today&apos;s date.{' '}
-                <button
-                  type="button"
-                  className="text-sky underline underline-offset-2"
-                  onClick={() => setEditingYear((v) => !v)}
-                >
-                  Change
-                </button>
-              </p>
-              {editingYear && (
-                <div className="mt-2 flex gap-3">
-                  <Select value={values.year} onValueChange={(v) => change('year', v)}>
-                    <SelectTrigger aria-label="Year" className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map((y) => (
-                        <SelectItem key={y} value={String(y)}>
-                          Year {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={values.semester} onValueChange={(v) => change('semester', v)}>
-                    <SelectTrigger aria-label="Semester" className="w-36">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3].map((s) => (
-                        <SelectItem key={s} value={String(s)}>
-                          Semester {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <fieldset>
-              <legend className="mb-2 text-sm font-semibold text-ink">
-                Week
-                <Hint text={hints.moduleNum} />
-              </legend>
-              <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                {WEEKS.map((week) => (
-                  <Chip
-                    key={week}
-                    pressed={values.moduleNum === String(week)}
-                    onClick={() => change('moduleNum', String(week))}
-                  >
-                    {week}
-                    {week === newestWeek && (
-                      <span
-                        className="absolute top-1 right-1.5 size-1.5 rounded-full bg-brand"
-                        title="Newest week with notes"
-                      />
-                    )}
-                  </Chip>
-                ))}
-              </div>
-            </fieldset>
-
-            <div>
-              <Label htmlFor="share-title" hint={hints.title}>
-                Title
-              </Label>
-              <Input
-                id="share-title"
-                maxLength={200}
-                value={values.title}
-                placeholder="e.g. Week 10 Heaps"
-                onChange={(e) => change('title', e.target.value)}
-                onBlur={() => form.trigger('title')}
-              />
-              {values.title.length > 0 && values.title.trim().length < 3 && (
-                <p className="mt-1 text-xs text-bad">Give it a title of at least 3 letters.</p>
-              )}
-            </div>
-
-            <label className="flex items-center justify-between gap-4">
-              <span>
-                <b className="block text-sm text-ink">Post anonymously</b>
-                <span className="text-xs text-text-muted">
-                  Classmates see &quot;A classmate&quot; instead of your name.
-                </span>
-              </span>
-              <Switch
-                aria-label="Post anonymously"
-                checked={values.isAnonymous}
-                onCheckedChange={(v) => change('isAnonymous', v)}
-              />
-            </label>
-
-            <details
-              open={moreOpen || problemInMoreDetails}
-              onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-              className="group rounded-lg border border-line bg-surface"
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold text-ink">
-                <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
-                More details
-                <span className="text-xs font-normal text-text-muted">
-                  description, tags, link (all optional)
-                </span>
-              </summary>
-              <div className="flex flex-col gap-4 px-3 pb-3">
-                <div>
-                  <Label htmlFor="share-description">Description</Label>
-                  <Textarea
-                    id="share-description"
-                    rows={3}
-                    value={values.description}
-                    onChange={(e) => change('description', e.target.value)}
-                    placeholder="Describe what you're sharing…"
-                  />
-                  {issueFor('description') && (
-                    <p className="mt-1 text-xs text-bad">{issueFor('description')}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Tags</Label>
-                  <TagInput value={values.tags} onChange={(t) => change('tags', t)} maxTags={5} />
-                </div>
-                <div>
-                  <Label htmlFor="share-link">Link</Label>
-                  <Input
-                    id="share-link"
-                    type="url"
-                    value={values.externalUrl ?? ''}
-                    onChange={(e) => change('externalUrl', e.target.value)}
-                    placeholder="https://…"
-                  />
-                  {values.externalUrl && issueFor('externalUrl') && (
-                    <p className="mt-1 text-xs text-bad">{issueFor('externalUrl')}</p>
-                  )}
-                </div>
-                <SnippetPaster onAddFiles={addFiles} />
-              </div>
-            </details>
-
-            <div className="sticky bottom-0 z-10 -mx-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-card/90 px-4 py-3 backdrop-blur max-md:bottom-24">
-              <p className="min-w-0 text-sm text-ink" role="status">
-                {footerLine}
-              </p>
-              <Button type="submit" variant="brand" disabled={!canShare || submitting}>
-                Share
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
+          Choose files
+        </Button>
+      </section>
 
       {hasFiles && (
-        <aside>
-          <div className="flex flex-col gap-6 min-[1180px]:sticky min-[1180px]:top-24">
-            <div>
-              <p className="mb-2 text-sm font-semibold text-ink">How classmates will see it</p>
-              <div className="rounded-xl border border-line bg-surface p-4">
-                <p className={cn('text-xs font-semibold uppercase', typeMeta.text)}>
-                  {typeMeta.label}
-                </p>
-                <p className="mt-1 line-clamp-2 font-semibold text-ink">
-                  {values.title.trim() || 'Your title'}
-                </p>
-                <p className="mt-1 text-xs text-text-muted">
-                  {course ? course.code : 'Course'}
-                  {values.moduleNum && ` · Week ${values.moduleNum}`} ·{' '}
-                  {values.isAnonymous ? 'A classmate' : (me?.name ?? 'You')}
-                </p>
-                <p className="mt-2 text-xs text-text-muted">
-                  {previewFileCount} {previewFileCount === 1 ? 'file' : 'files'}
-                </p>
+        <div className="mt-3 flex flex-col gap-2">
+          {entries.map((entry) => (
+            <FileRow
+              key={entry.id}
+              name={entry.file.name}
+              size={entry.file.size}
+              mimeType={entry.file.type}
+              disabled={submitting}
+              onRemove={() => removeEntry(entry.id)}
+              status={
+                entry.status === 'uploading'
+                  ? { kind: 'uploading', text: 'Uploading…' }
+                  : entry.status === 'error'
+                    ? {
+                        kind: 'error',
+                        text: entry.reason ?? 'Upload failed',
+                        onRetry: () => void startUpload(entry.id, entry.file),
+                      }
+                    : entry.status === 'rejected'
+                      ? { kind: 'error', text: entry.reason ?? '' }
+                      : undefined
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {hasFiles && firstFile && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void handleShare()
+          }}
+          className="mt-6 flex flex-col gap-6"
+        >
+          <p className="flex items-start gap-2 rounded-lg bg-sky-soft px-3 py-2.5 text-sm text-ink">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-sky" aria-hidden />
+            <span>
+              {filledCount > 0 ? (
+                <>
+                  We filled in {filledCount} {filledCount === 1 ? 'thing' : 'things'} from “
+                  <b>{firstFile.name}</b>”. Check them, then share.
+                </>
+              ) : (
+                <>
+                  We couldn’t tell much from “<b>{firstFile.name}</b>”, so pick the course and
+                  module below.
+                </>
+              )}
+            </span>
+          </p>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-semibold text-ink">
+              What is it?
+              <Hint text={hints.postType} />
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {TYPE_CHOICES.map((choice) => (
+                <Chip
+                  key={choice.value}
+                  pressed={values.postType === choice.value}
+                  disabled={choice.disabled}
+                  onClick={() => change('postType', choice.value)}
+                >
+                  {choice.label}
+                </Chip>
+              ))}
+            </div>
+            {values.postType === 'EXERCISE' && (
+              <label className="mt-3 flex items-start gap-2.5 rounded-lg bg-surface-2 px-3 py-2.5 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 shrink-0 accent-brand"
+                  checked={!!values.homeworkConfirmed}
+                  onChange={(e) => change('homeworkConfirmed', e.target.checked)}
+                />
+                This isn&apos;t homework that&apos;s still being graded, and I&apos;m allowed to
+                share it.
+              </label>
+            )}
+          </fieldset>
+
+          <div>
+            <Label htmlFor="share-course" hint={hints.selectedCourse}>
+              Course
+            </Label>
+            {!departmentId ? (
+              <p className="text-sm text-text-muted">
+                Please{' '}
+                <a href="/profile" className="text-sky underline underline-offset-2">
+                  set your department
+                </a>{' '}
+                in your profile to select a course.
+              </p>
+            ) : coursesLoading ? (
+              <div className="h-[42px] animate-pulse rounded-md bg-surface-2" />
+            ) : (
+              <SearchSelect
+                id="share-course"
+                options={courses.map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))}
+                value={values.selectedCourse}
+                onChange={(id) => change('selectedCourse', id)}
+                placeholder="Search your department's courses…"
+              />
+            )}
+            <p className="mt-2 text-xs text-text-muted">
+              Year {values.year} · Semester {values.semester}. Set from the course and today&apos;s
+              date.{' '}
+              <button
+                type="button"
+                className="text-sky underline underline-offset-2"
+                onClick={() => setEditingYear((v) => !v)}
+              >
+                Change
+              </button>
+            </p>
+            {editingYear && (
+              <div className="mt-2 flex gap-3">
+                <Select value={values.year} onValueChange={(v) => change('year', v)}>
+                  <SelectTrigger aria-label="Year" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        Year {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={values.semester} onValueChange={(v) => change('semester', v)}>
+                  <SelectTrigger aria-label="Semester" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3].map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        Semester {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-semibold text-ink">Good to know</p>
-              <ul className="list-disc space-y-1 pl-4 text-sm text-text-muted">
-                <li>It shows up under the course for your classmates.</li>
-                <li>You can edit or delete it later.</li>
-                <li>Anonymous posts hide your name; moderators can still review them.</li>
-              </ul>
-            </div>
+            )}
           </div>
-        </aside>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-semibold text-ink">
+              Module
+              <Hint text={hints.moduleNum} />
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {MODULES.map((moduleNumber) => (
+                <Chip
+                  key={moduleNumber}
+                  pressed={values.moduleNum === String(moduleNumber)}
+                  onClick={() => change('moduleNum', String(moduleNumber))}
+                >
+                  {moduleNumber}
+                  {moduleNumber === newestModule && (
+                    <span
+                      className="absolute top-1 right-1.5 size-1.5 rounded-full bg-brand"
+                      title="Newest module with notes"
+                    />
+                  )}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+
+          <div>
+            <Label htmlFor="share-title" hint={hints.title}>
+              Title
+            </Label>
+            <Input
+              id="share-title"
+              maxLength={200}
+              value={values.title}
+              placeholder="e.g. Module 2 Heaps"
+              onChange={(e) => change('title', e.target.value)}
+              onBlur={() => form.trigger('title')}
+            />
+            {values.title.length > 0 && values.title.trim().length < 3 && (
+              <p className="mt-1 text-xs text-bad">Give it a title of at least 3 letters.</p>
+            )}
+          </div>
+
+          <label className="flex items-center justify-between gap-4">
+            <span>
+              <b className="block text-sm text-ink">Post anonymously</b>
+              <span className="text-xs text-text-muted">
+                Classmates see &quot;A classmate&quot; instead of your name.
+              </span>
+            </span>
+            <Switch
+              aria-label="Post anonymously"
+              checked={values.isAnonymous}
+              onCheckedChange={(v) => change('isAnonymous', v)}
+            />
+          </label>
+
+          <details
+            open={moreOpen || problemInMoreDetails}
+            onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+            className="group rounded-lg border border-line bg-surface"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold text-ink">
+              <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+              More details
+              <span className="text-xs font-normal text-text-muted">
+                description, tags, link (all optional)
+              </span>
+            </summary>
+            <div className="flex flex-col gap-4 px-3 pb-3">
+              <div>
+                <Label htmlFor="share-description">Description</Label>
+                <Textarea
+                  id="share-description"
+                  rows={3}
+                  value={values.description}
+                  onChange={(e) => change('description', e.target.value)}
+                  placeholder="Describe what you're sharing…"
+                />
+                {issueFor('description') && (
+                  <p className="mt-1 text-xs text-bad">{issueFor('description')}</p>
+                )}
+              </div>
+              <div>
+                <Label>Tags</Label>
+                <TagInput value={values.tags} onChange={(t) => change('tags', t)} maxTags={5} />
+              </div>
+              <div>
+                <Label htmlFor="share-link">Link</Label>
+                <Input
+                  id="share-link"
+                  type="url"
+                  value={values.externalUrl ?? ''}
+                  onChange={(e) => change('externalUrl', e.target.value)}
+                  placeholder="https://…"
+                />
+                {values.externalUrl && issueFor('externalUrl') && (
+                  <p className="mt-1 text-xs text-bad">{issueFor('externalUrl')}</p>
+                )}
+              </div>
+              <SnippetPaster onAddFiles={addFiles} />
+            </div>
+          </details>
+
+          <div className="sticky bottom-0 z-10 -mx-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-card/90 px-4 py-3 backdrop-blur max-md:bottom-24">
+            <p className="min-w-0 text-sm text-ink" role="status">
+              {footerLine}
+            </p>
+            <Button type="submit" variant="brand" disabled={!canShare || submitting}>
+              Share
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+  const rail = (
+    <div className="flex flex-col gap-6 min-[1180px]:sticky min-[1180px]:top-24">
+      <div>
+        <p className="mb-2 text-sm font-semibold text-ink">How classmates will see it</p>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <p className={cn('text-xs font-semibold uppercase', typeMeta.text)}>{typeMeta.label}</p>
+          <p className="mt-1 line-clamp-2 font-semibold text-ink">
+            {values.title.trim() || 'Your title'}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            {course ? course.code : 'Course'}
+            {values.moduleNum && ` · Module ${values.moduleNum}`} ·{' '}
+            {values.isAnonymous ? 'A classmate' : (me?.name ?? 'You')}
+          </p>
+          <p className="mt-2 text-xs text-text-muted">
+            {previewFileCount} {previewFileCount === 1 ? 'file' : 'files'}
+          </p>
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-sm font-semibold text-ink">Good to know</p>
+        <ul className="list-disc space-y-1 pl-4 text-sm text-text-muted">
+          <li>It shows up under the course for your classmates.</li>
+          <li>You can edit or delete it later.</li>
+          <li>Anonymous posts hide your name; moderators can still review them.</li>
+        </ul>
+      </div>
+    </div>
+  )
+
+  // Stretch the rail to the form's height so its sticky preview has room to move.
+  return (
+    <div className="mx-auto max-w-[1040px] px-6 py-8">
+      {hasFiles ? (
+        <PageRail className="min-[1180px]:items-stretch" rail={rail}>
+          {page}
+        </PageRail>
+      ) : (
+        page
       )}
     </div>
   )
