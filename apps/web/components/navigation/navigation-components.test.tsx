@@ -93,11 +93,11 @@ vi.mock('@/src/lib/auth/uniauth', () => ({
 }))
 vi.mock('@/components/feedback/feedback-dialog', () => ({ FeedbackDialog: () => null }))
 
-function renderSidebar(tab: string | null = null) {
+function renderSidebar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <AppSidebar tab={tab} />
+      <AppSidebar />
     </QueryClientProvider>,
   )
 }
@@ -128,12 +128,11 @@ describe('desktop sidebar', () => {
     useUIStore.setState({ sidebarCollapsed: false })
   })
 
-  it('shows Today, Courses, Campus and Profile, then the signed-in items', () => {
+  it('shows Today, Courses and Profile, then the signed-in items', () => {
     renderSidebar()
     const nav = within(primaryNav())
     expect(nav.getByRole('link', { name: 'Today' })).toHaveAttribute('href', '/feed')
     expect(nav.getByRole('link', { name: 'Courses' })).toHaveAttribute('href', '/departments/d1')
-    expect(nav.getByRole('link', { name: 'Campus' })).toHaveAttribute('href', '/feed?tab=campus')
     expect(nav.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile')
     expect(nav.getByRole('link', { name: 'Chat (4)' })).toHaveAttribute('href', '/chat')
     expect(nav.getByRole('link', { name: 'Notifications (2)' })).toHaveAttribute(
@@ -208,20 +207,10 @@ describe('desktop sidebar', () => {
     expect(moderation.getByRole('link', { name: 'Users' })).toHaveAttribute('href', '/admin/users')
   })
 
-  it('marks Campus active only on the campus tab', () => {
-    renderSidebar('campus')
-    expect(screen.getByRole('link', { name: 'Campus' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current')
-  })
-
-  it('marks neither Today nor Campus in the sidebar until the tab is known', () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <AppSidebar tab={undefined} />
-      </QueryClientProvider>,
-    )
-    expect(screen.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('link', { name: 'Campus' })).not.toHaveAttribute('aria-current')
+  it('marks Today active on the feed', () => {
+    renderSidebar()
+    expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Profile' })).not.toHaveAttribute('aria-current')
   })
 
   it('labels the collapsed moderation group and the collapsed share button', async () => {
@@ -255,12 +244,11 @@ describe('desktop sidebar', () => {
       mocks.guest = true
     })
 
-    it('gets Today, Courses, Campus and Profile, and no signed-in items', () => {
+    it('gets Today, Courses and Profile, and no signed-in items', () => {
       renderSidebar()
       const nav = within(primaryNav())
       expect(nav.getByRole('link', { name: 'Today' })).toBeInTheDocument()
       expect(nav.getByRole('link', { name: 'Courses' })).toBeInTheDocument()
-      expect(nav.getByRole('link', { name: 'Campus' })).toBeInTheDocument()
       expect(nav.getByRole('link', { name: 'Profile' })).toBeInTheDocument()
       expect(nav.queryByRole('link', { name: /Chat/ })).not.toBeInTheDocument()
       expect(nav.queryByRole('link', { name: 'Share a note' })).not.toBeInTheDocument()
@@ -286,23 +274,15 @@ describe('phone navigation', () => {
     mocks.signInWithUniauth.mockClear()
   })
 
-  it('renders the four bottom tabs', () => {
+  it('renders the three bottom tabs', () => {
     render(<MobileNav />)
     const tabs = within(screen.getByRole('navigation', { name: 'Primary tabs' }))
     expect(tabs.getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Today',
       'Courses',
-      'Campus',
       'Me',
     ])
     expect(tabs.getByRole('link', { name: 'Me' })).toHaveAttribute('href', '/profile')
-  })
-
-  it('marks neither Today nor Campus until the client knows the tab', () => {
-    render(<MobileNav tab={undefined} />)
-    const tabs = within(screen.getByRole('navigation', { name: 'Primary tabs' }))
-    expect(tabs.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current')
-    expect(tabs.getByRole('link', { name: 'Campus' })).not.toHaveAttribute('aria-current')
   })
 
   it('sizes the phone top bar as 56px plus the notch inset, outside the padding', () => {
@@ -311,17 +291,9 @@ describe('phone navigation', () => {
     expect(header).toHaveClass('box-content', 'h-14', 'pt-[env(safe-area-inset-top)]')
   })
 
-  it('marks Campus active on the campus tab', () => {
-    render(<MobileNav tab="campus" />)
-    const tabs = within(screen.getByRole('navigation', { name: 'Primary tabs' }))
-    expect(tabs.getByRole('link', { name: 'Campus' })).toHaveAttribute('aria-current', 'page')
-    expect(tabs.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current')
-  })
-
-  it('renders the same navigation without a tab, so static pages send it from the server', () => {
+  it('renders the same navigation without client state, so static pages send it from the server', () => {
     const html = renderToStaticMarkup(<MobileNav />)
     expect(html).toContain('aria-label="Primary tabs"')
-    expect(html).toContain('href="/feed?tab=campus"')
     const sidebar = renderToStaticMarkup(
       <QueryClientProvider client={new QueryClient()}>
         <AppSidebar />
@@ -340,7 +312,7 @@ describe('phone navigation', () => {
     )
   })
 
-  it('shows a guest the four tabs and a sign-in button, with no share or chat', async () => {
+  it('shows a guest the three tabs and a sign-in button, with no share or chat', async () => {
     mocks.authenticated = false
     mocks.guest = true
     render(<MobileNav />)

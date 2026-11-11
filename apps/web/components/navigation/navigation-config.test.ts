@@ -28,24 +28,18 @@ describe('isRouteActive', () => {
 })
 
 describe('isNavItemActive', () => {
-  const [today, , campus] = mainNavigation('d1')
-  it('highlights Campus only on the campus tab, and Today otherwise', () => {
-    expect(isNavItemActive('/feed', 'campus', campus)).toBe(true)
-    expect(isNavItemActive('/feed', 'campus', today)).toBe(false)
-    expect(isNavItemActive('/feed', null, today)).toBe(true)
-    expect(isNavItemActive('/feed', null, campus)).toBe(false)
+  const [today] = mainNavigation('d1')
+  it('highlights Today on /feed and below', () => {
+    expect(isNavItemActive('/feed', today)).toBe(true)
+    expect(isNavItemActive('/feed/latest', today)).toBe(true)
+    expect(isNavItemActive('/profile', today)).toBe(false)
   })
 })
 
 describe('main navigation', () => {
-  it('shows Today, Courses, Campus and Profile in that order', () => {
-    expect(labels(mainNavigation('d1'))).toEqual(['Today', 'Courses', 'Campus', 'Profile'])
-    expect(hrefs(mainNavigation('d1'))).toEqual([
-      '/feed',
-      '/departments/d1',
-      '/feed?tab=campus',
-      '/profile',
-    ])
+  it('shows Today, Courses and Profile in that order', () => {
+    expect(labels(mainNavigation('d1'))).toEqual(['Today', 'Courses', 'Profile'])
+    expect(hrefs(mainNavigation('d1'))).toEqual(['/feed', '/departments/d1', '/profile'])
   })
 
   it('sends Courses to the department list when the user has no department', () => {
@@ -55,21 +49,14 @@ describe('main navigation', () => {
 
   it('highlights Courses on any departments page, not only the own department', () => {
     const courses = mainNavigation('d1')[1]
-    expect(isNavItemActive('/departments/d9', null, courses)).toBe(true)
-    expect(isNavItemActive('/departments', null, courses)).toBe(true)
-    expect(isNavItemActive('/feed', null, courses)).toBe(false)
+    expect(isNavItemActive('/departments/d9', courses)).toBe(true)
+    expect(isNavItemActive('/departments', courses)).toBe(true)
+    expect(isNavItemActive('/feed', courses)).toBe(false)
   })
 
-  it('is not active for Today or Campus while the tab is unknown', () => {
-    const [today, , campus] = mainNavigation('d1')
-    expect(isNavItemActive('/feed', undefined, today)).toBe(false)
-    expect(isNavItemActive('/feed', undefined, campus)).toBe(false)
-    expect(isNavItemActive('/profile', undefined, mainNavigation('d1')[3])).toBe(true)
-  })
-
-  it('gives the phone bar four tabs, with Profile labelled Me', () => {
-    expect(labels(mobileTabNavigation('d1'))).toEqual(['Today', 'Courses', 'Campus', 'Me'])
-    expect(hrefs(mobileTabNavigation('d1'))[3]).toBe('/profile')
+  it('gives the phone bar three tabs, with Profile labelled Me', () => {
+    expect(labels(mobileTabNavigation('d1'))).toEqual(['Today', 'Courses', 'Me'])
+    expect(hrefs(mobileTabNavigation('d1'))[2]).toBe('/profile')
   })
 })
 

@@ -57,17 +57,15 @@ function Badge({ count }: { count?: number }) {
 
 function SidebarLink({
   item,
-  tab,
   collapsed,
   badge,
 }: {
   item: NavigationItem
-  tab: string | null | undefined
   collapsed: boolean
   badge?: number
 }) {
   const pathname = usePathname()
-  const active = isNavItemActive(pathname, tab, item)
+  const active = isNavItemActive(pathname, item)
   const badgeLabel = badge ? ` (${badge > 99 ? '99+' : badge})` : ''
   const content = (
     <Link
@@ -200,7 +198,7 @@ function MyCourses() {
   )
 }
 
-export function AppSidebar({ tab }: { tab?: string | null }) {
+export function AppSidebar() {
   const { session, user, isAuthenticated, isGuest } = useAuth()
   const account = session?.user
   const collapsed = useUIStore((state) => state.sidebarCollapsed)
@@ -268,7 +266,7 @@ export function AppSidebar({ tab }: { tab?: string | null }) {
         >
           <div className={cn('space-y-1', collapsed && 'flex flex-col items-center')}>
             {main.map((item) => (
-              <SidebarLink key={item.label} item={item} tab={tab} collapsed={collapsed} />
+              <SidebarLink key={item.label} item={item} collapsed={collapsed} />
             ))}
           </div>
 
@@ -278,7 +276,6 @@ export function AppSidebar({ tab }: { tab?: string | null }) {
                 <SidebarLink
                   key={item.href}
                   item={item}
-                  tab={tab}
                   collapsed={collapsed}
                   badge={badgeFor(item.href)}
                 />
@@ -299,7 +296,7 @@ export function AppSidebar({ tab }: { tab?: string | null }) {
               )}
               <div className={cn('space-y-1', collapsed && 'flex flex-col items-center')}>
                 {moderation.map((item) => (
-                  <SidebarLink key={item.href} item={item} tab={tab} collapsed={collapsed} />
+                  <SidebarLink key={item.href} item={item} collapsed={collapsed} />
                 ))}
               </div>
             </section>

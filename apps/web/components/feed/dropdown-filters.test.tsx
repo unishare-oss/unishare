@@ -20,15 +20,9 @@ const base = {
   onSortChange: vi.fn(),
 }
 
-describe('DropdownFilters on Campus', () => {
-  it('shows year, module and course selects on Today', () => {
+describe('DropdownFilters', () => {
+  it('shows year, module and course selects', () => {
     render(<DropdownFilters {...base} />)
     expect(screen.getAllByRole('combobox')).toHaveLength(3)
-  })
-
-  it('hides year, module and course on Campus, keeping the sort', () => {
-    render(<DropdownFilters {...base} campus />)
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0)
-    expect(screen.getByRole('button', { name: /recent/i })).toBeInTheDocument()
   })
 })

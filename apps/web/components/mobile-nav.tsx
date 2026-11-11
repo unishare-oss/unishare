@@ -49,7 +49,7 @@ function TabLink({ item, isActive }: { item: NavigationItem; isActive: boolean }
 }
 
 /** Phone chrome: a glass top bar and a glass bottom tab bar. Hidden from md up. */
-export function MobileNav({ tab }: { tab?: string | null }) {
+export function MobileNav() {
   const pathname = usePathname()
   const { isAuthenticated, user } = useAuth()
   const unreadChatCount = useUnreadChatCount()
@@ -121,7 +121,7 @@ export function MobileNav({ tab }: { tab?: string | null }) {
         )}
       >
         {mobileTabNavigation(user?.department?.id).map((item) => (
-          <TabLink key={item.label} item={item} isActive={isNavItemActive(pathname, tab, item)} />
+          <TabLink key={item.label} item={item} isActive={isNavItemActive(pathname, item)} />
         ))}
       </nav>
     </>
