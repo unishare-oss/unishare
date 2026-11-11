@@ -161,6 +161,11 @@
   --lift: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
+/* Noto on the dark hero card keeps light limbs in every theme. */
+.bg-hero {
+  --noto-limb: #e6ebf7;
+}
+
 @theme inline {
   /* Each Tailwind name points at a stack defined once on :root. */
   --font-sans: var(--stack-body);
