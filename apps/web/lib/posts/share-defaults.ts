@@ -13,7 +13,7 @@ const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&
 const CAMERA_NAME = /^(img|dsc|pxl|scan|screenshot)/i
 const EXAM_WORDS = /\b(?:midterm|final|exam|test)s?\d*\b/i
 const EXERCISE_WORDS = /\b(?:exercise|worksheet|pset|problem set|tutorial|lab|practice)s?\d*\b/i
-const WEEK = /\b(?:week|wk|w|lecture|lec|module)\s?(\d{1,2})\b/i
+const MODULE = /\b(?:module|mod|m)\s?([1-3])\b/i
 const EXAM_YEAR = /\b(199\d|20[0-2]\d)\b/
 
 /** Guesses what it can from a file name; only the fields it is sure of are returned. */
@@ -44,8 +44,8 @@ export function guessFromFileName(
     }
   }
 
-  const week = WEEK.exec(text)
-  if (week && Number(week[1]) >= 1 && Number(week[1]) <= 15) guess.moduleNumber = Number(week[1])
+  const moduleMatch = MODULE.exec(text)
+  if (moduleMatch) guess.moduleNumber = Number(moduleMatch[1])
 
   if (EXAM_WORDS.test(text)) guess.type = 'OLD_QUESTION'
   else if (EXERCISE_WORDS.test(text)) guess.type = 'EXERCISE'
@@ -72,10 +72,14 @@ export function deriveSemester(now: Date, academicStartMonth = 9): 1 | 2 | 3 {
   return 3
 }
 
-/** The highest week among a course's notes, or undefined when it has none. */
-export function newestWeekWithNotes(posts: { moduleNumber?: number | null }[]): number | undefined {
-  const weeks = posts.map((post) => post.moduleNumber).filter((week): week is number => !!week)
-  return weeks.length > 0 ? Math.max(...weeks) : undefined
+/** The highest module among a course's notes, or undefined when it has none. */
+export function newestModuleWithNotes(
+  posts: { moduleNumber?: number | null }[],
+): number | undefined {
+  const modules = posts
+    .map((post) => post.moduleNumber)
+    .filter((n): n is number => !!n && n >= 1 && n <= 3)
+  return modules.length > 0 ? Math.max(...modules) : undefined
 }
 
 /** The labels still needed before Share is enabled, in the order the form asks for them. */
@@ -94,7 +98,7 @@ export function missingFields(
   if (readyFileCount === 0) missing.push('file')
   if (!values.postType) missing.push('type')
   if (!values.selectedCourse) missing.push('course')
-  if (!values.moduleNum) missing.push('week')
+  if (!values.moduleNum) missing.push('a module')
   if (values.title.trim().length < 3) missing.push('title')
   if (values.postType === 'OLD_QUESTION' && !values.examYear) missing.push('exam year')
   if (values.postType === 'EXERCISE' && !values.homeworkConfirmed) missing.push('homework check')

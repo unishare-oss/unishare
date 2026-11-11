@@ -198,7 +198,7 @@ function ExerciseCard() {
         <TypeTag className="bg-type-exercise">Exercise</TypeTag>
         <span className="font-mono text-[10px] text-text-muted">CS-204 • Year 2</span>
       </div>
-      <h4 className="mt-3 text-sm font-black leading-tight">Traversal drills — Week 6</h4>
+      <h4 className="mt-3 text-sm font-black leading-tight">Traversal drills — Module 2</h4>
       <p className="mt-1 font-mono text-[11px] text-text-muted">12 problems • answers inside</p>
       <div className="mt-3 space-y-1.5">
         {['Pre-order of a BST', 'Rebuild from in + post', 'Level-order with a queue'].map(

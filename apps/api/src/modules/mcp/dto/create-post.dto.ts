@@ -30,7 +30,7 @@ export const createPostSchema = z.object({
   description: z.string().min(1).max(2000),
   type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
   courseId: z.string().min(1),
-  moduleNumber: z.number().int().min(1).max(20).optional(),
+  moduleNumber: z.number().int().min(1).max(3).optional(),
   year: z.number().int().min(1).max(6).optional(),
   semester: z.number().int().min(1).max(3).optional(),
   tags: z.array(z.string().min(2).max(50)).max(5).optional(),

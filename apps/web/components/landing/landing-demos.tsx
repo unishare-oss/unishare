@@ -162,10 +162,10 @@ type FindPost = {
 const FIND_POSTS: FindPost[] = [
   { title: 'Trees & Traversals', meta: 'Lecture 12 • 2.4 MB', type: 'Note', year: 2 },
   { title: 'CS-204 Final • 2025', meta: '3 hrs • with solutions', type: 'Past paper', year: 2 },
-  { title: 'Traversal drills', meta: '12 problems • Week 6', type: 'Exercise', year: 2 },
+  { title: 'Traversal drills', meta: '12 problems • Module 2', type: 'Exercise', year: 2 },
   { title: 'Big-O cheat sheet', meta: 'One page • 1.1k saves', type: 'Note', year: 1 },
   { title: 'CS-101 Midterm • 2024', meta: '90 min • marked', type: 'Past paper', year: 1 },
-  { title: 'Recursion warm-ups', meta: '8 problems • Week 3', type: 'Exercise', year: 1 },
+  { title: 'Recursion warm-ups', meta: '8 problems • Module 1', type: 'Exercise', year: 1 },
 ]
 
 const TYPE_STYLE: Record<FindPost['type'], string> = {
@@ -269,7 +269,7 @@ type Message = { id: number; from: 'Aisha' | 'Jonas' | 'You'; text: string; file
 
 const REPLIES = [
   'Same question here 😅 pinning this.',
-  'Check the Week 6 drills — question 4 is on every past paper.',
+  'Check the Module 2 drills — question 4 is on every past paper.',
   'Board session at 7? I’ll bring the tree diagrams.',
 ]
 

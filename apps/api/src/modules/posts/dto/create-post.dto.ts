@@ -58,10 +58,10 @@ export class CreatePostDto {
   @Max(2100)
   examYear?: number
 
-  @ApiProperty({ minimum: 1, maximum: 20 })
+  @ApiProperty({ minimum: 1, maximum: 3 })
   @IsInt()
   @Min(1)
-  @Max(20)
+  @Max(3)
   moduleNumber: number
 
   @ApiProperty({ minimum: 1, maximum: 6 })

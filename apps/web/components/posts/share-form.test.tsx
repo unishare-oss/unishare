@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -84,7 +84,7 @@ describe('ShareForm', () => {
 
   it('marks guessed fields, counts them, and drops the mark when the student edits', async () => {
     render(<ShareForm />)
-    addFile('CSC213_week4_heaps.pdf')
+    addFile('CSC213_Module2_heaps.pdf')
     await waitFor(() => expect(screen.getAllByText('from the file name')).toHaveLength(3))
     expect(screen.getByText(/We filled in 3 things from/)).toBeInTheDocument()
 
@@ -101,11 +101,11 @@ describe('ShareForm', () => {
   it('keeps Share disabled with what is still needed as fields are filled', async () => {
     render(<ShareForm />)
     addFile('IMG_2041.pdf')
-    expect(await screen.findByText('Still needed: course, week, title')).toBeInTheDocument()
+    expect(await screen.findByText('Still needed: course, a module, title')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Share' })).toBeDisabled()
 
     fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Heaps' } })
-    fireEvent.click(screen.getByRole('button', { name: '10' }))
+    fireEvent.click(screen.getByRole('button', { name: '3' }))
     fireEvent.click(screen.getByRole('switch', { name: 'Post anonymously' }))
     expect(screen.getByRole('status')).toHaveTextContent('Still needed: course')
   })
@@ -119,18 +119,20 @@ describe('ShareForm', () => {
 
   it('shares, opens the new post and shows the toast with Undo', async () => {
     render(<ShareForm />)
-    addFile('CSC213_week4_heaps.pdf')
+    addFile('CSC213_Module2_heaps.pdf')
     const share = await screen.findByRole('button', { name: 'Share' })
     await waitFor(() => expect(share).toBeEnabled())
-    expect(screen.getByRole('status')).toHaveTextContent('Shares to CSC213 · Week 4')
+    expect(screen.getByRole('status')).toHaveTextContent('Shares to CSC213 · Module 2')
 
     fireEvent.click(screen.getByRole('switch', { name: 'Post anonymously' }))
-    expect(screen.getByRole('status')).toHaveTextContent('Shares to CSC213 · Week 4 · anonymously')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Shares to CSC213 · Module 2 · anonymously',
+    )
 
     fireEvent.click(share)
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/posts/p1'))
     expect(mocks.createPost).toHaveBeenCalledWith({
-      data: expect.objectContaining({ courseId: 'c1', moduleNumber: 4, isAnonymous: true }),
+      data: expect.objectContaining({ courseId: 'c1', moduleNumber: 2, isAnonymous: true }),
     })
     expect(mocks.confirmUpload).toHaveBeenCalledWith('p1', expect.objectContaining({ key: 'k' }))
     expect(mocks.toastSuccess).toHaveBeenCalledWith(
@@ -174,7 +176,7 @@ describe('ShareForm', () => {
 
   it('says what is wrong with the link instead of the ready line, and opens More details', async () => {
     render(<ShareForm />)
-    addFile('CSC213_week4_heaps.pdf')
+    addFile('CSC213_Module2_heaps.pdf')
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Shares to CSC213'))
     fireEvent.change(screen.getByLabelText('Link'), { target: { value: 'http://example.com' } })
     expect(screen.getByRole('status')).toHaveTextContent('Fix the link in More details')
@@ -186,7 +188,7 @@ describe('ShareForm', () => {
     mocks.auth = { isLoading: true }
     mocks.coursesLoading = true
     const { rerender } = render(<ShareForm />)
-    addFile('CSC213_week4_heaps.pdf')
+    addFile('CSC213_Module2_heaps.pdf')
     expect(screen.queryByText(/We filled in/)).not.toBeInTheDocument()
 
     mocks.auth = { isLoading: false }
@@ -194,6 +196,15 @@ describe('ShareForm', () => {
     rerender(<ShareForm />)
     await waitFor(() => expect(screen.getByText(/We filled in 3 things/)).toBeInTheDocument())
     expect(screen.getByLabelText(/^Course/)).toHaveValue('CSC213 — Data Structures')
+  })
+
+  it('shows the preview and good-to-know in the page rail', async () => {
+    render(<ShareForm />)
+    addFile('CSC213_Module2_heaps.pdf')
+    const rail = await screen.findByRole('complementary', { name: 'Page details' })
+    expect(within(rail).getByText('How classmates will see it')).toBeInTheDocument()
+    expect(within(rail).getByText('Good to know')).toBeInTheDocument()
+    expect(within(rail).getByText(/· Module 2/)).toBeInTheDocument()
   })
 
   it('counts a file that is still uploading in the preview card', async () => {

@@ -204,10 +204,11 @@ function buildCourseOutlineExtractionPrompt(): string {
   return `You are helping structure a university course outline (syllabus) into per-module topics.
 
 Read the course outline below and split it into modules. A module is a chunk of consecutive
-weeks/lectures bounded by an exam, midterm, or final — universities typically run 2-4 such
-modules per semester (e.g. everything up to Exam 1 is module 1, Exam 1 to Exam 2 is module 2,
-and so on to the final). If the source already labels its own sections "Module", "Unit", or
-"Chapter", use those boundaries instead of inferring from exams. Do NOT create one module per
+weeks/lectures bounded by an exam, midterm, or final — a course has at most 3 modules
+(e.g. everything up to Exam 1 is module 1, Exam 1 to Exam 2 is module 2, and the rest is
+module 3). Merge adjacent chunks so there are never more than 3 modules. If the source already
+labels its own sections "Module", "Unit", or "Chapter", use those boundaries instead of
+inferring from exams, and merge them down to at most 3. Do NOT create one module per
 week/lecture unless the source has no exam markers at all to group by.
 
 Number modules sequentially starting at 1 in the order they appear.
@@ -1117,8 +1118,12 @@ export class AiSummaryService {
 
       const modules = JSON.parse(jsonMatch[0])
 
+      if (!Array.isArray(modules) || modules.length > 3) {
+        throw new Error('Outline has more than 3 modules')
+      }
+
       modules.forEach((m: any, idx: number) => {
-        if (typeof m.moduleNumber !== 'number' || m.moduleNumber < 1) {
+        if (typeof m.moduleNumber !== 'number' || m.moduleNumber < 1 || m.moduleNumber > 3) {
           throw new Error(`Module ${idx + 1} has an invalid moduleNumber`)
         }
         if (!Array.isArray(m.topics) || m.topics.some((t: unknown) => typeof t !== 'string')) {

@@ -30,7 +30,7 @@ const EMPTY_SELECT_VALUE = '__empty__'
 const TITLE_ERROR = 'Title must be at least 3 characters'
 const DESCRIPTION_ERROR = 'Description is required'
 const SEMESTER_ERROR = 'Semester must be between 1 and 3'
-const MODULE_ERROR = 'Module number must be between 1 and 20'
+const MODULE_ERROR = 'Module must be between 1 and 3'
 const EXAM_YEAR_ERROR = 'Exam year must be between 1900 and 2100'
 const EXTERNAL_URL_ERROR = 'External URL must be a valid URL'
 
@@ -81,7 +81,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                   <Input
                     {...field}
                     type="text"
-                    placeholder="e.g. Complete Lecture Notes Week 1-6"
+                    placeholder="e.g. Complete lecture notes, Module 1"
                     className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
@@ -188,7 +188,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
             name="moduleNum"
             rules={{
               validate: (value) =>
-                postType == null || isWholeNumberInRange(value, 1, 20) || MODULE_ERROR,
+                postType == null || isWholeNumberInRange(value, 1, 3) || MODULE_ERROR,
             }}
             render={({ field }) => (
               <FormItem>
@@ -199,7 +199,9 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                   <Input
                     {...field}
                     type="number"
-                    placeholder="e.g. 4"
+                    min={1}
+                    max={3}
+                    placeholder="e.g. 2"
                     className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
                   />
                 </FormControl>
