@@ -16,6 +16,8 @@ interface SearchSelectProps {
   placeholder?: string
   disabledPlaceholder?: string
   disabled?: boolean
+  /** Id for the text input, so an external <label htmlFor> can name it. */
+  id?: string
 }
 
 export function SearchSelect({
@@ -25,6 +27,7 @@ export function SearchSelect({
   placeholder = 'Select...',
   disabledPlaceholder = 'Select...',
   disabled = false,
+  id,
 }: SearchSelectProps) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -144,6 +147,7 @@ export function SearchSelect({
         }}
       >
         <input
+          id={id}
           ref={inputRef}
           type="text"
           spellCheck={false}

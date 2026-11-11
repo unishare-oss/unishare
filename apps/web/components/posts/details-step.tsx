@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/TagInput'
-import type { PostType } from './type-step'
+import type { PostType } from '@/lib/posts/form-types'
 
 const EMPTY_SELECT_VALUE = '__empty__'
 

@@ -16,4 +16,6 @@ export type CreatePostFormValues = {
   externalUrl?: string
   files: File[]
   tags: string[]
+  /** Share form only: must be true for exercises. */
+  homeworkConfirmed?: boolean
 }
