@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useState, type ReactNode } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        <WithCurrentTab>{(tab) => <AppSidebar tab={tab} />}</WithCurrentTab>
+        <AppSidebar />
       </div>
       <main
         className={cn(
@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </main>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        {!isChatRoom && <WithCurrentTab>{(tab) => <MobileNav tab={tab} />}</WithCurrentTab>}
+        {!isChatRoom && <MobileNav />}
       </div>
 
       {!showLoader && requiresDepartmentOnboarding && !profileModalDismissed && (
@@ -88,22 +88,5 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
     </div>
-  )
-}
-
-function ReadCurrentTab({ children }: { children: (tab: string | null | undefined) => ReactNode }) {
-  return <>{children(useSearchParams().get('tab'))}</>
-}
-
-/**
- * Reads ?tab= inside its own Suspense boundary. Until the client knows the tab (undefined), the
- * fallback renders the same nav with neither Today nor Campus marked active, so static pages
- * still send the navigation from the server and never mark the wrong item.
- */
-function WithCurrentTab({ children }: { children: (tab: string | null | undefined) => ReactNode }) {
-  return (
-    <Suspense fallback={children(undefined)}>
-      <ReadCurrentTab>{children}</ReadCurrentTab>
-    </Suspense>
   )
 }

@@ -9,7 +9,6 @@ import {
   CalendarDays,
   FileText,
   Flag,
-  Globe,
   Home,
   LayoutGrid,
   MessageSquare,
@@ -33,7 +32,6 @@ export interface NavigationItem {
 }
 
 const todayItem: NavigationItem = { href: '/feed', label: 'Today', icon: Home }
-const campusItem: NavigationItem = { href: '/feed?tab=campus', label: 'Campus', icon: Globe }
 const profileItem: NavigationItem = { href: '/profile', label: 'Profile', icon: UserRound }
 
 /** Courses goes to the student's department course list until US-56 adds course pages. */
@@ -41,7 +39,7 @@ export function coursesHref(departmentId?: string | null): string {
   return departmentId ? `/departments/${departmentId}` : '/departments'
 }
 
-/** Desktop sidebar: Today, Courses, Campus, Profile. Guests see the same four. */
+/** Desktop sidebar: Today, Courses, Profile. Guests see the same three. */
 export function mainNavigation(departmentId?: string | null): NavigationItem[] {
   return [
     todayItem,
@@ -51,12 +49,11 @@ export function mainNavigation(departmentId?: string | null): NavigationItem[] {
       icon: BookOpen,
       matchPrefix: '/departments',
     },
-    campusItem,
     profileItem,
   ]
 }
 
-/** Phone bottom tab bar: the same four destinations, with Profile labelled Me. */
+/** Phone bottom tab bar: the same three destinations, with Profile labelled Me. */
 export function mobileTabNavigation(departmentId?: string | null): NavigationItem[] {
   return mainNavigation(departmentId).map((item) =>
     item.href === profileItem.href ? { ...item, label: 'Me' } : item,
@@ -116,17 +113,6 @@ export function isRouteActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-/** Today and Campus both live on /feed, so the `tab` query tells them apart. */
-/** `tab` is undefined until the client has read the URL; Today and Campus then stay unmarked. */
-export function isNavItemActive(
-  pathname: string,
-  tab: string | null | undefined,
-  item: NavigationItem,
-) {
-  const [path, query] = item.href.split('?')
-  if (!isRouteActive(pathname, item.matchPrefix ?? path)) return false
-  if (path === '/feed' && tab === undefined) return false
-  const onCampus = pathname === '/feed' && tab === 'campus'
-  if (query) return onCampus
-  return path === '/feed' ? !onCampus : true
+export function isNavItemActive(pathname: string, item: NavigationItem) {
+  return isRouteActive(pathname, item.matchPrefix ?? item.href)
 }

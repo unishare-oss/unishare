@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   search: '',
   replace: vi.fn(),
   postsFindAll: vi.fn(),
-  filterStripProps: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -41,20 +40,14 @@ vi.mock('@/components/feed/feed-header', () => ({
     </div>
   ),
 }))
-vi.mock('@/components/feed/filter-strip', () => ({
-  FilterStrip: (props: unknown) => {
-    mocks.filterStripProps(props)
-    return null
-  },
-}))
+vi.mock('@/components/feed/filter-strip', () => ({ FilterStrip: () => null }))
 vi.mock('@/components/feed/post-feed', () => ({ PostFeed: () => null }))
 
-describe('feed tabs', () => {
+describe('feed filters', () => {
   beforeEach(() => {
     mocks.search = ''
     mocks.replace.mockClear()
     mocks.postsFindAll.mockClear()
-    mocks.filterStripProps.mockClear()
     useFeedStore.setState({
       selectedDeptId: 'd1',
       selectedYear: 2,
@@ -74,39 +67,9 @@ describe('feed tabs', () => {
         moduleNumber: 3,
       }),
     )
-    expect(mocks.filterStripProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ campus: false }),
-    )
   })
 
-  it('Campus drops the department, year, course and module filters and tells the strip', () => {
-    mocks.search = 'tab=campus'
-    render(<FeedPage />)
-    const params = mocks.postsFindAll.mock.lastCall?.[0] as Record<string, unknown>
-    expect(params.departmentId).toBeUndefined()
-    expect(params.yearLevel).toBeUndefined()
-    expect(params.courseId).toBeUndefined()
-    expect(params.moduleNumber).toBeUndefined()
-    expect(mocks.filterStripProps).toHaveBeenLastCalledWith(
-      expect.objectContaining({ campus: true }),
-    )
-  })
-
-  it('keeps tab=campus when a search is typed', async () => {
-    mocks.search = 'tab=campus'
-    render(<FeedPage />)
-    await userEvent.click(screen.getByRole('button', { name: 'search pasta' }))
-    expect(mocks.replace).toHaveBeenLastCalledWith('/feed?tab=campus&q=pasta', { scroll: false })
-  })
-
-  it('keeps tab=campus when a tag is picked', async () => {
-    mocks.search = 'tab=campus&q=old'
-    render(<FeedPage />)
-    await userEvent.click(screen.getByRole('button', { name: 'pick exam tag' }))
-    expect(mocks.replace).toHaveBeenLastCalledWith('/feed?tab=campus&tag=exam', { scroll: false })
-  })
-
-  it('clearing the search on Today returns to plain /feed', async () => {
+  it('clearing the search returns to plain /feed', async () => {
     mocks.search = 'q=old'
     render(<FeedPage />)
     await userEvent.click(screen.getByRole('button', { name: 'search pasta' }))

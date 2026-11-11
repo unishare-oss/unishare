@@ -37,8 +37,6 @@ function FeedContent() {
   const searchParams = useSearchParams()
   const tagParam = searchParams.get('tag')
   const qParam = searchParams.get('q')
-  // Campus shows the whole university: the department, year and course filters do not apply.
-  const isCampus = searchParams.get('tab') === 'campus'
   const {
     activeFilter,
     selectedDeptId,
@@ -61,7 +59,7 @@ function FeedContent() {
   const page = parsePageParam(searchParams.get('page'))
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
-  // Search and tag changes keep every other param (such as tab=campus); the given ones replace q/tag.
+  // Search and tag changes keep every other param; the given ones replace q/tag.
   function feedHref(changes: { q?: string | null; tag?: string | null }) {
     const next = new URLSearchParams(searchParams)
     next.delete('page')
@@ -177,10 +175,10 @@ function FeedContent() {
   const { data, isLoading } = usePostsControllerFindAll(
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
-      courseId: isCampus ? undefined : selectedCourseId || undefined,
-      departmentId: isCampus ? undefined : effectiveDeptId || undefined,
-      yearLevel: isCampus ? undefined : (selectedYear ?? undefined),
-      moduleNumber: isCampus ? undefined : (selectedModuleNumber ?? undefined),
+      courseId: selectedCourseId || undefined,
+      departmentId: effectiveDeptId || undefined,
+      yearLevel: selectedYear ?? undefined,
+      moduleNumber: selectedModuleNumber ?? undefined,
       tagSlug: tagSlug || undefined,
       page,
       limit: 10,
@@ -257,7 +255,6 @@ function FeedContent() {
         onModuleChange={handleModuleChange}
         sortType={sortType}
         onSortChange={handleSortChange}
-        campus={isCampus}
       />
 
       <PostFeed
