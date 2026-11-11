@@ -171,15 +171,13 @@ describe('desktop sidebar', () => {
     expect(mocks.lastEnabled).toBe(false)
   })
 
-  it('opens the feed filtered to the course it links to', async () => {
+  it('links each course to its course page', async () => {
     renderSidebar()
     const section = await screen.findByRole('region', { name: 'My courses' })
-    await userEvent.click(within(section).getByRole('link', { name: /CSC213/ }))
-    expect(useFeedStore.getState().pendingFilter).toEqual({
-      deptId: 'd1',
-      courseId: 'c1',
-      yearLevel: 2,
-    })
+    expect(within(section).getByRole('link', { name: /CSC213/ })).toHaveAttribute(
+      'href',
+      '/courses/c1',
+    )
   })
 
   it('hides My courses when the student has no department', () => {
