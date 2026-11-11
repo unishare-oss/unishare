@@ -49,6 +49,7 @@ describe('proxy', () => {
       '/auth/return',
       '/privacy',
       '/terms',
+      '/support',
       '/canvas/room1',
       '/api/auth/get-session',
       '/.well-known/openid-configuration',
