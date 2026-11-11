@@ -23,10 +23,15 @@ const mocks = vi.hoisted(() => ({
     isGuest: boolean
   },
 }))
-vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }))
+vi.mock('next/navigation', () => ({
+  usePathname: () => mocks.pathname,
+  useSearchParams: () => new URLSearchParams(),
+}))
 vi.mock('@/contexts/auth-context', () => ({ useAuth: () => mocks.auth }))
 vi.mock('@/hooks/use-notifications', () => ({ useNotificationStream: vi.fn() }))
-vi.mock('@/components/app-rail', () => ({ AppRail: () => <aside data-testid="desktop-nav" /> }))
+vi.mock('@/components/app-sidebar', () => ({
+  AppSidebar: () => <aside data-testid="desktop-nav" />,
+}))
 vi.mock('@/components/mobile-nav', () => ({ MobileNav: () => <nav data-testid="mobile-nav" /> }))
 vi.mock('@/components/academic-profile-modal', () => ({ AcademicProfileModal: () => null }))
 vi.mock('@/components/shared/background-upload-manager', () => ({
@@ -84,6 +89,20 @@ describe('AppShell navigation layout', () => {
     act(() => vi.advanceTimersByTime(1000))
     expect(screen.getByRole('main')).toHaveClass('h-screen', 'overflow-hidden')
     expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
+  })
+
+  it('lets sticky headers sit under the phone top bar, only below md', () => {
+    render(
+      <AppShell>
+        <p>Content</p>
+      </AppShell>,
+    )
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('main')).toHaveClass(
+      'pt-[calc(3.5rem+env(safe-area-inset-top))]',
+      'md:pt-0',
+      'max-md:[--mobile-topbar-h:calc(3.5rem+env(safe-area-inset-top))]',
+    )
   })
 
   describe('member without a university', () => {

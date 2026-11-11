@@ -47,7 +47,7 @@ export default function ReportsPage() {
   const isActioning = approving || rejecting
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <ReportsHeader
         pendingCount={pendingCount}
         activeFilter={activeFilter}

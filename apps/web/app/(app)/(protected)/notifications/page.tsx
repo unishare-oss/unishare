@@ -89,7 +89,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Notifications" />
 
       <div className="flex-1 bg-card">

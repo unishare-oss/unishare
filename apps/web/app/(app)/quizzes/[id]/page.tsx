@@ -24,7 +24,7 @@ export default function QuizPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin mx-auto text-brand-edge" />
           <p className="text-muted-foreground">Loading quiz...</p>
@@ -35,7 +35,7 @@ export default function QuizPage() {
 
   if (error || !response) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{(error as Error)?.message || 'Quiz not found'}</AlertDescription>

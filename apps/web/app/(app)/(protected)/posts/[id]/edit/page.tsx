@@ -194,7 +194,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
 
   if (isLoading || !post || !post.isOwner) {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-[calc(100dvh-var(--mobile-topbar-h,0px))] flex-col">
         <PageHeader title="Edit Post" />
         <div className="flex flex-1 items-center justify-center bg-card">
           <LoadingSpinner className="size-20" />
@@ -204,7 +204,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-[calc(100dvh-var(--mobile-topbar-h,0px))] flex-col">
       <PageHeader title="Edit Post" />
 
       <div className="flex-1 bg-card">

@@ -34,7 +34,7 @@ export default function AdminFeedbackPage() {
   const items: FeedbackEntity[] = data?.items ?? []
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Feedback" />
 
       <div className="border-b border-border bg-background px-6 py-3 flex items-center gap-2">

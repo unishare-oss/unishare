@@ -110,7 +110,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   if (!request) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
         <PageHeader title="Request" />
         <div className="flex-1 bg-card flex items-center justify-center">
           <LoadingSpinner className="size-20" />
@@ -125,7 +125,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const canSuggest = !!userId && !isFulfilled && !hasSuggested
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Request" />
 
       <div className="flex-1 bg-card">

@@ -29,7 +29,7 @@ export function GuestUniversityPicker() {
   })
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh-var(--mobile-topbar-h,0px))] max-w-md flex-col justify-center gap-4 px-6">
       <h1 className="text-xl font-semibold text-foreground">Pick a university to browse</h1>
       <p className="text-sm text-text-muted">
         As a guest you can read one university&rsquo;s posts. You pick it once; sign out to start

@@ -28,6 +28,8 @@ export interface DropdownFiltersProps {
   onModuleChange: (value: string) => void
   sortType?: SortType
   onSortChange?: (sort: SortType) => void
+  /** Campus shows the whole university, so the year, module and course filters are hidden. */
+  campus?: boolean
 }
 
 export function DropdownFilters({
@@ -46,6 +48,7 @@ export function DropdownFilters({
   onModuleChange,
   sortType = 'recent',
   onSortChange,
+  campus = false,
 }: DropdownFiltersProps) {
   return (
     <div className="flex flex-col gap-3 pb-2">
@@ -99,63 +102,67 @@ export function DropdownFilters({
             </Select>
           </div> */}
 
-          <Select
-            value={selectedYear === null ? ALL : String(selectedYear)}
-            onValueChange={onYearChange}
-          >
-            <SelectTrigger
-              size="sm"
-              className="font-mono text-xs text-text-muted w-full"
-              title={selectedYearLabel}
-            >
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All years</SelectItem>
-              {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  Year {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
-            onValueChange={onModuleChange}
-          >
-            <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
-              <SelectValue placeholder="Module" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value={ALL}>All modules</SelectItem>
-              {[1, 2, 3].map((m) => (
-                <SelectItem key={m} value={String(m)}>
-                  Module {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="col-span-2">
-            <Select value={selectedCourseId || ALL} onValueChange={onCourseChange}>
-              <SelectTrigger
-                size="sm"
-                className="font-mono text-xs text-text-muted w-full"
-                title={selectedCourseLabel}
+          {!campus && (
+            <>
+              <Select
+                value={selectedYear === null ? ALL : String(selectedYear)}
+                onValueChange={onYearChange}
               >
-                <SelectValue placeholder="Course" />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value={ALL}>All courses</SelectItem>
-                {filteredCourses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.code} — {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <SelectTrigger
+                  size="sm"
+                  className="font-mono text-xs text-text-muted w-full"
+                  title={selectedYearLabel}
+                >
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value={ALL}>All years</SelectItem>
+                  {Array.from({ length: 6 }, (_, i) => i + 1).map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      Year {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
+                onValueChange={onModuleChange}
+              >
+                <SelectTrigger size="sm" className="font-mono text-xs text-text-muted w-full">
+                  <SelectValue placeholder="Module" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value={ALL}>All modules</SelectItem>
+                  {[1, 2, 3].map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      Module {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="col-span-2">
+                <Select value={selectedCourseId || ALL} onValueChange={onCourseChange}>
+                  <SelectTrigger
+                    size="sm"
+                    className="font-mono text-xs text-text-muted w-full"
+                    title={selectedCourseLabel}
+                  >
+                    <SelectValue placeholder="Course" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value={ALL}>All courses</SelectItem>
+                    {filteredCourses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.code} — {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

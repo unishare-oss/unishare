@@ -9,7 +9,7 @@ export function NoUniversityNotice() {
   const pathname = usePathname()
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh-var(--mobile-topbar-h,0px))] max-w-md flex-col justify-center gap-4 px-6">
       <h1 className="text-xl font-semibold text-foreground">Pick your university</h1>
       <p className="text-sm text-text-muted">
         Unishare shows the posts, departments and people of your university. Pick it on your Unicorp

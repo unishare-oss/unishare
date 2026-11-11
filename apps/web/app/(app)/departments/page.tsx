@@ -20,7 +20,7 @@ export default function DepartmentsPage() {
   const loading = isLoading || (!isAuthenticated && universitiesLoading)
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Departments" />
       <div className="flex-1 bg-card">
         {loading ? (

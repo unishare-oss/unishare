@@ -128,11 +128,11 @@ export default function RequestsPage() {
   const requests = data?.items ?? []
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader title="Requests" />
 
       {/* Toolbar */}
-      <div className="sticky top-15 z-10 bg-card border-b border-border px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+      <div className="sticky top-[calc(var(--mobile-topbar-h,0px)+3.75rem)] md:top-15 z-10 bg-card border-b border-border px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <Select
             value={statusFilter}

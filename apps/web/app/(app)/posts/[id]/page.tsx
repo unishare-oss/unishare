@@ -60,7 +60,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!post) {
     return (
-      <div className="flex flex-col min-h-screen" data-detail-style={feedStyle}>
+      <div
+        className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]"
+        data-detail-style={feedStyle}
+      >
         <PageHeader title="Post" />
         <div className={cn('flex-1', feedStyle === 'classic' ? 'bg-card' : 'bg-background')}>
           <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4', 'max-w-300')}>
@@ -87,7 +90,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const isOwner = post.isOwner
 
   return (
-    <div className="flex flex-col min-h-screen" data-detail-style={feedStyle}>
+    <div
+      className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]"
+      data-detail-style={feedStyle}
+    >
       <PageHeader title={post.title ?? 'Post'} />
 
       <div className={cn('flex-1', feedStyle === 'classic' ? 'bg-card' : 'bg-background')}>

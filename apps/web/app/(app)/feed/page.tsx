@@ -20,6 +20,11 @@ function parsePageParam(value: string | null): number {
   return Number.isSafeInteger(n) && n >= 1 && n <= PAGE_PARAM_MAX ? n : 1
 }
 
+function setOrDelete(params: URLSearchParams, key: string, value: string | null) {
+  if (value) params.set(key, value)
+  else params.delete(key)
+}
+
 function stripPage(params: URLSearchParams): string {
   const next = new URLSearchParams(params)
   next.delete('page')
@@ -32,6 +37,8 @@ function FeedContent() {
   const searchParams = useSearchParams()
   const tagParam = searchParams.get('tag')
   const qParam = searchParams.get('q')
+  // Campus shows the whole university: the department, year and course filters do not apply.
+  const isCampus = searchParams.get('tab') === 'campus'
   const {
     activeFilter,
     selectedDeptId,
@@ -45,6 +52,7 @@ function FeedContent() {
     setSelectedCourseId,
     setSelectedModuleNumber,
     consumePendingFilter,
+    pendingFilter,
   } = useFeedStore()
 
   const [searchQuery, setSearchQuery] = useState(qParam ?? '')
@@ -53,22 +61,28 @@ function FeedContent() {
   const page = parsePageParam(searchParams.get('page'))
   const effectiveDeptId = selectedDeptId ?? user?.department?.id ?? ''
 
+  // Search and tag changes keep every other param (such as tab=campus); the given ones replace q/tag.
+  function feedHref(changes: { q?: string | null; tag?: string | null }) {
+    const next = new URLSearchParams(searchParams)
+    next.delete('page')
+    if (changes.q !== undefined) setOrDelete(next, 'q', changes.q)
+    if (changes.tag !== undefined) setOrDelete(next, 'tag', changes.tag)
+    const qs = next.toString()
+    return `/feed${qs ? `?${qs}` : ''}`
+  }
+
   // When user types, clear ?tag= and instantly update ?q= in the URL
   function handleSearchChange(value: string) {
     setSearchQuery(value)
     const q = value.trim()
-    if (q) {
-      router.replace(`/feed?q=${encodeURIComponent(q)}`, { scroll: false })
-    } else {
-      router.replace('/feed', { scroll: false })
-    }
+    router.replace(feedHref({ q: q || null, tag: null }), { scroll: false })
   }
 
   // When user picks a tag from autocomplete, switch to tag-filter mode
   function handleTagSelect(tagName: string) {
     setSearchQuery('')
     setDebouncedSearch('')
-    router.replace(`/feed?tag=${encodeURIComponent(tagName)}`, { scroll: false })
+    router.replace(feedHref({ q: null, tag: tagName }), { scroll: false })
   }
 
   function handlePageChange(newPage: number) {
@@ -100,10 +114,11 @@ function FeedContent() {
     }
   }, [hasSelectedYear, setSelectedYear, user?.yearLevel])
 
-  // Consume any cross-page filter set via setPendingFilter() on mount.
+  // Apply a cross-page filter set via setPendingFilter(). Runs on mount and when a new one arrives
+  // while the feed is already open (the sidebar's course links).
   useEffect(() => {
-    consumePendingFilter()
-  }, [consumePendingFilter])
+    if (pendingFilter) consumePendingFilter()
+  }, [pendingFilter, consumePendingFilter])
 
   // Normalize URL: strip ?page= when the parsed value resolves to page 1
   // so shared links like /feed?page=1 or /feed?page=abc stay consistent
@@ -162,10 +177,10 @@ function FeedContent() {
   const { data, isLoading } = usePostsControllerFindAll(
     {
       type: activeFilter !== 'ALL' ? activeFilter : undefined,
-      courseId: selectedCourseId || undefined,
-      departmentId: effectiveDeptId || undefined,
-      yearLevel: selectedYear ?? undefined,
-      moduleNumber: selectedModuleNumber ?? undefined,
+      courseId: isCampus ? undefined : selectedCourseId || undefined,
+      departmentId: isCampus ? undefined : effectiveDeptId || undefined,
+      yearLevel: isCampus ? undefined : (selectedYear ?? undefined),
+      moduleNumber: isCampus ? undefined : (selectedModuleNumber ?? undefined),
       tagSlug: tagSlug || undefined,
       page,
       limit: 10,
@@ -223,7 +238,7 @@ function FeedContent() {
   const loading = isTrendingActive ? trendingLoading : isSearchActive ? searchLoading : isLoading
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <FeedHeader
         searchQuery={tagParam !== null ? tagParam : searchQuery}
         onSearchChange={handleSearchChange}
@@ -242,6 +257,7 @@ function FeedContent() {
         onModuleChange={handleModuleChange}
         sortType={sortType}
         onSortChange={handleSortChange}
+        campus={isCampus}
       />
 
       <PostFeed

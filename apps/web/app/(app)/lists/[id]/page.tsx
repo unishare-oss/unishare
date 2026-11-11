@@ -42,7 +42,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const isOwner = list && session?.user?.id === list.userId
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
       <PageHeader
         title={list?.name ?? 'Reading List'}
         subtitle={list?.description ?? undefined}
