@@ -49,3 +49,41 @@ export function addExamYearIssueIfPresent(examYear: string, ctx: z.RefinementCtx
     }
   }
 }
+
+const postTypeSchema = z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE'])
+
+export const createPostFormSchema = z
+  .object({
+    postType: postTypeSchema.nullable().refine((value) => value !== null, 'Post type is required'),
+    selectedDept: z.string(),
+    selectedCourse: z.string().min(1, 'Course is required'),
+    title: z.string().trim().min(3, 'Give it a title of at least 3 letters.'),
+    description: z.string().trim().max(2000, 'Description can be up to 2000 characters'),
+    year: yearSchema,
+    semester: semesterSchema,
+    moduleNum: z.string(),
+    examYear: z.string(),
+    externalUrl: externalUrlSchema,
+    files: z.array(z.custom<File>((value) => value instanceof File)),
+    homeworkConfirmed: z.boolean().optional(),
+  })
+  .superRefine((values, ctx) => {
+    const moduleResult = moduleNumberSchema.safeParse(values.moduleNum)
+    if (!moduleResult.success) {
+      for (const issue of moduleResult.error.issues) {
+        ctx.addIssue({ ...issue, path: ['moduleNum'] })
+      }
+    }
+
+    if (values.postType === 'OLD_QUESTION') {
+      addExamYearIssueIfPresent(values.examYear, ctx)
+    }
+
+    if (values.postType === 'EXERCISE' && !values.homeworkConfirmed) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['homeworkConfirmed'],
+        message: 'Please confirm this is not graded homework',
+      })
+    }
+  })
