@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useDepartmentsControllerFindOne } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useFeedStore } from '@/lib/store'
 import { PageHeader } from '@/components/shared/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -29,7 +28,6 @@ function CourseListSkeleton() {
 export default function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const setPendingFilter = useFeedStore((s) => s.setPendingFilter)
 
   const { data: dept } = useDepartmentsControllerFindOne(id, {
     query: { select: (r) => r.data },
@@ -41,11 +39,6 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
   )
 
   const courses = coursesData?.items ?? []
-
-  function handleCourseClick(courseId: string, yearLevel: number | null) {
-    setPendingFilter(id, courseId, yearLevel)
-    router.push('/')
-  }
 
   return (
     <div className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]">
@@ -67,7 +60,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
               {courses.map((course) => (
                 <button
                   key={course.id}
-                  onClick={() => handleCourseClick(course.id, course.yearLevel ?? null)}
+                  onClick={() => router.push(`/courses/${course.id}`)}
                   className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full"
                 >
                   <span className="font-mono text-[13px] text-foreground font-medium shrink-0">

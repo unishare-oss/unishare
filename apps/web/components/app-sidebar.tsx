@@ -27,7 +27,6 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useUnreadNotificationCount } from '@/hooks/use-unread-notification-count'
 import { useCoursesControllerFindAllInfinite } from '@/src/lib/api/generated/courses/courses'
-import { useFeedStore } from '@/lib/store'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   buildModerationNavigation,
@@ -153,7 +152,6 @@ function MyCourses() {
   const { user } = useAuth()
   const departmentId = user?.department?.id
   const yearLevel = user?.yearLevel
-  const setPendingFilter = useFeedStore((state) => state.setPendingFilter)
   const desktop = useMediaQuery('(min-width: 768px)')
   const enabled = desktop && !!departmentId && !!yearLevel
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
@@ -188,10 +186,8 @@ function MyCourses() {
       <ul className="space-y-1">
         {mine.map((course) => (
           <li key={course.id}>
-            {/* Opens the feed filtered to this course, the same hand-off the department page uses. */}
             <Link
-              href="/feed"
-              onClick={() => setPendingFilter(departmentId, course.id, yearLevel)}
+              href={`/courses/${course.id}`}
               className="flex min-h-11 flex-col justify-center rounded-xl px-3 text-text-muted outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
               <span className="font-mono text-xs font-bold">{course.code}</span>
