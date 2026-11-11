@@ -16,7 +16,7 @@ export function QuizProgressPanel({ game, correctAnswers }: QuizProgressPanelPro
         <span className="text-sm font-medium">
           Question {game.currentQuestionIndex + 1} of {game.totalQuestions}
         </span>
-        <span className="text-sm font-medium text-primary">{game.progress}%</span>
+        <span className="text-sm font-medium text-foreground">{game.progress}%</span>
       </div>
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
         {Array.from({ length: game.totalQuestions }).map((_, idx) => {

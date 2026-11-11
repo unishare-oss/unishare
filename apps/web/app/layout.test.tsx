@@ -5,9 +5,8 @@ import { THEME_COOKIE } from '@unishare-oss/unitheme'
 
 const { getCookie } = vi.hoisted(() => ({ getCookie: vi.fn() }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: getCookie }) }))
-vi.mock('next/font/google', () => ({
-  Space_Grotesk: () => ({ variable: 'space-grotesk' }),
-  Fira_Code: () => ({ variable: 'fira-code' }),
+vi.mock('next/font/local', () => ({
+  default: ({ variable }: { variable: string }) => ({ variable: `var${variable}` }),
 }))
 vi.mock('next/script', () => ({ default: () => null }))
 vi.mock('@/components/ui/sonner', () => ({ Toaster: () => null }))
@@ -31,7 +30,7 @@ describe('server-rendered theme', () => {
     getCookie.mockReturnValue({ value: 'theme-nord' })
     const html = renderToString(await RootLayout({ children: <p>App</p> }))
     expect(getCookie).toHaveBeenCalledWith(THEME_COOKIE)
-    expect(html).toContain('<html lang="en" class="theme-nord dark">')
+    expect(html).toContain('<html lang="en" class="theme-nord dark ')
     expect(html).toContain('data-initial-theme="theme-nord"')
     expect(html).not.toContain('localStorage.getItem')
   })
@@ -39,7 +38,7 @@ describe('server-rendered theme', () => {
   it('does not add the dark class to light palettes', async () => {
     getCookie.mockReturnValue({ value: 'theme-sakura' })
     expect(renderToString(await RootLayout({ children: null }))).toContain(
-      '<html lang="en" class="theme-sakura">',
+      '<html lang="en" class="theme-sakura ',
     )
   })
 
@@ -48,9 +47,25 @@ describe('server-rendered theme', () => {
     async (value) => {
       getCookie.mockReturnValue(value === undefined ? undefined : { value })
       const html = renderToString(await RootLayout({ children: null }))
-      expect(html).toContain('<html lang="en" class="theme-unishare">')
+      expect(html).toContain('<html lang="en" class="theme-unishare ')
       expect(html).not.toContain('data-initial-theme=')
       expect(html).not.toContain('alert(1)')
     },
   )
+})
+
+describe('fonts', () => {
+  it('puts the four font variables on <html> for the display, body, read and mono stacks', async () => {
+    getCookie.mockReturnValue(undefined)
+    const html = renderToString(await RootLayout({ children: null }))
+    const htmlClass = html.match(/<html lang="en" class="([^"]+)"/)?.[1].split(' ')
+    expect(htmlClass).toEqual(
+      expect.arrayContaining([
+        'var--font-baloo',
+        'var--font-lexend',
+        'var--font-literata',
+        'var--font-plex-mono',
+      ]),
+    )
+  })
 })

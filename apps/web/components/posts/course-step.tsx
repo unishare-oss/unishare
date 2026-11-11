@@ -73,7 +73,7 @@ export function CourseStep({
           ) : !departmentId ? (
             <p className="font-mono text-sm text-text-muted py-4">
               Please{' '}
-              <a href="/profile" className="text-amber underline underline-offset-2">
+              <a href="/profile" className="text-sky underline underline-offset-2">
                 set your department
               </a>{' '}
               in your profile to select a course.

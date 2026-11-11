@@ -48,7 +48,7 @@ export function HeroIllustration() {
             data-front={slot === 0 || undefined}
             onPointerEnter={(e) => e.pointerType === 'mouse' && bringForward(id)}
             onClick={() => bringForward(id)}
-            className="hero-card absolute left-0 top-0 h-[74%] w-[68%] rounded-2xl border-2 border-border-strong bg-card p-4 sm:p-5"
+            className="hero-card absolute left-0 top-0 h-[74%] w-[68%] rounded-2xl border-2 border-border bg-card p-4 sm:p-5"
             style={
               {
                 transform: SLOTS[slot],
@@ -67,7 +67,7 @@ export function HeroIllustration() {
       })}
 
       <div
-        className="hero-chip absolute -left-2 bottom-[14%] z-10 hidden items-center gap-2 rounded-2xl border-2 border-border-strong bg-card px-3 py-2 shadow-[4px_4px_0_0_var(--shadow-color)] sm:flex"
+        className="hero-chip absolute -left-2 bottom-[14%] z-10 hidden items-center gap-2 rounded-2xl border-2 border-border bg-card px-3 py-2 sm:flex"
         style={{ ['--chip-delay' as string]: '420ms' }}
       >
         <div className="flex size-8 items-center justify-center rounded-xl bg-success text-white">
@@ -79,7 +79,7 @@ export function HeroIllustration() {
         </div>
       </div>
       <div
-        className="hero-chip absolute -right-2 top-[52%] z-10 hidden items-center gap-2 rounded-2xl border-2 border-border-strong bg-card px-3 py-2 shadow-[4px_4px_0_0_var(--shadow-color)] sm:flex"
+        className="hero-chip absolute -right-2 top-[52%] z-10 hidden items-center gap-2 rounded-2xl border-2 border-border bg-card px-3 py-2 sm:flex"
         style={{ ['--chip-delay' as string]: '540ms' }}
       >
         <div className="flex size-8 items-center justify-center rounded-xl bg-info text-white">
@@ -139,10 +139,10 @@ function NoteCard() {
       </div>
       <div className="mt-4 flex items-center justify-between">
         <div className="hidden items-center gap-1.5 md:flex">
-          <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
-            <Heart className="size-3 fill-amber text-amber" /> 86
+          <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold">
+            <Heart className="size-3 fill-amber text-brand-edge" /> 86
           </span>
-          <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold shadow-[1px_1px_0_0_var(--shadow-color)]">
+          <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs font-bold">
             <MessageCircle className="size-3" /> 12
           </span>
         </div>
@@ -170,7 +170,7 @@ function PaperCard() {
           <div key={n} className="flex gap-2">
             <span
               className={`flex size-5 items-center justify-center rounded-full border font-mono text-[10px] font-bold ${
-                n === 3 ? 'border-amber bg-amber text-white' : 'border-border bg-accent'
+                n === 3 ? 'border-amber bg-amber text-on-brand' : 'border-border bg-accent'
               }`}
             >
               {n}
@@ -180,7 +180,7 @@ function PaperCard() {
         ))}
       </div>
       <div className="mt-4 hidden items-center gap-2 rounded-xl border border-border bg-amber-subtle px-3 py-2 md:flex">
-        <div className="flex size-7 items-center justify-center rounded-full bg-amber text-white">
+        <div className="flex size-7 items-center justify-center rounded-full bg-amber text-on-brand">
           <Sparkles className="size-3.5" />
         </div>
         <p className="text-xs font-bold leading-tight">

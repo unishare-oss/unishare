@@ -276,7 +276,7 @@ export function ChatInfoPane({
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">
+                              <p className="text-xs font-medium truncate group-hover:text-foreground transition-colors">
                                 {p.user?.name}
                               </p>
                               <p className="text-[10px] text-muted-foreground truncate">
@@ -382,7 +382,7 @@ export function ChatInfoPane({
                           title={msg.fileName ?? undefined}
                           className="flex items-center gap-2.5 rounded-[6px] hover:bg-muted px-2 py-2 transition-colors group"
                         >
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-primary/10 text-primary">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-primary/10 text-brand-edge">
                             <FileIcon className="size-4" />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -417,7 +417,7 @@ export function ChatInfoPane({
                         title={url}
                         className="flex flex-col gap-0.5 rounded-[6px] hover:bg-muted px-2 py-2 transition-colors group"
                       >
-                        <span className="text-xs font-medium text-primary truncate group-hover:underline">
+                        <span className="text-xs font-medium text-sky truncate group-hover:underline">
                           {getHostname(url)}
                         </span>
                         <span className="text-[10px] text-muted-foreground truncate">{url}</span>

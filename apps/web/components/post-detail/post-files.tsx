@@ -81,7 +81,7 @@ function fileIcon(mimeType: string) {
   if (mimeType.startsWith('video/'))
     return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
-    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+    return <FileSpreadsheet className="size-5 text-brand-edge" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
@@ -286,14 +286,14 @@ export function PostFiles({ post }: PostFilesProps) {
           Description
         </h2>
         <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
-          {renderWithLinks(post.description ?? '', 'text-primary')}
+          {renderWithLinks(post.description ?? '', 'text-sky')}
         </p>
         {post.externalUrl && (
           <a
             href={post.externalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-3 text-sm text-amber hover:text-amber-hover font-medium"
+            className="inline-flex items-center gap-1.5 mt-3 text-sm text-sky hover:text-sky font-medium"
           >
             <Link2 className="size-3.5" strokeWidth={1.5} />
             External Link
@@ -462,7 +462,7 @@ export function PostFiles({ post }: PostFilesProps) {
                     onClick={() => handlePreview(file)}
                     className={`shrink-0 ${
                       previewFile?.id === file.id
-                        ? 'bg-amber text-white hover:bg-amber'
+                        ? 'bg-amber text-on-brand hover:bg-amber'
                         : 'text-text-muted'
                     }`}
                     disabled={loadingPreviewId === file.id}

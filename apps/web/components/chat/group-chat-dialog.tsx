@@ -221,7 +221,7 @@ export function GroupChatDialog({
       <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-4">
           <DialogTitle className="flex items-center gap-2 text-base">
-            <TitleIcon className="size-4 text-primary" strokeWidth={1.5} />
+            <TitleIcon className="size-4 text-brand-edge" strokeWidth={1.5} />
             {title}
           </DialogTitle>
         </DialogHeader>

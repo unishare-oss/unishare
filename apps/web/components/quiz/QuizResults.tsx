@@ -110,7 +110,7 @@ export function QuizResults({ quiz, score, totalPoints, timeTaken, answers }: Qu
               <p className="text-xs text-muted-foreground">Wrong</p>
             </div>
             <div className="rounded-xl bg-muted/50 p-3 space-y-1">
-              <Clock className="w-4 h-4 text-primary mx-auto" />
+              <Clock className="w-4 h-4 text-brand-edge mx-auto" />
               <p className="text-2xl font-bold">
                 {minutes > 0 ? `${minutes}m` : ''}
                 {seconds}s

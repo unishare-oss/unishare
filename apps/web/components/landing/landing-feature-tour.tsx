@@ -139,9 +139,7 @@ export function LandingFeatureTour() {
                 onClick={() => setActive(i)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors duration-150 lg:items-start lg:py-3',
-                  on
-                    ? 'border-border-strong bg-card shadow-[4px_4px_0_0_var(--shadow-color)]'
-                    : 'border-transparent hover:bg-card/60',
+                  on ? 'border-border bg-card' : 'border-transparent hover:bg-card/60',
                 )}
               >
                 <span
@@ -172,7 +170,7 @@ export function LandingFeatureTour() {
       </ol>
 
       <div>
-        <div className="rounded-[20px] border-2 border-border-strong bg-card p-2 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-3">
+        <div className="rounded-[20px] border-2 border-border bg-card p-2 sm:p-3">
           <div className="overflow-hidden rounded-xl border border-border bg-background">
             <DemoDirector
               key={feature.id}

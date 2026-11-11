@@ -13,7 +13,7 @@ export function LandingStats() {
             },
           ].map((s) => (
             <div key={s.v} className="text-center">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-amber">
+              <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
                 {s.k}
               </p>
               <p className="mt-1 text-xl font-black tracking-tight">{s.v}</p>

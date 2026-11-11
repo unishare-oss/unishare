@@ -55,7 +55,7 @@ export function ArcadePostCard({ post, index = 0, trending = false }: ArcadePost
       {/* Type spine */}
       <div
         className={cn(
-          'flex flex-col items-center justify-center gap-2 border-r-[3px] border-border-strong py-4',
+          'flex flex-col items-center justify-center gap-2 border-r-[3px] border-border py-4',
           meta.softBg,
           meta.text,
         )}
@@ -78,7 +78,7 @@ export function ArcadePostCard({ post, index = 0, trending = false }: ArcadePost
             {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
           </span>
           {trending && (
-            <span className="arcade-trending ml-auto inline-flex items-center gap-1 rounded-full border-2 border-border-strong bg-destructive text-destructive-foreground px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider">
+            <span className="arcade-trending ml-auto inline-flex items-center gap-1 rounded-full border-2 border-border bg-destructive text-destructive-foreground px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider">
               <Flame className="size-3" strokeWidth={2.5} />
               trending
             </span>
@@ -104,7 +104,7 @@ export function ArcadePostCard({ post, index = 0, trending = false }: ArcadePost
                   e.stopPropagation()
                   router.push(`/feed?tag=${encodeURIComponent(tag.name)}`)
                 }}
-                className="relative z-[1] font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-background text-text-muted border-2 border-border hover:border-amber hover:text-amber transition-colors"
+                className="relative z-[1] font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-background text-text-muted border-2 border-border hover:border-amber hover:text-foreground transition-colors"
               >
                 {tag.name}
               </button>

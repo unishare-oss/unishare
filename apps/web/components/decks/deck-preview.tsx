@@ -86,7 +86,7 @@ export function DeckPreview({ deckId, version }: { deckId: string; version: stri
             href={data.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            className="inline-flex items-center gap-1.5 text-sm text-sky hover:underline"
           >
             <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
             Open the preview in a new tab

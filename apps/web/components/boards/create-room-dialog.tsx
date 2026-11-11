@@ -107,7 +107,7 @@ export function CreateRoomDialog({ open, onOpenChange }: CreateRoomDialogProps) 
             <rect width="100%" height="100%" fill="url(#create-grid)" />
           </svg>
           <div className="relative flex items-center justify-center size-10 rounded-[8px] bg-card border border-border shadow-sm">
-            <LayoutGrid className="size-5 text-primary" strokeWidth={1.5} />
+            <LayoutGrid className="size-5 text-brand-edge" strokeWidth={1.5} />
           </div>
         </div>
 

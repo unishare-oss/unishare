@@ -67,7 +67,7 @@ export function ConfirmDialog({
       >
         <div className="border-b border-border bg-muted/40 px-6 py-4">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-[6px] bg-amber-subtle text-amber">
+            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-[6px] bg-amber-subtle text-brand-edge">
               {icon ?? <AlertTriangle className="size-5" strokeWidth={1.8} />}
             </div>
             <DialogHeader className="gap-1 text-left">

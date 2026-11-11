@@ -47,7 +47,7 @@ function Chip({
         chip,
         active
           ? 'border-amber bg-amber-subtle text-foreground'
-          : 'border-border bg-card text-text-secondary hover:border-border-strong',
+          : 'border-border bg-card text-text-secondary hover:border-edge',
       )}
     >
       {children}
@@ -72,7 +72,7 @@ export function ShareDemo() {
   return (
     <div className="flex min-h-[260px] flex-col p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border-2 border-border-strong bg-muted">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-muted">
           <FileText className="size-5 text-type-exam" />
         </div>
         <div className="min-w-0">
@@ -141,7 +141,7 @@ export function ShareDemo() {
           </div>
         )}
         {stage === 'posted' && (
-          <span className="demo-pop mt-3 inline-flex items-center gap-1.5 rounded-full bg-success px-3 py-1.5 text-xs font-black text-white shadow-[2px_2px_0_0_var(--shadow-color)]">
+          <span className="demo-pop mt-3 inline-flex items-center gap-1.5 rounded-full bg-success px-3 py-1.5 text-xs font-black text-white">
             Posted <Check className="size-3.5" />
           </span>
         )}
@@ -189,7 +189,7 @@ export function FindDemo() {
 
   return (
     <div className="flex min-h-[260px] flex-col p-4 sm:p-5">
-      <label className="flex items-center gap-2 rounded-xl border-2 border-border-strong bg-card px-3 py-2 focus-within:border-amber">
+      <label className="flex items-center gap-2 rounded-xl border-2 border-border bg-card px-3 py-2 focus-within:border-amber">
         <Search className="size-4 shrink-0 text-text-muted" />
         <input
           data-demo="search"
@@ -312,7 +312,7 @@ export function ChatDemo() {
   return (
     <div className="flex h-[300px] flex-col p-3 sm:p-4">
       <div className="flex items-center gap-2">
-        <div className="flex size-8 items-center justify-center rounded-lg border-2 border-border-strong bg-amber-subtle">
+        <div className="flex size-8 items-center justify-center rounded-lg border-2 border-border bg-amber-subtle">
           <MessageCircle className="size-4" />
         </div>
         <div className="min-w-0">
@@ -552,7 +552,7 @@ export function BoardsDemo() {
             data-demo-grab
             onPointerDown={(e) => startDrag(e, s)}
             className={cn(
-              'demo-pop absolute w-[34%] touch-none select-none rounded-lg border-2 border-border-strong p-2 text-[11px] font-bold leading-snug shadow-[3px_3px_0_0_var(--shadow-color)]',
+              'demo-pop absolute w-[34%] touch-none select-none rounded-lg border-2 border-border p-2 text-[11px] font-bold leading-snug',
               s.tone,
               pen ? 'pointer-events-none' : 'cursor-grab active:cursor-grabbing',
             )}
@@ -616,7 +616,7 @@ export function QuizDemo() {
   return (
     <div className="flex min-h-[300px] flex-col p-4 sm:p-5">
       <p className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] font-bold">
-        <Sparkles className="size-3 text-amber" /> Generated from Trees &amp; Traversals.pdf
+        <Sparkles className="size-3 text-brand-edge" /> Generated from Trees &amp; Traversals.pdf
       </p>
 
       {done ? (
@@ -660,7 +660,7 @@ export function QuizDemo() {
                   className={cn(
                     'flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-left text-sm font-medium transition-colors duration-150',
                     press,
-                    state === 'idle' && 'border-border-strong bg-card hover:bg-accent',
+                    state === 'idle' && 'border-border bg-card hover:bg-accent',
                     state === 'right' && 'border-success bg-success/15',
                     state === 'wrong' && 'border-destructive bg-destructive/10',
                     state === 'dim' && 'border-border bg-card opacity-50',
@@ -743,8 +743,8 @@ export function DecksDemo() {
   return (
     <div className="flex min-h-[300px] flex-col p-4 sm:p-5">
       <form onSubmit={generate} className="flex flex-col gap-2 sm:flex-row">
-        <label className="flex flex-1 items-center gap-2 rounded-xl border-2 border-border-strong bg-card px-3 py-2 focus-within:border-amber">
-          <Sparkles className="size-4 shrink-0 text-amber" />
+        <label className="flex flex-1 items-center gap-2 rounded-xl border-2 border-border bg-card px-3 py-2 focus-within:border-amber">
+          <Sparkles className="size-4 shrink-0 text-brand-edge" />
           <input
             data-demo="topic"
             value={topic}
@@ -760,8 +760,8 @@ export function DecksDemo() {
           data-demo="generate"
           disabled={stage === 'generating'}
           className={cn(
-            'shrink-0 rounded-xl px-4 py-2 text-sm font-black text-white shadow-[3px_3px_0_0_var(--shadow-color)] disabled:opacity-70',
-            stage === 'ready' ? 'bg-success' : 'bg-amber',
+            'shrink-0 rounded-xl px-4 py-2 text-sm font-black disabled:opacity-70',
+            stage === 'ready' ? 'bg-success text-white' : 'bg-amber text-on-brand',
             press,
           )}
         >
@@ -775,7 +775,7 @@ export function DecksDemo() {
             <div
               key={`${title}-${kind}`}
               className={cn(
-                'demo-pop aspect-[4/3] rounded-lg border-2 border-border-strong p-2 shadow-[2px_2px_0_0_var(--shadow-color)]',
+                'demo-pop aspect-[4/3] rounded-lg border-2 border-border p-2',
                 i === 0 ? 'bg-amber-subtle' : 'bg-card',
               )}
               style={{ ['--i' as string]: i }}

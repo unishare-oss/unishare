@@ -33,7 +33,7 @@ const typeFilterLabel: Record<TypeFilter, string> = {
 }
 
 const typeFilterActiveClass: Record<TypeFilter, string> = {
-  ALL: 'border-amber text-amber',
+  ALL: 'border-amber text-foreground',
   NOTE: 'border-type-note text-type-note',
   OLD_QUESTION: 'border-type-exam text-type-exam',
   EXERCISE: 'border-type-exercise text-type-exercise',
@@ -179,7 +179,7 @@ export function FilterStrip({
               <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-on-brand font-bold flex items-center justify-center leading-none">
                   {activeFilterCount}
                 </span>
               )}
@@ -222,7 +222,7 @@ export function FilterStrip({
               <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
               Filters
               {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-on-brand font-bold flex items-center justify-center leading-none">
                   {activeFilterCount}
                 </span>
               )}

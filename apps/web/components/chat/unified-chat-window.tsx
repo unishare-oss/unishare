@@ -402,8 +402,8 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
       {/* Drag-drop overlay */}
       {isDragging && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-none pointer-events-none">
-          <ImageIcon className="size-10 text-primary opacity-80" />
-          <p className="text-sm font-medium text-primary">Drop image to send</p>
+          <ImageIcon className="size-10 text-brand-edge opacity-80" />
+          <p className="text-sm font-medium text-foreground">Drop image to send</p>
         </div>
       )}
 
@@ -593,7 +593,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                             {firstUnreadId === msg.id && !isMe && (
                               <div className="flex items-center gap-3 my-3">
                                 <div className="flex-1 h-px bg-primary/25" />
-                                <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                <span className="text-[0.5625rem] font-bold font-mono tracking-widest uppercase text-foreground bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
                                   ↓ new messages
                                 </span>
                                 <div className="flex-1 h-px bg-primary/25" />
@@ -603,7 +603,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
                             {/* Message Bubble */}
                             {msg.type === 'SYSTEM' ? (
                               <div className="flex justify-center my-1">
-                                <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                <span className="text-[0.5625rem] font-bold tracking-widest uppercase text-foreground bg-primary/10 px-2.5 py-1 rounded-full whitespace-nowrap">
                                   {msg.content}
                                 </span>
                               </div>
@@ -701,7 +701,7 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
               <div className="absolute inset-0 z-40 flex items-center justify-center backdrop-blur-md bg-background/60">
                 <div className="flex flex-col items-center gap-4 rounded-2xl border bg-card p-8 shadow-xl max-w-xs text-center mx-4">
                   <div className="rounded-full bg-primary/10 p-4">
-                    <KeyRound className="size-7 text-primary" />
+                    <KeyRound className="size-7 text-brand-edge" />
                   </div>
                   <div className="space-y-1.5">
                     <p className="font-semibold text-sm">Messages are end-to-end encrypted</p>

@@ -299,7 +299,7 @@ function RequestCard({
             className={cn(
               'flex flex-col items-center gap-0.5 p-1.5 rounded-[6px] transition-colors',
               request.isUpvoted
-                ? 'text-amber bg-amber/10'
+                ? 'text-foreground bg-amber/10'
                 : 'text-text-muted hover:text-foreground hover:bg-muted',
               !currentUserId && 'cursor-default opacity-50',
             )}
@@ -321,7 +321,9 @@ function RequestCard({
               <span
                 className={cn(
                   'inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border',
-                  isFulfilled ? 'border-success/50 text-success' : 'border-amber/50 text-amber',
+                  isFulfilled
+                    ? 'border-success/50 text-success'
+                    : 'border-amber/50 bg-brand-soft font-semibold text-foreground',
                 )}
               >
                 {isFulfilled ? (
@@ -354,7 +356,7 @@ function RequestCard({
                 e.stopPropagation()
                 router.push(`/posts/${request.fulfilledByPost!.id}`)
               }}
-              className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber hover:underline"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs text-sky hover:underline"
             >
               <CheckCircle2 className="size-3" />
               Fulfilled by: {request.fulfilledByPost.title ?? request.fulfilledByPost.shortCode}

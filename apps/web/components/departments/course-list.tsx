@@ -40,7 +40,7 @@ export function CourseList({ deptName, deptId, courses, onBack }: CourseListProp
             onClick={() => handleCourseClick(course.id, course.yearLevel ?? null)}
             className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full cursor-pointer"
           >
-            <span className="font-mono text-[13px] text-amber font-medium shrink-0">
+            <span className="font-mono text-[13px] text-foreground font-medium shrink-0">
               {course.code}
             </span>
             <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>

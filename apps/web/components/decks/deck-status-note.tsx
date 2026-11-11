@@ -27,7 +27,7 @@ export function DeckStatusNote({ state, className }: { state: DeckWaitState; cla
         className={cn(
           'size-3.5 shrink-0 mt-0.5',
           state.spin && 'animate-spin motion-reduce:animate-none',
-          warning && 'text-amber',
+          warning && 'text-foreground',
         )}
         strokeWidth={1.5}
         aria-hidden="true"

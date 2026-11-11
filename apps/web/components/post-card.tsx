@@ -61,7 +61,7 @@ export function PostCard({ post }: { post: ApiPost }) {
               <TypeBadge type={post.type} />
               {post.course && (
                 <>
-                  <span className="font-mono text-[13px] text-amber font-medium">
+                  <span className="font-mono text-[13px] text-foreground font-medium">
                     {post.course.code}
                   </span>
                   <span className="text-text-muted text-[13px] hidden sm:inline">{'·'}</span>
@@ -89,7 +89,7 @@ export function PostCard({ post }: { post: ApiPost }) {
                       e.stopPropagation()
                       router.push(`/feed?tag=${encodeURIComponent(tag.name)}`)
                     }}
-                    className="font-mono text-[10px] px-2 py-1 rounded-[4px] bg-muted text-text-muted border border-border hover:border-amber hover:text-amber transition-colors"
+                    className="font-mono text-[10px] px-2 py-1 rounded-[4px] bg-muted text-text-muted border border-border hover:border-amber hover:text-foreground transition-colors"
                   >
                     {tag.name}
                   </button>

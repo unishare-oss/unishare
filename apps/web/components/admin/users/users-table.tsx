@@ -33,7 +33,7 @@ const ROLES: Role[] = ['STUDENT', 'MODERATOR', 'ADMIN']
 const roleBadgeClass: Record<Role, string> = {
   STUDENT: 'text-text-muted',
   MODERATOR: 'text-blue-400',
-  ADMIN: 'text-amber',
+  ADMIN: 'text-foreground',
 }
 
 type BaseUser = NonNullable<

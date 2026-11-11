@@ -23,11 +23,17 @@ const NOTIFICATION_META: Record<NotificationEntityType, { label: string; color: 
   POST_REJECTED: { label: 'Rejected', color: 'text-red-400' },
   REQUEST_SUGGESTION_ADDED: { label: 'Suggestion', color: 'text-text-muted' },
   REQUEST_FULFILLED: { label: 'Fulfilled', color: 'text-success' },
-  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
+  NEW_POST_FROM_FOLLOWED: {
+    label: 'New Post',
+    color: 'rounded-sm bg-brand-soft px-1.5 py-0.5 font-semibold text-foreground',
+  },
   COMMENT_ADDED: { label: 'Comment', color: 'text-text-muted' },
   CHAT_MESSAGE: { label: 'Message', color: 'text-info' },
   EXAM_REMINDER: { label: 'Exam', color: 'text-red-400' },
-  MENTION: { label: 'Mention', color: 'text-primary' },
+  MENTION: {
+    label: 'Mention',
+    color: 'rounded-sm bg-brand-soft px-1.5 py-0.5 font-semibold text-foreground',
+  },
 }
 
 function notificationHref(n: NotificationEntity) {

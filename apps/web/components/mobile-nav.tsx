@@ -77,8 +77,7 @@ const moreAuthItems = [
 const dockTileBase =
   'relative flex size-11 items-center justify-center rounded-xl border-2 outline-none transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring'
 
-const dockTileActive =
-  'border-border-strong bg-primary text-primary-foreground shadow-[2px_2px_0_0_var(--shadow-color)]'
+const dockTileActive = 'border-border bg-primary text-primary-foreground'
 
 const dockTileIdle = 'border-transparent text-text-muted active:scale-95'
 
@@ -152,7 +151,7 @@ export function MobileNav() {
       aria-label="Primary"
       className="md:hidden fixed inset-x-3 z-40 [bottom:max(0.75rem,env(safe-area-inset-bottom))]"
     >
-      <div className="flex h-16 items-center justify-around gap-1 rounded-2xl border-2 border-border-strong bg-card px-2 shadow-[4px_4px_0_0_var(--shadow-color)]">
+      <div className="flex h-16 items-center justify-around gap-1 rounded-2xl border-2 border-border bg-card px-2">
         {isAuthenticated ? (
           <>
             {primaryAuthTabs.map((tab) => (
@@ -170,7 +169,7 @@ export function MobileNav() {
             <Link
               href="/posts/new"
               aria-label="Create post"
-              className="flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-border-strong bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)] outline-none transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              className="flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-border bg-primary text-primary-foreground shadow-press-brand outline-none transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 active:translate-y-1 active:shadow-none"
             >
               <Plus className="size-6" strokeWidth={2.5} />
             </Link>

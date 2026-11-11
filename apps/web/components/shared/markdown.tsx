@@ -99,7 +99,7 @@ export function Markdown({ children, className }: MarkdownProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber hover:text-amber-hover underline underline-offset-2"
+              className="text-sky hover:text-sky underline underline-offset-2"
             >
               {children}
             </a>

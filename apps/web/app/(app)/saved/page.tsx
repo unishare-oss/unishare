@@ -66,7 +66,7 @@ export default function SavedPage() {
                 toast.error('Could not start sign-in. Please try again.'),
               )
             }
-            className="flex items-center gap-1.5 text-sm font-medium text-amber hover:underline shrink-0"
+            className="flex items-center gap-1.5 text-sm font-medium text-sky hover:underline shrink-0"
           >
             <LogIn className="size-3.5" strokeWidth={1.5} />
             Sign in to sync

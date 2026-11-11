@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 export function LandingCta() {
   return (
     <section className="mx-auto max-w-[1200px] px-4 pb-14 sm:px-6 sm:pb-16 pt-14">
-      <div className="relative overflow-hidden rounded-[24px] border-2 border-border-strong bg-card p-6 shadow-[8px_8px_0_0_var(--shadow-color)] sm:p-10">
+      <div className="relative overflow-hidden rounded-[24px] border-2 border-border bg-card p-6 sm:p-10">
         <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-amber-subtle blur-2xl opacity-50" />
         <div className="pointer-events-none absolute -bottom-12 -left-12 size-64 rounded-full bg-info/10 blur-2xl" />
         <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
@@ -41,7 +41,7 @@ export function LandingCta() {
           </div>
           <div className="grid gap-3">
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
                 <UploadCloud className="size-5" />
               </div>
               <div>
@@ -52,8 +52,8 @@ export function LandingCta() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
-                <Zap className="size-5 text-amber" />
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
+                <Zap className="size-5 text-brand-edge" />
               </div>
               <div>
                 <p className="text-sm font-black">Find in 10 seconds</p>
@@ -61,7 +61,7 @@ export function LandingCta() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
                 <Clock className="size-5 text-success" />
               </div>
               <div>

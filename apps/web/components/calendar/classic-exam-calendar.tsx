@@ -86,7 +86,7 @@ export function ClassicExamCalendar({
                         key={code}
                         className={[
                           'rounded-sm px-1 font-mono text-[9px] font-semibold',
-                          selected ? 'bg-card text-amber' : 'bg-amber-subtle text-amber',
+                          selected ? 'bg-card text-foreground' : 'bg-amber-subtle text-foreground',
                         ].join(' ')}
                       >
                         {code}
@@ -129,7 +129,7 @@ export function ClassicExamCalendar({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono text-[11px] text-amber font-medium truncate">
+                  <p className="font-mono text-[11px] text-foreground font-medium truncate">
                     {exam.course.code} — {exam.course.name}
                   </p>
                   <p className="text-base text-foreground font-semibold">{exam.title}</p>

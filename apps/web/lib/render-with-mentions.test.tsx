@@ -6,10 +6,10 @@ import { mentionIdsIn } from '@/lib/mentions'
 const jane = { id: 'u1', name: 'Jane Doe' }
 
 describe('renderWithMentions', () => {
-  it('marks a mentioned @Name as semibold primary', () => {
+  it('marks a mentioned @Name with a brand-soft fill and semibold ink, not orange text', () => {
     render(<p>{renderWithMentions('hi @Jane Doe!', [jane])}</p>)
     const el = screen.getByText('@Jane Doe')
-    expect(el).toHaveClass('font-semibold', 'text-primary')
+    expect(el).toHaveClass('font-semibold', 'text-foreground', 'bg-brand-soft')
   })
 
   it('leaves an email address and an unlisted @name plain', () => {

@@ -19,7 +19,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             'text-xs tracking-wide border border-border bg-card text-foreground shadow-sm rounded-[6px]',
           title: 'font-medium',
           description: 'text-text-muted',
-          actionButton: 'bg-amber text-white text-xs font-mono',
+          actionButton: 'bg-amber text-on-brand text-xs font-mono',
           cancelButton: 'bg-muted text-foreground text-xs font-mono',
           success: 'border-l-2 border-l-[#16a34a]',
           error: 'border-l-2 border-l-destructive',
@@ -30,7 +30,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       icons={{
         success: <CircleCheckIcon className="size-4 text-[#16a34a]" />,
         info: <InfoIcon className="size-4 text-info" />,
-        warning: <TriangleAlertIcon className="size-4 text-amber" />,
+        warning: <TriangleAlertIcon className="size-4 text-brand-edge" />,
         error: <OctagonXIcon className="size-4 text-destructive" />,
         loading: <Loader2Icon className="size-4 animate-spin text-text-muted" />,
       }}

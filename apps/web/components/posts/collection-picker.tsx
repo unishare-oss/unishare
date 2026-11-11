@@ -186,7 +186,7 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
         aria-label={isGuestSaved ? 'Unsave post' : 'Save post'}
       >
         <Bookmark
-          className={cn('size-4', isGuestSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+          className={cn('size-4', isGuestSaved ? 'fill-amber text-brand-edge' : 'text-text-muted')}
           strokeWidth={1.5}
         />
       </Button>
@@ -203,7 +203,7 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
           aria-label="Save to collection"
         >
           <Bookmark
-            className={cn('size-4', showFilled ? 'fill-amber text-amber' : 'text-text-muted')}
+            className={cn('size-4', showFilled ? 'fill-amber text-brand-edge' : 'text-text-muted')}
             strokeWidth={1.5}
           />
         </Button>
@@ -223,7 +223,7 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
               isSaved && 'border-primary bg-primary',
             )}
           >
-            {isSaved && <Check className="size-3 text-white" strokeWidth={2.5} />}
+            {isSaved && <Check className="size-3 text-on-brand" strokeWidth={2.5} />}
           </div>
           <Bookmark className="size-3.5 shrink-0 text-text-muted" strokeWidth={1.5} />
           <span>All Saved</span>
@@ -249,7 +249,7 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
                     inList && 'border-primary bg-primary',
                   )}
                 >
-                  {inList && <Check className="size-3 text-white" strokeWidth={2.5} />}
+                  {inList && <Check className="size-3 text-on-brand" strokeWidth={2.5} />}
                 </div>
                 {list.isPublic ? (
                   <Globe className="size-3.5 shrink-0 text-text-muted" />

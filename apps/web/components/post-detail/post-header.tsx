@@ -93,7 +93,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
 
       {post.status === 'PENDING' && (
         <div className="mb-4 bg-amber-subtle border border-amber/50 px-4 py-3 rounded-[6px]">
-          <p className="text-sm text-amber font-medium">
+          <p className="text-sm text-foreground font-medium">
             This post is pending review and is only visible to you.
           </p>
         </div>
@@ -109,7 +109,9 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <TypeBadge type={post.type} />
-          <span className="font-mono text-[13px] text-amber font-medium">{post.course.code}</span>
+          <span className="font-mono text-[13px] text-foreground font-medium">
+            {post.course.code}
+          </span>
         </div>
         <h1 className="text-[28px] font-extrabold text-foreground tracking-tight leading-tight mt-2 text-balance">
           {post.title}
@@ -137,7 +139,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
               <Link
                 key={tag.id}
                 href={`/feed?tag=${encodeURIComponent(tag.name)}`}
-                className="font-mono text-[11px] px-2 py-0.5 rounded-lg bg-muted text-text-muted border border-border hover:border-amber hover:text-amber transition-colors"
+                className="font-mono text-[11px] px-2 py-0.5 rounded-lg bg-muted text-text-muted border border-border hover:border-amber hover:text-foreground transition-colors"
               >
                 {tag.name}
               </Link>

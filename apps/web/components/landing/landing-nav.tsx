@@ -37,7 +37,7 @@ export function LandingNav() {
               alt="Unishare"
               width={32}
               height={32}
-              className="rounded-[8px] border border-border-strong/10"
+              className="rounded-[8px] border border-border"
             />
             <span className="font-mono text-[17px] font-black tracking-tight">Unishare</span>
             <span className="hidden sm:inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-text-muted">
@@ -90,7 +90,7 @@ export function LandingNav() {
           <Button
             asChild
             size="sm"
-            className="rounded-full gap-1.5 pr-3 font-bold shadow-[2px_2px_0_0_var(--shadow-color)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+            className="rounded-full gap-1.5 pr-3 font-bold shadow-press active:translate-y-1 active:shadow-none"
           >
             <Link href="/feed">
               Browse feed <ArrowRight className="size-4" />

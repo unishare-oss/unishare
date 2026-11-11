@@ -86,11 +86,11 @@ export function FileSource({ file, onFileChange, disabled }: FileSourceProps) {
           <Upload
             className={cn(
               'size-6 transition-colors',
-              isDragging ? 'text-amber' : 'text-muted-foreground',
+              isDragging ? 'text-foreground' : 'text-muted-foreground',
             )}
             strokeWidth={1.5}
           />
-          <p className={cn('text-sm', isDragging ? 'text-amber' : 'text-muted-foreground')}>
+          <p className={cn('text-sm', isDragging ? 'text-foreground' : 'text-muted-foreground')}>
             {isDragging ? 'Release to upload' : 'Drop file here or click to browse'}
           </p>
         </button>

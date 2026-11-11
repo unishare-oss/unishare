@@ -58,7 +58,7 @@ interface RoomCardProps {
 function VisibilityBadge({ visibility }: { visibility: string }) {
   if (visibility === 'OPEN') {
     return (
-      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-subtle text-amber">
+      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-subtle text-foreground">
         Open
       </span>
     )

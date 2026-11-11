@@ -71,7 +71,7 @@ function SidebarLink({
         'relative flex min-h-11 items-center gap-3 rounded-xl border-2 px-3 outline-none transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
         collapsed && 'w-11 justify-center px-0',
         active
-          ? 'border-border-strong bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)]'
+          ? 'border-border bg-primary text-primary-foreground'
           : 'border-transparent text-text-muted hover:bg-accent hover:text-accent-foreground active:translate-y-px',
       )}
     >
@@ -136,7 +136,7 @@ function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
             className={cn(
               'flex size-11 items-center justify-center rounded-xl border-2 outline-none transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
               active
-                ? 'border-border-strong bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)]'
+                ? 'border-border bg-primary text-primary-foreground'
                 : 'border-transparent text-text-muted hover:bg-accent hover:text-accent-foreground',
             )}
           >
@@ -149,7 +149,7 @@ function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
         side="right"
         align="start"
         sideOffset={12}
-        className="min-w-60 rounded-xl border-2 border-border-strong bg-popover p-1.5 shadow-[4px_4px_0_0_var(--shadow-color)]"
+        className="min-w-60 rounded-xl border-2 border-border bg-popover p-1.5"
       >
         <DropdownMenuLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
           Admin
@@ -195,7 +195,7 @@ export function AppRail() {
       <aside
         data-collapsed={collapsed}
         className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r-2 border-border-strong bg-card transition-[width] duration-200 motion-reduce:transition-none md:flex',
+          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r-2 border-border bg-card transition-[width] duration-200 motion-reduce:transition-none md:flex',
           collapsed ? 'w-[72px]' : 'w-[232px]',
         )}
       >
@@ -230,8 +230,7 @@ export function AppRail() {
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className={cn(
               'flex size-11 shrink-0 items-center justify-center rounded-xl border-2 border-transparent text-text-muted outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50',
-              collapsed &&
-                'absolute left-[58px] top-4 size-8 border-border-strong bg-card shadow-sm',
+              collapsed && 'absolute left-[58px] top-4 size-8 border-border bg-card shadow-sm',
             )}
           >
             {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-5" />}
@@ -301,7 +300,7 @@ export function AppRail() {
                 <DropdownMenuContent
                   side="right"
                   align="end"
-                  className="min-w-60 rounded-xl border-2 border-border-strong bg-popover p-1.5 shadow-[4px_4px_0_0_var(--shadow-color)]"
+                  className="min-w-60 rounded-xl border-2 border-border bg-popover p-1.5"
                 >
                   <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
                   <DropdownMenuSeparator />

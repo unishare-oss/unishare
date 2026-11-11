@@ -232,7 +232,7 @@ export function ChatMessageBubble({
                                 'flex items-center justify-center w-10 h-10 rounded-xl shrink-0',
                                 isMe
                                   ? 'bg-primary-foreground/15 text-primary-foreground'
-                                  : 'bg-primary/10 text-primary',
+                                  : 'bg-primary/10 text-foreground',
                               )}
                             >
                               <FileIcon className="size-5" />
@@ -314,7 +314,7 @@ export function ChatMessageBubble({
                         <p className="whitespace-pre-wrap break-words min-w-0">
                           {renderWithLinks(
                             message.content,
-                            isMe ? 'text-primary-foreground/90' : 'text-primary',
+                            isMe ? 'text-primary-foreground/90' : 'text-foreground',
                           )}
                           {(isMe || isEdited) && (
                             <span className="inline-flex items-center gap-1 float-right ml-2 mt-1 translate-y-1.5">

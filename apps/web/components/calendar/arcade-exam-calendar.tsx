@@ -23,12 +23,12 @@ export function ArcadeExamCalendar({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="border-[3px] border-border-strong rounded-xl p-4 shadow-[6px_6px_0_0_var(--shadow-color)] bg-card">
+      <div className="border-[3px] border-border rounded-xl p-4 bg-card">
         <div className="flex items-center justify-between mb-4">
           <Button
             variant="ghost"
             size="icon-xs"
-            className="border-2 border-border-strong rounded-md"
+            className="border-2 border-border rounded-md"
             onClick={() => onMonthChange(subMonths(month, 1))}
           >
             <ChevronLeft className="size-4" strokeWidth={2} />
@@ -37,7 +37,7 @@ export function ArcadeExamCalendar({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="border-2 border-border-strong rounded-md"
+            className="border-2 border-border rounded-md"
             onClick={() => onMonthChange(addMonths(month, 1))}
           >
             <ChevronRight className="size-4" strokeWidth={2} />
@@ -60,17 +60,15 @@ export function ArcadeExamCalendar({
                 key={key}
                 onClick={() => onSelectDay(date)}
                 className={[
-                  'flex flex-col items-center gap-1 rounded-lg py-1.5 h-20 sm:h-24 border-2 transition-transform',
-                  selected
-                    ? 'border-border-strong bg-amber-subtle shadow-[3px_3px_0_0_var(--shadow-color)]'
-                    : 'border-transparent hover:-translate-x-0.5 hover:-translate-y-0.5',
+                  'flex flex-col items-center gap-1 rounded-lg py-1.5 h-20 sm:h-24 border-2',
+                  selected ? 'border-border bg-amber-subtle' : 'border-transparent',
                 ].join(' ')}
               >
                 <span
                   className={[
                     'flex size-6 items-center justify-center rounded-md text-xs font-bold',
                     selected
-                      ? 'bg-amber border-2 border-border-strong'
+                      ? 'bg-amber text-on-brand border-2 border-border'
                       : isOutside
                         ? 'text-text-muted/50'
                         : 'text-foreground',
@@ -114,7 +112,7 @@ export function ArcadeExamCalendar({
             {selectedDayExams.map((exam) => (
               <div
                 key={exam.id}
-                className="flex items-start gap-4 p-4 border-2 border-border-strong rounded-xl bg-card shadow-[3px_3px_0_0_var(--shadow-color)] transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--shadow-color)] group"
+                className="flex items-start gap-4 p-4 border-2 border-border rounded-xl bg-card group"
               >
                 <div className="font-mono text-xs font-bold shrink-0 w-16 leading-relaxed pt-0.5">
                   {format(new Date(exam.startsAt), 'p')}
@@ -145,7 +143,7 @@ export function ArcadeExamCalendar({
                       variant="ghost"
                       size="icon-xs"
                       aria-label="Edit exam"
-                      className="border-2 border-border-strong rounded-md"
+                      className="border-2 border-border rounded-md"
                       onClick={() => onEdit(exam)}
                     >
                       <Pencil className="size-3.5" strokeWidth={2} />
@@ -154,7 +152,7 @@ export function ArcadeExamCalendar({
                       variant="ghost"
                       size="icon-xs"
                       aria-label="Delete exam"
-                      className="border-2 border-border-strong rounded-md hover:text-destructive hover:bg-destructive/10"
+                      className="border-2 border-border rounded-md hover:text-destructive hover:bg-destructive/10"
                       onClick={() => onDelete(exam.id)}
                     >
                       <Trash2 className="size-3.5" strokeWidth={2} />

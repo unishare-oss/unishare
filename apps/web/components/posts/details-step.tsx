@@ -59,7 +59,7 @@ function validateExternalUrl(value?: string) {
 }
 
 export function DetailsStep({ form, postType }: DetailsStepProps) {
-  const requiredMark = <span className="text-amber text-xl leading-none align-middle">*</span>
+  const requiredMark = <span className="text-foreground text-xl leading-none align-middle">*</span>
 
   return (
     <Form {...form}>

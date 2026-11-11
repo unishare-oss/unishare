@@ -143,7 +143,7 @@ function fileIcon(mimeType: string) {
   if (mimeType.startsWith('video/'))
     return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
-    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+    return <FileSpreadsheet className="size-5 text-brand-edge" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
@@ -230,14 +230,14 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
         <Upload
           className={cn(
             'size-6 transition-colors duration-150',
-            isDragging ? 'text-amber' : 'text-text-muted',
+            isDragging ? 'text-foreground' : 'text-text-muted',
           )}
           strokeWidth={1.5}
         />
         <p
           className={cn(
             'text-sm transition-colors duration-150',
-            isDragging ? 'text-amber' : 'text-text-muted',
+            isDragging ? 'text-foreground' : 'text-text-muted',
           )}
         >
           {isDragging ? 'Release to upload' : 'Drop files here or click to browse'}

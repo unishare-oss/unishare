@@ -24,7 +24,7 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
               className={cn(
                 'font-mono text-xs uppercase tracking-wider hidden sm:inline',
                 i === currentStep
-                  ? 'text-amber font-medium'
+                  ? 'text-foreground font-medium'
                   : i < currentStep
                     ? 'text-foreground'
                     : 'text-text-muted',
