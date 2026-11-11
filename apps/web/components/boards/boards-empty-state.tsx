@@ -110,7 +110,7 @@ export function BoardsEmptyState({ onCreateClick }: BoardsEmptyStateProps) {
         </p>
       </div>
 
-      <Button variant="default" onClick={onCreateClick}>
+      <Button variant="brand" onClick={onCreateClick}>
         <Plus className="size-4 mr-1.5" strokeWidth={1.5} />
         New Board
       </Button>

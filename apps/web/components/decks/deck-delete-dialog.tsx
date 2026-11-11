@@ -90,6 +90,7 @@ export function DeckDeleteDialog({ deck, children, onDeleted }: DeckDeleteDialog
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
+            variant="destructive"
             onClick={(e) => {
               // The dialog closes itself on click; without this the mutation would be torn
               // down mid-flight and the toast would never land.

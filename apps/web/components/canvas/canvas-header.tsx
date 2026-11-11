@@ -440,7 +440,7 @@ export function CanvasHeader() {
         <ParticipantAvatars />
         <SettingsPopover />
         <ExportDropdown />
-        <Button variant="default" size="sm" onClick={handleCopyLink} className="gap-1">
+        <Button variant="brand" size="sm" onClick={handleCopyLink} className="gap-1">
           <ClipboardCopy className="h-4 w-4" />
           Copy link
         </Button>

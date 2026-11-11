@@ -77,7 +77,7 @@ function PublicProfileHeader({
             {canFollow && (
               <Button
                 size="sm"
-                variant={user.isFollowing ? 'outline' : 'default'}
+                variant={user.isFollowing ? 'quiet' : 'brand'}
                 disabled={isPending}
                 onClick={user.isFollowing ? onUnfollow : onFollow}
                 className="shrink-0"

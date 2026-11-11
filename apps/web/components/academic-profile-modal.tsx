@@ -195,7 +195,7 @@ export function AcademicProfileModal({
                   Do it later
                 </Button>
               )}
-              <Button type="submit" className="flex-1" disabled={saveDisabled}>
+              <Button type="submit" variant="brand" className="flex-1" disabled={saveDisabled}>
                 {requireDepartment ? 'Continue' : 'Save'}
               </Button>
             </div>

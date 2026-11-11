@@ -53,6 +53,8 @@
   --press-brand: 0 4px 0 #d4650a;
   --press-sm: 0 3px 0 #dde2ee;
   --press-bad: 0 4px 0 var(--bad-edge);
+  --press-sky: 0 4px 0 var(--sky-edge);
+  --press-ok: 0 4px 0 var(--ok-edge);
   --lift: 0 10px 28px rgba(20, 33, 61, 0.1);
 
   /* Radius, easing and font stacks are defined once here; @theme inline maps them to Tailwind's
@@ -774,4 +776,66 @@ html {
 
 .demo-cursor[data-pressed] svg {
   scale: 0.85;
+}
+
+/* Button edges, border widths and press motion. Kept in @layer components, so className
+ * utilities (shadow-none, border-0) override them. Keyed off data-variant, set by Button. */
+@layer components {
+  [data-slot='button'][data-solid] {
+    border-width: 2px;
+  }
+  [data-slot='button'][data-variant='brand'] {
+    box-shadow: var(--press-brand);
+  }
+  [data-slot='button'][data-variant='neutral'] {
+    box-shadow: var(--press);
+  }
+  [data-slot='button'][data-variant='sky'] {
+    box-shadow: var(--press-sky);
+  }
+  [data-slot='button'][data-variant='ok'] {
+    box-shadow: var(--press-ok);
+  }
+  [data-slot='button'][data-variant='destructive'] {
+    box-shadow: var(--press-bad);
+  }
+  [data-slot='button'][data-solid]:active:not(:disabled):not([aria-disabled='true']) {
+    box-shadow: none;
+  }
+
+  /* Reading pages (.calm): every non-brand button renders flat, like quiet, except links and
+   * ghost buttons, which are text and keep their look. The brand button keeps its edge and press. */
+  .calm
+    [data-slot='button']:not(
+      [data-variant='brand'],
+      [data-variant='link'],
+      [data-variant='ghost']
+    ) {
+    box-shadow: none;
+    border-width: 1.5px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Press: the solid buttons drop 4px onto their edge; quiet buttons scale; ghost nudges. A
+     * disabled button, or an asChild link with aria-disabled, does not press. */
+    [data-slot='button'][data-solid]:active:not(:disabled):not([aria-disabled='true']) {
+      translate: 0 4px;
+    }
+    [data-slot='button'][data-variant='quiet']:active:not(:disabled):not([aria-disabled='true']) {
+      scale: 0.97;
+    }
+    [data-slot='button'][data-variant='ghost']:active:not(:disabled):not([aria-disabled='true']) {
+      translate: 0 1px;
+    }
+    /* On reading pages a non-brand button only scales; it does not drop or keep its edge. */
+    .calm
+      [data-slot='button']:not(
+        [data-variant='brand'],
+        [data-variant='link'],
+        [data-variant='ghost']
+      ):active:not(:disabled):not([aria-disabled='true']) {
+      translate: none;
+      scale: 0.97;
+    }
+  }
 }

@@ -27,21 +27,17 @@ export function QuizProgressPanel({ game, correctAnswers }: QuizProgressPanelPro
             <Button
               key={idx}
               onClick={() => game.jumpToQuestion(idx)}
-              variant={
-                idx === game.currentQuestionIndex
-                  ? 'default'
-                  : isAnswered
-                    ? isCorrect
-                      ? 'outline'
-                      : 'destructive'
-                    : 'ghost'
-              }
+              // The current question is the one brand button; answered ones stay quiet, tinted by
+              // whether they were right; unanswered ones are ghost.
+              variant={idx === game.currentQuestionIndex ? 'brand' : isAnswered ? 'quiet' : 'ghost'}
               size="sm"
               className={`aspect-square h-auto p-0 font-semibold ${
                 idx === game.currentQuestionIndex ? 'ring-2 ring-offset-2' : ''
               } ${
-                isAnswered && !isCorrect && idx !== game.currentQuestionIndex
-                  ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                isAnswered && idx !== game.currentQuestionIndex
+                  ? isCorrect
+                    ? 'text-ok'
+                    : 'bg-destructive/10 text-destructive hover:bg-destructive/20'
                   : ''
               }`}
             >

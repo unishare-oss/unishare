@@ -161,11 +161,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-amber text-primary-foreground hover:bg-amber-hover"
-                >
+                <Button type="submit" disabled={isSubmitting} variant="brand">
                   {isSubmitting ? 'Sending...' : 'Send'}
                 </Button>
               </div>
