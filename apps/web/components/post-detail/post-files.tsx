@@ -38,7 +38,6 @@ import {
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
-import { renderWithLinks } from '@/lib/render-with-links'
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
@@ -285,9 +284,7 @@ export function PostFiles({ post }: PostFilesProps) {
         <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
           Description
         </h2>
-        <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
-          {renderWithLinks(post.description ?? '', 'text-sky')}
-        </p>
+        {post.description?.trim() ? <Markdown>{post.description}</Markdown> : null}
         {post.externalUrl && (
           <a
             href={post.externalUrl}
@@ -320,7 +317,7 @@ export function PostFiles({ post }: PostFilesProps) {
             </Button>
           </div>
 
-          <div className="bg-card-dark rounded-lg overflow-hidden border border-border">
+          <div className="rounded-card overflow-hidden border border-line bg-surface-2">
             {previewFile.mimeType === 'application/pdf' && previewFile.url ? (
               <PdfViewer key={previewFile.url} url={previewFile.url} storageKey={previewFile.id} />
             ) : previewFile.mimeType.startsWith('image/') && previewFile.url ? (

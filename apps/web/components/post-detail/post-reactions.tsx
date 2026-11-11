@@ -16,9 +16,10 @@ const DEBOUNCE_MS = 600
 
 interface PostReactionsProps {
   post: ApiPostDetail
+  likeOnly?: boolean
 }
 
-export function PostReactions({ post }: PostReactionsProps) {
+export function PostReactions({ post, likeOnly = false }: PostReactionsProps) {
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
 
@@ -89,44 +90,47 @@ export function PostReactions({ post }: PostReactionsProps) {
   const totalReactions = Object.values(activeCounts).reduce((a, b) => a + b, 0) as number
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-4">
-      {REACTIONS.map(({ type, icon: Icon, label, color, activeBg }) => {
-        const count = activeCounts[type] ?? 0
-        const isActive = activeReaction === type
+    <div className={cn('flex flex-wrap items-center gap-2', likeOnly ? 'py-0' : 'py-4')}>
+      {REACTIONS.filter(({ type }) => !likeOnly || type === 'HELPFUL').map(
+        ({ type, icon: Icon, label, color, activeBg }) => {
+          const count = activeCounts[type] ?? 0
+          const isActive = activeReaction === type
 
-        return (
-          <button
-            key={type}
-            onClick={() => handleReact(type)}
-            title={label}
-            className={cn(
-              'group flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors duration-150 select-none',
-              isActive
-                ? [activeBg, 'reaction-active']
-                : 'border-border hover:border-border/80 hover:bg-muted',
-            )}
-          >
-            <Icon
+          return (
+            <button
+              key={type}
+              onClick={() => handleReact(type)}
+              title={label}
               className={cn(
-                'size-3.5',
-                isActive ? color.split(' ')[0] : `text-text-muted ${color.split(' ')[1]}`,
+                'group flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors duration-150 select-none',
+                isActive
+                  ? [activeBg, 'reaction-active']
+                  : 'border-border hover:border-border/80 hover:bg-muted',
               )}
-              strokeWidth={isActive ? 2.5 : 1.5}
-            />
-            {count > 0 && (
-              <span
+            >
+              <Icon
                 className={cn(
-                  'font-mono text-xs tabular-nums',
-                  isActive ? color.split(' ')[0] : 'text-text-muted',
+                  'size-3.5',
+                  isActive ? color.split(' ')[0] : `text-text-muted ${color.split(' ')[1]}`,
                 )}
-              >
-                {count}
-              </span>
-            )}
-          </button>
-        )
-      })}
-      {totalReactions > 0 && (
+                strokeWidth={isActive ? 2.5 : 1.5}
+              />
+              {likeOnly && <span className="text-sm">Like</span>}
+              {count > 0 && (
+                <span
+                  className={cn(
+                    'font-mono text-xs tabular-nums',
+                    isActive ? color.split(' ')[0] : 'text-text-muted',
+                  )}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        },
+      )}
+      {totalReactions > 0 && !likeOnly && (
         <span className="font-mono text-xs text-text-muted ml-1">
           {totalReactions} {totalReactions === 1 ? 'reaction' : 'reactions'}
         </span>

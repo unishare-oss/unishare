@@ -15,10 +15,12 @@ import { PostBreadcrumb } from '@/components/post-detail/post-breadcrumb'
 import { PostHeader } from '@/components/post-detail/post-header'
 import { PostFiles } from '@/components/post-detail/post-files'
 import { CommentSection } from '@/components/post-detail/comment-section'
-import { RelatedPosts } from '@/components/post-detail/related-posts'
 import { PostReactions } from '@/components/post-detail/post-reactions'
 import { PostSummary } from '@/components/post-detail/post-summary'
 import { PostAiChat } from '@/components/post-detail/post-ai-chat'
+import { PageRail } from '@/components/page-rail'
+import { NoteRail } from '@/components/post-detail/note-rail'
+import { ReadingBar } from '@/components/post-detail/reading-bar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFilesControllerRemove } from '@/src/lib/api/generated/files/files'
 
@@ -91,48 +93,57 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div
-      className="flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]"
+      className="calm flex flex-col min-h-[calc(100dvh-var(--mobile-topbar-h,0px))]"
       data-detail-style={feedStyle}
     >
+      <ReadingBar />
       <PageHeader title={post.title ?? 'Post'} />
 
-      <div className={cn('flex-1', feedStyle === 'classic' ? 'bg-card' : 'bg-background')}>
-        <div className={cn('mx-auto px-4 py-4 md:px-6 md:py-6', 'max-w-300')}>
+      <div className="flex-1 bg-background">
+        <div className="mx-auto max-w-[1440px] px-4 py-4 md:px-6 md:py-6">
           <PostBreadcrumb
             courseCode={post.course.code}
             courseName={post.course.name}
             title={post.title ?? ''}
           />
-          <div className="mt-6 detail-surface">
-            <PostHeader
-              post={post}
-              isOwner={isOwner}
-              onDelete={handleDeletePost}
-              isDeleting={isDeleting}
-            />
-          </div>
-          {post.summary && (
-            <div className="mt-8">
-              <PostSummary post={post} />
-            </div>
-          )}
-          {/* Members only: guests are read-only and the API refuses them. */}
-          {isAuthenticated && (
-            <div className="mt-4">
-              <PostAiChat post={post} />
-            </div>
-          )}
-          <div className="mt-8 detail-surface">
-            <PostFiles post={post} />
-          </div>
-          <div className="mt-8 detail-surface">
-            <PostReactions post={post} />
-          </div>
-          <div className="mt-8">
-            <RelatedPosts courseId={post.course.id} currentPostId={post.id} />
-          </div>
-          <div className="mt-8 detail-surface">
-            <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+          <div className="mt-6">
+            <PageRail
+              rail={
+                <NoteRail
+                  courseId={post.course.id}
+                  courseName={post.course.name}
+                  postId={post.id}
+                />
+              }
+            >
+              <div className="rounded-card border border-line bg-surface p-5 md:p-7">
+                <PostHeader
+                  post={post}
+                  isOwner={isOwner}
+                  onDelete={handleDeletePost}
+                  isDeleting={isDeleting}
+                  actionExtras={<PostReactions post={post} likeOnly />}
+                />
+              </div>
+              <article
+                data-note-paper
+                className="mt-6 rounded-card border border-line bg-surface px-6 py-7 md:px-10 md:py-10"
+              >
+                {post.summary && <PostSummary post={post} />}
+                <div className="font-read text-base leading-[1.85] text-ink [&_.markdown]:font-read [&_.markdown_p]:text-base [&_.markdown_h1]:text-2xl [&_.markdown_h2]:text-xl [&_.markdown_h3]:text-lg">
+                  <PostFiles post={post} />
+                </div>
+              </article>
+              {/* Members only: guests are read-only and the API refuses them. */}
+              {isAuthenticated && (
+                <div className="mt-5">
+                  <PostAiChat post={post} />
+                </div>
+              )}
+              <div className="mt-8">
+                <CommentSection postId={post.id} postAuthorId={post.author?.id ?? null} />
+              </div>
+            </PageRail>
           </div>
         </div>
       </div>
