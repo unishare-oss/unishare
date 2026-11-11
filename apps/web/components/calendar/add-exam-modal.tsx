@@ -191,11 +191,7 @@ export function AddExamModal({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={!canSubmit || submitting}
-              className="bg-amber text-primary-foreground hover:bg-amber-hover"
-            >
+            <Button type="submit" disabled={!canSubmit || submitting} variant="brand">
               {editMode ? 'Save' : 'Create'}
             </Button>
           </div>

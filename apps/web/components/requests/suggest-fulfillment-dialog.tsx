@@ -104,7 +104,7 @@ export function SuggestFulfillmentDialog({ requestId }: { requestId: string }) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!postId || suggest.isPending}>
+            <Button type="submit" variant="brand" disabled={!postId || suggest.isPending}>
               {suggest.isPending ? 'Submitting…' : 'Submit'}
             </Button>
           </div>

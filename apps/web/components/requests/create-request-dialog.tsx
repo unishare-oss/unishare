@@ -223,7 +223,7 @@ export function CreateRequestDialog() {
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={create.isPending}>
+              <Button type="submit" variant="brand" disabled={create.isPending}>
                 {create.isPending ? 'Posting…' : 'Post Request'}
               </Button>
             </div>

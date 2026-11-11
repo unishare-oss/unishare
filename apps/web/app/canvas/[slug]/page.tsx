@@ -175,7 +175,7 @@ export default function CanvasPage() {
               </p>
             )}
           </div>
-          <Button type="submit" variant="default" className="w-full" disabled={passwordSubmitting}>
+          <Button type="submit" variant="brand" className="w-full" disabled={passwordSubmitting}>
             {passwordSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

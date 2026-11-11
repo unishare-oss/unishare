@@ -174,11 +174,7 @@ export function AddDeptModal({ open, dept, onClose, onSubmit }: AddDeptModalProp
               <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="bg-amber text-primary-foreground hover:bg-amber-hover"
-              >
+              <Button type="submit" disabled={saving} variant="brand">
                 {dept ? 'Save' : 'Create'}
               </Button>
             </div>

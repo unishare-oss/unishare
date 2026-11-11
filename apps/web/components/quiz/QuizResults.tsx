@@ -199,7 +199,7 @@ export function QuizResults({ quiz, score, totalPoints, timeTaken, answers }: Qu
 
       {/* Actions */}
       <div className="flex gap-3 pb-8">
-        <Button asChild variant="default" className="flex-1" size="lg">
+        <Button asChild variant="brand" className="flex-1" size="lg">
           <Link href={`/quizzes/${quiz.id}`}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Try Again

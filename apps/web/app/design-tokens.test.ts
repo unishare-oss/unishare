@@ -77,18 +77,21 @@ describe('colour pairings', () => {
     expect(link).not.toMatch(/text-(primary|amber|brand)(?![\w-])/)
   })
 
-  it('brand fills use on-brand text, not white', () => {
-    const solid = buttonVariants({ variant: 'default' })
-    expect(solid).toContain('bg-primary')
-    expect(solid).toContain('text-primary-foreground')
-    expect(solid).not.toContain('text-white')
+  it('brand fills use on-brand text, not white; default buttons stay neutral', () => {
+    const brand = buttonVariants({ variant: 'brand' })
+    expect(brand).toContain('bg-brand')
+    expect(brand).toContain('text-on-brand')
+    expect(brand).not.toContain('text-white')
+    expect(buttonVariants({ variant: 'default' })).not.toContain('bg-brand')
   })
 
   it('destructive buttons use their own red ledge, not the orange one', () => {
     const destructive = buttonVariants({ variant: 'destructive' })
-    expect(destructive).toContain('shadow-press-bad')
+    expect(destructive).toContain('border-bad-edge')
     expect(destructive).not.toContain('press-brand')
+    // The edge itself is set in the CSS layer, keyed off data-variant.
     const css = globalsCss()
+    expect(css).toMatch(/\[data-variant='destructive'\] \{\s*box-shadow: var\(--press-bad\);/)
     expect(css).toMatch(/--press-bad:\s*0 4px 0 var\(--bad-edge\);/)
     expect(css).toMatch(/--shadow-press-bad:\s*var\(--press-bad\);/)
   })

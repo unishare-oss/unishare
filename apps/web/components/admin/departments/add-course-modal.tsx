@@ -121,11 +121,7 @@ export function AddCourseModal({
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={!code.trim() || !name.trim()}
-                className="bg-amber text-primary-foreground hover:bg-amber-hover"
-              >
+              <Button type="submit" disabled={!code.trim() || !name.trim()} variant="brand">
                 {editMode ? 'Save' : 'Create'}
               </Button>
             </div>

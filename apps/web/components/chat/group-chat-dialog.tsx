@@ -370,7 +370,7 @@ export function GroupChatDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={!canSubmit || isPending}>
+                <Button type="submit" variant="brand" size="sm" disabled={!canSubmit || isPending}>
                   {isPending ? (
                     <>
                       <Loader2 className="size-3.5 animate-spin" />
