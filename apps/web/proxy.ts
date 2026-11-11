@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   '/privacy',
   '/terms',
   '/changelog',
+  '/support',
   '/canvas',
   '/api',
   '/mcp',
