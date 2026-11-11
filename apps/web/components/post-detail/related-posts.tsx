@@ -7,9 +7,10 @@ import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
 interface RelatedPostsProps {
   courseId: string
   currentPostId: string
+  courseName?: string
 }
 
-export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
+export function RelatedPosts({ courseId, currentPostId, courseName }: RelatedPostsProps) {
   const { data } = usePostsControllerFindAll(
     { courseId, limit: 6 },
     { query: { select: (r) => r.data } },
@@ -22,7 +23,7 @@ export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
   return (
     <div className="mt-6 mb-2">
       <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
-        More from this course
+        More from {courseName ?? 'this course'}
       </h3>
       <div className="detail-box flex flex-col border border-border rounded-[6px] overflow-hidden bg-card">
         {related.map((post, i) => (
@@ -39,7 +40,7 @@ export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground line-clamp-1">{post.title}</p>
               <p className="font-mono text-xs text-text-muted mt-0.5">
-                {post.author?.name ?? 'Anonymous'} ·{' '}
+                {post.author?.name && <>{post.author.name} · </>}
                 {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
               </p>
             </div>

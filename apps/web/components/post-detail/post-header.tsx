@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { Bookmark, Link2, Pencil, Trash2, Check, Eye, MessageSquare, Sparkles } from 'lucide-react'
+import { Link2, Pencil, Trash2, Check, Sparkles } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 
-import { calcYearLevel, pluralize } from '@/lib/utils'
+import { calcYearLevel } from '@/lib/utils'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { TypeBadge } from '@/components/post-card'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useAuth } from '@/contexts/auth-context'
 import { CollectionPicker } from '@/components/posts/collection-picker'
+import { ReportDialog } from '@/components/ReportDialog'
 import type { ApiPostDetail } from '@/lib/api-types'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -32,6 +34,7 @@ interface PostHeaderProps {
   isOwner: boolean
   onDelete?: () => void
   isDeleting?: boolean
+  actionExtras?: ReactNode
 }
 
 function ActionHint({ label, children }: { label: string; children: React.ReactNode }) {
@@ -45,7 +48,13 @@ function ActionHint({ label, children }: { label: string; children: React.ReactN
   )
 }
 
-export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: PostHeaderProps) {
+export function PostHeader({
+  post,
+  isOwner,
+  onDelete,
+  isDeleting = false,
+  actionExtras,
+}: PostHeaderProps) {
   const [copied, setCopied] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -68,7 +77,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
   }
 
   const author = post.author
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
 
   const academicYear = useAcademicYear()
   const yearLevel =
@@ -185,24 +194,10 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
         )}
       </div>
 
-      <div className="flex items-center gap-2 justify-between mb-6">
-        <div className="flex items-center gap-3 font-mono text-xs text-text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <Eye className="size-3.5" strokeWidth={1.5} />
-            {(post.views || 0).toLocaleString()} {pluralize(post.views || 0, 'view')}
-          </span>
-          {post._count.savedBy > 0 && (
-            <span className="inline-flex items-center gap-1.5">
-              <Bookmark className="size-3.5" strokeWidth={1.5} />
-              {post._count.savedBy.toLocaleString()} {pluralize(post._count.savedBy, 'save')}
-            </span>
-          )}
-          {post._count.comments > 0 && (
-            <span className="inline-flex items-center gap-1.5">
-              <MessageSquare className="size-3.5" strokeWidth={1.5} />
-              {post._count.comments.toLocaleString()} {pluralize(post._count.comments, 'comment')}
-            </span>
-          )}
+      <div className="flex items-center justify-between gap-2 border-y border-line py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          {actionExtras}
+          {isAuthenticated && !isOwner && <ReportDialog postId={post.id} />}
         </div>
         <div className="flex items-center gap-2">
           <ActionHint label="Save to Collection">
@@ -263,8 +258,6 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
           )}
         </div>
       </div>
-
-      <div className="border-t border-border" />
     </>
   )
 }
