@@ -206,12 +206,12 @@ jobs:
           app-id: ${{ secrets.GITOPS_APP_ID }}
           private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: k8s-practice
+          repositories: infra
 
       - name: Checkout GitOps repo
         uses: actions/checkout@v7
         with:
-          repository: unishare-oss/k8s-practice
+          repository: unishare-oss/infra
           ref: main
           token: ${{ steps.app-token.outputs.token }}
           path: gitops
