@@ -94,7 +94,7 @@ export const MIN_SLIDES = 3
  * one, and why this was pinned to 10.
  *
  * Two changes moved that ceiling: the generator's batch is pinned to 2 with a 45s pause
- * between batches (the initContainer in k8s-practice/presenton/deployment.yaml, which
+ * between batches (the initContainer in infra/presenton/deployment.yaml, which
  * explains the arithmetic), and DEFAULT_VERBOSITY is now concise, which is what removes most
  * of the content retries rather than merely pacing them.
  *
