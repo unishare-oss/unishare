@@ -45,8 +45,8 @@ generator cookie and the generator's login page is unreachable.
 
 ```
 browser (iframe on decks-dev.psstee.dev)
-  -> Traefik Ingress                              k8s-practice/presenton/ingress.yaml
-     -> Middleware deck-editor-auth-dev           k8s-practice/presenton/middleware.yaml
+  -> Traefik Ingress                              infra/presenton/ingress.yaml
+     -> Middleware deck-editor-auth-dev           infra/presenton/middleware.yaml
           -> GET /api/decks/frame-auth            decks.controller.ts
                Better Auth session or 401
                route policy                       decks.frame-auth.service.ts
@@ -69,7 +69,7 @@ Sessions are cached in Redis for 30 minutes and treated as possibly-stale: calle
 a 401 rather than validating up front, which would add a round trip to every request.
 
 The trade-off — rotating `PRESENTON_ACCOUNT_SECRET` orphans every account — and its recovery
-path are documented in `k8s-practice/presenton/README.md`.
+path are documented in `infra/presenton/README.md`.
 
 ### Generation now runs as the owner
 
