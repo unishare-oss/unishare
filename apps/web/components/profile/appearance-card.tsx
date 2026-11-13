@@ -1,10 +1,16 @@
 'use client'
 
-import { ThemePicker } from '@unishare-oss/unitheme/react'
+import { useTheme } from '@unishare-oss/unitheme/react'
+import { isDarkTheme, type ThemeId } from '@unishare-oss/unitheme'
 import { cn } from '@/lib/utils'
 import { useFeedStyleStore, useSettingsStore, type FeedStyle } from '@/lib/store'
 import { playMessageSound } from '@/lib/chat-sound'
 import { Switch } from '@/components/ui/switch'
+
+// A dark unitheme id, so the server adds the `dark` class. Move both to one shared spot when the
+// theme toggle needs them.
+export const LIGHT_THEME: ThemeId = 'theme-unishare'
+export const DARK_THEME: ThemeId = 'theme-catppuccin-mocha'
 
 interface FeedStyleOption {
   id: FeedStyle
@@ -71,6 +77,8 @@ function FeedStylePreview({ id }: { id: FeedStyle }) {
 }
 
 export function AppearanceCard() {
+  const { theme, setTheme } = useTheme()
+  const dark = isDarkTheme(theme)
   const fontSize = useSettingsStore((s) => s.fontSize)
   const chatSoundEnabled = useSettingsStore((s) => s.chatSoundEnabled)
   const setChatSoundEnabled = useSettingsStore((s) => s.setChatSoundEnabled)
@@ -80,7 +88,30 @@ export function AppearanceCard() {
   return (
     <section className="mb-8">
       <div className="mb-8">
-        <ThemePicker />
+        <h3 className="text-sm font-medium text-foreground mb-3">Theme</h3>
+        <div role="group" aria-label="Theme" className="grid grid-cols-2 gap-3">
+          {(
+            [
+              { id: LIGHT_THEME, label: 'Light', pressed: !dark },
+              { id: DARK_THEME, label: 'Dark', pressed: dark },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={option.pressed}
+              onClick={() => setTheme(option.id)}
+              className={cn(
+                'rounded-s border-2 px-4 py-3 text-sm font-medium transition-all duration-150',
+                option.pressed
+                  ? 'border-brand bg-brand-soft text-foreground'
+                  : 'border-border text-muted-foreground hover:border-brand/40 hover:bg-muted',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* App-specific preferences remain in UniShare. */}

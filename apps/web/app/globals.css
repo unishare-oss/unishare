@@ -3,14 +3,219 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+/* Unishare design tokens (design system tokens.json). Light values on :root:root, dark values on
+   :root:root.dark. The doubled :root gives them specificity (0,2,0), above unitheme's single-class
+   palettes (.theme-*), so they win on purpose, not by import order. The dark block is one class
+   higher again, so it beats the light block. For now the app is plain light/dark: the unitheme
+   picker no longer changes colours. */
+:root:root {
+  color-scheme: light;
   --font-scale: 1;
-  --radius: 14px;
+
+  --bg: #f5f6fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f8;
+  --ink: #14213d;
+  --line: #dde2ee;
+  --edge: #c9d0e0;
+  --brand: #ff8a1f;
+  --brand-edge: #d4650a;
+  --brand-soft: #fff0e0;
+  --on-brand: #1c1305;
+  --sky: #2f6fe0;
+  --sky-soft: #e6efff;
+  --sky-edge: #1f53b3;
+  --ok: #1d9a55;
+  --ok-soft: #e2f6ea;
+  --ok-edge: #157a42;
+  --bad: #e0484d;
+  --bad-soft: #fde8e8;
+  --bad-edge: #b3353a;
+  --ice: #2f9be0;
+  --hero: #14213d;
+  --on-hero: #ffffff;
+  --hero-muted: #aab4d0;
+  --hero-line: #2b3a60;
+  --m0: #e3e7f1;
+  --m1: #ffd3a3;
+  --m2: #9cc0f7;
+  --m3: #3d7fe6;
+  --m4: #1b3f91;
+  --hl: rgba(255, 196, 0, 0.32);
+  --glass: rgba(245, 246, 251, 0.78);
+  --noto-limb: #14213d;
+  --noto-shadow: #14213d;
+  /* The design system's `muted` text colour. `--muted` itself keeps its shadcn meaning (a quiet
+     fill, = --surface-2), so use --muted-foreground / text-muted-foreground for muted text. */
+  --muted-foreground: #5b6785;
+
+  --press: 0 4px 0 #dde2ee;
+  --press-brand: 0 4px 0 #d4650a;
+  --press-sm: 0 3px 0 #dde2ee;
+  --lift: 0 10px 28px rgba(20, 33, 61, 0.1);
+
+  /* Radius and easing are defined once here; @theme inline maps them to Tailwind's
+     names. */
+  --r-s: 12px;
+  --r: 18px;
+  --r-l: 24px;
+  --r-pill: 999px;
+  --radius: 18px;
+
+  --curve-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --curve-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --curve-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* shadcn variables, pointed at the tokens so existing components pick up the new look. */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--sky);
+  --chart-1: var(--brand);
+  --chart-2: var(--sky);
+  --chart-3: var(--ok);
+  --chart-4: var(--bad);
+  --chart-5: var(--muted-foreground);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--sky);
+
+  /* Older app variables (from unitheme), pointed at the tokens. */
+  --amber: var(--brand);
+  --amber-hover: var(--brand-edge);
+  --amber-subtle: var(--brand-soft);
+  --success: var(--ok);
+  --info: var(--sky);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --surface-dark: var(--hero);
+  --card-dark: var(--surface-2);
+  --border-strong: var(--edge);
+  --shadow-color: var(--edge);
+  --type-note: var(--brand-edge);
+  --type-exam: var(--sky);
+  --type-exercise: var(--ok);
+}
+
+:root:root.dark {
+  color-scheme: dark;
+
+  --bg: #0e1424;
+  --surface: #161f35;
+  --surface-2: #1e2943;
+  --ink: #edf1fb;
+  --line: #2a3654;
+  --edge: #080c18;
+  --brand: #ff9a3c;
+  --brand-edge: #b8600f;
+  --brand-soft: #3a2816;
+  --on-brand: #1c1305;
+  --sky: #6aa2f7;
+  --sky-soft: #1c2c4d;
+  --sky-edge: #0b1a36;
+  --ok: #3cc479;
+  --ok-soft: #14301f;
+  --ok-edge: #0d2416;
+  --bad: #ff6b70;
+  --bad-soft: #3a1a1c;
+  --bad-edge: #2a0f11;
+  --ice: #5cb7f2;
+  --hero: #1f2c4f;
+  --on-hero: #ffffff;
+  --hero-muted: #a6b1cf;
+  --hero-line: #33436e;
+  --m0: #26314d;
+  --m1: #6b4a26;
+  --m2: #2f528f;
+  --m3: #4f8ff0;
+  --m4: #a9c8ff;
+  --hl: rgba(255, 170, 60, 0.28);
+  --glass: rgba(14, 20, 36, 0.78);
+  --noto-limb: #e6ebf7;
+  --noto-shadow: #000000;
+  --muted-foreground: #9aa6c3;
+
+  --press: 0 4px 0 #2a3654;
+  --press-brand: 0 4px 0 #b8600f;
+  --press-sm: 0 3px 0 #2a3654;
+  --lift: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+  /* shadcn variables, pointed at the tokens so existing components pick up the new look. */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--sky);
+  --chart-1: var(--brand);
+  --chart-2: var(--sky);
+  --chart-3: var(--ok);
+  --chart-4: var(--bad);
+  --chart-5: var(--muted-foreground);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--sky);
+
+  /* Older app variables (from unitheme), pointed at the tokens. */
+  --amber: var(--brand);
+  --amber-hover: var(--brand-edge);
+  --amber-subtle: var(--brand-soft);
+  --success: var(--ok);
+  --info: var(--sky);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --surface-dark: var(--hero);
+  --card-dark: var(--surface-2);
+  --border-strong: var(--edge);
+  --shadow-color: var(--edge);
+  --type-note: var(--brand-edge);
+  --type-exam: var(--sky);
+  --type-exercise: var(--ok);
 }
 
 @theme inline {
-  --font-sans: var(--font-space-grotesk), sans-serif;
-  --font-mono: var(--font-fira-code), monospace;
+  /* Font roles name the next/font face variables directly: they live on <body>, not :root. */
+  --font-sans: var(--font-lexend), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: var(--font-lexend), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-baloo), ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-read: var(--font-literata), Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -28,6 +233,7 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
@@ -57,10 +263,52 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
 
-  --color-border-strong: var(--border-strong);
   --color-type-note: var(--type-note);
   --color-type-exam: var(--type-exam);
   --color-type-exercise: var(--type-exercise);
+
+  /* Design system tokens */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-line: var(--line);
+  --color-edge: var(--edge);
+  --color-brand: var(--brand);
+  --color-brand-edge: var(--brand-edge);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-sky-edge: var(--sky-edge);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-edge: var(--ok-edge);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-bad-edge: var(--bad-edge);
+  --color-ice: var(--ice);
+  --color-hero: var(--hero);
+  --color-on-hero: var(--on-hero);
+  --color-hero-muted: var(--hero-muted);
+  --color-hero-line: var(--hero-line);
+  --color-m0: var(--m0);
+  --color-m1: var(--m1);
+  --color-m2: var(--m2);
+  --color-m3: var(--m3);
+  --color-m4: var(--m4);
+  --color-hl: var(--hl);
+  --color-glass: var(--glass);
+  --radius-s: var(--r-s);
+  --radius-card: var(--r);
+  --radius-l: var(--r-l);
+  --shadow-press: var(--press);
+  --shadow-press-brand: var(--press-brand);
+  --shadow-press-sm: var(--press-sm);
+  --shadow-lift: var(--lift);
+  --ease-out: var(--curve-out);
+  --ease-in-out: var(--curve-in-out);
+  --ease-pop: var(--curve-pop);
 }
 
 @layer base {
@@ -68,7 +316,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-semibold;
+    @apply bg-background text-foreground;
   }
 }
 
