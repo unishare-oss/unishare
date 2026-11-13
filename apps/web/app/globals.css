@@ -843,3 +843,78 @@ html {
 .demo-cursor[data-pressed] svg {
   scale: 0.85;
 }
+
+/* ─── Buttons: press-down edge (US-64) ───────────────────────────────────
+   Keyed off the data attributes Button renders. In the components layer so
+   className utilities (shadow-none, border-0) still win. The press motion only
+   runs when the user has not asked for reduced motion. */
+@layer components {
+  [data-slot='button'] {
+    border-width: 2px;
+  }
+  [data-slot='button'][data-solid] {
+    box-shadow: var(--press);
+  }
+  [data-slot='button'][data-variant='brand'] {
+    box-shadow: var(--press-brand);
+  }
+  [data-slot='button'][data-variant='sky'] {
+    box-shadow: 0 4px 0 var(--sky-edge);
+  }
+  [data-slot='button'][data-variant='ok'] {
+    box-shadow: 0 4px 0 var(--ok-edge);
+  }
+  [data-slot='button'][data-variant='destructive'] {
+    box-shadow: 0 4px 0 var(--bad-edge);
+  }
+
+  /* Calm pages: everything but brand, link and ghost goes flat. */
+  .calm
+    [data-slot='button']:not(
+      [data-variant='brand'],
+      [data-variant='link'],
+      [data-variant='ghost']
+    ) {
+    box-shadow: none;
+    border-width: 1.5px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot='button'] {
+      transition:
+        translate 100ms var(--ease-out),
+        scale 100ms var(--ease-out),
+        box-shadow 100ms var(--ease-out),
+        background-color 160ms ease,
+        opacity 160ms ease;
+    }
+    [data-slot='button'][data-solid]:active:not(:disabled, [aria-disabled='true']) {
+      translate: 0 4px;
+      box-shadow: none;
+    }
+    [data-slot='button']:is([data-variant='quiet'], [data-variant='outline']):active:not(
+        :disabled,
+        [aria-disabled='true']
+      ) {
+      scale: 0.97;
+    }
+    .calm
+      [data-slot='button']:not(
+        [data-variant='brand'],
+        [data-variant='link'],
+        [data-variant='ghost']
+      ):active:not(:disabled, [aria-disabled='true']) {
+      translate: none;
+      scale: 0.97;
+      box-shadow: none;
+    }
+  }
+}
+
+/* Select list entrance (US-64): fade and drop 4px; none under reduced motion. */
+@keyframes dd-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}

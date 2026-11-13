@@ -12,34 +12,33 @@ import { Toaster as Sonner, type ToasterProps } from 'sonner'
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      className="toaster group font-mono"
+      className="toaster group"
+      position="bottom-center"
+      offset={24}
+      mobileOffset={88}
       toastOptions={{
         classNames: {
           toast:
-            'text-xs tracking-wide border border-border bg-card text-foreground shadow-sm rounded-[6px]',
+            'w-fit! max-w-[calc(100vw-32px)] gap-3! py-2.5! pr-3! pl-4! font-sans text-sm! font-medium shadow-none!',
           title: 'font-medium',
-          description: 'text-text-muted',
-          actionButton: 'bg-amber text-white text-xs font-mono',
-          cancelButton: 'bg-muted text-foreground text-xs font-mono',
-          success: 'border-l-2 border-l-[#16a34a]',
-          error: 'border-l-2 border-l-destructive',
-          warning: 'border-l-2 border-l-amber',
-          info: 'border-l-2 border-l-info',
+          description: 'text-bg/70!',
+          actionButton: 'bg-transparent! px-1.5! py-1! font-semibold text-brand!',
+          cancelButton: 'border! border-bg/40! bg-transparent! text-bg!',
         },
       }}
       icons={{
-        success: <CircleCheckIcon className="size-4 text-[#16a34a]" />,
-        info: <InfoIcon className="size-4 text-info" />,
-        warning: <TriangleAlertIcon className="size-4 text-amber" />,
-        error: <OctagonXIcon className="size-4 text-destructive" />,
-        loading: <Loader2Icon className="size-4 animate-spin text-text-muted" />,
+        success: <CircleCheckIcon className="size-4 text-ok" />,
+        info: <InfoIcon className="size-4 text-sky" />,
+        warning: <TriangleAlertIcon className="size-4 text-brand" />,
+        error: <OctagonXIcon className="size-4 text-bad" />,
+        loading: <Loader2Icon className="size-4 animate-spin text-bg/70" />,
       }}
       style={
         {
-          '--normal-bg': 'var(--card)',
-          '--normal-text': 'var(--foreground)',
-          '--normal-border': 'var(--border)',
-          '--border-radius': 'var(--radius)',
+          '--normal-bg': 'var(--ink)',
+          '--normal-text': 'var(--bg)',
+          '--normal-border': 'var(--ink)',
+          '--border-radius': '14px',
         } as React.CSSProperties
       }
       {...props}

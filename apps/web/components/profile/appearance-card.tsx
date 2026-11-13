@@ -102,7 +102,7 @@ export function AppearanceCard() {
               aria-pressed={option.pressed}
               onClick={() => setTheme(option.id)}
               className={cn(
-                'rounded-s border-2 px-4 py-3 text-sm font-medium transition-all duration-150',
+                'rounded-(--r-s) border-2 px-4 py-3 text-sm font-medium transition-all duration-150',
                 option.pressed
                   ? 'border-brand bg-brand-soft text-foreground'
                   : 'border-border text-muted-foreground hover:border-brand/40 hover:bg-muted',
