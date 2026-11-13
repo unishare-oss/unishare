@@ -48,7 +48,7 @@ export default function SupportPage() {
           ← Back
         </Link>
 
-        <h1 className="text-2xl font-semibold text-foreground mt-8 mb-2">Support</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground mt-8 mb-2">Support</h1>
         <p className="text-sm text-text-secondary mb-10">
           Quick answers first. If you are still stuck, tell us on GitHub.
         </p>
