@@ -843,3 +843,8 @@ html {
 .demo-cursor[data-pressed] svg {
   scale: 0.85;
 }
+
+/* Noto: limbs stay light on the dark hero card in both themes */
+.bg-hero {
+  --noto-limb: #e6ebf7;
+}
