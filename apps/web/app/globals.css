@@ -918,3 +918,8 @@ html {
     transform: translateY(-4px) scale(0.98);
   }
 }
+
+/* Noto: limbs stay light on the dark hero card in both themes */
+.bg-hero {
+  --noto-limb: #e6ebf7;
+}
