@@ -63,15 +63,15 @@ describe('AppShell navigation layout', () => {
       </AppShell>,
     )
     act(() => vi.advanceTimersByTime(1000))
-    const main = screen.getByRole('main')
-    expect(main).toHaveClass('md:ml-[232px]')
+    const grid = screen.getByRole('main').parentElement
+    expect(grid).toHaveClass('md:grid-cols-[236px_minmax(0,1fr)]')
     act(() => useUIStore.setState({ sidebarCollapsed: true }))
     rerender(
       <AppShell>
         <p>Content</p>
       </AppShell>,
     )
-    expect(main).toHaveClass('md:ml-[72px]')
+    expect(grid).toHaveClass('md:grid-cols-[76px_minmax(0,1fr)]')
   })
 
   it('keeps chat full-height and hides the dock inside rooms', () => {

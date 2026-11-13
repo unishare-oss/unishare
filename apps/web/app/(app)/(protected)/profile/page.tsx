@@ -2,20 +2,18 @@
 
 import { useState } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
-import { LogOut } from 'lucide-react'
 import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
 import {
   usePostsControllerFindAll,
   usePostsControllerGetSavedPosts,
 } from '@/src/lib/api/generated/posts/posts'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { signOut } from '@/src/lib/auth/sign-out'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
 import { UniauthAccountCard } from '@/components/profile/uniauth-account-card'
-import { Button } from '@/components/ui/button'
+import { YourStuff } from '@/components/profile/your-stuff'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
 import { useAuth } from '@/contexts/auth-context'
@@ -39,6 +37,7 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
   return (
     <>
       <ProfileHeaderCard user={user} />
+      {!isGuest && <YourStuff />}
       <EditProfileForm user={user} isGuest={isGuest} />
       {/* A guest has no unicorp account, chat keys or account to delete: only the bio. */}
       {!isGuest && <UniauthAccountCard />}
@@ -50,23 +49,6 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
         loading={activeTab === 'MY POSTS' ? myPostsLoading : savedPostsLoading}
       />
     </>
-  )
-}
-
-function SignOutButton() {
-  async function handleSignOut() {
-    await signOut()
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      onClick={handleSignOut}
-      className="md:hidden text-text-muted hover:text-foreground"
-    >
-      <LogOut className="size-4" strokeWidth={1.5} />
-      Sign out
-    </Button>
   )
 }
 
@@ -97,7 +79,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Profile" action={<SignOutButton />} />
+      <PageHeader title="Profile" />
       <div className="flex-1 bg-card">
         <div className="max-w-[700px] mx-auto px-6 py-8">
           {isLoading ? <ProfileSkeleton /> : user && <ProfileContent user={user} />}

@@ -1,16 +1,12 @@
 'use client'
 
 import { useTheme } from '@unishare-oss/unitheme/react'
-import { isDarkTheme, type ThemeId } from '@unishare-oss/unitheme'
+import { isDarkTheme } from '@unishare-oss/unitheme'
 import { cn } from '@/lib/utils'
+import { DARK_THEME, LIGHT_THEME } from '@/lib/theme'
 import { useFeedStyleStore, useSettingsStore, type FeedStyle } from '@/lib/store'
 import { playMessageSound } from '@/lib/chat-sound'
 import { Switch } from '@/components/ui/switch'
-
-// A dark unitheme id, so the server adds the `dark` class. Move both to one shared spot when the
-// theme toggle needs them.
-export const LIGHT_THEME: ThemeId = 'theme-unishare'
-export const DARK_THEME: ThemeId = 'theme-catppuccin-mocha'
 
 interface FeedStyleOption {
   id: FeedStyle

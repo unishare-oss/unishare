@@ -22,7 +22,7 @@ export function ChatLayoutShell({ children }: { children: ReactNode }) {
   const selectedRoomId = isRoom ? (pathname.split('/')[2] ?? undefined) : undefined
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-background">
+    <div className="relative flex h-full w-full overflow-hidden bg-background">
       {/* Mobile: ChatSidebar always in background */}
       <div className="md:hidden absolute inset-0 flex flex-col">
         <ChatSidebar />
