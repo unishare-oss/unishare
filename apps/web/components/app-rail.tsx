@@ -1,36 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Bell,
   ChevronLeft,
   ChevronRight,
   GitFork,
   LogIn,
   LogOut,
   MessageSquareHeart,
+  Moon,
   Palette,
+  Plus,
   Settings,
   ShieldCheck,
+  Sun,
 } from 'lucide-react'
+import { useTheme } from '@unishare-oss/unitheme/react'
+import { isDarkTheme } from '@unishare-oss/unitheme'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/lib/store'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { toast } from 'sonner'
 import { signOut } from '@/src/lib/auth/sign-out'
-import { signInWithUniauth } from '@/src/lib/auth/uniauth'
 import { useAuth } from '@/contexts/auth-context'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
+import { Button } from '@/components/ui/button'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
-import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notifications/notifications'
+import { useUnreadNotificationCount } from '@/hooks/use-unread-notification-count'
+import { DARK_THEME, LIGHT_THEME } from '@/lib/theme'
+import { countLabel, startSignIn, UnreadBadge } from '@/components/navigation/nav-shared'
 import {
   buildVisibleNavigation,
-  isRouteActive,
+  isNavItemActive,
   type NavigationItem,
 } from '@/components/navigation/navigation-config'
+import { NotoLogo } from '@/components/noto/noto-logo'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -41,56 +46,52 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-function Badge({ count }: { count?: number }) {
-  if (!count) return null
-  return (
-    <span className="ml-auto rounded-full border-2 border-card bg-primary px-1.5 font-mono text-[10px] font-bold text-primary-foreground">
-      {count > 99 ? '99+' : count}
-    </span>
-  )
-}
+const rowBase =
+  'relative flex w-full items-center gap-3.5 rounded-(--r-s) border-2 border-transparent px-3 py-2.5 text-[15px] font-semibold text-muted-foreground outline-none transition-[background-color,color,border-color] duration-150 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50 hover:bg-surface-2 hover:text-ink max-[1180px]:justify-center max-[1180px]:px-0'
+
+// Collapsed (by the toggle or below 1180px) the badge sits on the icon's corner.
+const badgeCorner = 'absolute top-0.5 right-1.5 h-[18px] min-w-[18px] px-1 text-[10px]'
+const badgeClass = (collapsed: boolean) =>
+  collapsed
+    ? badgeCorner
+    : 'ml-auto max-[1180px]:absolute max-[1180px]:top-0.5 max-[1180px]:right-1.5 max-[1180px]:h-[18px] max-[1180px]:min-w-[18px] max-[1180px]:px-1 max-[1180px]:text-[10px]'
 
 function SidebarLink({
   item,
   collapsed,
-  badge,
+  badge = 0,
 }: {
   item: NavigationItem
   collapsed: boolean
   badge?: number
 }) {
   const pathname = usePathname()
-  const active = isRouteActive(pathname, item.href)
-  const badgeLabel = badge ? ` (${badge > 99 ? '99+' : badge})` : ''
-  const content = (
+  const active = isNavItemActive(pathname, item)
+  const name = badge ? `${item.label} (${countLabel(badge)})` : item.label
+  const link = (
     <Link
       href={item.href}
-      aria-label={`${item.label}${badgeLabel}`}
+      aria-label={name}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex min-h-11 items-center gap-3 rounded-xl border-2 px-3 outline-none transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-        collapsed && 'w-11 justify-center px-0',
-        active
-          ? 'border-border-strong bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)]'
-          : 'border-transparent text-text-muted hover:bg-accent hover:text-accent-foreground active:translate-y-px',
+        rowBase,
+        collapsed && 'justify-center px-0',
+        active && 'border-brand bg-brand-soft text-ink hover:bg-brand-soft',
       )}
     >
-      <item.icon className="size-5 shrink-0" strokeWidth={active ? 2 : 1.5} />
-      {!collapsed && <span className="truncate text-sm font-semibold">{item.label}</span>}
-      {!collapsed && <Badge count={badge} />}
-      {collapsed && !!badge && (
-        <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-card bg-primary" />
-      )}
+      <item.icon
+        className={cn('size-[22px] shrink-0', active && 'text-brand-edge')}
+        strokeWidth={2}
+      />
+      {!collapsed && <span className="truncate max-[1180px]:hidden">{item.label}</span>}
+      <UnreadBadge count={badge} className={badgeClass(collapsed)} />
     </Link>
   )
-  if (!collapsed) return content
+  if (!collapsed) return link
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent side="right">
-        {item.label}
-        {badge ? ` (${badge > 99 ? '99+' : badge})` : ''}
-      </TooltipContent>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{name}</TooltipContent>
     </Tooltip>
   )
 }
@@ -111,55 +112,66 @@ function SidebarButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={cn(
-        'flex min-h-11 w-full items-center gap-3 rounded-xl border-2 border-transparent px-3 text-text-muted outline-none transition-[color,background-color] duration-200 motion-reduce:transition-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
-        collapsed && 'w-11 justify-center px-0',
-      )}
+      className={cn(rowBase, 'gap-3 px-3 py-2 text-[13px]', collapsed && 'justify-center px-0')}
     >
-      <Icon className="size-5 shrink-0" strokeWidth={1.5} />
-      {!collapsed && <span className="truncate text-sm font-semibold">{label}</span>}
+      <Icon className="size-[22px] shrink-0" strokeWidth={2} />
+      {!collapsed && <span className="truncate max-[1180px]:hidden">{label}</span>}
     </button>
   )
 }
 
-function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
+function ThemeButton({ collapsed }: { collapsed: boolean }) {
+  const { theme, setTheme } = useTheme()
+  const dark = isDarkTheme(theme)
+  const Icon = dark ? Sun : Moon
+  const label = dark ? 'Light mode' : 'Dark mode'
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(dark ? LIGHT_THEME : DARK_THEME)}
+      aria-label={label}
+      className={cn(
+        'mt-auto flex flex-none items-center gap-3 rounded-(--r-s) px-3 py-2 text-[13px] font-semibold text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 max-[1180px]:justify-center',
+        collapsed && 'justify-center px-0',
+      )}
+    >
+      <Icon className="size-[22px] shrink-0" strokeWidth={2} />
+      {!collapsed && <span className="truncate max-[1180px]:hidden">{label}</span>}
+    </button>
+  )
+}
+
+function CollapsedModerationMenu({ items }: { items: NavigationItem[] }) {
   const pathname = usePathname()
-  const active = items.some((item) => isRouteActive(pathname, item.href))
+  const active = items.some((item) => isNavItemActive(pathname, item))
 
   return (
     <DropdownMenu>
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger
-            aria-label="Admin menu"
+            aria-label="Moderation menu"
             aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex size-11 items-center justify-center rounded-xl border-2 outline-none transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-              active
-                ? 'border-border-strong bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--shadow-color)]'
-                : 'border-transparent text-text-muted hover:bg-accent hover:text-accent-foreground',
-            )}
+            className={cn(rowBase, 'justify-center px-0', active && 'border-brand bg-brand-soft')}
           >
-            <ShieldCheck className="size-5" strokeWidth={active ? 2 : 1.5} />
+            <ShieldCheck
+              className={cn('size-[22px]', active && 'text-brand-edge')}
+              strokeWidth={2}
+            />
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="right">Admin</TooltipContent>
+        <TooltipContent side="right">Moderation</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent
-        side="right"
-        align="start"
-        sideOffset={12}
-        className="min-w-60 rounded-xl border-2 border-border-strong bg-popover p-1.5 shadow-[4px_4px_0_0_var(--shadow-color)]"
-      >
-        <DropdownMenuLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-          Admin
+      <DropdownMenuContent side="right" align="start" sideOffset={12} className="min-w-60">
+        <DropdownMenuLabel className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          Moderation
         </DropdownMenuLabel>
         {items.map((item) => (
           <DropdownMenuItem key={item.href} asChild>
             <Link
               href={item.href}
-              aria-current={isRouteActive(pathname, item.href) ? 'page' : undefined}
-              className="gap-3 rounded-lg px-3 py-2 font-medium"
+              aria-current={isNavItemActive(pathname, item) ? 'page' : undefined}
+              className="gap-3 px-3 py-2 font-medium"
             >
               <item.icon className="size-4" strokeWidth={1.5} />
               {item.label}
@@ -172,19 +184,19 @@ function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
 }
 
 export function AppRail() {
-  const { session, isAuthenticated, isGuest } = useAuth()
-  const user = session?.user
+  const { user, session, isAuthenticated, isGuest } = useAuth()
+  const sessionUser = session?.user
+  const pathname = usePathname()
   const collapsed = useUIStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useUIStore((state) => state.toggleSidebar)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const unreadChatCount = useUnreadChatCount()
-  const { data: notifications } = useNotificationsControllerFindAll({
-    query: { select: (response) => response.data, enabled: isAuthenticated },
-  })
-  const unreadNotifications = (notifications ?? []).filter(
-    (notification) => !notification.read && notification.type !== 'CHAT_MESSAGE',
-  ).length
-  const groups = buildVisibleNavigation(isAuthenticated, user?.role)
+  const unreadNotifications = useUnreadNotificationCount()
+  const groups = buildVisibleNavigation(isAuthenticated, sessionUser?.role, user?.department?.id)
+  const badges: Record<string, number> = {
+    '/chat': unreadChatCount,
+    '/notifications': unreadNotifications,
+  }
 
   async function handleSignOut() {
     await signOut()
@@ -194,176 +206,177 @@ export function AppRail() {
     <TooltipProvider delayDuration={0}>
       <aside
         data-collapsed={collapsed}
-        className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r-2 border-border-strong bg-card transition-[width] duration-200 motion-reduce:transition-none md:flex',
-          collapsed ? 'w-[72px]' : 'w-[232px]',
-        )}
+        className="sticky top-0 hidden h-screen min-w-0 flex-col gap-[18px] py-[22px] md:flex"
       >
-        <header
-          className={cn(
-            'flex h-[76px] items-center border-b-2 border-border px-3',
-            collapsed ? 'justify-center' : 'gap-3',
-          )}
-        >
+        <div className={cn('flex flex-none items-center', collapsed ? 'flex-col gap-2' : 'gap-2')}>
           <Link
             href="/feed"
-            aria-label="UniShare — go to feed"
-            className="shrink-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            aria-label="Unishare, Today"
+            className="flex flex-1 items-center gap-2.5 rounded-(--r-s) px-2.5 text-ink outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            <Image
-              src="/icon.svg"
-              alt=""
-              width={40}
-              height={40}
-              priority
-              className="rounded-[9px]"
-            />
+            <NotoLogo className="size-9" />
+            {!collapsed && (
+              <b className="font-display text-[28px] leading-none font-extrabold tracking-[-0.02em] max-[1180px]:hidden">
+                unishare
+              </b>
+            )}
           </Link>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="font-mono text-base font-black tracking-tight">UniShare</p>
-            </div>
-          )}
           <button
             type="button"
             onClick={toggleSidebar}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="flex size-8 shrink-0 items-center justify-center rounded-(--r-s) text-muted-foreground outline-none hover:bg-surface-2 max-[1180px]:hidden focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+          </button>
+        </div>
+
+        {isAuthenticated && (
+          <Button
+            asChild
+            size="sm"
             className={cn(
-              'flex size-11 shrink-0 items-center justify-center rounded-xl border-2 border-transparent text-text-muted outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50',
-              collapsed &&
-                'absolute left-[58px] top-4 size-8 border-border-strong bg-card shadow-sm',
+              'mx-0.5 h-auto flex-none gap-2.5 px-3 py-1.5 text-[13px] shadow-[0_3px_0_var(--line)] aria-[current=page]:border-brand aria-[current=page]:bg-brand-soft max-[1180px]:px-0 max-[1180px]:py-2',
+              collapsed && 'px-0',
             )}
           >
-            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-5" />}
-          </button>
-        </header>
+            <Link
+              href="/posts/new"
+              aria-label="Share a note"
+              aria-current={pathname === '/posts/new' ? 'page' : undefined}
+            >
+              <Plus className="size-[18px]" strokeWidth={2} />
+              {!collapsed && <span className="max-[1180px]:hidden">Share a note</span>}
+            </Link>
+          </Button>
+        )}
 
-        <nav
-          aria-label="Primary"
-          className="flex-1 space-y-4 overflow-y-auto px-3 py-4 [scrollbar-width:thin]"
-        >
+        <div className="-m-0.5 min-h-0 flex-[0_1_auto] overflow-y-auto overscroll-contain p-0.5 [scrollbar-width:thin]">
           {groups.map((group) =>
-            collapsed && group.id === 'admin' ? (
-              <div key={group.id} className="flex justify-center">
-                <CollapsedAdminMenu items={group.items} />
+            collapsed && group.id === 'moderation' ? (
+              <div key={group.id} className="mt-1 border-t border-line pt-2">
+                <CollapsedModerationMenu items={group.items} />
               </div>
             ) : (
-              <section key={group.id} aria-labelledby={`nav-${group.id}`}>
-                {!collapsed && (
-                  <h2
-                    id={`nav-${group.id}`}
-                    className="mb-1 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-text-muted"
-                  >
-                    {group.label}
-                  </h2>
-                )}
-                <div className={cn('space-y-1', collapsed && 'flex flex-col items-center')}>
-                  {group.items.map((item) => (
-                    <SidebarLink
-                      key={item.href}
-                      item={item}
-                      collapsed={collapsed}
-                      badge={item.href === '/chat' ? unreadChatCount : undefined}
-                    />
-                  ))}
-                </div>
-              </section>
+              <nav
+                key={group.id}
+                aria-label={group.label}
+                className="grid gap-1 [&+&]:mt-1 [&+&]:border-t [&+&]:border-line [&+&]:pt-2"
+              >
+                {group.items.map((item) => (
+                  <SidebarLink
+                    key={item.href}
+                    item={item}
+                    collapsed={collapsed}
+                    badge={badges[item.href]}
+                  />
+                ))}
+              </nav>
             ),
           )}
-        </nav>
-
-        <div className="shrink-0 space-y-1 border-t-2 border-border p-3">
-          {isAuthenticated && user ? (
-            <>
-              <SidebarLink
-                item={{ href: '/notifications', label: 'Notifications', icon: Bell }}
-                collapsed={collapsed}
-                badge={unreadNotifications}
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={cn(
-                    'flex min-h-11 w-full items-center gap-3 rounded-xl px-2 text-left outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                    collapsed && 'justify-center px-0',
-                  )}
-                  aria-label={`Account menu — ${user.name ?? 'User'}`}
-                >
-                  <UserAvatar name={user.name ?? 'User'} image={user.image} size="md" priority />
-                  {!collapsed && (
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-bold">{user.name}</span>
-                      <span className="block font-mono text-[10px] uppercase text-text-muted">
-                        {user.role}
-                      </span>
-                    </span>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="right"
-                  align="end"
-                  className="min-w-60 rounded-xl border-2 border-border-strong bg-popover p-1.5 shadow-[4px_4px_0_0_var(--shadow-color)]"
-                >
-                  <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <Settings />
-                      Profile &amp; settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/appearance">
-                      <Palette />
-                      Theme &amp; appearance
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setFeedbackOpen(true)}>
-                    <MessageSquareHeart />
-                    Feedback or bug report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="https://github.com/unishare-oss/unishare"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <GitFork />
-                      Open source · Contribute
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
-                    <LogOut />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <>
-              {/* Straight to uniauth: the app shell only shows to guests here, and /login
-                  sends anyone with a session (a guest's too) back to the feed. */}
-              <SidebarButton
-                label="Sign In"
-                icon={LogIn}
-                collapsed={collapsed}
-                onClick={() =>
-                  signInWithUniauth({ returnTo: window.location.href }).catch(() =>
-                    toast.error('Could not start sign-in. Please try again.'),
-                  )
-                }
-              />
-              {isGuest && (
-                <SidebarButton
-                  label="Leave guest mode"
-                  icon={LogOut}
-                  collapsed={collapsed}
-                  onClick={handleSignOut}
-                />
-              )}
-            </>
-          )}
         </div>
+
+        <ThemeButton collapsed={collapsed} />
+
+        {isAuthenticated && sessionUser ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={`Account menu — ${sessionUser.name ?? 'User'}`}
+              className={cn(
+                'flex flex-none items-center gap-2.5 rounded-(--r-s) bg-surface px-2.5 py-2 text-left shadow-[inset_0_0_0_2px_var(--line)] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 max-[1180px]:justify-center max-[1180px]:px-0',
+                collapsed && 'justify-center px-0',
+              )}
+            >
+              <UserAvatar
+                name={sessionUser.name ?? 'User'}
+                image={sessionUser.image}
+                size="md"
+                priority
+                className="size-[34px] rounded-full"
+              />
+              {!collapsed && (
+                <span className="grid min-w-0 leading-tight max-[1180px]:hidden">
+                  <b className="truncate text-sm">{sessionUser.name}</b>
+                  <small className="truncate text-xs text-muted-foreground">
+                    {user?.department
+                      ? `${user.department.name}${user.yearLevel ? `, Year ${user.yearLevel}` : ''}`
+                      : sessionUser.role}
+                  </small>
+                </span>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="end" className="min-w-60">
+              <DropdownMenuLabel>{sessionUser.name}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile">
+                  <Settings />
+                  Profile &amp; settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/appearance">
+                  <Palette />
+                  Theme &amp; appearance
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setFeedbackOpen(true)}>
+                <MessageSquareHeart />
+                Feedback or bug report
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a
+                  href="https://github.com/unishare-oss/unishare"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <GitFork />
+                  Open source · Contribute
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
+                <LogOut />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : collapsed ? (
+          <>
+            <SidebarButton label="Sign in" icon={LogIn} collapsed onClick={startSignIn} />
+            {isGuest && (
+              <SidebarButton
+                label="Leave guest mode"
+                icon={LogOut}
+                collapsed
+                onClick={handleSignOut}
+              />
+            )}
+          </>
+        ) : (
+          // Below 1180px the card shrinks to its two buttons, which show only their icons.
+          <div className="grid flex-none gap-2 rounded-(--r-s) bg-surface p-3 text-[13px] text-muted-foreground shadow-[inset_0_0_0_2px_var(--line)] max-[1180px]:bg-transparent max-[1180px]:p-0 max-[1180px]:shadow-none">
+            <b className="text-sm text-ink max-[1180px]:hidden">Browsing as a guest</b>
+            <span className="max-[1180px]:hidden">
+              Sign in to share notes and see your courses.
+            </span>
+            <Button size="sm" aria-label="Sign in" onClick={startSignIn}>
+              <LogIn className="hidden size-[18px] max-[1180px]:block" strokeWidth={2} />
+              <span className="max-[1180px]:hidden">Sign in</span>
+            </Button>
+            {isGuest && (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Leave guest mode"
+                onClick={handleSignOut}
+              >
+                <LogOut className="hidden size-[18px] max-[1180px]:block" strokeWidth={2} />
+                <span className="max-[1180px]:hidden">Leave guest mode</span>
+              </Button>
+            )}
+          </div>
+        )}
       </aside>
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </TooltipProvider>

@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { FilterStrip, type SortType } from '@/components/feed/filter-strip'
 import { FeedHeader } from '@/components/feed/feed-header'
 import { useFeedStore, type TypeFilter } from '@/lib/store'
+import { PageRail } from '@/components/page-rail'
+import { MyCoursesCard } from '@/components/my-courses-card'
 import { PostFeed } from '@/components/feed/post-feed'
 import type { ApiPost } from '@/lib/api-types'
 
@@ -223,42 +225,44 @@ function FeedContent() {
   const loading = isTrendingActive ? trendingLoading : isSearchActive ? searchLoading : isLoading
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <FeedHeader
-        searchQuery={tagParam !== null ? tagParam : searchQuery}
-        onSearchChange={handleSearchChange}
-        onTagSelect={handleTagSelect}
-      />
-      <FilterStrip
-        activeFilter={activeFilter}
-        onFilterChange={handleFilterChange}
-        selectedDeptId={effectiveDeptId}
-        onDeptChange={handleDeptChange}
-        selectedYear={selectedYear}
-        onYearChange={handleYearChange}
-        selectedCourseId={selectedCourseId}
-        onCourseChange={handleCourseChange}
-        selectedModuleNumber={selectedModuleNumber}
-        onModuleChange={handleModuleChange}
-        sortType={sortType}
-        onSortChange={handleSortChange}
-      />
+    <PageRail rail={<MyCoursesCard onSelectCourse={stripPageFromUrl} />}>
+      <div className="flex flex-col min-h-screen">
+        <FeedHeader
+          searchQuery={tagParam !== null ? tagParam : searchQuery}
+          onSearchChange={handleSearchChange}
+          onTagSelect={handleTagSelect}
+        />
+        <FilterStrip
+          activeFilter={activeFilter}
+          onFilterChange={handleFilterChange}
+          selectedDeptId={effectiveDeptId}
+          onDeptChange={handleDeptChange}
+          selectedYear={selectedYear}
+          onYearChange={handleYearChange}
+          selectedCourseId={selectedCourseId}
+          onCourseChange={handleCourseChange}
+          selectedModuleNumber={selectedModuleNumber}
+          onModuleChange={handleModuleChange}
+          sortType={sortType}
+          onSortChange={handleSortChange}
+        />
 
-      <PostFeed
-        posts={items}
-        loading={loading}
-        page={page}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        emptyDescription={
-          isTrendingActive
-            ? 'No trending posts yet. Check back soon!'
-            : isSearchActive
-              ? 'No posts matched your search.'
-              : 'Try adjusting your filters or search query.'
-        }
-      />
-    </div>
+        <PostFeed
+          posts={items}
+          loading={loading}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          emptyDescription={
+            isTrendingActive
+              ? 'No trending posts yet. Check back soon!'
+              : isSearchActive
+                ? 'No posts matched your search.'
+                : 'Try adjusting your filters or search query.'
+          }
+        />
+      </div>
+    </PageRail>
   )
 }
 

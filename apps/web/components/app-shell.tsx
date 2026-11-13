@@ -43,32 +43,40 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const requiresDepartmentOnboarding =
     isAuthenticated && !!user && !user.department && !needsUniversity
-  
+
   return (
     <div className="min-h-screen bg-background">
-      <div className={showLoader ? 'invisible pointer-events-none' : ''}>
-        <AppRail />
-      </div>
-      <main
+      {/* The demo's shell: a centred grid, sidebar column on the left (76px icons below 1180px). */}
+      <div
         className={cn(
-          showLoader ? 'invisible pointer-events-none' : '',
-          'transition-[margin] duration-200 motion-reduce:transition-none',
-          sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[232px]',
-          isChat
-            ? 'h-screen overflow-hidden'
-            : // Bottom padding clears the floating mobile dock (h-16 + 12px inset + breathing room).
-              'min-h-screen pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0',
+          'mx-auto grid max-w-[1320px] gap-7 px-4 md:items-start',
+          sidebarCollapsed
+            ? 'md:grid-cols-[76px_minmax(0,1fr)]'
+            : 'md:grid-cols-[236px_minmax(0,1fr)]',
+          'max-[1180px]:md:grid-cols-[76px_minmax(0,1fr)]',
+          showLoader && 'invisible pointer-events-none',
         )}
-        aria-hidden={showLoader}
       >
-        {needsUniversity ? (
-          <NoUniversityNotice />
-        ) : guestNeedsUniversity ? (
-          <GuestUniversityPicker />
-        ) : (
-          children
-        )}
-      </main>
+        <AppRail />
+        <main
+          className={cn(
+            'min-w-0',
+            isChat ? 'h-screen overflow-hidden' : 'min-h-screen',
+            // Phones: clear the glass top bar and the bottom tab bar (hidden inside a chat room).
+            !isChatRoom &&
+              'pt-[calc(60px+env(safe-area-inset-top))] pb-[calc(96px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0',
+          )}
+          aria-hidden={showLoader}
+        >
+          {needsUniversity ? (
+            <NoUniversityNotice />
+          ) : guestNeedsUniversity ? (
+            <GuestUniversityPicker />
+          ) : (
+            children
+          )}
+        </main>
+      </div>
       <div className={showLoader ? 'invisible pointer-events-none' : ''}>
         {!isChatRoom && <MobileNav />}
       </div>
