@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { GithubIcon } from './github-icon'
 
 export function LandingFooter() {
+  const statusUrl = process.env.STATUS_PAGE_URL
   return (
     <footer className="border-t-2 border-border-strong bg-card">
       <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">
@@ -113,6 +114,14 @@ export function LandingFooter() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/support"
+                  className="hover:text-foreground hover:underline underline-offset-4"
+                >
+                  Support
+                </Link>
+              </li>
+              <li>
                 <a
                   href="https://github.com/unishare-oss/unishare/issues"
                   target="_blank"
@@ -124,14 +133,26 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="https://github.com/unishare-oss/unishare"
+                  href="https://github.com/unishare-oss/unishare/blob/dev/CONTRIBUTING.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-foreground hover:underline underline-offset-4"
                 >
-                  GitHub
+                  Contribute
                 </a>
               </li>
+              {statusUrl ? (
+                <li>
+                  <a
+                    href={statusUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground hover:underline underline-offset-4"
+                  >
+                    Status
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </div>
 
@@ -154,37 +175,31 @@ export function LandingFooter() {
                   Privacy
                 </Link>
               </li>
-              <li>
-                <span className="font-mono text-xs text-text-muted">
-                  © {new Date().getFullYear()} Unishare
-                </span>
-              </li>
             </ul>
-            <div className="mt-4 rounded-xl border-2 border-border-strong bg-amber-subtle p-3">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-amber">
-                Stay in the loop
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-                Star us on GitHub — releases every week.
-              </p>
-              <Button asChild size="sm" className="mt-2 w-full rounded-full font-bold">
-                <a
-                  href="https://github.com/unishare-oss/unishare"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <GithubIcon className="size-4" /> Star on GitHub
-                </a>
-              </Button>
-            </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 sm:flex-row">
-          <p className="font-mono text-xs text-text-muted">
-            Built by students, for students. Self-hostable. Open source. Not affiliated with any
-            university.
-          </p>
+        <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="font-mono text-xs text-text-muted">
+              © {new Date().getFullYear()} Unishare
+            </p>
+            <p className="font-mono text-xs text-text-muted">
+              Built by students, for students. Self-hostable. Open source. Not affiliated with any
+              university.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild size="sm" className="rounded-full font-bold">
+              <a
+                href="https://github.com/unishare-oss/unishare"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <GithubIcon className="size-4" /> Star on GitHub
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
     </footer>
