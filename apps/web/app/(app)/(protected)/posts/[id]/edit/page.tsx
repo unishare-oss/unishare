@@ -35,7 +35,7 @@ import {
 const baseEditPostSchema = z
   .object({
     title: z.string().trim().min(3, 'Title must be at least 3 characters'),
-    description: z.string().trim().min(1, 'Description is required'),
+    description: z.string().trim(),
     year: yearSchema,
     semester: semesterSchema,
     moduleNum: moduleNumberSchema,
