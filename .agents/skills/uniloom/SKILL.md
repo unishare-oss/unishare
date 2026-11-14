@@ -50,22 +50,19 @@ by the ticket key (see [Branches and pull requests](#branches-and-pull-requests)
 When the project's repository is connected to Uniloom's GitHub App, a pull request links
 to a ticket by its key (`TG-12`, any letter case). Without the key, nothing links.
 
-- **Branch**: `<type>/<KEY>-<short-desc>` with the **slice** key, such as
-  `feat/TG-12-send-message`. Also put the key in the PR title when the repo's title rules
-  allow it.
-- **Title or branch** with a key: the PR **closes** that ticket.
-- **Description**: `Closes TG-13`, `Fixes TG-13` or `Resolves TG-13` closes a ticket. A
-  bare `TG-13` only links it, to show the PR on that ticket. GitHub's `Closes #12` does
-  nothing in Uniloom.
-- **One PR, several slices**: name the branch after one of them, or after none, and write
-  `Closes <KEY>` once per slice in the description.
+- **Description**: write `Closes TG-12` once per slice the PR finishes. `Fixes` and
+  `Resolves` work too. This is enough on its own: the branch can have any name. A bare
+  `TG-12` only links the ticket, to show the PR on it. GitHub's `Closes #12` does nothing
+  in Uniloom.
+- **Title or branch**: a key here is optional, but **every** key in them closes its
+  ticket, even without a closing word. Put only slice keys there, or none.
 - **Never close the feature from a PR.** Keep its key out of the branch and title (they
   close it) and name it bare, as `Part of TG-10`. A feature finishes with its slices.
 - **Dependencies** are `blockedBy` in Uniloom, not PR keys. Don't write `Closes` for a
   ticket this PR doesn't finish.
 - **Merge into `dev` or `main`.** Other base branches don't count as finished.
 
-A PR for slices TG-12 and TG-13 of feature TG-10, on branch `feat/TG-12-send-message`:
+The description of a PR for slices TG-12 and TG-13 of feature TG-10, on any branch:
 
 ```markdown
 Closes TG-12
@@ -133,8 +130,8 @@ A function never gets its own document.
 6. **Wait.** Tell the user the slices and SPECs are ready to read, with their URLs. Do not
    write code until the user moves the slice to Ready. Re-read it with `get_item` before
    starting. If a SPEC changes after Ready, tell the user: they review it again.
-7. **Build**: `save_item` with `state: "In Progress"`, on a branch named with the key
-   (see [Branches and pull requests](#branches-and-pull-requests)). Tick each item with
+7. **Build**: `save_item` with `state: "In Progress"`. The PR description closes the
+   slice (see [Branches and pull requests](#branches-and-pull-requests)). Tick each item with
    `check_criterion` **the moment it is met**, with evidence: the test that proves it and
    the commit SHA. A dropped session then leaves real progress recorded. There is no
    un-tick tool, and `set_criteria` resets every tick: if a ticked item stops being true,

@@ -6,6 +6,10 @@ A slice's design is a `SPEC` document created from the slice (`save_document` wi
 re-argue it. It says how the slice will be built, so the reviewer understands every function
 before it exists. They read it on the website and move the slice to Ready when they agree.
 
+## Style
+
+When writing a SPEC, be extremely concise and sacrifice grammar for the sake of concision.
+
 ## Sections
 
 Use the SPEC headings, in order:

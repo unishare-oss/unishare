@@ -5,6 +5,9 @@ the feature that can be reviewed and shipped on its own.
 
 ## Writing the feature
 
+When writing a ticket, be extremely concise and sacrifice grammar for the sake of
+concision.
+
 - **Title**: what the user gets, in plain words (`Chat rooms`), not how it is built.
 - **Description**: the goal in one or two sentences, then bullets for the scope and what
   is left out on purpose. The slices and their SPECs hold the detail.
