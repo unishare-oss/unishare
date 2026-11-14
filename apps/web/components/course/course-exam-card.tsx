@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { differenceInCalendarDays, format } from 'date-fns'
 import { useAuth } from '@/contexts/auth-context'
+import { daysPhrase, upcomingExams } from '@/components/today/exam-hero-data'
 import { useExamsControllerFindAll } from '@/src/lib/api/generated/exams/exams'
 
 const WINDOW_DAYS = 365
@@ -46,9 +47,7 @@ export function CourseExamCard({ courseId, departmentId }: CourseExamCardProps) 
     )
   }
 
-  const next = exams
-    .filter((exam) => new Date(exam.startsAt) > range.now)
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0]
+  const next = upcomingExams(exams, range.now)[0]
 
   if (!next) {
     return (
@@ -84,7 +83,7 @@ export function CourseExamCard({ courseId, departmentId }: CourseExamCardProps) 
       </span>
       <p className="-mt-1.5 text-sm text-muted-foreground">{where}</p>
       <span className="justify-self-start rounded-full bg-brand-soft px-2.5 py-[3px] text-xs font-semibold text-brand-edge">
-        {days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'} left`}
+        {days === 0 ? 'Today' : `${daysPhrase(days)} left`}
       </span>
       <Button size="sm" asChild className="justify-self-start">
         <Link href="/calendar">Open calendar</Link>

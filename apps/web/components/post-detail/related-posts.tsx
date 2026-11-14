@@ -1,13 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { getPostType } from '@/lib/posts/post-type'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
-
-const TYPE_LABELS: Record<string, string> = {
-  NOTE: 'Note',
-  OLD_QUESTION: 'Past exam',
-  EXERCISE: 'Exercise',
-}
 
 interface RelatedPostsProps {
   courseId: string
@@ -40,7 +35,7 @@ export function RelatedPosts({ courseId, courseCode, currentPostId }: RelatedPos
               <span className="group-hover:underline">{post.title}</span>
               <small className="text-xs font-normal text-muted-foreground">
                 {[
-                  TYPE_LABELS[post.type] ?? post.type,
+                  getPostType(post.type).label,
                   post.moduleNumber != null && `Module ${post.moduleNumber}`,
                   post.author?.name ?? 'A classmate',
                 ]

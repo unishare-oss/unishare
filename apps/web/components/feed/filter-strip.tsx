@@ -1,43 +1,29 @@
 'use client'
 
 import { useEffect } from 'react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { useMyDepartments } from '@/hooks/use-my-departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { type TypeFilter } from '@/lib/store'
 import { PostType } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { SlidersHorizontal, X } from 'lucide-react'
 import {
-  DropdownFilters,
-  type DropdownFiltersProps,
-  type SortType,
-} from '@/components/feed/dropdown-filters'
-import { DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, Drawer } from '../ui/drawer'
-import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
-export type { SortType }
+export type SortType = 'recent' | 'trending'
 
-export const typeFilters: TypeFilter[] = [
-  'ALL',
-  PostType.NOTE,
-  PostType.OLD_QUESTION,
-  PostType.EXERCISE,
+const typeFilters: { value: TypeFilter; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: PostType.NOTE, label: 'Notes' },
+  { value: PostType.OLD_QUESTION, label: 'Past exams' },
+  { value: PostType.EXERCISE, label: 'Exercises' },
 ]
 
-const typeFilterLabel: Record<TypeFilter, string> = {
-  ALL: 'ALL',
-  NOTE: 'NOTES',
-  OLD_QUESTION: 'PAST EXAMS',
-  EXERCISE: 'EXERCISES',
-}
-
-const typeFilterActiveClass: Record<TypeFilter, string> = {
-  ALL: 'border-amber text-amber',
-  NOTE: 'border-type-note text-type-note',
-  OLD_QUESTION: 'border-type-exam text-type-exam',
-  EXERCISE: 'border-type-exercise text-type-exercise',
-}
+const ALL = '__all__'
+const SELECT = 'h-auto max-w-full min-w-0 sm:max-w-56 text-[13px] font-medium'
 
 interface FilterStripProps {
   activeFilter: TypeFilter
@@ -54,8 +40,7 @@ interface FilterStripProps {
   onSortChange?: (sort: SortType) => void
 }
 
-const ALL = '__all__'
-
+/** The feed's filters: type chips, then sort, year, module and course selects. */
 export function FilterStrip({
   activeFilter,
   onFilterChange,
@@ -86,165 +71,93 @@ export function FilterStrip({
     { limit: 100, ...(selectedDeptId ? { departmentId: selectedDeptId } : {}) },
     { query: { select: (r) => r.data } },
   )
-  const allCourses = coursesData?.items ?? []
-
-  const filteredCourses = allCourses.filter((c) => {
+  const courses = (coursesData?.items ?? []).filter((c) => {
     const deptOk = selectedDeptId ? c.department.id === selectedDeptId : true
     const yearOk = selectedYear === null ? true : c.yearLevel === selectedYear
     return deptOk && yearOk
   })
 
-  const selectedDeptLabel = selectedDept?.name ?? 'All departments'
-
-  const selectedYearLabel = selectedYear === null ? 'All years' : `Year ${selectedYear}`
-
-  const selectedCourseLabel = selectedCourseId
-    ? (() => {
-        const c = allCourses.find((x) => x.id === selectedCourseId)
-        return c ? `${c.code} — ${c.name}` : ''
-      })()
-    : 'All courses'
-
-  const activeFilterCount = [
-    selectedYear !== null,
-    !!selectedCourseId,
-    selectedModuleNumber !== null,
-  ].filter(Boolean).length
-
-  function handleDeptChange(value: string) {
-    const deptId = value === ALL ? '' : value
-    onDeptChange(deptId)
-    onCourseChange('')
-  }
-
-  function handleYearChange(value: string) {
-    const year = value === ALL ? null : Number(value)
-    onYearChange(year)
-    onCourseChange('')
-  }
-
-  function handleCourseChange(value: string) {
-    onCourseChange(value === ALL ? '' : value)
-  }
-
-  function handleModuleChange(value: string) {
-    onModuleChange(value === ALL ? null : Number(value))
-  }
-
-  const dropdownProps: DropdownFiltersProps = {
-    selectedDeptId,
-    selectedYear,
-    selectedCourseId,
-    selectedModuleNumber,
-    departments,
-    filteredCourses,
-    selectedDeptLabel,
-    selectedYearLabel,
-    selectedCourseLabel,
-    onDeptChange: handleDeptChange,
-    onYearChange: handleYearChange,
-    onCourseChange: handleCourseChange,
-    onModuleChange: handleModuleChange,
-    sortType,
-    onSortChange,
-  }
-
   return (
-    <div className="sticky top-17 z-10 border-b border-border bg-card flex flex-col">
-      {/* Mobile: type tabs + Filters sheet button in a single row */}
-      <div className="md:hidden flex items-center">
-        <div className="flex items-center overflow-x-auto flex-1 px-2 scrollbar-none">
-          {typeFilters.map((filter) => (
-            <button
-              key={filter}
-              onClick={() => onFilterChange(filter)}
-              className={cn(
-                'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
-                activeFilter === filter
-                  ? cn('font-bold', typeFilterActiveClass[filter])
-                  : 'border-transparent text-text-muted hover:text-foreground',
-              )}
-            >
-              {typeFilterLabel[filter]}
-            </button>
-          ))}
-        </div>
-        <Drawer>
-          <DrawerTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0 mr-2 relative font-mono text-xs text-text-muted gap-1.5"
-            >
-              <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-          </DrawerTrigger>
-          <DrawerContent className="rounded-t-2xl px-5 pb-10 [padding-bottom:max(2.5rem,env(safe-area-inset-bottom))]">
-            <DrawerHeader className="mb-5">
-              <DrawerTitle className="font-mono text-sm text-left">Filter posts</DrawerTitle>
-            </DrawerHeader>
-            <DropdownFilters {...dropdownProps} />
-          </DrawerContent>
-        </Drawer>
+    <>
+      <div role="group" aria-label="Type" className="flex flex-wrap gap-1.5">
+        {typeFilters.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            aria-pressed={activeFilter === filter.value}
+            onClick={() => onFilterChange(filter.value)}
+            className="rounded-full border-[1.5px] border-line bg-surface px-3 py-[5px] text-[13.5px] font-medium text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.97] aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-background motion-safe:transition-[background-color,color,border-color,transform] motion-safe:duration-150 [@media(hover:hover)_and_(pointer:fine)]:hover:not-aria-pressed:border-muted-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:not-aria-pressed:text-ink"
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
-      {/* Desktop: type tabs + Filters popup button */}
-      <div className="hidden md:flex items-center">
-        <div className="flex items-center overflow-x-auto flex-1 px-4 scrollbar-none">
-          {typeFilters.map((filter) => (
-            <button
-              key={filter}
-              onClick={() => onFilterChange(filter)}
-              className={cn(
-                'font-mono text-xs uppercase tracking-wider px-3 py-3 border-b-2 shrink-0 transition-colors duration-150',
-                activeFilter === filter
-                  ? cn('font-bold', typeFilterActiveClass[filter])
-                  : 'border-transparent text-text-muted hover:text-foreground',
-              )}
-            >
-              {typeFilterLabel[filter]}
-            </button>
-          ))}
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0 mr-4 relative font-mono text-xs text-text-muted gap-1.5"
-            >
-              <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber text-[10px] text-white font-bold flex items-center justify-center leading-none">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-5" align="end">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-mono text-sm font-medium">Filter posts</h3>
-              <PopoverClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-text-muted hover:text-foreground"
-                >
-                  <X className="size-4" strokeWidth={1.5} />
-                </Button>
-              </PopoverClose>
-            </div>
-            <DropdownFilters {...dropdownProps} />
-          </PopoverContent>
-        </Popover>
+      <div className="flex max-w-full flex-wrap gap-2">
+        <Select value={sortType} onValueChange={(value) => onSortChange?.(value as SortType)}>
+          <SelectTrigger size="sm" aria-label="Sort" className={SELECT}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent">Recent</SelectItem>
+            <SelectItem value="trending">Trending</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedYear === null ? ALL : String(selectedYear)}
+          onValueChange={(value) => {
+            onYearChange(value === ALL ? null : Number(value))
+            onCourseChange('')
+          }}
+        >
+          <SelectTrigger size="sm" aria-label="Year" className={SELECT}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All years</SelectItem>
+            {Array.from({ length: 6 }, (_, i) => i + 1).map((year) => (
+              <SelectItem key={year} value={String(year)}>
+                Year {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedModuleNumber === null ? ALL : String(selectedModuleNumber)}
+          onValueChange={(value) => onModuleChange(value === ALL ? null : Number(value))}
+        >
+          <SelectTrigger size="sm" aria-label="Module" className={SELECT}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All modules</SelectItem>
+            {[1, 2, 3].map((module) => (
+              <SelectItem key={module} value={String(module)}>
+                Module {module}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedCourseId || ALL}
+          onValueChange={(value) => onCourseChange(value === ALL ? '' : value)}
+        >
+          <SelectTrigger size="sm" aria-label="Course" className={SELECT}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All courses</SelectItem>
+            {courses.map((course) => (
+              <SelectItem key={course.id} value={course.id}>
+                {course.code} — {course.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-    </div>
+    </>
   )
 }

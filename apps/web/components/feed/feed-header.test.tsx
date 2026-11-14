@@ -1,16 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-const mocks = vi.hoisted(() => ({ auth: { isAuthenticated: true, isGuest: false } }))
-vi.mock('@/contexts/auth-context', () => ({ useAuth: () => mocks.auth }))
-
-const { FeedHeader } = await import('./feed-header')
+import { FeedHeader } from './feed-header'
 
 describe('FeedHeader', () => {
-  beforeEach(() => {
-    mocks.auth = { isAuthenticated: true, isGuest: false }
-  })
   const renderHeader = () =>
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -18,14 +11,14 @@ describe('FeedHeader', () => {
       </QueryClientProvider>,
     )
 
-  it('offers a member the new-post button', () => {
+  it('offers the search box', () => {
     renderHeader()
-    expect(screen.getByRole('link', { name: /New Post/ })).toHaveAttribute('href', '/posts/new')
+    expect(screen.getByPlaceholderText('Search posts or #tags')).toBeInTheDocument()
   })
 
-  it('hides the new-post button from a guest, who browses read-only', () => {
-    mocks.auth = { isAuthenticated: false, isGuest: true }
+  it('has no Feed heading and no new-post button; the shell shares notes', () => {
     renderHeader()
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /New Post/ })).not.toBeInTheDocument()
   })
 })
