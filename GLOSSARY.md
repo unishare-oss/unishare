@@ -18,11 +18,11 @@ A page made for reading (a note, a course, sharing a note): flat, quiet, serif n
 _Avoid_: Reading mode, minimal page
 
 **Playful surface**:
-A place made for practice and return visits (Today, quizzes, rewards): bold buttons, motion and Noto.
+A place made for practice and return visits (Today, quizzes): bold buttons, motion and Noto.
 _Avoid_: Gamified page, fun mode
 
 **Noto**:
-Unishare's mascot, an animated orange note that appears only on playful surfaces.
+Unishare's mascot, an animated orange note. It appears on playful surfaces and on the one playful card a calm page may have (the course page's Up next card); the app logo uses a still drawing of it.
 _Avoid_: Mascot, buddy, character
 
 ## Content
