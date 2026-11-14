@@ -225,7 +225,7 @@ function FeedContent() {
   const loading = isTrendingActive ? trendingLoading : isSearchActive ? searchLoading : isLoading
 
   return (
-    <PageRail rail={<MyCoursesCard onSelectCourse={stripPageFromUrl} />}>
+    <PageRail rail={<MyCoursesCard />}>
       <div className="flex flex-col min-h-screen">
         <FeedHeader
           searchQuery={tagParam !== null ? tagParam : searchQuery}

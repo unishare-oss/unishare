@@ -64,7 +64,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             isChat ? 'h-screen overflow-hidden' : 'min-h-screen',
             // Phones: clear the glass top bar and the bottom tab bar (hidden inside a chat room).
             !isChatRoom &&
-              'pt-[calc(60px+env(safe-area-inset-top))] pb-[calc(96px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0',
+              'pt-[calc(60px+env(safe-area-inset-top))] pb-[calc(96px+env(safe-area-inset-bottom))] md:pt-0',
+            // Desktop: 22px under the last block, the same as the sidebar's bottom padding (`.side { padding-block: 22px }`),
+            // so the last card lines up with the profile card. Chat pages fill the screen, so they keep none.
+            isChat ? 'md:pb-0' : 'md:pb-[22px]',
           )}
           aria-hidden={showLoader}
         >

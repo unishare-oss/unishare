@@ -82,8 +82,19 @@ describe('AppShell navigation layout', () => {
       </AppShell>,
     )
     act(() => vi.advanceTimersByTime(1000))
-    expect(screen.getByRole('main')).toHaveClass('h-screen', 'overflow-hidden')
+    expect(screen.getByRole('main')).toHaveClass('h-screen', 'overflow-hidden', 'md:pb-0')
     expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
+  })
+
+  it('keeps 22px under the last block on desktop pages, level with the sidebar', () => {
+    render(
+      <AppShell>
+        <p>Content</p>
+      </AppShell>,
+    )
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByRole('main')).toHaveClass('md:pb-[22px]')
+    expect(screen.getByRole('main')).not.toHaveClass('md:pb-0')
   })
 
   describe('member without a university', () => {
