@@ -3,7 +3,7 @@ import './telemetry'
 import helmet from 'helmet'
 import { json } from 'express'
 import { NestFactory, Reflector } from '@nestjs/core'
-import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
+import { ConsoleLogger, Logger, RequestMethod, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter'
@@ -17,6 +17,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
     bufferLogs: true,
+    // One JSON object per line in production so Loki can parse it with `| json`.
+    // Local dev keeps Nest's coloured, human-readable output.
+    logger: new ConsoleLogger({ json: process.env.NODE_ENV === 'production' }),
   })
   const reflector = app.get(Reflector)
 
