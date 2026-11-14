@@ -10,11 +10,11 @@ import { ApiError, customFetch } from './fetcher'
  * WITH a status, never that a real response produces one — so the status could silently stop
  * being attached and every caller would quietly fall back to its generic message.
  */
-function jsonResponse(status: number, body: unknown): Response {
+function jsonResponse(status: number, body: unknown, headers = new Headers()): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
-    headers: new Headers(),
+    headers,
     json: async () => body,
   } as unknown as Response
 }
@@ -75,5 +75,33 @@ describe('customFetch', () => {
     // One level, not two: `data` holds the payload itself. Unwrapping twice is the bug that
     // shipped in use-ai-index-status.ts and survived 5/5 mutations there.
     expect(result.data).toEqual({ reply: 'hi' })
+  })
+
+  it('carries the trace id from the error body so users can report an Error ID', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(500, { success: false, message: 'boom', trace_id: 'abc123' })),
+    )
+
+    const error = await customFetch('/api/x').catch((e: unknown) => e)
+
+    expect((error as ApiError).traceId).toBe('abc123')
+  })
+
+  it('falls back to the X-Trace-Id header when the body has no trace id', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          502,
+          { success: false, message: 'bad gateway' },
+          new Headers({ 'X-Trace-Id': 'def456' }),
+        ),
+      ),
+    )
+
+    const error = await customFetch('/api/x').catch((e: unknown) => e)
+
+    expect((error as ApiError).traceId).toBe('def456')
   })
 })
