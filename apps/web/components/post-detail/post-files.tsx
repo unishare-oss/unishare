@@ -38,7 +38,13 @@ import {
 import { PdfViewer } from '@/components/shared/pdf-viewer/pdf-viewer'
 import { Markdown } from '@/components/shared/markdown'
 import { Button } from '@/components/ui/button'
-import { renderWithLinks } from '@/lib/render-with-links'
+
+// Bare URLs become CommonMark autolinks (<url>); links and angle-bracketed URLs are left alone.
+const BARE_URL = /(?<![(<[\]"'`=/\w])https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
+
+export function linkifyBareUrls(text: string) {
+  return text.replace(BARE_URL, (url) => `<${url}>`)
+}
 
 const MAX_TEXT_PREVIEW_BYTES = 200 * 1024 // 200KB
 
@@ -281,28 +287,29 @@ export function PostFiles({ post }: PostFilesProps) {
 
   return (
     <>
-      <section className="py-6">
-        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
-          Description
-        </h2>
-        <p className="text-[15px] leading-[1.7] text-foreground whitespace-pre-wrap">
-          {renderWithLinks(post.description ?? '', 'text-primary')}
-        </p>
-        {post.externalUrl && (
-          <a
-            href={post.externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-3 text-sm text-amber hover:text-amber-hover font-medium"
-          >
-            <Link2 className="size-3.5" strokeWidth={1.5} />
-            External Link
-          </a>
-        )}
-      </section>
+      {(post.description?.trim() || post.externalUrl) && (
+        <section className="max-w-[66ch]">
+          {post.description?.trim() && (
+            <Markdown className="[&_:is(h1,h2,h3)]:mt-2.5 [&_:is(h1,h2,h3)]:font-body [&_:is(h1,h2,h3)]:text-xl [&_:is(h1,h2,h3)]:leading-[1.3] [&_:is(h1,h2,h3)]:font-semibold [&_:is(h1,h2,h3)]:tracking-[-0.01em] [&_:is(h1,h2,h3)]:text-ink [&_li]:text-[1em] [&_li]:leading-[inherit] [&_p]:text-[1em] [&_p]:leading-[inherit]">
+              {linkifyBareUrls(post.description)}
+            </Markdown>
+          )}
+          {post.externalUrl && (
+            <a
+              href={post.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 font-body text-sm font-medium text-sky hover:underline"
+            >
+              <Link2 className="size-3.5" strokeWidth={2} />
+              External Link
+            </a>
+          )}
+        </section>
+      )}
 
       {previewFile && (
-        <section className="py-6 border-t border-border animate-in fade-in slide-in-from-top-4 duration-300">
+        <section className="border-t border-line pt-[18px] font-body text-base leading-normal animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted flex items-center gap-2">
               Previewing:{' '}
@@ -427,70 +434,70 @@ export function PostFiles({ post }: PostFilesProps) {
         </section>
       )}
 
-      <div className="border-t border-border" />
-
-      <section className="py-6">
-        <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
-          Attachments
-        </h2>
-        <div className="flex flex-col gap-2">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
-                previewFile?.id === file.id ? 'border-amber/30 bg-amber/5' : 'border-border'
-              }`}
-            >
-              {fileIcon(file.mimeType)}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-              </div>
-              <span className="font-mono text-xs text-text-muted shrink-0">
-                {formatBytes(file.size)}
-              </span>
-              {(downloadCounts[file.id] ?? 0) > 0 && (
-                <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs text-text-muted shrink-0">
-                  <Download className="size-3" strokeWidth={1.5} />
-                  {downloadCounts[file.id]}
+      {files.length > 0 && (
+        <section className="font-body text-base leading-normal">
+          <h2 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
+            Attachments
+          </h2>
+          <div className="flex flex-col gap-2">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
+                  previewFile?.id === file.id ? 'border-amber/30 bg-amber/5' : 'border-border'
+                }`}
+              >
+                {fileIcon(file.mimeType)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                </div>
+                <span className="font-mono text-xs text-text-muted shrink-0">
+                  {formatBytes(file.size)}
                 </span>
-              )}
-              <div className="flex items-center gap-1">
-                {isPreviewable(file.mimeType) && (
+                {(downloadCounts[file.id] ?? 0) > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1 font-mono text-xs text-text-muted shrink-0">
+                    <Download className="size-3" strokeWidth={1.5} />
+                    {downloadCounts[file.id]}
+                  </span>
+                )}
+                <div className="flex items-center gap-1">
+                  {isPreviewable(file.mimeType) && (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => handlePreview(file)}
+                      className={`shrink-0 ${
+                        previewFile?.id === file.id
+                          ? 'bg-amber text-white hover:bg-amber'
+                          : 'text-text-muted'
+                      }`}
+                      disabled={loadingPreviewId === file.id}
+                      aria-label={`Preview ${file.name}`}
+                    >
+                      {loadingPreviewId === file.id ? (
+                        <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Eye className="size-4" strokeWidth={1.5} />
+                      )}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => handlePreview(file)}
-                    className={`shrink-0 ${
-                      previewFile?.id === file.id
-                        ? 'bg-amber text-white hover:bg-amber'
-                        : 'text-text-muted'
-                    }`}
-                    disabled={loadingPreviewId === file.id}
-                    aria-label={`Preview ${file.name}`}
+                    onClick={() =>
+                      handleDownload(post.id, file.id, file.name, () => incrementCount(file.id))
+                    }
+                    className="shrink-0"
+                    aria-label={`Download ${file.name}`}
                   >
-                    {loadingPreviewId === file.id ? (
-                      <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : (
-                      <Eye className="size-4" strokeWidth={1.5} />
-                    )}
+                    <Download className="size-4 text-text-muted" strokeWidth={1.5} />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() =>
-                    handleDownload(post.id, file.id, file.name, () => incrementCount(file.id))
-                  }
-                  className="shrink-0"
-                  aria-label={`Download ${file.name}`}
-                >
-                  <Download className="size-4 text-text-muted" strokeWidth={1.5} />
-                </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }

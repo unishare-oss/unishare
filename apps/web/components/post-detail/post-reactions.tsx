@@ -9,7 +9,9 @@ import {
 } from '@/src/lib/api/generated/posts/posts'
 import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
-import { REACTIONS } from '@/lib/constants'
+import { SmilePlus } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ACTION_PILL, REACTIONS } from '@/lib/constants'
 import type { ApiPostDetail } from '@/lib/api-types'
 
 const DEBOUNCE_MS = 600
@@ -86,11 +88,19 @@ export function PostReactions({ post }: PostReactionsProps) {
     }, DEBOUNCE_MS)
   }
 
-  const totalReactions = Object.values(activeCounts).reduce((a, b) => a + b, 0) as number
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  function choose(type: string) {
+    handleReact(type)
+    setPickerOpen(false)
+  }
+
+  // HELPFUL is always shown; the other types only while someone has used them.
+  const shown = REACTIONS.filter(({ type }) => type === 'HELPFUL' || (activeCounts[type] ?? 0) > 0)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-4">
-      {REACTIONS.map(({ type, icon: Icon, label, color, activeBg }) => {
+    <>
+      {shown.map(({ type, icon: Icon, label, pressed }) => {
         const count = activeCounts[type] ?? 0
         const isActive = activeReaction === type
 
@@ -98,39 +108,53 @@ export function PostReactions({ post }: PostReactionsProps) {
           <button
             key={type}
             onClick={() => handleReact(type)}
-            title={label}
-            className={cn(
-              'group flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors duration-150 select-none',
-              isActive
-                ? [activeBg, 'reaction-active']
-                : 'border-border hover:border-border/80 hover:bg-muted',
-            )}
+            aria-label={label}
+            aria-pressed={isActive}
+            className={cn(ACTION_PILL, isActive && ['reaction-active', pressed])}
           >
-            <Icon
-              className={cn(
-                'size-3.5',
-                isActive ? color.split(' ')[0] : `text-text-muted ${color.split(' ')[1]}`,
-              )}
-              strokeWidth={isActive ? 2.5 : 1.5}
-            />
-            {count > 0 && (
-              <span
-                className={cn(
-                  'font-mono text-xs tabular-nums',
-                  isActive ? color.split(' ')[0] : 'text-text-muted',
-                )}
-              >
-                {count}
-              </span>
-            )}
+            <Icon className="size-5" strokeWidth={2} fill={isActive ? 'currentColor' : 'none'} />
+            {count > 0 && <span>{count}</span>}
           </button>
         )
       })}
-      {totalReactions > 0 && (
-        <span className="font-mono text-xs text-text-muted ml-1">
-          {totalReactions} {totalReactions === 1 ? 'reaction' : 'reactions'}
-        </span>
-      )}
-    </div>
+      <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Add a reaction"
+            aria-expanded={pickerOpen}
+            className={ACTION_PILL}
+          >
+            <SmilePlus className="size-5" strokeWidth={2} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          sideOffset={2}
+          className="flex w-auto gap-0.5 rounded-full border-line bg-surface p-1.5"
+        >
+          {REACTIONS.map(({ type, icon: Icon, label, pressed }) => {
+            const isActive = activeReaction === type
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => choose(type)}
+                aria-label={label}
+                title={label}
+                aria-pressed={isActive}
+                className={cn(ACTION_PILL, 'p-1.5', isActive && pressed)}
+              >
+                <Icon
+                  className="size-5"
+                  strokeWidth={2}
+                  fill={isActive ? 'currentColor' : 'none'}
+                />
+              </button>
+            )
+          })}
+        </PopoverContent>
+      </Popover>
+    </>
   )
 }
