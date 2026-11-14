@@ -2,6 +2,7 @@ interface ApiResponse<T> {
   success: boolean
   message: string
   data: T
+  trace_id?: string
 }
 
 /**
@@ -10,11 +11,15 @@ interface ApiResponse<T> {
  * previously arrived as an indistinguishable `Error` and were rendered as one opaque string.
  *
  * Extends `Error`, so every existing `catch` that only reads `.message` is unaffected.
+ *
+ * `traceId` is the API's OpenTelemetry trace id. It is shown to users as an "Error ID" so a bug
+ * report can be looked up in Grafana/Tempo.
  */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly traceId?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -35,7 +40,11 @@ export const customFetch = async <T>(url: string, options: RequestInit = {}): Pr
   const json: ApiResponse<unknown> = await response.json()
 
   if (!response.ok) {
-    throw new ApiError(json.message ?? 'An error occurred', response.status)
+    throw new ApiError(
+      json.message ?? 'An error occurred',
+      response.status,
+      json.trace_id ?? response.headers.get('x-trace-id') ?? undefined,
+    )
   }
 
   return {
