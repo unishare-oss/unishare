@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MyCoursesCard } from '@/components/my-courses-card'
-import { useFeedStore } from '@/lib/store'
 
 const mocks = vi.hoisted(() => ({
   user: null as null | {
@@ -24,14 +22,13 @@ describe('MyCoursesCard', () => {
       { id: 'c-1', code: 'CSC213', name: 'Data Structures', yearLevel: 2 },
       { id: 'c-2', code: 'CSC401', name: 'Compilers', yearLevel: 4 },
     ]
-    useFeedStore.setState({ selectedDeptId: null, selectedYear: null, selectedCourseId: '' })
   })
 
   it('lists the courses for the student year with the department and year as subtitle', () => {
     render(<MyCoursesCard />)
     expect(screen.getByRole('heading', { name: 'My courses' })).toBeInTheDocument()
     expect(screen.getByText('Computer Science · Year 2')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /CSC213/ })).toHaveTextContent('Data Structures')
+    expect(screen.getByRole('link', { name: /CSC213/ })).toHaveTextContent('Data Structures')
     expect(screen.queryByText('CSC401')).not.toBeInTheDocument()
   })
 
@@ -43,17 +40,9 @@ describe('MyCoursesCard', () => {
     )
   })
 
-  it('filters the feed to the clicked course without leaving the page', async () => {
-    const onSelect = vi.fn()
-    render(<MyCoursesCard onSelectCourse={onSelect} />)
-    await userEvent.click(screen.getByRole('button', { name: /CSC213/ }))
-    const state = useFeedStore.getState()
-    expect([state.selectedDeptId, state.selectedYear, state.selectedCourseId]).toEqual([
-      'd-1',
-      2,
-      'c-1',
-    ])
-    expect(onSelect).toHaveBeenCalled()
+  it('My courses items link to course pages', () => {
+    render(<MyCoursesCard />)
+    expect(screen.getByRole('link', { name: /CSC213/ })).toHaveAttribute('href', '/courses/c-1')
   })
 
   it.each([

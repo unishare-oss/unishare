@@ -2,11 +2,9 @@
 
 import { use } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useDepartmentsControllerFindOne } from '@/src/lib/api/generated/departments/departments'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import { useFeedStore } from '@/lib/store'
 import { PageHeader } from '@/components/shared/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -28,8 +26,6 @@ function CourseListSkeleton() {
 
 export default function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const router = useRouter()
-  const setPendingFilter = useFeedStore((s) => s.setPendingFilter)
 
   const { data: dept } = useDepartmentsControllerFindOne(id, {
     query: { select: (r) => r.data },
@@ -41,11 +37,6 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
   )
 
   const courses = coursesData?.items ?? []
-
-  function handleCourseClick(courseId: string, yearLevel: number | null) {
-    setPendingFilter(id, courseId, yearLevel)
-    router.push('/')
-  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -65,9 +56,9 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
           ) : (
             <div className="flex flex-col gap-2">
               {courses.map((course) => (
-                <button
+                <Link
                   key={course.id}
-                  onClick={() => handleCourseClick(course.id, course.yearLevel ?? null)}
+                  href={`/courses/${course.id}`}
                   className="flex items-center gap-4 px-5 py-3.5 border border-border rounded-[6px] hover:border-amber/50 transition-colors duration-150 text-left w-full"
                 >
                   <span className="font-mono text-[13px] text-amber font-medium shrink-0">
@@ -76,7 +67,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
                   <span className="text-sm text-foreground flex-1 min-w-0 truncate">
                     {course.name}
                   </span>
-                </button>
+                </Link>
               ))}
               {courses.length === 0 && (
                 <p className="font-mono text-sm text-text-muted py-8 text-center">
