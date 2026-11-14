@@ -1,30 +1,31 @@
 import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
 
 interface PostBreadcrumbProps {
+  courseId: string
   courseCode: string
   courseName: string
   title: string
 }
 
-export function PostBreadcrumb({ courseCode, courseName, title }: PostBreadcrumbProps) {
+const linkClass = 'font-medium text-sky no-underline hover:underline'
+
+export function PostBreadcrumb({ courseId, courseCode, courseName, title }: PostBreadcrumbProps) {
   return (
-    <nav className="flex items-center gap-1.5 mb-6" aria-label="Breadcrumb">
-      <Link
-        href="/"
-        className="font-mono text-xs text-text-muted hover:text-foreground transition-colors duration-150"
-      >
-        Feed
+    <nav
+      className="flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground"
+      aria-label="Breadcrumb"
+    >
+      <Link href="/feed" className={linkClass}>
+        Today
       </Link>
-      <ChevronRight className="size-3 text-text-muted" strokeWidth={1.5} />
-      <Link
-        href={`/feed?q=${encodeURIComponent(courseCode)}`}
-        className="font-mono text-xs text-text-muted hover:text-foreground transition-colors duration-150"
-      >
-        {courseCode} - {courseName}
+      <span aria-hidden="true">/</span>
+      <Link href={`/courses/${courseId}`} className={linkClass}>
+        {courseCode} {courseName}
       </Link>
-      <ChevronRight className="size-3 text-text-muted" strokeWidth={1.5} />
-      <span className="font-mono text-xs text-foreground truncate max-w-[200px]">{title}</span>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page" className="min-w-0 truncate">
+        {title}
+      </span>
     </nav>
   )
 }

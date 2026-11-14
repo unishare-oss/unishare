@@ -26,16 +26,24 @@ import {
 } from '@/src/lib/api/generated/posts/posts'
 import type { ReadingListEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import type { ApiPost } from '@/lib/api-types'
+import { ACTION_PILL } from '@/lib/constants'
 
 interface CollectionPickerProps {
   post: Pick<ApiPost, 'id'> & { savedByCurrentUser?: boolean }
   align?: 'start' | 'end' | 'center'
   className?: string
+  /** Render the trigger as a labelled action pill (post detail) instead of an icon button. */
+  pill?: boolean
 }
 
 type ListsResponse = { data: ReadingListEntity[] }
 
-export function CollectionPicker({ post, align = 'end', className }: CollectionPickerProps) {
+export function CollectionPicker({
+  post,
+  align = 'end',
+  className,
+  pill = false,
+}: CollectionPickerProps) {
   const { isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const toggleSaved = useUIStore((s) => s.toggleSaved)
@@ -173,6 +181,23 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
 
   // Guest: simple toggle bookmark, no popover
   if (!isAuthenticated) {
+    if (pill) {
+      return (
+        <button
+          type="button"
+          className={cn(ACTION_PILL, isGuestSaved && 'text-brand-edge')}
+          aria-pressed={isGuestSaved}
+          onClick={() => toggleSaved(post as ApiPost)}
+        >
+          <Bookmark
+            className="size-5"
+            strokeWidth={2}
+            fill={isGuestSaved ? 'currentColor' : 'none'}
+          />
+          <span className="max-sm:sr-only">{isGuestSaved ? 'Saved' : 'Save'}</span>
+        </button>
+      )
+    }
     return (
       <Button
         variant="ghost"
@@ -196,17 +221,32 @@ export function CollectionPicker({ post, align = 'end', className }: CollectionP
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className={cn('hover:bg-background', className)}
-          aria-label="Save to collection"
-        >
-          <Bookmark
-            className={cn('size-4', showFilled ? 'fill-amber text-amber' : 'text-text-muted')}
-            strokeWidth={1.5}
-          />
-        </Button>
+        {pill ? (
+          <button
+            type="button"
+            className={cn(ACTION_PILL, showFilled && 'text-brand-edge')}
+            aria-pressed={showFilled}
+          >
+            <Bookmark
+              className="size-5"
+              strokeWidth={2}
+              fill={showFilled ? 'currentColor' : 'none'}
+            />
+            <span className="max-sm:sr-only">{showFilled ? 'Saved' : 'Save'}</span>
+          </button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className={cn('hover:bg-background', className)}
+            aria-label="Save to collection"
+          >
+            <Bookmark
+              className={cn('size-4', showFilled ? 'fill-amber text-amber' : 'text-text-muted')}
+              strokeWidth={1.5}
+            />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align={align} className="w-60 p-2" onClick={(e) => e.stopPropagation()}>
         <p className="px-2 pb-2 text-xs font-semibold text-text-muted">Save to</p>

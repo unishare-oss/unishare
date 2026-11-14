@@ -1,15 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
 import { usePostsControllerFindAll } from '@/src/lib/api/generated/posts/posts'
+
+const TYPE_LABELS: Record<string, string> = {
+  NOTE: 'Note',
+  OLD_QUESTION: 'Past exam',
+  EXERCISE: 'Exercise',
+}
 
 interface RelatedPostsProps {
   courseId: string
+  courseCode: string
   currentPostId: string
 }
 
-export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
+export function RelatedPosts({ courseId, courseCode, currentPostId }: RelatedPostsProps) {
   const { data } = usePostsControllerFindAll(
     { courseId, limit: 6 },
     { query: { select: (r) => r.data } },
@@ -20,35 +26,31 @@ export function RelatedPosts({ courseId, currentPostId }: RelatedPostsProps) {
   if (related.length === 0) return null
 
   return (
-    <div className="mt-6 mb-2">
-      <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
-        More from this course
-      </h3>
-      <div className="detail-box flex flex-col border border-border rounded-[6px] overflow-hidden bg-card">
-        {related.map((post, i) => (
-          <Link
-            key={post.id}
-            href={`/posts/${post.id}`}
-            className={`flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors duration-150 ${
-              i < related.length - 1 ? 'border-b border-border' : ''
-            }`}
-          >
-            <span
-              className={`shrink-0 size-1.5 rounded-full ${post.type === 'NOTE' ? 'bg-info' : 'bg-amber'}`}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-foreground line-clamp-1">{post.title}</p>
-              <p className="font-mono text-xs text-text-muted mt-0.5">
-                {post.author?.name ?? 'Anonymous'} ·{' '}
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-              </p>
-            </div>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted shrink-0">
-              {post.type === 'NOTE' ? 'Note' : 'Past Exam'}
-            </span>
-          </Link>
+    <section className="grid gap-2.5 py-1">
+      <h2 className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+        More from {courseCode}
+      </h2>
+      <ul className="m-0 grid list-none gap-2.5 p-0">
+        {related.map((post) => (
+          <li key={post.id}>
+            <Link
+              href={`/posts/${post.id}`}
+              className="group grid gap-0.5 text-sm font-medium leading-[1.35] text-ink no-underline"
+            >
+              <span className="group-hover:underline">{post.title}</span>
+              <small className="text-xs font-normal text-muted-foreground">
+                {[
+                  TYPE_LABELS[post.type] ?? post.type,
+                  post.moduleNumber != null && `Module ${post.moduleNumber}`,
+                  post.author?.name ?? 'A classmate',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </small>
+            </Link>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   )
 }

@@ -6,10 +6,13 @@ import { Flag } from 'lucide-react'
 import { useState } from 'react'
 import { useReportPost } from '@/hooks/useReportPost'
 import { cn } from '@/lib/utils'
+import { ACTION_PILL } from '@/lib/constants'
 
 interface ReportDialogProps {
   postId: string
   onSuccess?: () => void
+  /** Render the trigger as a labelled action pill (post detail) instead of an icon button. */
+  pill?: boolean
 }
 
 type ReportReason = 'SPAM' | 'OFFENSIVE' | 'COPYRIGHT' | 'OTHER'
@@ -21,7 +24,7 @@ const REPORT_REASONS: { value: ReportReason; label: string; description: string 
   { value: 'OTHER', label: 'Other', description: 'Other policy violation' },
 ]
 
-export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
+export function ReportDialog({ postId, onSuccess, pill = false }: ReportDialogProps) {
   const [open, setOpen] = useState(false)
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null)
   const [comment, setComment] = useState('')
@@ -52,15 +55,22 @@ export function ReportDialog({ postId, onSuccess }: ReportDialogProps) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="shrink-0 mt-1 hover:bg-background text-text-muted hover:text-destructive"
-        onClick={() => setOpen(true)}
-        aria-label="Report post"
-      >
-        <Flag className="size-4" strokeWidth={1.5} />
-      </Button>
+      {pill ? (
+        <button type="button" className={ACTION_PILL} onClick={() => setOpen(true)}>
+          <Flag className="size-5" strokeWidth={2} />
+          <span className="max-sm:sr-only">Report</span>
+        </button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 mt-1 hover:bg-background text-text-muted hover:text-destructive"
+          onClick={() => setOpen(true)}
+          aria-label="Report post"
+        >
+          <Flag className="size-4" strokeWidth={1.5} />
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md">
