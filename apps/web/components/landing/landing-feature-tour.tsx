@@ -33,7 +33,7 @@ const FEATURES: Feature[] = [
   {
     id: 'share',
     icon: UploadCloud,
-    tone: 'bg-type-note',
+    tone: 'bg-type-note text-white',
     title: 'Share it once',
     body: 'Upload a note or past paper and it lands sorted by course and year.',
     hint: 'pick a type and upload',
@@ -44,7 +44,7 @@ const FEATURES: Feature[] = [
   {
     id: 'find',
     icon: Search,
-    tone: 'bg-success',
+    tone: 'bg-success text-white',
     title: 'Find it in seconds',
     body: 'Search or filter by year and type — last year’s paper is right there.',
     hint: 'search or flip the filters',
@@ -55,7 +55,7 @@ const FEATURES: Feature[] = [
   {
     id: 'chat',
     icon: MessageCircle,
-    tone: 'bg-info',
+    tone: 'bg-info text-white',
     title: 'Ask your cohort',
     body: 'End-to-end encrypted course chats, right next to the files.',
     hint: 'send a message, someone answers',
@@ -66,7 +66,7 @@ const FEATURES: Feature[] = [
   {
     id: 'boards',
     icon: LayoutDashboard,
-    tone: 'bg-type-exam',
+    tone: 'bg-type-exam text-white',
     title: 'Sketch it out',
     body: 'A shared whiteboard with sticky notes, drawing and live cursors.',
     hint: 'drag the notes, or draw with the pen',
@@ -77,7 +77,7 @@ const FEATURES: Feature[] = [
   {
     id: 'quiz',
     icon: ClipboardCheck,
-    tone: 'bg-type-exercise',
+    tone: 'bg-type-exercise text-white',
     title: 'Test yourself',
     body: 'Practice quizzes generated from your notes. Attempts stay private.',
     hint: 'pick an answer',
@@ -88,7 +88,7 @@ const FEATURES: Feature[] = [
   {
     id: 'decks',
     icon: Presentation,
-    tone: 'bg-amber',
+    tone: 'bg-brand text-on-brand',
     title: 'Revise with a deck',
     body: 'Type a topic, get a slide deck you can edit, download or share.',
     hint: 'type a topic and press Generate',
@@ -139,14 +139,12 @@ export function LandingFeatureTour() {
                 onClick={() => setActive(i)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors duration-150 lg:items-start lg:py-3',
-                  on
-                    ? 'border-border-strong bg-card shadow-[4px_4px_0_0_var(--shadow-color)]'
-                    : 'border-transparent hover:bg-card/60',
+                  on ? 'border-border bg-card' : 'border-transparent hover:bg-card/60',
                 )}
               >
                 <span
                   className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-xl text-white',
+                    'flex size-8 shrink-0 items-center justify-center rounded-xl',
                     on ? f.tone : 'bg-foreground/10 text-text-secondary',
                   )}
                 >
@@ -172,7 +170,7 @@ export function LandingFeatureTour() {
       </ol>
 
       <div>
-        <div className="rounded-[20px] border-2 border-border-strong bg-card p-2 shadow-[6px_6px_0_0_var(--shadow-color)] sm:p-3">
+        <div className="rounded-[20px] border-2 border-border bg-card p-2 shadow-[var(--lift)] sm:p-3">
           <div className="overflow-hidden rounded-xl border border-border bg-background">
             <DemoDirector
               key={feature.id}

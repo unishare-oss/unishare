@@ -13,11 +13,11 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 -z-10 opacity-[0.035]"
         style={{
           backgroundImage:
-            'linear-gradient(var(--border-strong) 1px, transparent 1px), linear-gradient(90deg, var(--border-strong) 1px, transparent 1px)',
+            'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }}
       />
-      <div className="pointer-events-none absolute -top-24 right-0 -z-10 h-[520px] w-[520px] rounded-full bg-amber-subtle blur-[90px] opacity-60" />
+      <div className="pointer-events-none absolute -top-24 right-0 -z-10 h-[520px] w-[520px] rounded-full bg-brand-soft blur-[90px] opacity-60" />
 
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6">
         <div className="grid items-center gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:py-16">
@@ -28,7 +28,7 @@ export function LandingHero() {
                 href="/changelog"
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 font-mono text-[11px] font-bold hover:bg-accent"
               >
-                <span className="size-1.5 rounded-full bg-amber" /> What&apos;s new{' '}
+                <span className="size-1.5 rounded-full bg-brand" /> What&apos;s new{' '}
                 <ArrowRight className="size-3" />
               </Link>
             </div>
@@ -52,8 +52,9 @@ export function LandingHero() {
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button
                 asChild
+                variant="brand"
                 size="lg"
-                className="h-12 rounded-full px-7 text-[15px] font-black shadow-[3px_3px_0_0_var(--shadow-color)]"
+                className="h-12 rounded-full px-7 text-[15px] font-black"
               >
                 <Link href="/login">
                   Get started — free <ArrowRight className="size-4" />
@@ -86,7 +87,7 @@ export function LandingHero() {
 
           <div className="relative lg:pl-4">
             <HeroIllustration />
-            <div className="mx-auto mt-4 flex max-w-[520px] items-center gap-2 rounded-2xl border-2 border-border-strong bg-card p-2 shadow-[4px_4px_0_0_var(--shadow-color)] lg:hidden">
+            <div className="mx-auto mt-4 flex max-w-[520px] items-center gap-2 rounded-2xl border-2 border-border bg-card p-2 lg:hidden">
               <div className="flex flex-1 items-center gap-2 rounded-xl bg-muted px-3 py-2.5">
                 <Search className="size-4 text-text-muted" />
                 <span className="text-sm text-text-muted">Search “trees traversal”...</span>

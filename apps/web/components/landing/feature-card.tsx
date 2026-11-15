@@ -7,9 +7,9 @@ type FeatureCardProps = {
 
 export function FeatureCard({ icon: Icon, title, desc, accent }: FeatureCardProps) {
   return (
-    <div className="card-pop card-pop-hover flex flex-col gap-4 rounded-2xl bg-card p-6">
+    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-[var(--lift)]">
       <div
-        className="flex size-11 items-center justify-center rounded-xl border-2 border-border-strong text-card-foreground shadow-[2px_2px_0_0_var(--shadow-color)]"
+        className="flex size-11 items-center justify-center rounded-xl border-2 border-border text-card-foreground"
         style={{ background: accent }}
       >
         <Icon className="size-5" />
