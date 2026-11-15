@@ -80,12 +80,12 @@ export function UniauthLogin() {
             height={28}
             className="rounded-[6px]"
           />
-          <span className="font-mono text-lg font-bold text-[#F7F3EE]">Unishare</span>
+          <span className="font-mono text-lg font-bold text-on-hero">Unishare</span>
         </div>
         <blockquote className="max-w-xl">
-          <p className="text-4xl xl:text-5xl font-extrabold leading-[1.15] text-[#F7F3EE] tracking-tight text-balance">
+          <p className="text-4xl xl:text-5xl font-extrabold leading-[1.15] text-on-hero tracking-tight text-balance">
             Every lecture note and study guide {'—'}{' '}
-            <span className="hand-underline text-[#fbbf24]">shared</span>{' '}
+            <span className="hand-underline text-brand">shared</span>{' '}
             {'by students who’ve been there.'}
           </p>
         </blockquote>
@@ -110,7 +110,12 @@ export function UniauthLogin() {
             One unicorp account for Unishare and every other unicorp app
           </p>
 
-          <Button onClick={continueWithUniauth} disabled={loading} className="w-full h-10.5">
+          <Button
+            variant="brand"
+            onClick={continueWithUniauth}
+            disabled={loading}
+            className="w-full h-10.5"
+          >
             {loading ? 'Redirecting…' : 'Continue'}
           </Button>
           {message && <p className="text-xs text-destructive mt-3 text-center">{message}</p>}
