@@ -17,7 +17,7 @@ interface ProfileTabsProps {
 export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: ProfileTabsProps) {
   return (
     <>
-      <div className="flex items-center gap-1 border-b border-border mb-0">
+      <div className="flex items-center gap-1 border-b border-border mb-4">
         {tabs.map((tab) => (
           <button
             key={tab}

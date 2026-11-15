@@ -162,7 +162,7 @@ export function ChatMessageBubble({
                   message.imageUrl || message.fileUrl ? 'w-full' : 'w-fit',
                   isMe
                     ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-secondary text-secondary-foreground rounded-bl-sm',
+                    : 'border border-line bg-surface text-foreground rounded-bl-sm',
                 )}
               >
                 {/* Inline reply quote */}
