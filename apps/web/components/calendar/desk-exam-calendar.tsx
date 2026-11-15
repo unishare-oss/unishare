@@ -30,8 +30,8 @@ export function DeskExamCalendar({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="relative rounded-sm bg-card p-4 shadow-[0_18px_34px_-18px_rgba(28,25,23,0.35)] [transform:rotate(-0.3deg)]">
-        <span className="desk-tape bg-amber-subtle" />
+      <div className="relative rounded-sm bg-card p-4 shadow-(--lift) [transform:rotate(-0.3deg)]">
+        <span className="desk-tape bg-brand-soft" />
 
         <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="icon-xs" onClick={() => onMonthChange(subMonths(month, 1))}>
@@ -53,7 +53,7 @@ export function DeskExamCalendar({
           className="grid grid-cols-7 gap-0.5"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(0deg, transparent 0 36px, color-mix(in srgb, var(--amber) 12%, transparent) 36px 37px)',
+              'repeating-linear-gradient(0deg, transparent 0 36px, color-mix(in srgb, var(--brand) 12%, transparent) 36px 37px)',
           }}
         >
           {days.map(({ date, isOutside }) => {
@@ -66,7 +66,7 @@ export function DeskExamCalendar({
                 onClick={() => onSelectDay(date)}
                 className={[
                   'flex flex-col items-center gap-1 rounded py-1 min-h-16 sm:min-h-20 transition-colors',
-                  selected ? 'bg-amber-subtle/60' : 'hover:bg-black/[0.03]',
+                  selected ? 'bg-brand-soft/60' : 'hover:bg-black/[0.03]',
                 ].join(' ')}
               >
                 <span
@@ -114,7 +114,7 @@ export function DeskExamCalendar({
             {selectedDayExams.map((exam) => (
               <div
                 key={exam.id}
-                className="flex items-start gap-4 p-4 rounded-sm bg-card shadow-[0_10px_20px_-12px_rgba(28,25,23,0.4)] transition-transform hover:-translate-y-0.5 group"
+                className="flex items-start gap-4 p-4 rounded-sm bg-card shadow-(--lift) transition-transform hover:-translate-y-0.5 group"
                 style={{ transform: `rotate(${tiltFor(exam.id)}deg)` }}
               >
                 <div className="text-xs text-text-muted shrink-0 w-16 leading-relaxed">

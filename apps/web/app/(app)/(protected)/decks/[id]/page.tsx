@@ -127,7 +127,7 @@ export default function DeckDetailPage({ params }: { params: Promise<{ id: strin
             <>
               {/* The prompt is the only thing a waiting deck can show of itself. */}
               {!rendered && (
-                <div className="card-pop rounded-xl bg-card p-4 flex items-start gap-4">
+                <div className="border-2 border-line rounded-xl bg-card p-4 flex items-start gap-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Presentation
                       className="w-5 h-5 text-primary"

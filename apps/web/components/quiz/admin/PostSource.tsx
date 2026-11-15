@@ -65,7 +65,7 @@ export function PostSource({
             onChange={(e) => setPostSearch(e.target.value)}
             placeholder="Search by title or course code…"
             disabled={disabled}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-muted border border-border rounded-[6px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-amber/50 disabled:opacity-50"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-muted border border-border rounded-[6px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand/50 disabled:opacity-50"
           />
         </div>
 
@@ -83,7 +83,7 @@ export function PostSource({
                 className={cn(
                   'w-full text-left px-4 py-3 text-sm transition-colors',
                   selectedPostId === p.value
-                    ? 'bg-amber/10 text-amber'
+                    ? 'bg-brand-soft text-foreground font-semibold'
                     : 'text-foreground hover:bg-muted',
                 )}
               >
@@ -95,7 +95,7 @@ export function PostSource({
 
         {selectedPostId && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="size-3.5 text-amber" strokeWidth={1.5} />
+            <BookOpen className="size-3.5 text-brand-edge" strokeWidth={1.5} />
             <span className="truncate">
               Selected: <span className="text-foreground">{selectedPostLabel}</span>
             </span>

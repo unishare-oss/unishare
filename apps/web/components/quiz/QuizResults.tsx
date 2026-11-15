@@ -43,9 +43,9 @@ function getGrade(percent: number): GradeConfig {
     return {
       grade: 'C',
       label: 'Good effort',
-      ringClass: 'ring-amber-500/30',
-      textClass: 'text-amber-600 dark:text-amber-400',
-      bgClass: 'bg-amber-500/10',
+      ringClass: 'ring-brand-edge/30',
+      textClass: 'text-foreground',
+      bgClass: 'bg-brand-soft',
     }
   if (percent >= 60)
     return {
