@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './legacy.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -714,4 +713,27 @@ html {
 /* Noto: limbs stay light on the dark hero card in both themes */
 .bg-hero {
   --noto-limb: #e6ebf7;
+}
+
+/* Washi-tape strip pinned to the top edge of a hero card; tint set per card. */
+@utility hero-tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 96px;
+  height: 26px;
+  transform: translateX(-50%) rotate(var(--tape-tilt, -2deg));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 18%, transparent);
+  -webkit-mask: linear-gradient(
+    90deg,
+    transparent 0 3px,
+    #000 3px calc(100% - 3px),
+    transparent calc(100% - 3px)
+  );
+  mask: linear-gradient(
+    90deg,
+    transparent 0 3px,
+    #000 3px calc(100% - 3px),
+    transparent calc(100% - 3px)
+  );
 }

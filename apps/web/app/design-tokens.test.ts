@@ -87,16 +87,12 @@ const DARK: Record<string, string> = {
 }
 
 // Every Tailwind colour name the app had before the redesign. Dropping one silently breaks its
-// utility classes (for example border-border-strong).
+// utility classes
 const LEGACY_COLOR_NAMES = [
   '--color-accent',
   '--color-accent-foreground',
-  '--color-amber',
-  '--color-amber-hover',
-  '--color-amber-subtle',
   '--color-background',
   '--color-border',
-  '--color-border-strong',
   '--color-card',
   '--color-card-foreground',
   '--color-chart-1',
@@ -135,12 +131,13 @@ const LEGACY_COLOR_NAMES = [
   '--color-type-note',
 ]
 
-const WEB_ROOT = process.cwd()
-const css = ['app/globals.css', 'app/legacy.css']
-  .map((file) => readFileSync(join(WEB_ROOT, file), 'utf8'))
-  .join('\n')
+// Old-look aliases removed with legacy.css. unitheme's own themes.css still defines them.
+const RETIRED = ['--amber', '--amber-hover', '--amber-subtle', '--border-strong', '--shadow-color']
 
-// Every block with this selector, so tokens split across globals.css and legacy.css both count.
+const WEB_ROOT = process.cwd()
+const css = readFileSync(join(WEB_ROOT, 'app/globals.css'), 'utf8')
+
+// Every block with this selector.
 function block(selector: string): string {
   let out = ''
   for (let from = 0; ;) {
@@ -163,6 +160,12 @@ const light = declared(block(':root:root'))
 const dark = declared(block(':root:root.dark'))
 
 describe('design tokens', () => {
+  it('retired aliases are gone', () => {
+    for (const name of RETIRED) {
+      expect(css, name).not.toMatch(new RegExp(`${name}\\b`))
+    }
+  })
+
   it('light and dark token values equal the design system', () => {
     for (const [name, value] of Object.entries(LIGHT)) {
       const key = name === '--muted' ? '--muted-foreground' : name
@@ -223,7 +226,9 @@ describe('design tokens', () => {
     )
     const start = unitheme.indexOf(':root, .theme-unishare {')
     expect(start).toBeGreaterThan(-1)
-    const names = [...declared(unitheme.slice(start, unitheme.indexOf('}', start))).keys()]
+    const names = [...declared(unitheme.slice(start, unitheme.indexOf('}', start))).keys()].filter(
+      (name) => !RETIRED.includes(name),
+    )
     expect(names.length).toBeGreaterThan(30)
     for (const name of names) {
       expect(light.has(name), `light ${name}`).toBe(true)

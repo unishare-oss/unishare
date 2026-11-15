@@ -6,12 +6,11 @@ import { QueryProvider } from './query-provider'
 import { AuthProvider } from '@/contexts/auth-context'
 import { CryptoProvider } from '@/contexts/crypto-context'
 import { FontSizeProvider } from '@/components/font-size-provider'
-import { useFeedStyleStore, useUIStore } from '@/lib/store'
+import { useUIStore } from '@/lib/store'
 
 export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     useUIStore.persist.rehydrate()
-    useFeedStyleStore.persist.rehydrate()
   }, [])
 
   return (

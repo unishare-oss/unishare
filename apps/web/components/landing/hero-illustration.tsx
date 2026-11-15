@@ -59,7 +59,7 @@ export function HeroIllustration() {
           >
             {card.body}
             <div
-              className={`desk-tape ${card.tape}`}
+              className={`hero-tape ${card.tape}`}
               style={{ ['--tape-tilt' as string]: card.tilt }}
             />
           </div>

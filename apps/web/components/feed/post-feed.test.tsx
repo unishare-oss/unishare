@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { ApiPost } from '@/lib/api-types'
-import { useFeedStyleStore } from '@/lib/store'
 import { PostFeed } from './post-feed'
 
 vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ isAuthenticated: false }) }))
@@ -23,24 +22,15 @@ const post = {
 } as unknown as ApiPost
 
 describe('PostFeed', () => {
-  it('renders one card design whatever feedStyle is stored', () => {
-    for (const feedStyle of ['arcade', 'desk', 'classic'] as const) {
-      useFeedStyleStore.setState({ feedStyle })
-      const { unmount } = render(
-        <PostFeed posts={[post]} page={1} totalPages={1} onPageChange={() => {}} />,
-      )
-      expect(screen.getByRole('link', { name: 'Hash tables' })).toHaveAttribute(
-        'href',
-        '/posts/p-1',
-      )
-      expect(screen.getByText('Note')).toBeInTheDocument()
-      expect(screen.getByText('hash.pdf')).toBeInTheDocument()
-      expect(screen.getByLabelText('24 likes')).toBeInTheDocument()
-      expect(screen.getByLabelText('6 comments')).toBeInTheDocument()
-      expect(screen.getByLabelText('18 saves')).toBeInTheDocument()
-      expect(screen.getAllByRole('article')).toHaveLength(1)
-      unmount()
-    }
+  it('renders the post card', () => {
+    render(<PostFeed posts={[post]} page={1} totalPages={1} onPageChange={() => {}} />)
+    expect(screen.getByRole('link', { name: 'Hash tables' })).toHaveAttribute('href', '/posts/p-1')
+    expect(screen.getByText('Note')).toBeInTheDocument()
+    expect(screen.getByText('hash.pdf')).toBeInTheDocument()
+    expect(screen.getByLabelText('24 likes')).toBeInTheDocument()
+    expect(screen.getByLabelText('6 comments')).toBeInTheDocument()
+    expect(screen.getByLabelText('18 saves')).toBeInTheDocument()
+    expect(screen.getAllByRole('article')).toHaveLength(1)
   })
 
   it('shows the empty state with no posts', () => {

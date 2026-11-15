@@ -87,7 +87,7 @@ function fileIcon(mimeType: string) {
   if (mimeType.startsWith('video/'))
     return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
-    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+    return <FileSpreadsheet className="size-5 text-brand-edge" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
@@ -444,7 +444,7 @@ export function PostFiles({ post }: PostFilesProps) {
               <div
                 key={file.id}
                 className={`flex items-center gap-3 border rounded-[6px] px-4 py-3 transition-colors duration-200 ${
-                  previewFile?.id === file.id ? 'border-amber/30 bg-amber/5' : 'border-border'
+                  previewFile?.id === file.id ? 'border-brand/30 bg-brand/5' : 'border-border'
                 }`}
               >
                 {fileIcon(file.mimeType)}
@@ -467,9 +467,7 @@ export function PostFiles({ post }: PostFilesProps) {
                       size="icon-xs"
                       onClick={() => handlePreview(file)}
                       className={`shrink-0 ${
-                        previewFile?.id === file.id
-                          ? 'bg-amber text-white hover:bg-amber'
-                          : 'text-text-muted'
+                        previewFile?.id === file.id ? 'bg-brand text-on-brand' : 'text-text-muted'
                       }`}
                       disabled={loadingPreviewId === file.id}
                       aria-label={`Preview ${file.name}`}

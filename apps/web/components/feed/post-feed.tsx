@@ -77,7 +77,7 @@ export function PostFeed({
                 className={cn(
                   'font-mono text-xs',
                   p === page
-                    ? 'text-amber font-medium bg-amber-subtle hover:bg-amber-subtle'
+                    ? 'text-foreground font-semibold bg-brand-soft hover:bg-brand-soft'
                     : 'text-text-muted',
                 )}
               >

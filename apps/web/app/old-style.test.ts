@@ -6,55 +6,6 @@ const WEB = join(__dirname, '..')
 const SCAN_ROOTS = ['app', 'components', 'contexts', 'hooks', 'lib', 'src']
 const EXTENSIONS = ['.ts', '.tsx', '.css']
 
-// Paths owned by slices 10a and 10b, plus the excluded list (slices 5-9 and legacy.css).
-// Hard-coded on purpose: the three 10x slices run in parallel and share no helper.
-const SKIP: readonly string[] = [
-  // 10a
-  'app/page.tsx',
-  'components/landing/',
-  'app/(auth)/',
-  'app/auth/',
-  'components/auth/',
-  // 10b
-  'app/(app)/(protected)/decks/',
-  'app/(app)/d/',
-  'components/decks/',
-  'lib/decks/',
-  'app/(app)/quizzes/',
-  'components/quiz/',
-  'app/(app)/(protected)/calendar/',
-  'components/calendar/',
-  'lib/calendar/',
-  // slice 5
-  'components/app-rail.tsx',
-  'components/mobile-nav.tsx',
-  'components/navigation/',
-  'components/profile/your-stuff.tsx',
-  'components/page-rail.tsx',
-  'hooks/use-unread-notification-count.ts',
-  // slice 6
-  'app/(app)/feed/',
-  'components/feed/',
-  'components/today/',
-  'components/post-card.tsx',
-  // slice 7
-  'app/(app)/posts/[id]/',
-  'components/post-detail/',
-  // slice 8
-  'app/(app)/courses/',
-  'components/course/',
-  'lib/courses/course-page.ts',
-  'hooks/use-all-course-posts.ts',
-  // slice 9
-  'app/(app)/(protected)/posts/new/',
-  'components/posts/share-form.tsx',
-  'components/posts/module-select.tsx',
-  'components/posts/share-preview-card.tsx',
-  'lib/posts/share-defaults.ts',
-  // legacy stylesheet, deleted by slice 11
-  'app/legacy.css',
-]
-
 const OLD_PALETTE_HEX = 'd97706|b45309|f59e0b|fef3c7|f7f3ee|1c1917|e2dad0|16a34a|0369a1'
 const OLD_PALETTE_RGB =
   '(217,\\s*119,\\s*6|180,\\s*83,\\s*9|245,\\s*158,\\s*11|254,\\s*243,\\s*199|247,\\s*243,\\s*238|28,\\s*25,\\s*23)'
@@ -77,7 +28,7 @@ const OLD_STYLE: { id: string; name: string; pattern: RegExp; files?: 'css' | 'c
   {
     id: 'DW4',
     name: 'old palette hex (arbitrary value)',
-    pattern: new RegExp(`\\[#(${OLD_PALETTE_HEX})\\]`, 'i'),
+    pattern: new RegExp(`\\[#(${OLD_PALETTE_HEX})`, 'i'),
     files: 'code',
   },
   {
@@ -97,10 +48,6 @@ function toPosix(p: string) {
   return p.split(sep).join('/')
 }
 
-function isSkipped(rel: string) {
-  return SKIP.some((entry) => (entry.endsWith('/') ? rel.startsWith(entry) : rel === entry))
-}
-
 function walk(dir: string, out: string[]) {
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules' || name === '.next' || name === 'generated') continue
@@ -116,18 +63,18 @@ function walk(dir: string, out: string[]) {
   return out
 }
 
-function scopeFiles(): string[] {
+function sourceFiles(): string[] {
   const files: string[] = []
   for (const root of SCAN_ROOTS) {
     const dir = join(WEB, root)
     if (existsSync(dir)) walk(dir, files)
   }
-  return files.filter((rel) => !isSkipped(rel))
+  return files
 }
 
 function hits(ids: string[]) {
   const found: string[] = []
-  for (const rel of scopeFiles()) {
+  for (const rel of sourceFiles()) {
     const isCss = rel.endsWith('.css')
     const text = readFileSync(join(WEB, rel), 'utf8')
     for (const rule of OLD_STYLE) {
@@ -140,30 +87,28 @@ function hits(ids: string[]) {
   return found
 }
 
-describe('admin and the remaining pages', () => {
-  it('no offset-shadow utilities in admin and the remaining pages', () => {
-    expect(hits(['DW1'])).toEqual([])
-  })
-
-  it('no heavy-border utilities in admin and the remaining pages', () => {
-    expect(hits(['DW2'])).toEqual([])
-  })
-
-  it('no old font families in admin and the remaining pages', () => {
-    expect(hits(['DW3'])).toEqual([])
+describe('old style', () => {
+  it('one whole-app check with no exclusions', () => {
+    expect(hits(['DW1', 'DW2', 'DW3', 'DW4'])).toEqual([])
     const fonts = existsSync(join(WEB, 'fonts')) ? readdirSync(join(WEB, 'fonts')) : []
     expect(fonts.filter((f) => /space[ _-]?grotesk|fira[ _-]?code/i.test(f))).toEqual([])
+    for (const old of ['landing-auth', 'decks-quizzes-calendar', 'rest']) {
+      expect(existsSync(join(WEB, `app/old-style-${old}.test.ts`))).toBe(false)
+    }
   })
 
-  it('no hard-coded old colours in admin and the remaining pages', () => {
-    expect(hits(['DW4'])).toEqual([])
-  })
-
-  it('every SKIP path is real', () => {
-    const missing = SKIP.filter((entry) => {
-      const clean = entry.replace(/\/$/, '')
-      return !existsSync(join(WEB, clean))
-    })
-    expect(missing).toEqual([])
+  it('old theme and look-switcher code is gone', () => {
+    const mentions = sourceFiles().filter((rel) =>
+      /useFeedStyleStore|FeedStyle|data-detail-style/.test(readFileSync(join(WEB, rel), 'utf8')),
+    )
+    expect(mentions).toEqual([])
+    for (const gone of [
+      'app/legacy.css',
+      'components/calendar/arcade-exam-calendar.tsx',
+      'components/calendar/desk-exam-calendar.tsx',
+    ]) {
+      expect(existsSync(join(WEB, gone)), gone).toBe(false)
+    }
+    expect(readFileSync(join(WEB, 'app/globals.css'), 'utf8')).not.toMatch(/legacy\.css/)
   })
 })

@@ -62,7 +62,7 @@ export function CommentEditor({
             size="sm"
             onClick={onSubmit}
             disabled={!value.trim() || isPending}
-            className="bg-amber text-primary-foreground hover:bg-amber-hover"
+            className="bg-brand text-primary-foreground hover:bg-brand-edge"
           >
             {isPending ? pendingLabel : submitLabel}
           </Button>
