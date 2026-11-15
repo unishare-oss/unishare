@@ -263,11 +263,7 @@ export function EditProfileForm({ user, isGuest = false }: EditProfileFormProps)
 
           <div className="flex items-center justify-end gap-3">
             {success && <p className="text-xs text-green-500">Profile saved successfully</p>}
-            <Button
-              type="submit"
-              disabled={saving}
-              className="bg-amber text-primary-foreground hover:bg-amber-hover"
-            >
+            <Button type="submit" disabled={saving} variant="brand">
               {saving ? 'Saving...' : 'Save'}
             </Button>
           </div>

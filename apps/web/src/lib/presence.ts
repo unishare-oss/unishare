@@ -1,6 +1,6 @@
 /**
  * Presence color palette — 10 distinct accessible colors for cursor/avatar assignment.
- * Excludes UniShare amber and neutral grays. All pass WCAG AA 4.5:1 with white text.
+ * Excludes UniShare brand orange and neutral grays. All pass WCAG AA 4.5:1 with white text.
  */
 export const PRESENCE_COLORS = [
   '#E03131', // [0] red

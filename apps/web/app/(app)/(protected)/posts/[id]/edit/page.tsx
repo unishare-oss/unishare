@@ -3,7 +3,6 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -284,11 +283,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
               type="button"
               disabled={!canSubmit || !hasChanges || isSubmitting}
               onClick={() => void handleSubmit()}
-              className={cn(
-                !canSubmit || !hasChanges || isSubmitting
-                  ? 'bg-muted text-text-muted hover:bg-muted'
-                  : 'bg-amber text-primary-foreground hover:bg-amber-hover',
-              )}
+              variant="brand"
             >
               {isSubmitting ? 'Saving...' : 'Save changes'}
             </Button>

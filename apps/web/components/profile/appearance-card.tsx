@@ -71,7 +71,7 @@ export function AppearanceCard() {
             onClick={() => useSettingsStore.getState().decreaseFontSize()}
             className={cn(
               'flex-1 px-4 py-2 rounded-lg border font-semibold transition-all duration-200 text-xs',
-              'border-border text-text-muted hover:border-amber/40 hover:bg-muted',
+              'border-border text-text-muted hover:border-brand-edge/40 hover:bg-muted',
             )}
           >
             a
@@ -80,7 +80,7 @@ export function AppearanceCard() {
             onClick={() => useSettingsStore.getState().increaseFontSize()}
             className={cn(
               'flex-1 px-4 py-2 rounded-lg border font-semibold transition-all duration-200 text-lg',
-              'border-border text-text-muted hover:border-amber/40 hover:bg-muted',
+              'border-border text-text-muted hover:border-brand-edge/40 hover:bg-muted',
             )}
           >
             A

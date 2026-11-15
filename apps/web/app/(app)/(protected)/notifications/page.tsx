@@ -23,7 +23,7 @@ const NOTIFICATION_META: Record<NotificationEntityType, { label: string; color: 
   POST_REJECTED: { label: 'Rejected', color: 'text-red-400' },
   REQUEST_SUGGESTION_ADDED: { label: 'Suggestion', color: 'text-text-muted' },
   REQUEST_FULFILLED: { label: 'Fulfilled', color: 'text-success' },
-  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
+  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-foreground font-semibold' },
   COMMENT_ADDED: { label: 'Comment', color: 'text-text-muted' },
   CHAT_MESSAGE: { label: 'Message', color: 'text-info' },
   EXAM_REMINDER: { label: 'Exam', color: 'text-red-400' },
@@ -137,14 +137,14 @@ export default function NotificationsPage() {
                   className={cn(
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
-                    !n.read && 'bg-amber/[0.04]',
+                    !n.read && 'bg-brand/[0.04]',
                     notificationHref(n) ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <span
                     className={cn(
                       'mt-1.5 shrink-0 size-1.5 rounded-full',
-                      !n.read ? 'bg-amber' : 'bg-transparent',
+                      !n.read ? 'bg-brand' : 'bg-transparent',
                     )}
                   />
                   <div className="flex-1">

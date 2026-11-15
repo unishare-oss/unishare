@@ -32,7 +32,7 @@ export function ChatInputContextBar({
   return (
     <div className="w-full border-t border-border/50 bg-muted/20 animate-in slide-in-from-bottom-1 duration-200">
       <div className="max-w-4xl mx-auto flex items-stretch">
-        {/* Amber accent strip */}
+        {/* Brand accent strip */}
         <div className="w-[3px] bg-primary shrink-0 my-1 rounded-r-full" />
 
         <div className="flex-1 px-4 py-2 flex items-center justify-between gap-3 min-w-0">

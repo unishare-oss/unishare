@@ -143,7 +143,7 @@ function fileIcon(mimeType: string) {
   if (mimeType.startsWith('video/'))
     return <FileVideo className="size-5 text-purple-400" strokeWidth={1.5} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('presentation'))
-    return <FileSpreadsheet className="size-5 text-amber" strokeWidth={1.5} />
+    return <FileSpreadsheet className="size-5 text-brand-edge" strokeWidth={1.5} />
   return <FileText className="size-5 text-info" strokeWidth={1.5} />
 }
 
@@ -223,21 +223,21 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
         className={cn(
           'w-full border-2 border-dashed rounded-[6px] py-10 flex flex-col items-center gap-3 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent',
           isDragging
-            ? 'border-amber bg-amber-subtle scale-[1.01]'
-            : 'border-border hover:border-amber hover:bg-amber-subtle',
+            ? 'border-brand-edge bg-brand-soft scale-[1.01]'
+            : 'border-border hover:border-brand-edge hover:bg-brand-soft',
         )}
       >
         <Upload
           className={cn(
             'size-6 transition-colors duration-150',
-            isDragging ? 'text-amber' : 'text-text-muted',
+            isDragging ? 'text-brand-edge' : 'text-text-muted',
           )}
           strokeWidth={1.5}
         />
         <p
           className={cn(
             'text-sm transition-colors duration-150',
-            isDragging ? 'text-amber' : 'text-text-muted',
+            isDragging ? 'text-foreground' : 'text-text-muted',
           )}
         >
           {isDragging ? 'Release to upload' : 'Drop files here or click to browse'}
@@ -312,7 +312,7 @@ export function FilesStep({ items, onAddFiles, onRemove, disabled }: FilesStepPr
             placeholder="Paste your code here..."
             rows={6}
             disabled={disabled}
-            className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none font-mono"
+            className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand resize-none font-mono"
           />
         </div>
       </div>
