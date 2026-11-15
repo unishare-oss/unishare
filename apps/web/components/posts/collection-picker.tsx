@@ -211,7 +211,7 @@ export function CollectionPicker({
         aria-label={isGuestSaved ? 'Unsave post' : 'Save post'}
       >
         <Bookmark
-          className={cn('size-4', isGuestSaved ? 'fill-amber text-amber' : 'text-text-muted')}
+          className={cn('size-4', isGuestSaved ? 'fill-brand text-brand-edge' : 'text-text-muted')}
           strokeWidth={1.5}
         />
       </Button>
@@ -242,7 +242,10 @@ export function CollectionPicker({
             aria-label="Save to collection"
           >
             <Bookmark
-              className={cn('size-4', showFilled ? 'fill-amber text-amber' : 'text-text-muted')}
+              className={cn(
+                'size-4',
+                showFilled ? 'fill-brand text-brand-edge' : 'text-text-muted',
+              )}
               strokeWidth={1.5}
             />
           </Button>

@@ -30,7 +30,7 @@ export function ChatLayoutShell({ children }: { children: ReactNode }) {
 
       {/* Desktop: room list panel next to the icon rail (previously rendered inside
           the old wide sidebar, which the slim rail replaced). */}
-      <div className="hidden md:flex w-80 shrink-0 flex-col h-full overflow-hidden border-r-2 border-border-strong bg-background">
+      <div className="hidden md:flex w-80 shrink-0 flex-col h-full overflow-hidden border-r-2 border-border bg-background">
         <ChatSidebar selectedRoomId={selectedRoomId} />
       </div>
 

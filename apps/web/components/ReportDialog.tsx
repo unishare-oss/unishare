@@ -87,7 +87,7 @@ export function ReportDialog({ postId, onSuccess, pill = false }: ReportDialogPr
                 className={cn(
                   'w-full text-left px-4 py-3 rounded-lg border transition-colors',
                   selectedReason === r.value
-                    ? 'border-amber bg-amber/5 text-foreground'
+                    ? 'border-brand-edge bg-brand-soft text-foreground'
                     : 'border-border hover:border-border/80 hover:bg-muted text-foreground',
                 )}
               >
@@ -106,7 +106,7 @@ export function ReportDialog({ postId, onSuccess, pill = false }: ReportDialogPr
               onChange={(e) => setComment(e.target.value.slice(0, 500))}
               rows={3}
               placeholder="Add any details that would help our moderators..."
-              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand"
             />
             <p className="text-right text-xs text-text-muted">{comment.length}/500</p>
           </div>

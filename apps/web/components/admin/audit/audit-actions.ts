@@ -25,7 +25,7 @@ export const AUDIT_CATEGORY_FILTERS: { value: AuditCategoryFilter; label: string
   { value: 'auth', label: 'Sign-ins' },
 ]
 
-type Tone = 'destructive' | 'success' | 'amber' | 'muted'
+type Tone = 'destructive' | 'success' | 'emphasis' | 'muted'
 
 interface ActionMeta {
   label: string
@@ -37,9 +37,9 @@ const ACTIONS: Record<string, ActionMeta> = {
   'report.approve': { label: 'Removed reported post', icon: CheckCircle2, tone: 'destructive' },
   'report.reject': { label: 'Dismissed report', icon: XCircle, tone: 'muted' },
   'post.delete': { label: 'Deleted post', icon: FileX, tone: 'destructive' },
-  'post.status_change': { label: 'Changed post status', icon: RefreshCw, tone: 'amber' },
+  'post.status_change': { label: 'Changed post status', icon: RefreshCw, tone: 'emphasis' },
   'comment.delete': { label: 'Deleted comment', icon: MessageSquareX, tone: 'destructive' },
-  'user.set_role': { label: 'Changed role', icon: ShieldCheck, tone: 'amber' },
+  'user.set_role': { label: 'Changed role', icon: ShieldCheck, tone: 'emphasis' },
   'user.ban': { label: 'Banned user', icon: Ban, tone: 'destructive' },
   'user.unban': { label: 'Unbanned user', icon: UserCheck, tone: 'success' },
   'user.delete': { label: 'Deleted account', icon: UserX, tone: 'destructive' },
@@ -55,7 +55,7 @@ const ACTIONS: Record<string, ActionMeta> = {
 export const TONE_CLASS: Record<Tone, string> = {
   destructive: 'text-destructive',
   success: 'text-success',
-  amber: 'text-amber',
+  emphasis: 'text-foreground font-semibold',
   muted: 'text-text-muted',
 }
 

@@ -69,21 +69,23 @@ export function DeptPanel({
                 onClick={() => onSelect(dept.id)}
                 className={cn(
                   'group flex items-center justify-between px-5 py-3 text-left transition-colors duration-150 border-b border-border whitespace-nowrap md:whitespace-normal shrink-0 md:shrink cursor-pointer',
-                  selectedDeptId === dept.id ? 'bg-amber-subtle' : 'hover:bg-muted',
+                  selectedDeptId === dept.id ? 'bg-brand-soft' : 'hover:bg-muted',
                 )}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={cn(
                       'w-1.5 h-1.5 rounded-sm shrink-0 transition-colors duration-150',
-                      selectedDeptId === dept.id ? 'bg-amber' : 'bg-transparent',
+                      selectedDeptId === dept.id ? 'bg-brand' : 'bg-transparent',
                     )}
                   />
                   <div className="flex flex-col min-w-0">
                     <span
                       className={cn(
                         'text-sm truncate',
-                        selectedDeptId === dept.id ? 'font-medium text-amber' : 'text-foreground',
+                        selectedDeptId === dept.id
+                          ? 'font-semibold text-foreground'
+                          : 'text-foreground',
                       )}
                     >
                       {dept.name}

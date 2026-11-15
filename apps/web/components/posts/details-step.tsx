@@ -58,7 +58,9 @@ function validateExternalUrl(value?: string) {
 }
 
 export function DetailsStep({ form, postType }: DetailsStepProps) {
-  const requiredMark = <span className="text-amber text-xl leading-none align-middle">*</span>
+  const requiredMark = (
+    <span className="text-foreground font-semibold text-xl leading-none align-middle">*</span>
+  )
 
   return (
     <Form {...form}>
@@ -81,7 +83,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     {...field}
                     type="text"
                     placeholder="e.g. Complete Lecture Notes Week 1-6"
-                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -102,7 +104,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     {...field}
                     placeholder="Describe what you're sharing..."
                     rows={4}
-                    className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none"
+                    className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand resize-none"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -161,7 +163,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     }
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
+                      <SelectTrigger className="w-full h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-brand">
                         <SelectValue placeholder="Select..." />
                       </SelectTrigger>
                     </FormControl>
@@ -219,7 +221,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                       {...field}
                       type="number"
                       placeholder="e.g. 2024"
-                      className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                      className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -244,7 +246,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     value={field.value ?? ''}
                     type="url"
                     placeholder="https://..."
-                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />

@@ -136,12 +136,21 @@ const LEGACY_COLOR_NAMES = [
 ]
 
 const WEB_ROOT = process.cwd()
-const css = readFileSync(join(WEB_ROOT, 'app/globals.css'), 'utf8')
+const css = ['app/globals.css', 'app/legacy.css']
+  .map((file) => readFileSync(join(WEB_ROOT, file), 'utf8'))
+  .join('\n')
 
+// Every block with this selector, so tokens split across globals.css and legacy.css both count.
 function block(selector: string): string {
-  const start = css.indexOf(`\n${selector} {`)
-  expect(start, `${selector} block`).toBeGreaterThan(-1)
-  return css.slice(start, css.indexOf('\n}', start))
+  let out = ''
+  for (let from = 0; ;) {
+    const start = css.indexOf(`\n${selector} {`, from)
+    if (start < 0) break
+    out += css.slice(start, css.indexOf('\n}', start)) + '\n'
+    from = start + 1
+  }
+  expect(out, `${selector} block`).not.toBe('')
+  return out
 }
 
 function declared(source: string): Map<string, string> {
