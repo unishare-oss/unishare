@@ -21,7 +21,7 @@ describe('Toaster', () => {
   it('toasts use the demo style', async () => {
     render(<Toaster />)
     const props = captured.props!
-    expect(props.position).toBe('bottom-center')
+    expect(props.position).toBe('bottom-right')
     expect(props.mobileOffset).toBe(88)
     expect(props.offset).toBe(24)
     const style = props.style as Record<string, string>

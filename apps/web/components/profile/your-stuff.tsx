@@ -38,7 +38,7 @@ export function YourStuff() {
   const moderation = moderationItems(session?.user.role)
 
   return (
-    <section aria-labelledby="your-stuff" className="grid gap-3">
+    <section aria-labelledby="your-stuff" className="mb-8 grid gap-3">
       <h2 id="your-stuff" className={headingClass}>
         Your stuff
       </h2>
