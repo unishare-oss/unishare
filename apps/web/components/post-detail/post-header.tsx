@@ -9,6 +9,7 @@ import { calcYearLevel, pluralize } from '@/lib/utils'
 import { ACTION_PILL } from '@/lib/constants'
 import { useAcademicYear } from '@/hooks/use-academic-year'
 import { Button } from '@/components/ui/button'
+import { TypeBadge } from '@/components/post-card'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
@@ -28,13 +29,6 @@ const SUPPORTED_MIME_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
-
-// The demo's `.tag` pill: sentence case, tinted by one colour.
-const TYPE_TAGS: Record<string, { label: string; color: string }> = {
-  NOTE: { label: 'Note', color: 'var(--brand-edge)' },
-  OLD_QUESTION: { label: 'Past exam', color: 'var(--sky)' },
-  EXERCISE: { label: 'Exercise', color: 'var(--ok)' },
-}
 
 interface PostHeaderProps {
   post: ApiPostDetail
@@ -126,12 +120,7 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
 
       <header className="grid gap-3.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span
-            style={{ '--c': (TYPE_TAGS[post.type] ?? TYPE_TAGS.NOTE).color } as React.CSSProperties}
-            className="rounded-full bg-[color-mix(in_srgb,var(--c)_14%,transparent)] px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--c)]"
-          >
-            {(TYPE_TAGS[post.type] ?? { label: post.type }).label}
-          </span>
+          <TypeBadge type={post.type} />
           <span className="font-mono text-[13px] text-muted-foreground">
             {[
               post.course.code,

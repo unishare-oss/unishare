@@ -4,6 +4,7 @@ import { useId, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { differenceInCalendarDays } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { sumReactions } from '@/lib/posts/post-type'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -137,7 +138,7 @@ function By({ post }: { post: PostEntity }) {
 }
 
 function Stats({ post }: { post: PostEntity }) {
-  const reactions = Object.values(post.reactionCounts ?? {}).reduce((sum, n) => sum + n, 0)
+  const reactions = sumReactions(post.reactionCounts)
   const days = differenceInCalendarDays(new Date(), new Date(post.createdAt))
   return (
     <span className="flex gap-3 text-[12.5px] text-muted-foreground tabular-nums">

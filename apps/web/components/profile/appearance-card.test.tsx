@@ -29,6 +29,14 @@ describe('AppearanceCard theme choice', () => {
     expect(screen.queryByRole('button', { name: 'Sakura' })).not.toBeInTheDocument()
   })
 
+  it('offers no Classic/Arcade/Desk choice', () => {
+    render(<AppearanceCard />)
+    for (const name of ['Classic', 'Arcade', 'Desk']) {
+      expect(screen.queryByRole('button', { name: new RegExp(name) })).not.toBeInTheDocument()
+    }
+    expect(screen.queryByText('Feed style')).not.toBeInTheDocument()
+  })
+
   it('switches theme', async () => {
     const { rerender } = render(<AppearanceCard />)
     expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
