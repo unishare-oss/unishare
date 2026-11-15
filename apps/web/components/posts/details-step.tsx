@@ -1,7 +1,7 @@
 'use client'
 
 import type { UseFormReturn } from 'react-hook-form'
-import type { CreatePostFormValues } from '@/lib/posts/form-types'
+import type { CreatePostFormValues, PostType } from '@/lib/posts/form-types'
 import {
   Form,
   FormControl,
@@ -23,12 +23,11 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { TagInput } from '@/components/TagInput'
-import type { PostType } from './type-step'
+import { ModuleSelect } from './module-select'
 
 const EMPTY_SELECT_VALUE = '__empty__'
 
 const TITLE_ERROR = 'Title must be at least 3 characters'
-const DESCRIPTION_ERROR = 'Description is required'
 const SEMESTER_ERROR = 'Semester must be between 1 and 3'
 const MODULE_ERROR = 'Module number must be between 1 and 20'
 const EXAM_YEAR_ERROR = 'Exam year must be between 1900 and 2100'
@@ -59,7 +58,9 @@ function validateExternalUrl(value?: string) {
 }
 
 export function DetailsStep({ form, postType }: DetailsStepProps) {
-  const requiredMark = <span className="text-amber text-xl leading-none align-middle">*</span>
+  const requiredMark = (
+    <span className="text-foreground font-semibold text-xl leading-none align-middle">*</span>
+  )
 
   return (
     <Form {...form}>
@@ -82,7 +83,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     {...field}
                     type="text"
                     placeholder="e.g. Complete Lecture Notes Week 1-6"
-                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -93,20 +94,17 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
           <FormField
             control={form.control}
             name="description"
-            rules={{
-              validate: (value) => value.trim().length > 0 || DESCRIPTION_ERROR,
-            }}
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-mono text-[11px] uppercase tracking-wider text-text-muted">
-                  Description {requiredMark}
+                  Description
                 </FormLabel>
                 <FormControl>
                   <Textarea
                     {...field}
                     placeholder="Describe what you're sharing..."
                     rows={4}
-                    className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none"
+                    className="rounded-[6px] border-border bg-card px-3 py-3 text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand resize-none"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -165,7 +163,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     }
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-amber">
+                      <SelectTrigger className="w-full h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-brand">
                         <SelectValue placeholder="Select..." />
                       </SelectTrigger>
                     </FormControl>
@@ -196,12 +194,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                   Module Number {requiredMark}
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    placeholder="e.g. 4"
-                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
-                  />
+                  <ModuleSelect value={field.value} onChange={field.onChange} />
                 </FormControl>
                 <FormMessage className="text-xs" />
               </FormItem>
@@ -228,7 +221,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                       {...field}
                       type="number"
                       placeholder="e.g. 2024"
-                      className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                      className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -253,7 +246,7 @@ export function DetailsStep({ form, postType }: DetailsStepProps) {
                     value={field.value ?? ''}
                     type="url"
                     placeholder="https://..."
-                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber"
+                    className="h-10.5 rounded-[6px] border-border bg-card text-sm text-foreground placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />

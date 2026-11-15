@@ -65,7 +65,7 @@ export default function DecksPage() {
             : undefined
         }
         action={
-          <Button size="sm" asChild>
+          <Button variant="brand" size="sm" asChild>
             <Link href="/decks/new">
               <Plus className="size-4 mr-1.5" strokeWidth={1.5} aria-hidden="true" />
               New deck

@@ -58,7 +58,7 @@ interface RoomCardProps {
 function VisibilityBadge({ visibility }: { visibility: string }) {
   if (visibility === 'OPEN') {
     return (
-      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-subtle text-amber">
+      <span className="self-start inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-brand-soft text-foreground">
         Open
       </span>
     )
@@ -243,7 +243,7 @@ export function RoomCard({
   return (
     <>
       <article
-        className="card-pop card-pop-hover group relative rounded-xl bg-card hover:bg-card-dark flex flex-col cursor-pointer overflow-hidden"
+        className="group relative rounded-xl border border-border bg-card shadow-lift hover:bg-card-dark flex flex-col cursor-pointer overflow-hidden"
         onClick={handleCardClick}
       >
         {/* Canvas preview header */}
@@ -267,7 +267,7 @@ export function RoomCard({
             <rect width="100%" height="100%" fill={`url(#grid-${room.slug})`} />
           </svg>
           {room.visibility === 'OPEN' && (
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-50/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-soft/60 to-transparent" />
           )}
           <div className="absolute inset-0 flex items-center justify-center">
             <svg

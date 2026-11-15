@@ -515,8 +515,8 @@ export function UnifiedChatWindow({ roomId }: UnifiedChatWindowProps) {
 
       {/* Unencrypted banner */}
       {room && !isEncrypted && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">
-          <LockKeyholeOpen className="size-3 shrink-0" />
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-brand-soft border-b border-brand-edge/20 text-foreground text-xs">
+          <LockKeyholeOpen className="size-3 shrink-0 text-brand-edge" />
           <span>Messages in this chat are not end-to-end encrypted.</span>
         </div>
       )}

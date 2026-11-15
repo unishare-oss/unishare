@@ -89,7 +89,7 @@ export function Markdown({ children, className }: MarkdownProps) {
             )
           },
           blockquote: ({ children }) => (
-            <blockquote className="border-l-2 border-amber pl-3 my-3 text-sm text-text-muted italic">
+            <blockquote className="border-l-2 border-brand-edge pl-3 my-3 text-sm text-text-muted italic">
               {children}
             </blockquote>
           ),
@@ -99,7 +99,7 @@ export function Markdown({ children, className }: MarkdownProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber hover:text-amber-hover underline underline-offset-2"
+              className="text-foreground font-semibold underline underline-offset-2"
             >
               {children}
             </a>

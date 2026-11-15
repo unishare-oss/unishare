@@ -18,7 +18,7 @@ export function DeckStatusNote({ state, className }: { state: DeckWaitState; cla
       className={cn(
         'flex items-start gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed',
         warning
-          ? 'border-amber/40 bg-amber-subtle text-foreground'
+          ? 'border-brand-edge/40 bg-brand-soft text-foreground'
           : 'border-border bg-muted text-text-muted',
         className,
       )}
@@ -27,7 +27,7 @@ export function DeckStatusNote({ state, className }: { state: DeckWaitState; cla
         className={cn(
           'size-3.5 shrink-0 mt-0.5',
           state.spin && 'animate-spin motion-reduce:animate-none',
-          warning && 'text-amber',
+          warning && 'text-brand-edge',
         )}
         strokeWidth={1.5}
         aria-hidden="true"

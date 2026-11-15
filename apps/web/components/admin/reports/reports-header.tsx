@@ -29,13 +29,13 @@ export function ReportsHeader({ pendingCount, activeFilter, onFilterChange }: Re
             className={cn(
               'font-mono text-xs uppercase tracking-wider px-3 py-1.5 rounded-[6px] transition-colors duration-150 flex items-center gap-2',
               activeFilter === filter
-                ? 'bg-amber-subtle text-amber font-medium'
+                ? 'bg-brand-soft text-foreground font-medium'
                 : 'text-text-muted hover:text-foreground hover:bg-muted',
             )}
           >
             {filter}
             {filter === 'PENDING' && pendingCount > 0 && (
-              <span className="bg-amber text-primary-foreground text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-[4px]">
+              <span className="bg-brand text-primary-foreground text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-[4px]">
                 {pendingCount}
               </span>
             )}

@@ -9,8 +9,6 @@ import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { SearchSelect } from '@/components/ui/search-select'
 import { ClassicExamCalendar } from '@/components/calendar/classic-exam-calendar'
-import { ArcadeExamCalendar } from '@/components/calendar/arcade-exam-calendar'
-import { DeskExamCalendar } from '@/components/calendar/desk-exam-calendar'
 import {
   AddExamModal,
   EMPTY_EXAM_FORM,
@@ -18,7 +16,6 @@ import {
   type ExamFormState,
 } from '@/components/calendar/add-exam-modal'
 import { useAuth } from '@/contexts/auth-context'
-import { useFeedStyleStore } from '@/lib/store'
 import { useMyDepartments } from '@/hooks/use-my-departments'
 import {
   useExamsControllerFindAll,
@@ -64,7 +61,6 @@ function statusLine(exams: ExamEntity[]): string {
 export default function CalendarPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const feedStyle = useFeedStyleStore((s) => s.feedStyle)
   const canManage = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
 
   const [month, setMonth] = useState(new Date())
@@ -190,11 +186,7 @@ export default function CalendarPage() {
         title="Exam Calendar"
         action={
           canManage && (
-            <Button
-              onClick={openCreateModal}
-              size="sm"
-              className="bg-amber text-primary-foreground hover:bg-amber-hover"
-            >
+            <Button onClick={openCreateModal} size="sm" variant="brand">
               <Plus className="size-3.5" strokeWidth={1.5} />
               Add Exam
             </Button>
@@ -219,27 +211,17 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {(() => {
-            const ExamCalendarView =
-              feedStyle === 'arcade'
-                ? ArcadeExamCalendar
-                : feedStyle === 'desk'
-                  ? DeskExamCalendar
-                  : ClassicExamCalendar
-            return (
-              <ExamCalendarView
-                month={month}
-                onMonthChange={setMonth}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                examsByDay={examsByDay}
-                selectedDayExams={selectedDayExams}
-                canManage={canManage}
-                onEdit={openEditModal}
-                onDelete={(examId) => removeExam({ id: examId })}
-              />
-            )
-          })()}
+          <ClassicExamCalendar
+            month={month}
+            onMonthChange={setMonth}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            examsByDay={examsByDay}
+            selectedDayExams={selectedDayExams}
+            canManage={canManage}
+            onEdit={openEditModal}
+            onDelete={(examId) => removeExam({ id: examId })}
+          />
         </div>
       </div>
 

@@ -23,7 +23,9 @@ export default function PrivacyPage() {
           ← Back
         </Link>
 
-        <h1 className="text-2xl font-semibold text-foreground mt-8 mb-2">Privacy Policy</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground mt-8 mb-2">
+          Privacy Policy
+        </h1>
         <p className="font-mono text-xs text-text-muted mb-10">Last updated: March 2026</p>
 
         <div className="flex flex-col gap-8 text-sm text-foreground leading-relaxed">

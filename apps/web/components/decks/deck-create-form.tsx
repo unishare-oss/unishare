@@ -175,7 +175,12 @@ export function DeckCreateForm() {
         <DeckOptions disabled={isPending} />
 
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
-          <Button type="submit" size="sm" disabled={isPending || !form.formState.isValid}>
+          <Button
+            type="submit"
+            variant="brand"
+            size="sm"
+            disabled={isPending || !form.formState.isValid}
+          >
             {isPending ? (
               <Loader2 className="size-4 mr-2 animate-spin" strokeWidth={1.5} />
             ) : (

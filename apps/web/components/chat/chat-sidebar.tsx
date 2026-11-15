@@ -192,7 +192,7 @@ export function ChatSidebar({ selectedRoomId }: ChatSidebarProps) {
   return (
     <Card className="flex flex-col h-full border-none gap-0 rounded-none bg-background py-2 shadow-none">
       <ScrollArea className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]>div]:block! [&>[data-radix-scroll-area-viewport]>div]:w-full!">
-        <div className="flex flex-col pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-4">
+        <div className="flex flex-col pb-4">
           {/* Active Conversations */}
           {roomsWithMessages.length > 0 && (
             <div className="px-4 py-2 mt-2">

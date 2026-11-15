@@ -299,7 +299,7 @@ export function DemoDirector({
           className={cn(
             'size-1.5 rounded-full',
             mode === 'auto' && 'animate-pulse bg-success motion-reduce:animate-none',
-            mode === 'paused' && 'bg-amber',
+            mode === 'paused' && 'bg-brand',
             mode === 'live' && 'bg-info',
           )}
         />

@@ -11,15 +11,33 @@ import '@unishare-oss/unitheme/themes.css'
 import '@unishare-oss/unitheme/picker.css'
 import 'prismjs/themes/prism-tomorrow.css'
 
-const spaceGrotesk = localFont({
-  src: '../fonts/SpaceGrotesk.ttf',
-  variable: '--font-space-grotesk',
-  weight: '300 700',
+// Latin subsets of the Google Fonts files (OFL, licences next to them). globals.css builds the
+// --font-display, --font-body, --font-read and --font-mono stacks from these variables.
+// Baloo 2 and Literata are not preloaded: no page uses them yet.
+const baloo = localFont({
+  src: '../fonts/Baloo2.woff2',
+  variable: '--font-baloo',
+  weight: '400 800',
+  preload: false,
 })
-const firaCode = localFont({
-  src: '../fonts/FiraCode.ttf',
-  variable: '--font-fira-code',
-  weight: '300 700',
+const lexend = localFont({
+  src: '../fonts/Lexend.woff2',
+  variable: '--font-lexend',
+  weight: '100 900',
+})
+const literata = localFont({
+  src: '../fonts/Literata.woff2',
+  variable: '--font-literata',
+  weight: '200 900',
+  preload: false,
+})
+// Both Plex Mono weights are registered so font-bold mono text is not faux-bolded.
+const plexMono = localFont({
+  src: [
+    { path: '../fonts/IBMPlexMono-Medium.woff2', weight: '500', style: 'normal' },
+    { path: '../fonts/IBMPlexMono-Bold.woff2', weight: '700', style: 'normal' },
+  ],
+  variable: '--font-plex-mono',
 })
 
 export const metadata: Metadata = {
@@ -66,7 +84,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F7F3EE',
+  themeColor: '#f5f6fb',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -98,7 +116,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${theme}${isDarkTheme(theme) ? ' dark' : ''}`}>
-      <body className={`${spaceGrotesk.variable} ${firaCode.variable} font-sans antialiased`}>
+      <body
+        className={`${baloo.variable} ${lexend.variable} ${literata.variable} ${plexMono.variable} font-sans antialiased`}
+      >
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

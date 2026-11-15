@@ -79,18 +79,23 @@ export function FileSource({ file, onFileChange, disabled }: FileSourceProps) {
           className={cn(
             'w-full border-2 border-dashed rounded-[6px] py-10 flex flex-col items-center gap-3 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed',
             isDragging
-              ? 'border-amber bg-amber/5 scale-[1.01]'
-              : 'border-border hover:border-amber hover:bg-amber/5',
+              ? 'border-brand-edge bg-brand-soft scale-[1.01]'
+              : 'border-border hover:border-brand-edge hover:bg-brand-soft',
           )}
         >
           <Upload
             className={cn(
               'size-6 transition-colors',
-              isDragging ? 'text-amber' : 'text-muted-foreground',
+              isDragging ? 'text-brand-edge' : 'text-muted-foreground',
             )}
             strokeWidth={1.5}
           />
-          <p className={cn('text-sm', isDragging ? 'text-amber' : 'text-muted-foreground')}>
+          <p
+            className={cn(
+              'text-sm',
+              isDragging ? 'text-foreground font-semibold' : 'text-muted-foreground',
+            )}
+          >
             {isDragging ? 'Release to upload' : 'Drop file here or click to browse'}
           </p>
         </button>

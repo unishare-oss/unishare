@@ -12,7 +12,7 @@ export function LandingFeatures() {
   return (
     <section id="features" className="mx-auto max-w-[1200px] px-4 py-14 sm:px-6 sm:py-16">
       <div className="mx-auto max-w-2xl text-center">
-        <p className="font-mono text-xs font-bold uppercase tracking-widest text-amber">
+        <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
           Why UniShare
         </p>
         <h2 className="mt-2 text-balance text-3xl font-black tracking-tight sm:text-4xl">
@@ -29,7 +29,7 @@ export function LandingFeatures() {
           icon={Layers}
           title="Organized by course & year"
           desc="Every post is tied to a department, course and module. Filter to exactly your year — no more hunting in Drive folders."
-          accent="var(--amber)"
+          accent="var(--brand)"
         />
         <FeatureCard
           icon={UploadCloud}
@@ -59,7 +59,7 @@ export function LandingFeatures() {
           icon={Bookmark}
           title="Saves, reactions & trending"
           desc="Bookmark for later, react to help others surface the best, and follow the weekly trending board."
-          accent="var(--amber)"
+          accent="var(--brand)"
         />
       </div>
     </section>

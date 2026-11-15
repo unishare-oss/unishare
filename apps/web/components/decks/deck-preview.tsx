@@ -16,7 +16,7 @@ const URL_STALE_MS = 30 * 60 * 1000
  */
 export function DeckPreviewUnavailable() {
   return (
-    <div className="card-pop rounded-xl bg-card flex min-h-64 flex-col items-center justify-center gap-2 p-6 text-center">
+    <div className="border-2 border-line rounded-xl bg-card flex min-h-64 flex-col items-center justify-center gap-2 p-6 text-center">
       <FileWarning className="size-6 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
       <p className="text-sm text-text-muted text-balance">
         No preview was rendered for this deck. The PowerPoint download still works.
@@ -55,7 +55,7 @@ export function DeckPreview({ deckId, version }: { deckId: string; version: stri
       <div
         role="status"
         aria-live="polite"
-        className="card-pop rounded-xl bg-card relative min-h-64 overflow-hidden"
+        className="border-2 border-line rounded-xl bg-card relative min-h-64 overflow-hidden"
       >
         <Skeleton className="absolute inset-0 rounded-none" />
         <div className="relative flex min-h-64 items-center justify-center gap-2 text-xs text-text-muted">
@@ -71,7 +71,7 @@ export function DeckPreview({ deckId, version }: { deckId: string; version: stri
   }
 
   return (
-    <div className="card-pop rounded-xl bg-card overflow-hidden">
+    <div className="border-2 border-line rounded-xl bg-card overflow-hidden">
       <object
         data={data.url}
         type="application/pdf"
