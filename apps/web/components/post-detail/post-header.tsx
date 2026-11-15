@@ -104,8 +104,8 @@ export function PostHeader({ post, isOwner, onDelete, isDeleting = false }: Post
       )}
 
       {post.status === 'PENDING' && (
-        <div className="mb-4 bg-amber-subtle border border-amber/50 px-4 py-3 rounded-[6px]">
-          <p className="text-sm text-amber font-medium">
+        <div className="mb-4 bg-brand-soft border border-brand/50 px-4 py-3 rounded-[6px]">
+          <p className="text-sm text-foreground font-medium">
             This post is pending review and is only visible to you.
           </p>
         </div>

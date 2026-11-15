@@ -95,7 +95,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           courseName={post.course.name}
           title={post.title ?? ''}
         />
-        <article className="grid min-w-0 gap-[18px]" aria-label={post.title ?? undefined}>
+        <article
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[18px]"
+          aria-label={post.title ?? undefined}
+        >
           <PostHeader
             post={post}
             isOwner={post.isOwner}
@@ -104,7 +107,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           />
           <div
             data-note-paper
-            className="grid min-w-0 gap-[18px] rounded-[var(--r)] border border-line bg-surface p-[clamp(20px,4.2vw,48px)] font-read text-[17.5px] leading-[1.72] text-ink max-[560px]:text-[17px]"
+            className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[18px] rounded-[var(--r)] border border-line bg-surface p-[clamp(20px,4.2vw,48px)] font-read text-[17.5px] leading-[1.72] text-ink max-[560px]:text-[17px]"
           >
             <PostSummary post={post} />
             <PostFiles post={post} />

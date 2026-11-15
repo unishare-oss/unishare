@@ -82,8 +82,8 @@ function getCommentLayerStyle(depth: number): CommentLayerStyle {
 
   const palette = [
     {
-      accentClassName: 'bg-amber',
-      badgeClassName: 'text-amber',
+      accentClassName: 'bg-brand',
+      badgeClassName: 'text-brand',
     },
     {
       accentClassName: 'bg-info',
@@ -192,7 +192,7 @@ export function CommentThreadItem({
                 {isOriginalPosterComment && (
                   <Badge
                     variant="outline"
-                    className="h-5 rounded-full border-amber/30 bg-amber-subtle/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber"
+                    className="h-5 rounded-full border-brand/30 bg-brand-soft/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-brand-edge"
                   >
                     OP
                   </Badge>
