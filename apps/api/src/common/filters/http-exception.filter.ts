@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common'
 import { Request, Response } from 'express'
+import { trace } from '@opentelemetry/api'
 
 type ExceptionResponseBody =
   | string
@@ -58,6 +59,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error,
       path: request.path,
       timestamp: new Date().toISOString(),
+      trace_id: trace.getActiveSpan()?.spanContext().traceId,
     })
   }
 

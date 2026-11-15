@@ -10,6 +10,7 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggerMiddleware } from './common/middleware'
+import { JsonConsoleLogger } from './common/logger/json-console-logger'
 import { HttpMetricsMiddleware } from './metrics/http-metrics.middleware'
 
 async function bootstrap() {
@@ -17,6 +18,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
     bufferLogs: true,
+    // One JSON object per line in production so Loki can parse it with `| json`.
+    // Local dev keeps Nest's coloured, human-readable output.
+    logger: new JsonConsoleLogger({ json: process.env.NODE_ENV === 'production' }),
   })
   const reflector = app.get(Reflector)
 
