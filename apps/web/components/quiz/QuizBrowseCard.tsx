@@ -19,7 +19,7 @@ export function QuizBrowseCard({ quiz }: { quiz: QuizListItem }) {
   return (
     <Link
       href={`/quizzes/${quiz.id}`}
-      className="card-pop card-pop-hover flex items-start gap-4 p-4 rounded-xl bg-card group hover:bg-accent"
+      className="border-2 border-line flex items-start gap-4 p-4 rounded-xl bg-card group hover:bg-accent"
     >
       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
         <HelpCircle className="w-5 h-5 text-primary" />

@@ -50,7 +50,7 @@ export function SharedDeckPreview({ token }: { token: string }) {
       <div
         role="status"
         aria-live="polite"
-        className="card-pop relative min-h-64 overflow-hidden rounded-xl bg-card"
+        className="border-2 border-line relative min-h-64 overflow-hidden rounded-xl bg-card"
       >
         <Skeleton className="absolute inset-0 rounded-none" />
         <div className="relative flex min-h-64 items-center justify-center gap-2 text-xs text-text-muted">
@@ -66,7 +66,7 @@ export function SharedDeckPreview({ token }: { token: string }) {
   }
 
   return (
-    <div className="card-pop overflow-hidden rounded-xl bg-card">
+    <div className="border-2 border-line overflow-hidden rounded-xl bg-card">
       <object
         data={url}
         type="application/pdf"

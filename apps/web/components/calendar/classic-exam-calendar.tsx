@@ -63,18 +63,18 @@ export function ClassicExamCalendar({
                 onClick={() => onSelectDay(date)}
                 className={[
                   'flex flex-col items-center gap-1 rounded-md py-1.5 h-20 sm:h-24 transition-colors',
-                  selected ? 'bg-amber-subtle' : 'hover:bg-muted',
+                  selected ? 'bg-brand-soft' : 'hover:bg-muted',
                 ].join(' ')}
               >
                 <span
                   className={[
                     'flex size-6 items-center justify-center rounded-full text-xs font-medium',
                     selected
-                      ? 'bg-amber text-primary-foreground'
+                      ? 'bg-brand text-on-brand'
                       : isOutside
                         ? 'text-text-muted/50'
                         : 'text-foreground',
-                    isToday(date) && !selected ? 'ring-1 ring-amber ring-offset-1' : '',
+                    isToday(date) && !selected ? 'ring-1 ring-brand ring-offset-1' : '',
                   ].join(' ')}
                 >
                   {format(date, 'd')}
@@ -86,7 +86,7 @@ export function ClassicExamCalendar({
                         key={code}
                         className={[
                           'rounded-sm px-1 font-mono text-[9px] font-semibold',
-                          selected ? 'bg-card text-amber' : 'bg-amber-subtle text-amber',
+                          selected ? 'bg-card text-foreground' : 'bg-brand-soft text-foreground',
                         ].join(' ')}
                       >
                         {code}
@@ -105,7 +105,7 @@ export function ClassicExamCalendar({
         </div>
       </div>
 
-      <div className="border-t-2 border-amber pt-4">
+      <div className="border-t-2 border-brand-edge pt-4">
         <h3 className="font-mono text-[11px] uppercase tracking-wider text-text-muted mb-3">
           {selectedDay ? format(selectedDay, 'EEEE, MMMM d') : 'Select a day'}
         </h3>
@@ -117,7 +117,7 @@ export function ClassicExamCalendar({
             {selectedDayExams.map((exam) => (
               <div
                 key={exam.id}
-                className="flex items-start gap-4 py-4 pl-4 border-l-4 border-amber group"
+                className="flex items-start gap-4 py-4 pl-4 border-l-2 border-brand-edge group"
               >
                 <div className="font-mono text-xs text-text-muted shrink-0 w-16 leading-relaxed">
                   {format(new Date(exam.startsAt), 'p')}
@@ -129,7 +129,7 @@ export function ClassicExamCalendar({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono text-[11px] text-amber font-medium truncate">
+                  <p className="font-mono text-[11px] text-foreground font-semibold truncate">
                     {exam.course.code} — {exam.course.name}
                   </p>
                   <p className="text-base text-foreground font-semibold">{exam.title}</p>

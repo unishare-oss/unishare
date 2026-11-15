@@ -190,11 +190,7 @@ export default function CalendarPage() {
         title="Exam Calendar"
         action={
           canManage && (
-            <Button
-              onClick={openCreateModal}
-              size="sm"
-              className="bg-amber text-primary-foreground hover:bg-amber-hover"
-            >
+            <Button onClick={openCreateModal} size="sm" variant="brand">
               <Plus className="size-3.5" strokeWidth={1.5} />
               Add Exam
             </Button>

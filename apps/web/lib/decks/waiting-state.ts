@@ -43,7 +43,7 @@ export interface DeckWaitState {
   icon: LucideIcon
   /** Spin the icon only when it stands for work in flight, never for a clock or a queue. */
   spin: boolean
-  /** `warning` renders amber: something went wrong, even though recovery is automatic. */
+  /** `warning` renders in the warning tone: something went wrong, even though recovery is automatic. */
   tone: 'progress' | 'warning'
   /**
    * The bar under the message, when there is one.

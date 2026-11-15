@@ -11,7 +11,7 @@ import type { DeckFormValues } from '@/components/decks/deck-form-schema'
 
 function TemplateSkeleton() {
   return (
-    <div className="card-pop rounded-xl bg-card p-3 space-y-2" aria-hidden="true">
+    <div className="border-2 border-line rounded-xl bg-card p-3 space-y-2" aria-hidden="true">
       <Skeleton className="h-4 w-2/3" />
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-4/5" />
@@ -100,7 +100,7 @@ export function TemplatePicker({ disabled }: { disabled?: boolean }) {
                       disabled={disabled}
                       onClick={() => field.onChange(template.id)}
                       className={cn(
-                        'card-pop card-pop-hover relative rounded-xl p-3 text-left disabled:opacity-50 disabled:pointer-events-none',
+                        'border-2 border-line relative rounded-xl p-3 text-left disabled:opacity-50 disabled:pointer-events-none',
                         selected ? 'bg-accent' : 'bg-card hover:bg-accent',
                       )}
                     >

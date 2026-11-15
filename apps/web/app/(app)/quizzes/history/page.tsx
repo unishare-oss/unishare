@@ -54,7 +54,7 @@ function gradeFromPercent(pct: number) {
   if (pct >= 70)
     return {
       grade: 'C',
-      className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+      className: 'bg-brand-soft text-foreground border-brand-edge/20',
     }
   if (pct >= 60)
     return {
@@ -86,7 +86,7 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <Card className="card-pop">
+    <Card className="border-2 border-line">
       <CardContent className="pt-6 pb-5 text-center space-y-2">
         <div className="flex justify-center text-primary">{icon}</div>
         <p className="text-2xl font-bold">{value}</p>
@@ -172,7 +172,7 @@ export default function QuizHistoryPage() {
       </div>
 
       {/* Session list */}
-      <Card className="card-pop">
+      <Card className="border-2 border-line">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Attempts</CardTitle>
         </CardHeader>
