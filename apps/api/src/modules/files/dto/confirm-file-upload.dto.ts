@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsInt, IsString, MaxLength, Min } from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 
 export class ConfirmFileUploadDto {
   @ApiProperty({ maxLength: 500 })
@@ -21,4 +21,9 @@ export class ConfirmFileUploadDto {
   @IsString()
   @MaxLength(255)
   mimeType: string
+
+  @ApiPropertyOptional({ description: 'Claim an owner-bound web upload created before Share' })
+  @IsOptional()
+  @IsBoolean()
+  preShare?: boolean
 }

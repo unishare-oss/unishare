@@ -21,6 +21,9 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
+import { PendingUploadsRepository } from './pending-uploads.repository'
+import type { UploadPurpose } from './dto/presigned-upload.dto'
+import { PENDING_UPLOAD_TTL_MS } from './pending-uploads.types'
 
 type UploadType = 'document' | 'image' | 'video' | 'encrypted-blob'
 
@@ -122,7 +125,46 @@ export class StorageService implements OnModuleInit {
   private publicUrl: string
   private readonly partEtagCache = new Map<string, Map<number, string>>()
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly pendingUploads: PendingUploadsRepository,
+  ) {}
+
+  async registerForPurpose(ownerId: string, purpose: UploadPurpose, key: string, mimeType: string) {
+    if (purpose !== 'post-attachment') return
+    if (!key.startsWith(`posts/${ownerId}/`)) throw new BadRequestException('Invalid file key')
+    return this.pendingUploads.register(
+      ownerId,
+      key,
+      mimeType,
+      new Date(Date.now() + PENDING_UPLOAD_TTL_MS),
+    )
+  }
+
+  async generatePresignedUploadForPurpose(
+    ownerId: string,
+    purpose: UploadPurpose,
+    folder: string,
+    mimeType: string,
+    uploadType: UploadType,
+    options: { checksumSha256?: string } = {},
+  ) {
+    const upload = await this.generatePresignedUploadUrl(folder, mimeType, uploadType, options)
+    await this.registerForPurpose(ownerId, purpose, upload.key, mimeType)
+    return upload
+  }
+
+  async createMultipartUploadForPurpose(
+    ownerId: string,
+    purpose: UploadPurpose,
+    folder: string,
+    mimeType: string,
+    uploadType: UploadType,
+  ) {
+    const upload = await this.createMultipartUpload(folder, mimeType, uploadType)
+    await this.registerForPurpose(ownerId, purpose, upload.key, mimeType)
+    return upload
+  }
 
   onModuleInit() {
     // Two endpoints, two clients.

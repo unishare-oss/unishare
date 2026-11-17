@@ -607,7 +607,7 @@ describe('McpRepository', () => {
       expect(postsService.create).not.toHaveBeenCalled()
     })
 
-    it('attaches a presigned-uploaded file by key without touching uploadBuffer', async () => {
+    it('still attaches an MCP presigned upload without using the web Share claim', async () => {
       prisma.user.findUnique.mockResolvedValue(member)
       postsService.create.mockResolvedValue({
         id: 'post-1',
@@ -666,6 +666,8 @@ describe('McpRepository', () => {
           url: 'http://localhost:3000/storage/posts/user-1/file-1.pdf',
         },
       ])
+      expect(filesService.confirmUpload).toHaveBeenCalledTimes(1)
+      expect(filesService.confirmUpload.mock.calls[0][1]).not.toHaveProperty('preShare')
     })
 
     it('collects a failed file instead of aborting the whole post', async () => {

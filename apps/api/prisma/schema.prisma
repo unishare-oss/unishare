@@ -254,6 +254,18 @@ model File {
   @@map("file")
 }
 
+model PendingUpload {
+  key               String    @id
+  ownerId           String
+  mimeType          String
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime
+  cleanupReservedAt DateTime?
+
+  @@index([expiresAt])
+  @@map("pending_upload")
+}
+
 model PostChunk {
   id         String                      @id @default(cuid())
   postId     String

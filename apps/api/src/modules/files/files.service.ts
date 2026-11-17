@@ -13,6 +13,7 @@ import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
 import { FilesRepository } from './files.repository'
 import { ConfirmFileUploadDto } from './dto/confirm-file-upload.dto'
+import { PendingUploadsService } from '@/modules/storage/pending-uploads.service'
 
 @Injectable()
 export class FilesService {
@@ -24,6 +25,7 @@ export class FilesService {
     private readonly postsService: PostsService,
     private readonly aiSummaryService: AiSummaryService,
     private readonly ingestionService: IngestionService,
+    private readonly pendingUploads: PendingUploadsService,
   ) {}
 
   async confirmUpload(
@@ -42,7 +44,20 @@ export class FilesService {
     const exists = await this.storageService.fileExists(dto.key)
     if (!exists) throw new BadRequestException('File has not been uploaded yet')
 
-    const file = await this.filesRepository.create(postId, dto)
+    const { preShare, ...fileDto } = dto
+    const pendingRecord = await this.pendingUploads.getClaimableUpload(
+      userId,
+      fileDto,
+      Boolean(preShare),
+    )
+    let file
+    if (pendingRecord) {
+      const claim = await this.filesRepository.createWithPendingClaim(postId, fileDto, userId)
+      if (!claim.claimed) throw new BadRequestException('Uploaded file is no longer available')
+      file = claim.file
+    } else {
+      file = await this.filesRepository.create(postId, fileDto)
+    }
 
     // Ingest first, THEN summarise — not both at once.
     //

@@ -52,9 +52,16 @@ export class StorageController {
       userId: session.user.id,
       roomSlug: dto.roomSlug,
     })
-    return this.storageService.generatePresignedUploadUrl(folder, dto.mimeType, dto.uploadType, {
-      checksumSha256: dto.checksumSha256,
-    })
+    return this.storageService.generatePresignedUploadForPurpose(
+      session.user.id,
+      dto.purpose,
+      folder,
+      dto.mimeType,
+      dto.uploadType,
+      {
+        checksumSha256: dto.checksumSha256,
+      },
+    )
   }
 
   @GuestReadOnly()
@@ -63,7 +70,13 @@ export class StorageController {
   @ApiOkResponse({ type: MultipartUploadEntity })
   createMultipartUpload(@Body() dto: CreateMultipartUploadDto, @Session() session: UserSession) {
     const folder = getFolderForPurpose(dto.purpose, { userId: session.user.id })
-    return this.storageService.createMultipartUpload(folder, dto.mimeType, dto.uploadType)
+    return this.storageService.createMultipartUploadForPurpose(
+      session.user.id,
+      dto.purpose,
+      folder,
+      dto.mimeType,
+      dto.uploadType,
+    )
   }
 
   @GuestReadOnly()
