@@ -12,12 +12,18 @@ export function ShareCourseField({
   yearLevel,
   value,
   loading,
+  suggestions = [],
+  matching = false,
+  suggestionsUnavailable = false,
   onSelect,
 }: {
   courses: Course[]
   yearLevel?: number | null
   value: string
   loading: boolean
+  suggestions?: Course[]
+  matching?: boolean
+  suggestionsUnavailable?: boolean
   onSelect: (courseId: string) => void
 }) {
   const [searching, setSearching] = useState(false)
@@ -44,6 +50,34 @@ export function ShareCourseField({
 
   return (
     <>
+      {(suggestions.length > 0 || matching || suggestionsUnavailable) && (
+        <div className="grid gap-2" aria-label="Course suggestions">
+          <p className="m-0 text-[13px] font-medium text-muted-foreground">Suggested courses</p>
+          {suggestions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((course) => (
+                <Chip
+                  key={course.id}
+                  ariaLabel={`Suggested course ${course.code} ${course.name}`}
+                  pressed={value === course.id}
+                  onClick={() => onSelect(course.id)}
+                >
+                  {course.code}{' '}
+                  <small className="text-xs font-normal opacity-75">{course.name}</small>
+                </Chip>
+              ))}
+            </div>
+          ) : matching ? (
+            <p role="status" className="m-0 text-[13px] text-muted-foreground">
+              Checking your files…
+            </p>
+          ) : (
+            <p role="status" className="m-0 text-[13px] text-muted-foreground">
+              Suggestions aren&apos;t available. You can choose a course below.
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {chips.map((c) => (
           <Chip key={c.id} pressed={value === c.id} onClick={() => onSelect(c.id)}>

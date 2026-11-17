@@ -18,12 +18,18 @@ const MULTIPART_THRESHOLD = 10 * 1024 * 1024 // 10MB — use multipart above thi
 const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB per part (S3 minimum)
 const MAX_PARALLEL_CHUNKS = 3
 
+export const COURSE_MATCH_SUPPORTED_MIME_TYPES: readonly string[] = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+] as const
+
 function getFileExtension(name: string): string {
   const parts = name.toLowerCase().split('.')
   return parts.length > 1 ? (parts.at(-1) ?? '') : ''
 }
 
-function getUploadMimeType(file: File): string {
+export function getUploadMimeType(file: File): string {
   const ext = getFileExtension(file.name)
 
   if (ext === 'json') return 'application/json'

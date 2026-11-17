@@ -9,6 +9,7 @@ export function Chip({
   expanded,
   locked,
   title,
+  ariaLabel,
   onClick,
   onFocus,
   onPointerDown,
@@ -18,6 +19,7 @@ export function Chip({
   expanded?: boolean
   locked?: boolean
   title?: string
+  ariaLabel?: string
   onClick: () => void
   onFocus?: () => void
   onPointerDown?: () => void
@@ -30,6 +32,7 @@ export function Chip({
       aria-expanded={expanded}
       aria-disabled={locked || undefined}
       title={title}
+      aria-label={ariaLabel}
       onClick={onClick}
       onFocus={onFocus}
       onPointerDown={onPointerDown}

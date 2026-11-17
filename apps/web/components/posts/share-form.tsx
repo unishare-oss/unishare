@@ -33,12 +33,19 @@ import {
   deriveSemester,
   guessFromFileName,
 } from '@/lib/posts/share-defaults'
-import { uploadPostFile } from '@/lib/posts/upload-post-file'
-import { useUploadStore } from '@/lib/store'
+import {
+  COURSE_MATCH_SUPPORTED_MIME_TYPES,
+  getUploadMimeType,
+  uploadPostFile,
+} from '@/lib/posts/upload-post-file'
 import { cn } from '@/lib/utils'
 import { usePostsControllerCreate } from '@/src/lib/api/generated/posts/posts'
 import { filesControllerConfirmUpload } from '@/src/lib/api/generated/files/files'
-import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
+import {
+  useCoursesControllerFindAll,
+  useCoursesControllerSuggest,
+} from '@/src/lib/api/generated/courses/courses'
+import type { CourseSuggestionEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 const shareSchema = z.object({
   // Old exams are locked for now, so the form can never send them.
@@ -73,7 +80,6 @@ const MISSING_LABELS: Partial<Record<keyof ShareValues, string>> = {
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024
-const BG_THRESHOLD = 10 * 1024 * 1024
 const FROM_FILE = 'from the file name'
 
 const defaultValues: ShareValues = {
@@ -93,6 +99,11 @@ const defaultValues: ShareValues = {
 }
 
 const labelClass = 'flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-sm font-semibold'
+const MAX_MATCH_FILES = 5
+
+function isCourseMatchSupportedFile(file: File) {
+  return COURSE_MATCH_SUPPORTED_MIME_TYPES.includes(getUploadMimeType(file))
+}
 
 function Hint({ text }: { text?: string }) {
   if (!text) return null
@@ -117,7 +128,6 @@ export function ShareForm({
 }) {
   const router = useRouter()
   const { user: me } = useAuth()
-  const enqueueUploads = useUploadStore((s) => s.enqueue)
   const { mutateAsync: createPost } = usePostsControllerCreate()
   const form = useForm<ShareValues, unknown, z.output<typeof shareSchema>>({
     resolver: zodResolver(shareSchema),
@@ -133,6 +143,13 @@ export function ShareForm({
   const [editSemester, setEditSemester] = useState(false)
   const [showLockedNote, setShowLockedNote] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [attachmentSetVersion, setAttachmentSetVersion] = useState(0)
+  const [courseSuggestions, setCourseSuggestions] = useState<CourseSuggestionEntity[]>([])
+  const [suggestionStatus, setSuggestionStatus] = useState<'idle' | 'matching' | 'unavailable'>(
+    'idle',
+  )
+  const uploadPromises = useRef(new Map<File, ReturnType<typeof uploadPostFile>>())
+  const matchVersion = useRef(0)
   // Fields the student, or an earlier guess, already filled. A later file never overwrites them.
   const touched = useRef(new Set<Guessable>())
   // The file the guess ran on, so it can run again once the courses arrive.
@@ -142,8 +159,64 @@ export function ShareForm({
     { departmentId: me?.department?.id, limit: 100 },
     { query: { enabled: !!me?.department?.id, select: (r) => r.data } },
   )
+  const { mutateAsync: suggestCourses } = useCoursesControllerSuggest()
   const courses = useMemo(() => coursesData?.items ?? [], [coursesData])
   const course = courses.find((c) => c.id === values.selectedCourse)
+  const supportedFileCount = values.files.filter(isCourseMatchSupportedFile).length
+
+  const uploadFile = useCallback((file: File) => {
+    const existing = uploadPromises.current.get(file)
+    if (existing) return existing
+    const upload = uploadPostFile(file)
+    uploadPromises.current.set(file, upload)
+    void upload.catch(() => {
+      if (uploadPromises.current.get(file) === upload) uploadPromises.current.delete(file)
+    })
+    return upload
+  }, [])
+
+  useEffect(() => {
+    const version = ++matchVersion.current
+    let active = true
+    const files = form.getValues('files')
+    const departmentId = me?.department?.id
+    const supported = files.filter(isCourseMatchSupportedFile)
+    const matchingFiles = supported.slice(0, MAX_MATCH_FILES)
+    setCourseSuggestions([])
+    if (!departmentId || matchingFiles.length === 0) {
+      setSuggestionStatus('idle')
+      return () => {
+        active = false
+      }
+    }
+
+    setSuggestionStatus('matching')
+    void Promise.all(matchingFiles.map(uploadFile))
+      .then((uploaded) => {
+        if (!active || version !== matchVersion.current) return null
+        const references = uploaded.map((upload) => ({
+          key: upload.key,
+          mimeType: upload.mimeType,
+        }))
+        return suggestCourses({ data: { departmentId, files: references } })
+      })
+      .then((response) => {
+        if (!active || version !== matchVersion.current || !response) return
+        const body = response.data
+        setCourseSuggestions(body.available ? body.suggestions : [])
+        setSuggestionStatus(body.available ? 'idle' : 'unavailable')
+      })
+      .catch(() => {
+        if (active && version === matchVersion.current) {
+          setCourseSuggestions([])
+          setSuggestionStatus('unavailable')
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [attachmentSetVersion, form, me?.department?.id, uploadFile, suggestCourses])
 
   const markFilled = useCallback((field: Guessable, hint: string) => {
     touched.current.add(field)
@@ -195,6 +268,7 @@ export function ShareForm({
     if (ok.length === 0) return
     const current = form.getValues('files')
     form.setValue('files', [...current, ...ok], { shouldDirty: true })
+    setAttachmentSetVersion((version) => version + 1)
     if (current.length === 0) {
       guessedFile.current = ok[0]!
       applyGuess(ok[0]!)
@@ -255,6 +329,7 @@ export function ShareForm({
   async function onSubmit(data: z.output<typeof shareSchema>) {
     if (submitting) return
     setSubmitting(true)
+    const uploads = await Promise.allSettled(data.files.map(uploadFile))
     const post = await createPost({
       data: {
         type: data.postType,
@@ -277,17 +352,14 @@ export function ShareForm({
       return
     }
 
-    // The post exists now, so a failed upload must not offer a retry that would duplicate it.
-    const small = data.files.filter((f) => f.size <= BG_THRESHOLD)
-    const large = data.files.filter((f) => f.size > BG_THRESHOLD)
-    const results = await Promise.allSettled(
-      small.map(async (file) => {
-        const uploaded = await uploadPostFile(file)
-        await filesControllerConfirmUpload(post.id, uploaded)
-      }),
+    const confirmations = await Promise.allSettled(
+      uploads.map((result) =>
+        result.status === 'fulfilled'
+          ? filesControllerConfirmUpload(post.id, { ...result.value, preShare: true })
+          : Promise.reject(result.reason),
+      ),
     )
-    if (large.length > 0) enqueueUploads(post.id, large)
-    const failed = results.filter((r) => r.status === 'rejected').length
+    const failed = confirmations.filter((r) => r.status === 'rejected').length
     if (failed > 0) {
       toast.warning(
         `Shared. ${failed} ${failed === 1 ? 'file' : 'files'} didn't upload. Add them from Edit.`,
@@ -322,14 +394,23 @@ export function ShareForm({
         files={values.files}
         dragging={dragging}
         onAdd={addFiles}
-        onRemove={(index) =>
+        onRemove={(index) => {
+          const removed = values.files[index]
+          if (removed) uploadPromises.current.delete(removed)
           form.setValue(
             'files',
             values.files.filter((_, i) => i !== index),
             { shouldDirty: true },
           )
-        }
+          setAttachmentSetVersion((version) => version + 1)
+        }}
       />
+      {supportedFileCount > MAX_MATCH_FILES && (
+        <p className="-mt-4 text-[13px] text-muted-foreground">
+          Suggestions use the first {MAX_MATCH_FILES} supported files. All attached files will still
+          be shared.
+        </p>
+      )}
 
       {firstFile && (
         <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-[22px]">
@@ -384,6 +465,9 @@ export function ShareForm({
               yearLevel={me?.yearLevel}
               value={values.selectedCourse}
               loading={coursesLoading}
+              suggestions={courseSuggestions}
+              matching={suggestionStatus === 'matching'}
+              suggestionsUnavailable={suggestionStatus === 'unavailable'}
               onSelect={(id) => setText('selectedCourse', id)}
             />
             {course && values.year && (
