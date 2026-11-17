@@ -34,6 +34,8 @@ import { EmbeddingService } from '../ai/embedding/embedding.service'
 import { AuditService } from '../audit/audit.service'
 import { AuditAction } from '../audit/audit.actions'
 
+type PostSummaryOptions = { summary: string; summarizedAt: Date }
+
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name)
@@ -64,6 +66,7 @@ export class PostsService {
     userId: string,
     departmentId: string | null | undefined,
     scope: UniversityScope,
+    summaryOptions?: PostSummaryOptions,
   ) {
     if (!departmentId) {
       throw new BadRequestException('Please set your department before creating a post')
@@ -82,7 +85,7 @@ export class PostsService {
 
     const shortCode = nanoid(8)
     const post = await this.postsRepository.create(
-      { shortCode, authorId: userId, ...postData },
+      { shortCode, authorId: userId, ...postData, ...(summaryOptions ?? {}) },
       { id: userId },
     )
 
@@ -107,6 +110,10 @@ export class PostsService {
     }
 
     return created ?? post
+  }
+
+  clearSummary(postId: string) {
+    return this.postsRepository.clearSummary(postId)
   }
 
   async findAll(

@@ -6,7 +6,14 @@ const NONE: UniversityScope = { kind: 'none' }
 const IN_U1 = { course: { department: { faculty: { universityId: 'u1' } } } }
 
 describe('PostsRepository university scope', () => {
-  let prisma: { post: { findUnique: jest.Mock; findMany: jest.Mock; count: jest.Mock } }
+  let prisma: {
+    post: {
+      findUnique: jest.Mock
+      findMany: jest.Mock
+      count: jest.Mock
+      update: jest.Mock
+    }
+  }
   let repository: PostsRepository
 
   beforeEach(() => {
@@ -15,12 +22,22 @@ describe('PostsRepository university scope', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
+        update: jest.fn().mockResolvedValue({ id: 'p1' }),
       },
     }
     repository = new PostsRepository(prisma as any)
   })
 
   const whereOf = (mock: jest.Mock) => mock.mock.calls[0][0].where
+
+  it('clears the summary and summarizedAt for a post', async () => {
+    await repository.clearSummary('p1')
+
+    expect(prisma.post.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { summary: null, summarizedAt: null },
+    })
+  })
 
   it('findInScope adds the scope to the id lookup', async () => {
     await expect(repository.findInScope('p1', U1)).resolves.toBeNull()

@@ -71,6 +71,7 @@ describe('PostsService', () => {
       findSaved: jest.fn(),
       findByIds: jest.fn().mockResolvedValue([]),
       savePost: jest.fn(),
+      clearSummary: jest.fn().mockResolvedValue(undefined),
       toggleReaction: jest.fn(),
       recordView: jest.fn().mockResolvedValue(undefined),
       update: jest.fn(),
@@ -526,6 +527,49 @@ describe('PostsService', () => {
       expect(aiSummaryMock.summarizePost).toHaveBeenCalledWith('p2')
     })
 
+    it('skips the summary LLM after approval when a summary already exists', async () => {
+      const summaryPrisma = {
+        post: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'p2',
+            summary: 'Client supplied summary',
+            files: [{ key: 'k.pdf', mimeType: PDF }],
+            tags: [],
+          }),
+          update: jest.fn(),
+        },
+        postChunk: { findMany: jest.fn() },
+        file: { count: jest.fn() },
+      }
+      const llm = { enabled: true, chat: jest.fn() }
+      const summaryService = new AiSummaryService(
+        summaryPrisma as never,
+        {} as never,
+        llm as never,
+        {} as never,
+        { enabled: true } as never,
+        {} as never,
+      )
+      const summarizePost = jest.fn(summaryService.summarizePost.bind(summaryService))
+      aiSummaryMock.summarizePost = summarizePost
+      repoMock.findInScope.mockResolvedValue({
+        id: 'p2',
+        authorId: 'author-1',
+        title: 'T',
+        status: PostStatus.PENDING,
+        summary: 'Client supplied summary',
+        author: { name: 'A' },
+      })
+
+      await service.updateStatus('p2', approve, ALL, { id: 'mod-1', role: UserRole.MODERATOR })
+      await new Promise((resolve) => setImmediate(resolve))
+
+      expect(summarizePost).toHaveBeenCalledWith('p2')
+      expect(summaryPrisma.post.findUnique).toHaveBeenCalled()
+      expect(llm.chat).not.toHaveBeenCalled()
+      expect(summaryPrisma.post.update).not.toHaveBeenCalled()
+    })
+
     it.each([
       ['tagPost', (s: PostsService) => s.tagPost('p2', ['x'], 'mod-1', UserRole.MODERATOR, U1)],
       ['untagPost', (s: PostsService) => s.untagPost('p2', 't1', 'mod-1', UserRole.MODERATOR, U1)],
@@ -538,6 +582,27 @@ describe('PostsService', () => {
   })
 
   describe('create in scope', () => {
+    it('passes summary metadata through the post creation path', async () => {
+      const summarizedAt = new Date('2026-11-17T00:00:00.000Z')
+      repoMock.findCourseDepartmentInScope = jest
+        .fn()
+        .mockResolvedValue({ id: 'c1', departmentId: 'd1' })
+      repoMock.create = jest.fn().mockResolvedValue({ id: 'p2' })
+
+      await service.create(
+        { courseId: 'c1', title: 'T', type: PostType.NOTE } as never,
+        'u1',
+        'd1',
+        U1,
+        { summary: 'Client summary', summarizedAt },
+      )
+
+      expect(repoMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ summary: 'Client summary', summarizedAt }),
+        { id: 'u1' },
+      )
+    })
+
     it("gives 404 for another university's course, before the department check", async () => {
       repoMock.findCourseDepartmentInScope = jest.fn().mockResolvedValue(null)
       repoMock.create = jest.fn()
@@ -558,5 +623,11 @@ describe('PostsService', () => {
       ).rejects.toThrow(ForbiddenException)
       expect(repoMock.create).not.toHaveBeenCalled()
     })
+  })
+
+  it('clears a post summary through PostsRepository', async () => {
+    await expect(service.clearSummary('p1')).resolves.toBeUndefined()
+
+    expect(repoMock.clearSummary).toHaveBeenCalledWith('p1')
   })
 })

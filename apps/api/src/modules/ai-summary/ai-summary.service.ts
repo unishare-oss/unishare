@@ -743,12 +743,14 @@ export class AiSummaryService {
         where: { id: postId },
         select: {
           id: true,
+          summary: true,
           files: { select: { key: true, mimeType: true } },
           tags: { select: { tagId: true } },
         },
       })
 
       if (!post) return
+      if (post.summary) return
 
       const texts = await this.summarySourceTexts(postId, post.files)
       const allWindows = groupIntoWindows(texts, SUMMARY_WINDOW_CHARS)

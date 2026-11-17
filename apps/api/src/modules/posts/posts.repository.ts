@@ -115,6 +115,13 @@ function mapPost<T>(
 export class PostsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  clearSummary(postId: string) {
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: { summary: null, summarizedAt: null },
+    })
+  }
+
   async create(
     data: {
       shortCode: string
@@ -129,6 +136,8 @@ export class PostsRepository {
       moduleNumber?: number
       year?: number
       semester?: number
+      summary?: string
+      summarizedAt?: Date
     },
     viewer?: ViewerContext,
   ) {

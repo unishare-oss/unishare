@@ -38,6 +38,7 @@ describe('FilesService', () => {
     postsServiceMock = {
       findOne: jest.fn().mockResolvedValue({ id: 'p1', isOwner: true, status: 'PENDING' }),
       assertPostInScope: jest.fn().mockResolvedValue(undefined),
+      clearSummary: jest.fn().mockResolvedValue(undefined),
     }
     aiSummaryServiceMock = {
       summarizePost: jest.fn(),
@@ -163,6 +164,44 @@ describe('FilesService', () => {
         ingestDone!()
         await settle()
 
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('clears an approved post summary before ingestion and triggers a fresh summary', async () => {
+        const order: string[] = []
+        postsServiceMock.findOne.mockResolvedValue({
+          id: 'p1',
+          isOwner: true,
+          status: 'APPROVED',
+          summary: 'Old summary',
+        })
+        postsServiceMock.clearSummary.mockImplementation(async () => {
+          order.push('clear summary')
+        })
+        ingestionServiceMock.ingestFile.mockImplementation(async () => {
+          order.push('ingest file')
+        })
+
+        await service.confirmUpload('p1', dto as any, 'u1', ALL)
+        await settle()
+
+        expect(postsServiceMock.clearSummary).toHaveBeenCalledWith('p1')
+        expect(order).toEqual(['clear summary', 'ingest file'])
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('keeps a client summary when MCP uploads the files attached at creation', async () => {
+        postsServiceMock.findOne.mockResolvedValue({
+          id: 'p1',
+          isOwner: true,
+          status: 'APPROVED',
+          summary: 'Client summary',
+        })
+
+        await service.confirmUpload('p1', dto as any, 'u1', ALL, { keepSummary: true })
+        await settle()
+
+        expect(postsServiceMock.clearSummary).not.toHaveBeenCalled()
         expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
       })
 

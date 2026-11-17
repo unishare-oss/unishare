@@ -33,6 +33,7 @@ export class FilesService {
     dto: ConfirmFileUploadDto,
     userId: string,
     scope: UniversityScope,
+    options: { keepSummary?: boolean } = {},
   ) {
     const post = await this.postsService.findOne(postId, scope, { id: userId })
     if (!post.isOwner) throw new ForbiddenException('You do not own this post')
@@ -57,6 +58,10 @@ export class FilesService {
       file = claim.file
     } else {
       file = await this.filesRepository.create(postId, fileDto)
+    }
+
+    if (post.summary && !options.keepSummary) {
+      await this.postsService.clearSummary(postId)
     }
 
     // Ingest first, THEN summarise — not both at once.
