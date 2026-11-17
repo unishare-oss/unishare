@@ -58,6 +58,7 @@ export const cs = {
     { code: 'CSC319', name: 'Object-Oriented Design', yearLevel: 3 },
     { code: 'CSC340', name: 'Artificial Intelligence', yearLevel: 3 },
     { code: 'CSC345', name: 'Data Science', yearLevel: 3 },
+    { code: 'CSC535', name: 'Big Data Analytics' },
 
     // Year 3 - Semester 2
     {
