@@ -1,5 +1,5 @@
 import { RequireScope } from '@/common/decorators/require-scope.decorator'
-import { McpService } from './mcp.service'
+import { createPostToolDescription, McpService } from './mcp.service'
 import type { McpRepository } from './mcp.repository'
 import type { McpAuthSession } from './dto/mcp-auth-session.dto'
 import { drawingGuide } from './mcp-drawing-guide'
@@ -35,10 +35,18 @@ describe('McpService', () => {
   })
 
   it('registers interactive post creation rules in postGuide', () => {
+    const guidance = `${postGuide}\n${createPostToolDescription}`
+
     expect(postGuide).toContain('UniShare Post Creation Rules')
     expect(postGuide).toContain('DO NOT dump all fields or tables in a single message')
     expect(postGuide).toContain('Walk the user through interactively by asking ONE field at a time')
     expect(postGuide).toContain('courseId: Call list_courses first')
+    expect(guidance).toMatch(/summary is required when files are attached/i)
+    expect(guidance).toContain('AI client writes it from')
+    expect(guidance).toContain("files' readable content")
+    expect(guidance).toContain('•')
+    expect(guidance).toContain('let the user edit it')
+    expect(guidance).toContain('cannot skip the summary')
   })
 
   describe('isAllowed', () => {

@@ -190,6 +190,7 @@ export class McpRepository {
       user.departmentId,
       // Another university's course is a 404 there, the same as on the website
       universityScope(user),
+      input.summary ? { summary: input.summary, summarizedAt: new Date() } : undefined,
     )
 
     const attachedFiles: Array<{
@@ -213,6 +214,7 @@ export class McpRepository {
             { key, name: file.fileName, size, mimeType: file.mimeType },
             session.userId,
             { kind: 'all' },
+            { keepSummary: true },
           )
 
           attachedFiles.push({

@@ -14,6 +14,14 @@ import { McpRepository } from './mcp.repository'
 import { drawingGuide } from './mcp-drawing-guide'
 import { postGuide } from './mcp-post-guide'
 
+export const createPostToolDescription =
+  'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. ' +
+  'Call read_me before the first create_post call in a task and follow its rules: ask ONE field ' +
+  'at a time in order (title -> type -> description -> courseId from list_courses -> optional ' +
+  'fields with skip option), when files are included the AI client must write a summary from ' +
+  'their content (required, use 3–6 • lines), show it in the confirmation preview ' +
+  'for the user to edit, then confirm with the user before calling this tool.'
+
 @Injectable()
 export class McpService {
   constructor(private readonly mcpRepository: McpRepository) {}
@@ -141,8 +149,7 @@ export class McpService {
       server.registerTool(
         'create_post',
         {
-          description:
-            'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. Call read_me before the first create_post call in a task and follow its rules: ask ONE field at a time in order (title -> type -> description -> courseId from list_courses -> optional fields with skip option), show a summary, and confirm with the user before calling this tool.',
+          description: createPostToolDescription,
           inputSchema: createPostSchema,
         },
         async (input) => this.toToolResult(await this.mcpRepository.createPost(session, input)),

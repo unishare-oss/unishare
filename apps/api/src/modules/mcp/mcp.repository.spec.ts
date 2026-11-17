@@ -61,9 +61,6 @@ describe('McpRepository', () => {
     course: {
       findFirst: jest.fn(),
     },
-    post: {
-      findUnique: jest.fn(),
-    },
   }
   const filesService = {
     confirmUpload: jest.fn(),
@@ -423,6 +420,26 @@ describe('McpRepository', () => {
   })
 
   describe('createPost', () => {
+    it('creates a post without summary metadata when no files or summary are supplied', async () => {
+      prisma.user.findUnique.mockResolvedValue(member)
+      postsService.create.mockResolvedValue({
+        id: 'post-1',
+        shortCode: 'p1234567',
+        title: 'Data Structures Lecture 1',
+        type: PostType.NOTE,
+        status: PostStatus.APPROVED,
+        createdAt: new Date('2026-08-18T10:00:00.000Z'),
+      })
+
+      await repository.createPost({ userId: 'user-1', scopes: 'openid posts:write' }, createInput)
+
+      const createData = postsService.create.mock.calls[0][0]
+      expect(createData).not.toHaveProperty('summary')
+      expect(createData).not.toHaveProperty('summarizedAt')
+      expect(postsService.create.mock.calls[0][4]).toBeUndefined()
+      expect(filesService.confirmUpload).not.toHaveBeenCalled()
+    })
+
     it('creates a post for the authenticated user using provided courseId', async () => {
       prisma.user.findUnique.mockResolvedValue(member)
       const createdAt = new Date('2026-08-18T10:00:00.000Z')
@@ -461,6 +478,7 @@ describe('McpRepository', () => {
         'user-1',
         'dept-1',
         { kind: 'university', universityId: 'uni-1' },
+        undefined,
       )
       expect(result).toEqual({
         post: {
@@ -504,6 +522,7 @@ describe('McpRepository', () => {
           description: 'Introduction to Big O',
           type: 'NOTE',
           courseId: 'course-1',
+          summary: '• Arrays\n• Big O',
           files: [
             {
               fileName: 'diagram.png',
@@ -529,7 +548,12 @@ describe('McpRepository', () => {
         }),
         'user-1',
         { kind: 'all' },
+        { keepSummary: true },
       )
+      expect(postsService.create.mock.calls[0][4]).toEqual({
+        summary: '• Arrays\n• Big O',
+        summarizedAt: expect.any(Date),
+      })
       expect(result.post.files).toEqual([
         {
           id: 'file-1',
@@ -634,6 +658,7 @@ describe('McpRepository', () => {
           description: 'Introduction to Big O',
           type: 'NOTE',
           courseId: 'course-1',
+          summary: '• Notes summary',
           files: [
             {
               fileName: 'notes.pdf',
@@ -656,6 +681,7 @@ describe('McpRepository', () => {
         },
         'user-1',
         { kind: 'all' },
+        { keepSummary: true },
       )
       expect(result.post.files).toEqual([
         {
@@ -699,6 +725,7 @@ describe('McpRepository', () => {
           description: 'Introduction to Big O',
           type: 'NOTE',
           courseId: 'course-1',
+          summary: '• Notes summary',
           files: [
             {
               fileName: 'ok.pdf',

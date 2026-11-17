@@ -15,6 +15,14 @@ UniShare Post Creation Rules:
        returned key plus the file's byte size in create_post's files array. Only fall back to
        inline base64Data/textData (small text content, under ~500KB) when you have no way to
        make outbound HTTP requests.
+- A summary is required when files are attached in create_post. The AI client writes it from
+  the files' readable content; never ask the user to type the summary. Do not attach files whose
+  content you cannot read. Write 3–6 concise lines, each starting with •, with no introduction
+  or outro, and keep the summary under 2000 characters. Include document facts only. The summary
+  is distinct from description, which remains the user's post text.
+- Show the AI-written summary in the confirmation preview and let the user edit it before
+  create_post; the user cannot skip the summary when files are attached. No files means no
+  summary is needed.
 - Wait for the user's reply before asking the next field.
 - Skip optional fields if the user says "skip" or provides no value.
 - Once all fields are collected, show a concise summary preview and ask for confirmation before invoking create_post.
