@@ -6,6 +6,8 @@ export interface LlmMessage {
 export interface LlmChatOptions {
   maxTokens?: number
   temperature?: number
+  signal?: AbortSignal
+  timeoutMs?: number
 }
 
 export interface LlmProvider {

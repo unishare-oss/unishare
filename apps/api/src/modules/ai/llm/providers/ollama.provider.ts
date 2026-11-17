@@ -11,6 +11,7 @@ export class OllamaProvider implements LlmProvider {
     const response = await fetch(`${endpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: options.signal,
       body: JSON.stringify({
         model,
         stream: false,

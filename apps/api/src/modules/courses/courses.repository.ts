@@ -58,6 +58,25 @@ export class CoursesRepository {
     return c ? mapCourse(c) : null
   }
 
+  findSuggestionCandidates(departmentId: string, scope: UniversityScope) {
+    return this.prisma.course.findMany({
+      where: { AND: [{ departmentId }, courseInScope(scope)] },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, name: true },
+    })
+  }
+
+  findDepartmentInScope(departmentId: string, scope: UniversityScope) {
+    const departmentScope =
+      scope.kind === 'all'
+        ? {}
+        : scope.kind === 'university'
+          ? { faculty: { universityId: scope.universityId } }
+          : // A scope without a university must match no departments.
+            { id: { in: [] } }
+    return this.prisma.department.findFirst({ where: { id: departmentId, ...departmentScope } })
+  }
+
   async update(id: string, dto: UpdateCourseDto) {
     const course = await this.prisma.course.update({
       where: { id },

@@ -5,7 +5,10 @@ const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
 const IN_U1 = { department: { faculty: { universityId: 'u1' } } }
 
 describe('CoursesRepository university scope', () => {
-  let prisma: { course: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock } }
+  let prisma: {
+    course: { findMany: jest.Mock; count: jest.Mock; findUnique: jest.Mock }
+    department: { findFirst: jest.Mock }
+  }
   let repository: CoursesRepository
 
   beforeEach(() => {
@@ -15,6 +18,7 @@ describe('CoursesRepository university scope', () => {
         count: jest.fn().mockResolvedValue(0),
         findUnique: jest.fn().mockResolvedValue(null),
       },
+      department: { findFirst: jest.fn().mockResolvedValue({ id: 'd1' }) },
     }
     repository = new CoursesRepository(prisma as any)
   })
@@ -41,5 +45,22 @@ describe('CoursesRepository university scope', () => {
   it('findById adds the scope to the id lookup', async () => {
     await expect(repository.findById('c1', U1)).resolves.toBeNull()
     expect(whereOf(prisma.course.findUnique)).toEqual({ id: 'c1', AND: [IN_U1] })
+  })
+
+  it('loads suggestions only from the requested department inside the university scope', async () => {
+    await repository.findSuggestionCandidates('d1', U1)
+    expect(prisma.course.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: [{ departmentId: 'd1' }, IN_U1] },
+        select: { id: true, code: true, name: true },
+      }),
+    )
+  })
+
+  it('checks the selected department through its faculty university', async () => {
+    await repository.findDepartmentInScope('d1', U1)
+    expect(prisma.department.findFirst).toHaveBeenCalledWith({
+      where: { id: 'd1', faculty: { universityId: 'u1' } },
+    })
   })
 })

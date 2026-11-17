@@ -89,6 +89,36 @@ describe('LlmService', () => {
       service = await build()
       await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow('503')
     })
+
+    it('aborts one provider call after the configured timeout', async () => {
+      jest.useFakeTimers()
+      const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}))
+      service = await build()
+
+      const request = expect(
+        service.chatOnce([{ role: 'user', content: 'hi' }], { timeoutMs: 30_000 }),
+      ).rejects.toThrow(/timed out/i)
+      await Promise.resolve()
+      await jest.advanceTimersByTimeAsync(30_000)
+      await request
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true)
+      jest.useRealTimers()
+    })
+
+    it('makes only one attempt when chatOnce encounters a transient provider failure', async () => {
+      const fetchMock = jest
+        .spyOn(global, 'fetch')
+        .mockRejectedValue(Object.assign(new Error('provider unavailable'), { status: 503 }))
+      service = await build()
+
+      await expect(service.chatOnce([{ role: 'user', content: 'hi' }])).rejects.toThrow(
+        'provider unavailable',
+      )
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('gemini provider', () => {

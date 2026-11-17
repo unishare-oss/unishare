@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import { Roles } from '@thallesp/nestjs-better-auth'
+import { Roles, Session } from '@thallesp/nestjs-better-auth'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { GuestReadOnly } from '@/common/decorators/guest-read-only.decorator'
 import { UniversityScopeParam } from '@/common/decorators/university-scope.decorator'
+import { UserSession } from '@/auth/auth.config'
 import type { UniversityScope } from '@/common/university-scope'
 import { CoursesService } from './courses.service'
 import { CreateCourseDto } from './dto/create-course.dto'
@@ -13,6 +14,8 @@ import { ReplaceCourseOutlineDto } from './dto/replace-course-outline.dto'
 import { ExtractCourseOutlineDto } from './dto/extract-course-outline.dto'
 import { CourseEntity, PaginatedCourseEntity } from './entities/course.entity'
 import { CourseModuleOutlineEntity } from './entities/course-module-outline.entity'
+import { SuggestCoursesDto } from './dto/suggest-courses.dto'
+import { CourseSuggestionsEntity } from './entities/course-suggestions.entity'
 
 @ApiTags('courses')
 @GuestReadOnly()
@@ -34,6 +37,17 @@ export class CoursesController {
   findAll(@Query() query: ListCoursesDto, @UniversityScopeParam() scope: UniversityScope) {
     const { departmentId, hasOutline, ...pagination } = query
     return this.coursesService.findAll(pagination, scope, departmentId, hasOutline)
+  }
+
+  @Post('suggestions')
+  @ApiOkResponse({ type: CourseSuggestionsEntity })
+  @ResponseMessage('Course suggestions fetched successfully')
+  suggest(
+    @Body() dto: SuggestCoursesDto,
+    @Session() session: UserSession,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.coursesService.suggest(dto, session.user.id, scope)
   }
 
   @Get(':id')

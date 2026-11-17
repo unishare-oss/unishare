@@ -102,6 +102,30 @@ export class DocumentExtractorService {
     return this.extractFromBuffer(buffer, mimeType)
   }
 
+  /** Bounded text sample for pre-share course matching: at most 3 PDF pages and 4,000 chars. */
+  async extractSampleFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
+    if (!SUPPORTED_MIME_TYPES.includes(mimeType)) {
+      throw new Error(`Unsupported mime type: ${mimeType}`)
+    }
+
+    let text: string
+    if (mimeType === 'application/pdf') {
+      const parser = new PDFParse({ data: new Uint8Array(buffer) })
+      const result = await parser.getText({ first: 3 })
+      text = result.pages.map((page) => stripUnstorableChars(page.text).trim()).join('\n\n')
+    } else {
+      const result = await mammoth.extractRawText({ buffer })
+      text = stripUnstorableChars(result.value)
+    }
+
+    return text.slice(0, 4_000)
+  }
+
+  async extractSampleFromKey(key: string, mimeType: string): Promise<string> {
+    const buffer = await this.download(key)
+    return this.extractSampleFromBuffer(buffer, mimeType)
+  }
+
   /** Joined plain text, uncapped. Kept for quiz generation, which slices it itself. */
   async extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
     const doc = await this.extractFromBuffer(buffer, mimeType)
