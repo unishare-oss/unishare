@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    // jsdom workers are memory-heavy; more than 3 swaps an 8 GB machine.
+    maxWorkers: 3,
   },
   resolve: {
     alias: {
