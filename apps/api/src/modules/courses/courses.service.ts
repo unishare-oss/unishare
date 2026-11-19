@@ -13,7 +13,7 @@ import {
   DocumentExtractorService,
   SUPPORTED_MIME_TYPES,
 } from '@/modules/ai/extraction/document-extractor.service'
-import { LlmService } from '@/modules/ai/llm/llm.service'
+import { EmbeddingService } from '@/modules/ai/embedding/embedding.service'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { UniversityScope } from '@/common/university-scope'
 import { CoursesRepository } from './courses.repository'
@@ -21,79 +21,15 @@ import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
 import { CourseModuleOutlineEntryDto } from './dto/course-module-outline-entry.dto'
 import { SuggestCourseFileDto, SuggestCoursesDto } from './dto/suggest-courses.dto'
+import { MATCH_MIN_SIMILARITY } from './courses.constants'
 
 const MAX_MATCH_FILES = 5
 const MAX_FILE_SAMPLE_CHARS = 4_000
 const MAX_TOTAL_SAMPLE_CHARS = 12_000
-const MAX_SUGGESTIONS = 3
-const MATCH_OPTIONS = { maxTokens: 250, temperature: 0, timeoutMs: 30_000 }
-
 type SuggestionCandidate = { id: string; code: string; name: string }
 
 function noSuggestions(available: boolean) {
   return { suggestions: [], available }
-}
-
-function buildMatchPrompt(samples: string[], candidates: SuggestionCandidate[]) {
-  return [
-    'Match this study material to the listed courses. Return JSON only in the form {"suggestions":[{"courseId":"id","confidence":"high|medium|low"}]}. Use only listed course IDs, rank best first, and return at most three.',
-    'Document samples:',
-    ...samples.map((sample, index) => `File ${index + 1}:\n${sample}`),
-    'Eligible courses:',
-    ...candidates.map((course) => `${course.id}\t${course.code}\t${course.name}`),
-  ].join('\n\n')
-}
-
-/** Known candidate IDs only, first occurrence wins, best first, at most three. */
-function pickSuggestions(ids: string[], candidates: SuggestionCandidate[]) {
-  const byId = new Map(candidates.map((course) => [course.id, course]))
-  return [...new Set(ids)]
-    .filter((id) => byId.has(id))
-    .slice(0, MAX_SUGGESTIONS)
-    .map((courseId) => {
-      const { id, code, name } = byId.get(courseId)!
-      return { id, code, name }
-    })
-}
-
-function parseSuggestionIds(reply: string | null): string[] | null {
-  if (!reply) return null
-  try {
-    const start = reply.indexOf('{')
-    if (start < 0) return null
-    let depth = 0
-    let inString = false
-    let escaped = false
-    let end = -1
-    for (let index = start; index < reply.length; index++) {
-      const char = reply[index]
-      if (inString) {
-        if (escaped) escaped = false
-        else if (char === '\\') escaped = true
-        else if (char === '"') inString = false
-      } else if (char === '"') inString = true
-      else if (char === '{') depth++
-      else if (char === '}' && --depth === 0) {
-        end = index + 1
-        break
-      }
-    }
-    if (end < 0) return null
-    const json = reply.slice(start, end)
-    const parsed = JSON.parse(json) as {
-      suggestions?: Array<{ courseId?: unknown; confidence?: unknown }>
-    }
-    if (!Array.isArray(parsed.suggestions)) return null
-    return parsed.suggestions
-      .filter(
-        (item) =>
-          typeof item.courseId === 'string' &&
-          (item.confidence === 'high' || item.confidence === 'medium'),
-      )
-      .map((item) => item.courseId as string)
-  } catch {
-    return null
-  }
 }
 
 @Injectable()
@@ -106,7 +42,7 @@ export class CoursesService {
     private readonly storageService: StorageService,
     private readonly pendingUploads: PendingUploadsService,
     private readonly extractor: DocumentExtractorService,
-    private readonly llm: LlmService,
+    private readonly embedding: EmbeddingService,
   ) {}
 
   async create(dto: CreateCourseDto) {
@@ -134,22 +70,23 @@ export class CoursesService {
       scope,
     )
     if (candidates.length === 0) return noSuggestions(true)
-    if (!this.llm.supportsLocalOnlyMatching) return noSuggestions(false)
+    if (!this.embedding.enabled) return noSuggestions(false)
 
     try {
       const samples = await this.sampleFiles(files)
       if (samples.length === 0) return noSuggestions(true)
 
-      const reply = await this.llm.chatOnce(
-        [{ role: 'user', content: buildMatchPrompt(samples, candidates) }],
-        MATCH_OPTIONS,
+      const vector = await this.embedding.embedQuery(samples.join('\n\n'))
+      const ids = await this.coursesRepository.findNearestCourses(
+        vector,
+        candidates.map(({ id }) => id),
+        MATCH_MIN_SIMILARITY,
       )
-      const ids = parseSuggestionIds(reply)
-      if (!ids) {
-        this.logger.warn('Course matching returned an unreadable response')
-        return noSuggestions(false)
-      }
-      return { suggestions: pickSuggestions(ids, candidates), available: true }
+      const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]))
+      const suggestions = ids
+        .map((id) => byId.get(id))
+        .filter((candidate): candidate is SuggestionCandidate => candidate !== undefined)
+      return { suggestions, available: true }
     } catch (error) {
       if (error instanceof HttpException) throw error
       this.logger.warn('Course matching failed; suggestions are unavailable')

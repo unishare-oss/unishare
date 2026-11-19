@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common'
+import { Prisma } from '@/generated/prisma/client'
 import { PrismaService } from '@/prisma/prisma.service'
+import { toVectorLiteral } from '@/modules/ai/embedding/vector-literal'
 import { PaginationDto } from '@/common/dto/pagination.dto'
 import { paginate } from '@/common/utils/paginate'
 import { courseInScope, UniversityScope } from '@/common/university-scope'
 import { CreateCourseDto } from './dto/create-course.dto'
 import { UpdateCourseDto } from './dto/update-course.dto'
+import { MATCH_NEIGHBOURS, MAX_SUGGESTIONS } from './courses.constants'
 
 function mapCourse(course: any) {
   const { departmentId: _departmentId, ...rest } = course
@@ -64,6 +67,39 @@ export class CoursesRepository {
       orderBy: { code: 'asc' },
       select: { id: true, code: true, name: true },
     })
+  }
+
+  async findNearestCourses(vector: number[], candidateCourseIds: string[], threshold: number) {
+    if (candidateCourseIds.length === 0) return []
+
+    const literal = toVectorLiteral(vector)
+    const rows = await this.prisma.$queryRaw<{ courseId: string }[]>`
+      WITH eligible_chunks AS MATERIALIZED (
+        SELECT p."courseId" AS "courseId", c.embedding
+        FROM post_chunk c
+        JOIN post p ON p.id = c."postId"
+        WHERE p."courseId" IN (${Prisma.join(candidateCourseIds)})
+          AND p.status = 'APPROVED'
+          AND p."publicationStatus" = 'PUBLISHED'
+          AND p."deletedAt" IS NULL
+          AND c.embedding IS NOT NULL
+      ), nearest AS (
+        SELECT "courseId", 1 - (embedding <=> ${literal}::vector) AS similarity
+        FROM eligible_chunks
+        ORDER BY embedding <=> ${literal}::vector
+        LIMIT ${MATCH_NEIGHBOURS}
+      ), qualified AS (
+        SELECT "courseId", similarity
+        FROM nearest
+        WHERE similarity >= ${threshold}
+      )
+      SELECT "courseId", COUNT(*) AS hits, MAX(similarity) AS "bestSimilarity"
+      FROM qualified
+      GROUP BY "courseId"
+      ORDER BY hits DESC, "bestSimilarity" DESC
+      LIMIT ${MAX_SUGGESTIONS}
+    `
+    return rows.map(({ courseId }) => courseId)
   }
 
   findDepartmentInScope(departmentId: string, scope: UniversityScope) {

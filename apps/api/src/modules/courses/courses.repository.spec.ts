@@ -1,4 +1,5 @@
 import { UniversityScope } from '@/common/university-scope'
+import { PrismaService } from '@/prisma/prisma.service'
 import { CoursesRepository } from './courses.repository'
 
 const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
@@ -62,5 +63,41 @@ describe('CoursesRepository university scope', () => {
     expect(prisma.department.findFirst).toHaveBeenCalledWith({
       where: { id: 'd1', faculty: { universityId: 'u1' } },
     })
+  })
+})
+
+describe('CoursesRepository.findNearestCourses', () => {
+  it('queries top matching approved published chunks and returns at most three courses', async () => {
+    const queryRaw = jest.fn().mockResolvedValue([{ courseId: 'c2' }])
+    const repository = new CoursesRepository({ $queryRaw: queryRaw } as unknown as PrismaService)
+
+    await expect(repository.findNearestCourses([0.1, 0.2], ['c1', 'c2'], 0.6)).resolves.toEqual([
+      'c2',
+    ])
+
+    expect(queryRaw).toHaveBeenCalledTimes(1)
+    const [query, ...parameters] = queryRaw.mock.calls[0]
+    const sql = query.join('?')
+    const candidateFilter = parameters.find(
+      (parameter): parameter is { strings: string[]; values: string[] } =>
+        typeof parameter === 'object' && parameter !== null && 'strings' in parameter,
+    )
+    expect(sql).toContain('"courseId" IN')
+    expect(sql).toContain('WITH eligible_chunks AS MATERIALIZED')
+    expect(sql).toContain("p.status = 'APPROVED'")
+    expect(sql).toContain('p."publicationStatus" = \'PUBLISHED\'')
+    expect(sql).toContain('p."deletedAt" IS NULL')
+    expect(sql).toContain('embedding IS NOT NULL')
+    expect(sql).toContain('ORDER BY embedding <=> ?::vector')
+    expect(sql.indexOf('p."courseId" IN')).toBeLessThan(sql.indexOf('ORDER BY embedding <=>'))
+    expect(sql).toContain('LIMIT ?')
+    expect(sql).toContain('similarity >= ?')
+    expect(sql).toContain('ORDER BY hits DESC, "bestSimilarity" DESC')
+    expect(sql.trim().endsWith('LIMIT ?')).toBe(true)
+    expect(parameters).toContain('[0.1,0.2]')
+    expect(candidateFilter?.values).toEqual(['c1', 'c2'])
+    expect(parameters).toContain(50)
+    expect(parameters).toContain(0.6)
+    expect(parameters).toContain(3)
   })
 })
