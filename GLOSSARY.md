@@ -30,3 +30,21 @@ _Avoid_: Mascot, buddy, character
 **Module**:
 One of a course's numbered parts; each post belongs to one module.
 _Avoid_: Week, unit, chapter
+
+## Exams
+
+**Exam**:
+A scheduled sitting of a course's exam, with a start time and optionally an end time and room; students in that course's department see it on their calendar and get one reminder.
+_Avoid_: Test, assessment, event
+
+**Old exam**:
+A post holding a past exam paper for students to practise with; it is content, not an Exam.
+_Avoid_: Past paper post, exam post
+
+**Exam timetable**:
+The official document a university publishes listing a term's exams.
+_Avoid_: Exam schedule, timetable file, exam list
+
+**Import**:
+Turning an exam timetable into exams: a moderator uploads it, reviews the rows and publishes them; nothing is published until they confirm.
+_Avoid_: Upload, sync, bulk add
