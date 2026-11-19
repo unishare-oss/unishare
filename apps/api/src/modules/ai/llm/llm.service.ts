@@ -33,20 +33,14 @@ function delay(ms: number): Promise<void> {
 export class LlmService {
   private readonly logger = new Logger(LlmService.name)
   private readonly provider: LlmProvider | null
-  private readonly providerName: LlmProviderName | null
 
   constructor(private readonly config: ConfigService) {
     const providerName = (config.get<string>('AI_SUMMARY_PROVIDER') as LlmProviderName) || null
-    this.providerName = providerName
     this.provider = providerName ? this.build(providerName) : null
   }
 
   get enabled(): boolean {
     return this.provider !== null
-  }
-
-  get supportsLocalOnlyMatching(): boolean {
-    return this.providerName === 'ollama'
   }
 
   async chat(messages: LlmMessage[], options: LlmChatOptions = {}): Promise<string | null> {
@@ -77,35 +71,6 @@ export class LlmService {
       }
     }
     return null
-  }
-
-  /** One provider attempt for latency-bounded, optional features that must not retry. */
-  async chatOnce(messages: LlmMessage[], options: LlmChatOptions = {}): Promise<string | null> {
-    if (!this.provider) return null
-
-    const controller = new AbortController()
-    const abortFromCaller = () => controller.abort(options.signal?.reason)
-    options.signal?.addEventListener('abort', abortFromCaller, { once: true })
-    let timeout: ReturnType<typeof setTimeout> | undefined
-    try {
-      const request = this.provider.chat(messages, {
-        ...this.resolveOptions(options),
-        signal: controller.signal,
-      })
-      if (!options.timeoutMs) return await request
-      return await Promise.race([
-        request,
-        new Promise<never>((_, reject) => {
-          timeout = setTimeout(() => {
-            controller.abort(new Error('LLM request timed out'))
-            reject(new Error(`LLM request timed out after ${options.timeoutMs}ms`))
-          }, options.timeoutMs)
-        }),
-      ])
-    } finally {
-      if (timeout) clearTimeout(timeout)
-      options.signal?.removeEventListener('abort', abortFromCaller)
-    }
   }
 
   private resolveOptions(options: LlmChatOptions) {
