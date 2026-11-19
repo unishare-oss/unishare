@@ -11,6 +11,14 @@ import { UpdateExamDto } from './dto/update-exam.dto'
 /** How far ahead of an exam its one reminder notification fires. */
 export const EXAM_REMINDER_LEAD_DAYS = 14
 
+type ExamForReminder = {
+  id: string
+  title: string
+  startsAt: Date
+  reminderSentAt: Date | null
+  course: { code: string; departmentId: string; yearLevel: number | null }
+}
+
 @Injectable()
 export class ExamsService {
   private readonly logger = new Logger(ExamsService.name)
@@ -26,7 +34,9 @@ export class ExamsService {
   async create(dto: CreateExamDto, createdBy: string, scope: UniversityScope) {
     await this.coursesService.findOne(dto.courseId, scope)
     this.assertValidTimeRange(dto.startsAt, dto.endsAt)
-    return this.examsRepository.create(dto, createdBy)
+    const exam = await this.examsRepository.create(dto, createdBy)
+    await this.remindIfDue(exam, new Date())
+    return exam
   }
 
   async findInRange(
@@ -76,41 +86,60 @@ export class ExamsService {
     }
   }
 
-  /**
-   * Fires the single 14-days-out reminder for every exam whose day has just entered that
-   * window, then stamps `reminderSentAt` so a re-run (crash, lock miss) never double-sends.
-   */
+  /** Sends the one reminder for each unreminded exam in the next 14 days. */
   async sendDueReminders(now = new Date()): Promise<void> {
-    const targetDate = new Date(now)
-    targetDate.setUTCDate(targetDate.getUTCDate() + EXAM_REMINDER_LEAD_DAYS)
+    const until = this.reminderWindowEnd(now)
 
-    const dueExams = await this.examsRepository.findDueForReminder(targetDate)
+    const dueExams = await this.examsRepository.findDueForReminder(now, until)
     if (dueExams.length === 0) return
 
-    const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
-
     for (const exam of dueExams) {
-      const { departmentId, yearLevel } = exam.course
-      const enrollmentYear =
-        yearLevel != null
-          ? computeEnrollmentYearForLevel(yearLevel, now, academicStartMonth)
-          : undefined
-
-      const recipientIds = await this.examsRepository.findReminderRecipientIds(
-        departmentId,
-        enrollmentYear,
-      )
-
-      await this.notificationsService.notifyExamReminder(
-        exam.id,
-        exam.course.code,
-        exam.title,
-        exam.startsAt,
-        recipientIds,
-      )
-      await this.examsRepository.markReminderSent(exam.id, now)
-
-      this.logger.log(`Sent exam reminder for ${exam.id} to ${recipientIds.length} student(s)`)
+      await this.sendReminder(exam, now)
     }
+  }
+
+  async remindIfDue(exam: ExamForReminder, now: Date): Promise<void> {
+    if (
+      exam.reminderSentAt ||
+      exam.startsAt < now ||
+      exam.startsAt >= this.reminderWindowEnd(now)
+    ) {
+      return
+    }
+
+    try {
+      await this.sendReminder(exam, now)
+    } catch {
+      this.logger.warn('Exam reminder failed; nightly job will retry')
+    }
+  }
+
+  private reminderWindowEnd(now: Date): Date {
+    const until = new Date(now)
+    until.setUTCDate(until.getUTCDate() + EXAM_REMINDER_LEAD_DAYS)
+    return until
+  }
+
+  private async sendReminder(exam: ExamForReminder, now: Date): Promise<void> {
+    const { departmentId, yearLevel } = exam.course
+    const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
+    const enrollmentYear =
+      yearLevel != null
+        ? computeEnrollmentYearForLevel(yearLevel, now, academicStartMonth)
+        : undefined
+    const recipientIds = await this.examsRepository.findReminderRecipientIds(
+      departmentId,
+      enrollmentYear,
+    )
+
+    await this.notificationsService.notifyExamReminder(
+      exam.id,
+      exam.course.code,
+      exam.title,
+      exam.startsAt,
+      recipientIds,
+    )
+    await this.examsRepository.markReminderSent(exam.id, now)
+    this.logger.log(`Sent exam reminder for ${exam.id} to ${recipientIds.length} student(s)`)
   }
 }

@@ -39,3 +39,20 @@ describe('ExamsRepository university scope', () => {
     expect(whereOf(prisma.exam.findUnique)).toEqual({ id: 'e1', AND: [COURSE_IN_U1] })
   })
 })
+
+describe('ExamsRepository.findDueForReminder', () => {
+  it('selects unreminded exams starting from now up to but not including until', async () => {
+    const prisma = { exam: { findMany: jest.fn().mockResolvedValue([]) } }
+    const repository = new ExamsRepository(prisma as any)
+    const now = new Date('2026-11-19T03:00:00.000Z')
+    const until = new Date('2026-12-03T03:00:00.000Z')
+
+    await repository.findDueForReminder(now, until)
+
+    expect(prisma.exam.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { startsAt: { gte: now, lt: until }, reminderSentAt: null },
+      }),
+    )
+  })
+})

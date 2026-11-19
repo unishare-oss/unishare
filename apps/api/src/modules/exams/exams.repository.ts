@@ -77,15 +77,10 @@ export class ExamsRepository {
     return this.prisma.exam.delete({ where: { id } })
   }
 
-  /** Exams starting on `targetDate`'s calendar day (UTC) that haven't been reminded yet. */
-  findDueForReminder(targetDate: Date) {
-    const dayStart = new Date(targetDate)
-    dayStart.setUTCHours(0, 0, 0, 0)
-    const dayEnd = new Date(dayStart)
-    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1)
-
+  /** Exams starting in `[now, until)` that haven't been reminded yet. */
+  findDueForReminder(now: Date, until: Date) {
     return this.prisma.exam.findMany({
-      where: { startsAt: { gte: dayStart, lt: dayEnd }, reminderSentAt: null },
+      where: { startsAt: { gte: now, lt: until }, reminderSentAt: null },
       include: EXAM_INCLUDE,
     })
   }

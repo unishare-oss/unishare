@@ -55,7 +55,13 @@ describe('ExamsService', () => {
   describe('create', () => {
     it('validates the course is in scope before creating', async () => {
       coursesService.findOne.mockResolvedValue({ id: 'c1' })
-      repo.create.mockResolvedValue({ id: 'e1' })
+      repo.create.mockResolvedValue({
+        id: 'e1',
+        title: 'Midterm',
+        startsAt: new Date('2026-10-01'),
+        reminderSentAt: null,
+        course: { code: 'CS101', departmentId: 'd1', yearLevel: null },
+      })
 
       await service.create({ courseId: 'c1', title: 'Midterm', startsAt: '2026-10-01' }, 'u1', U1)
 
@@ -138,6 +144,13 @@ describe('ExamsService', () => {
 
     it('lets an admin create and move exams in any course', async () => {
       coursesService.findOne.mockResolvedValue({ id: 'c2' })
+      repo.create.mockResolvedValue({
+        id: 'e2',
+        title: 'Midterm',
+        startsAt: new Date('2026-10-01'),
+        reminderSentAt: null,
+        course: { code: 'CS101', departmentId: 'd1', yearLevel: null },
+      })
       repo.findById.mockResolvedValue({
         id: 'e1',
         startsAt: new Date('2026-10-01T09:00:00Z'),
@@ -239,6 +252,148 @@ describe('ExamsService', () => {
 
       // now=2026-09-01, academicStartMonth=9 -> currentAcademicYear=2026; yearLevel 2 -> enrollmentYear 2025
       expect(repo.findReminderRecipientIds).toHaveBeenCalledWith('d1', 2025)
+    })
+  })
+
+  describe('ExamsService reminder windows', () => {
+    it('queries the full 14-day window from now', async () => {
+      const now = new Date('2026-11-19T03:00:00.000Z')
+      const until = new Date('2026-12-03T03:00:00.000Z')
+
+      repo.findDueForReminder.mockResolvedValue([])
+      await service.sendDueReminders(now)
+
+      expect(repo.findDueForReminder).toHaveBeenCalledWith(now, until)
+    })
+
+    it('reminds a newly created exam within 14 days and stamps it once', async () => {
+      const now = new Date()
+      const exam = {
+        id: 'e1',
+        title: 'Final',
+        startsAt: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+        reminderSentAt: null,
+        course: { code: 'CS101', departmentId: 'd1', yearLevel: null },
+      }
+      repo.findReminderRecipientIds.mockResolvedValue(['u1'])
+      repo.markReminderSent.mockResolvedValue(undefined)
+      notificationsService.notifyExamReminder.mockResolvedValue(undefined)
+
+      await service.remindIfDue(exam as any, now)
+
+      expect(notificationsService.notifyExamReminder).toHaveBeenCalledWith(
+        'e1',
+        'CS101',
+        'Final',
+        exam.startsAt,
+        ['u1'],
+      )
+      expect(repo.markReminderSent).toHaveBeenCalledWith('e1', now)
+    })
+  })
+
+  describe('ExamsService reminder delivery guards', () => {
+    const now = new Date('2026-11-19T03:00:00.000Z')
+    const exam = (overrides: Record<string, unknown> = {}) => ({
+      id: 'e1',
+      title: 'Final',
+      startsAt: new Date('2026-11-22T03:00:00.000Z'),
+      reminderSentAt: null,
+      course: { code: 'CS101', departmentId: 'd1', yearLevel: null },
+      ...overrides,
+    })
+
+    it('skips exams that have started or already have a reminder', async () => {
+      await service.remindIfDue(exam({ startsAt: new Date('2026-11-19T02:59:59.999Z') }), now)
+      await service.remindIfDue(exam({ reminderSentAt: now }), now)
+
+      expect(notificationsService.notifyExamReminder).not.toHaveBeenCalled()
+      expect(repo.markReminderSent).not.toHaveBeenCalled()
+    })
+
+    it('creates an exam in the reminder window and sends its reminder immediately', async () => {
+      const created = exam({ startsAt: new Date(Date.now() + 3 * 86400000) })
+      repo.create.mockResolvedValue(created)
+      coursesService.findOne.mockResolvedValue({ id: 'c1' })
+      repo.findReminderRecipientIds.mockResolvedValue(['u1'])
+      repo.markReminderSent.mockResolvedValue(undefined)
+      notificationsService.notifyExamReminder.mockResolvedValue(undefined)
+
+      await service.create(
+        { courseId: 'c1', title: 'Final', startsAt: created.startsAt.toISOString() },
+        'u1',
+        U1,
+      )
+
+      expect(notificationsService.notifyExamReminder).toHaveBeenCalledTimes(1)
+      expect(repo.markReminderSent).toHaveBeenCalledWith('e1', expect.any(Date))
+    })
+
+    it('does not remind or stamp an exam at or beyond the 14-day boundary', async () => {
+      const now = new Date()
+      const startsAt = new Date(now.getTime() + 15 * 86400000)
+      const created = exam({ startsAt })
+      repo.create.mockResolvedValue(created)
+      coursesService.findOne.mockResolvedValue({ id: 'c1' })
+
+      await service.create(
+        { courseId: 'c1', title: 'Final', startsAt: startsAt.toISOString() },
+        'u1',
+        U1,
+      )
+
+      expect(notificationsService.notifyExamReminder).not.toHaveBeenCalled()
+      expect(repo.markReminderSent).not.toHaveBeenCalled()
+      expect(created.reminderSentAt).toBeNull()
+    })
+
+    it('does not remind or stamp when an exam starts exactly 14 days from now', async () => {
+      const now = new Date('2026-11-19T03:00:00.000Z')
+      const startsAt = new Date('2026-12-03T03:00:00.000Z')
+
+      await service.remindIfDue(exam({ startsAt }), now)
+
+      expect(notificationsService.notifyExamReminder).not.toHaveBeenCalled()
+      expect(repo.markReminderSent).not.toHaveBeenCalled()
+    })
+
+    it.each(['recipient lookup', 'notification delivery'])(
+      'returns the created exam unstamped when %s fails',
+      async (failurePoint) => {
+        const created = exam({ startsAt: new Date(Date.now() + 3 * 86400000) })
+        repo.create.mockResolvedValue(created)
+        coursesService.findOne.mockResolvedValue({ id: 'c1' })
+        if (failurePoint === 'recipient lookup') {
+          repo.findReminderRecipientIds.mockRejectedValue(new Error('sensitive detail'))
+        } else {
+          repo.findReminderRecipientIds.mockResolvedValue(['u1'])
+          notificationsService.notifyExamReminder.mockRejectedValue(new Error('sensitive detail'))
+        }
+
+        await expect(
+          service.create(
+            { courseId: 'c1', title: 'Final', startsAt: created.startsAt.toISOString() },
+            'u1',
+            U1,
+          ),
+        ).resolves.toBe(created)
+
+        expect(repo.markReminderSent).not.toHaveBeenCalled()
+      },
+    )
+
+    it('sends each due exam once when a nightly run is repeated', async () => {
+      const dueExam = exam()
+      repo.findDueForReminder.mockResolvedValueOnce([dueExam]).mockResolvedValueOnce([])
+      repo.findReminderRecipientIds.mockResolvedValue(['u1'])
+      repo.markReminderSent.mockResolvedValue(undefined)
+      notificationsService.notifyExamReminder.mockResolvedValue(undefined)
+
+      await service.sendDueReminders(now)
+      await service.sendDueReminders(now)
+
+      expect(notificationsService.notifyExamReminder).toHaveBeenCalledTimes(1)
+      expect(repo.markReminderSent).toHaveBeenCalledTimes(1)
     })
   })
 })
