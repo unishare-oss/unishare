@@ -82,3 +82,17 @@ describe('NotificationsService mentions', () => {
     )
   })
 })
+
+describe('NotificationsService exam reminders', () => {
+  it('formats the exam date in Bangkok time', async () => {
+    const repo = { create: jest.fn().mockResolvedValue({ id: 'n1' }) }
+    const service = new NotificationsService(repo as any)
+    await service.notifyExamReminder('e1', 'CS101', 'Final', new Date('2026-11-24T23:00:00.000Z'), [
+      'u1',
+    ])
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'CS101 Final is coming up on Nov 25.' }),
+    )
+  })
+})
