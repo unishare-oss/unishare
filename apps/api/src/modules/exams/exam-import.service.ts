@@ -183,7 +183,7 @@ export class ExamImportService {
         {
           role: 'system',
           content:
-            'Extract exam timetable rows from the supplied text. Return only a JSON array of objects with courseCode, date (YYYY-MM-DD), startsAt and optional endsAt (HH:mm), title, and optional room. Do not invent values; omit rows missing a course code, valid date, start time, or title. Keep times local as printed.',
+            'Extract exam timetable rows from the supplied text. Return only a JSON array of objects with courseCode, date (YYYY-MM-DD), startsAt and optional endsAt (HH:mm), title, and optional room. Do not invent values; omit rows missing a course code, valid date, start time, or title. Keep times local as printed. Dates must use the Gregorian calendar; convert Thai Buddhist-era years (for example 2569) by subtracting 543.',
         },
         { role: 'user', content: text },
       ],
@@ -203,7 +203,7 @@ export class ExamImportService {
       }
       const row = value as Record<string, unknown>
       const courseCode = typeof row.courseCode === 'string' ? row.courseCode.trim() : ''
-      const date = typeof row.date === 'string' ? row.date : ''
+      const date = toGregorianDate(typeof row.date === 'string' ? row.date : '')
       const startsAt = typeof row.startsAt === 'string' ? row.startsAt : ''
       const endsAt = typeof row.endsAt === 'string' ? row.endsAt : null
       const title = typeof row.title === 'string' ? row.title.trim() : ''
@@ -213,6 +213,7 @@ export class ExamImportService {
         !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         Number.isNaN(Date.parse(`${date}T00:00:00Z`)) ||
         new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date ||
+        isOutsideWindow(date) ||
         !TIME_PATTERN.test(startsAt) ||
         (endsAt !== null && (!TIME_PATTERN.test(endsAt) || endsAt <= startsAt))
       ) {
@@ -230,6 +231,18 @@ export class ExamImportService {
     }
     return { rows, droppedCount }
   }
+}
+
+// Thai timetables print Buddhist-era years (2569 = 2026); the model is told to convert them.
+function toGregorianDate(date: string): string {
+  const match = date.match(/^(\d{4})(-\d{2}-\d{2})$/)
+  return match && Number(match[1]) >= 2400 ? `${Number(match[1]) - 543}${match[2]}` : date
+}
+
+// A date more than two years from today is almost certainly a misread year.
+function isOutsideWindow(date: string): boolean {
+  const time = Date.parse(`${date}T00:00:00Z`)
+  return Math.abs(time - Date.now()) > 2 * 366 * 24 * 60 * 60 * 1000
 }
 
 function parseJsonArray(reply: string): unknown[] | null {

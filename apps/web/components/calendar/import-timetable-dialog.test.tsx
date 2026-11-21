@@ -512,6 +512,7 @@ describe('ImportTimetableDialog', () => {
       'Timetable is too large; split it by faculty',
       'Timetable is too large; split it by faculty',
     ],
+    [403, 'You do not have permission to import exams', 'do not have permission'],
     [400, 'Only PDF and Word documents are supported', 'Only PDF and Word'],
     [
       503,

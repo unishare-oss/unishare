@@ -26,6 +26,20 @@ describe('ExamImportService.parse', () => {
   })
 
   beforeEach(() => {
+    jest.useFakeTimers({
+      now: new Date('2026-11-21T00:00:00Z'),
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'queueMicrotask',
+        'performance',
+      ],
+    })
     extractor = {
       extractFromBuffer: jest.fn().mockResolvedValue(document('CS 101 exam timetable')),
     }
@@ -53,6 +67,10 @@ describe('ExamImportService.parse', () => {
       exams as never,
       universities as never,
     )
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
   })
 
   it('extracts and matches a PDF buffer without storing it', async () => {
@@ -445,5 +463,38 @@ describe('ExamImportService.parse', () => {
   it('asks the LLM for up to 8000 tokens', async () => {
     await service.parse(file('application/pdf') as never, scope)
     expect(llm.chat.mock.calls[0][1]).toMatchObject({ maxTokens: 8000 })
+  })
+
+  it('converts a Buddhist-era year to the Gregorian year', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2569-05-12","startsAt":"09:00","title":"Final exam"}]',
+    )
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result.rows[0].date).toBe('2026-05-12')
+  })
+
+  it('validates the converted date, so a Buddhist-era leap day is kept', async () => {
+    jest.setSystemTime(new Date('2024-01-15T00:00:00Z'))
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2567-02-29","startsAt":"09:00","title":"Final exam"}]',
+    )
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result.rows[0].date).toBe('2024-02-29')
+  })
+
+  it('drops and counts a row more than two years from today', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2031-05-12","startsAt":"09:00","title":"Final exam"}]',
+    )
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result).toMatchObject({ rows: [], droppedCount: 1 })
+  })
+
+  it('leaves a normal date unchanged', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]',
+    )
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result.rows[0].date).toBe('2026-12-10')
   })
 })

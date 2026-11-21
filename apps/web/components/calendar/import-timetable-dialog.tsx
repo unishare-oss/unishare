@@ -53,8 +53,11 @@ const WARNING_NOTE_CLASS = 'm-0 shrink-0 bg-warn-soft px-5 py-2 text-sm text-war
 const PARSE_ERROR_FALLBACK = 'Could not read this timetable. Please try again.'
 
 function showParseError(error: unknown) {
-  // 400 (no text, too large, wrong type), 503 (AI off or busy) and 502 carry clear server messages.
-  if (error instanceof ApiError && [400, 502, 503].includes(error.status) && error.message) {
+  // Any 4xx (no text, too large, wrong type, permissions), 502 and 503 (AI off or busy) carry clear
+  // server messages.
+  const clearStatus = (status: number) =>
+    (status >= 400 && status < 500) || [502, 503].includes(status)
+  if (error instanceof ApiError && clearStatus(error.status) && error.message) {
     toast.error(error.message)
   } else if (error instanceof ApiError && error.status >= 500 && error.traceId) {
     reportServerError(error)
