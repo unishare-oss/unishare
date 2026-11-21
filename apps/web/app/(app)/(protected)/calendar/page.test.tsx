@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CalendarPage from './page'
 
+const auth = vi.hoisted(() => ({ role: 'ADMIN' as string }))
 const exam = {
   id: 'e-1',
   title: 'Midterm',
@@ -14,16 +15,17 @@ const exam = {
   course: { id: 'c-1', code: 'CSC213', name: 'Data Structures', department: { id: 'd-1' } },
 }
 
-vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ user: { role: 'ADMIN' } }) }))
+vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ user: { role: auth.role } }) }))
 vi.mock('@/hooks/use-my-departments', () => ({ useMyDepartments: () => ({ departments: [] }) }))
 vi.mock('@/src/lib/api/generated/exams/exams', () => ({
   useExamsControllerFindAll: () => ({ data: [exam] }),
   useExamsControllerCreate: () => ({ mutate: vi.fn(), isPending: false }),
   useExamsControllerUpdate: () => ({ mutate: vi.fn(), isPending: false }),
   useExamsControllerRemove: () => ({ mutate: vi.fn(), isPending: false }),
+  useExamsControllerParseImport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useExamsControllerBulkCreate: () => ({ mutateAsync: vi.fn(), isPending: false }),
   getExamsControllerFindAllQueryKey: () => ['exams'],
 }))
-
 // Simulates a student whose browser still holds the old Desk feed-style value.
 beforeEach(() =>
   localStorage.setItem('unishare-feed-style', JSON.stringify({ state: { feedStyle: 'desk' } })),
@@ -31,9 +33,21 @@ beforeEach(() =>
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  auth.role = 'ADMIN'
 })
 
 describe('CalendarPage', () => {
+  it('keeps timetable import hidden from students', () => {
+    auth.role = 'STUDENT'
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CalendarPage />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Import timetable' })).not.toBeInTheDocument()
+  })
+
   it('shows one calendar design', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
