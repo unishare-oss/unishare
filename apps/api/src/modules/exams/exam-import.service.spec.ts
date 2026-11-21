@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common'
+import {
+  BadGatewayException,
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import { ExamImportService } from './exam-import.service'
 
 describe('ExamImportService.parse', () => {
@@ -275,12 +280,13 @@ describe('ExamImportService.parse', () => {
     expect(exams.findUpcomingForCourses).not.toHaveBeenCalled()
   })
 
-  it('surfaces extraction failures', async () => {
+  it('turns an unreadable or corrupt file into a 400', async () => {
     extractor.extractFromBuffer.mockRejectedValue(new Error('bad document'))
 
-    await expect(service.parse(file('application/pdf') as never, scope)).rejects.toThrow(
-      'bad document',
-    )
+    const error = await service.parse(file('application/pdf') as never, scope).catch((e) => e)
+    expect(error).toBeInstanceOf(BadRequestException)
+    expect(error.message).toMatch(/could not open this file/i)
+    expect(llm.chat).not.toHaveBeenCalled()
   })
 
   it('keeps lines intact when splitting text into LLM chunks', async () => {
@@ -309,5 +315,135 @@ describe('ExamImportService.parse', () => {
       BadRequestException,
     )
     expect(llm.chat).not.toHaveBeenCalled()
+  })
+
+  it('rejects a file with no extractable text before calling the LLM', async () => {
+    extractor.extractFromBuffer.mockResolvedValue(document('  \n '))
+    const error = await service.parse(file('application/pdf') as never, scope).catch((e) => e)
+    expect(error).toBeInstanceOf(BadRequestException)
+    expect(error.message).toMatch(/no text found/i)
+    expect(llm.chat).not.toHaveBeenCalled()
+  })
+
+  it('asks to split a timetable above the chunk limit by faculty', async () => {
+    extractor.extractFromBuffer.mockResolvedValue(
+      document(Array(13).fill('A'.repeat(4000)).join('\n')),
+    )
+    const error = await service.parse(file('application/pdf') as never, scope).catch((e) => e)
+    expect(error).toBeInstanceOf(BadRequestException)
+    expect(error.message).toMatch(/split it by faculty/i)
+  })
+
+  it('tells the user to add exams by hand when AI is off', async () => {
+    llm.enabled = false
+    const error = await service.parse(file('application/pdf') as never, scope).catch((e) => e)
+    expect(error).toBeInstanceOf(ServiceUnavailableException)
+    expect(error.message).toMatch(/add exams by hand/i)
+    expect(extractor.extractFromBuffer).not.toHaveBeenCalled()
+  })
+
+  it('passes through a busy AI as 503', async () => {
+    llm.chat.mockRejectedValue(new ServiceUnavailableException('The AI service is busy.'))
+    await expect(service.parse(file('application/pdf') as never, scope)).rejects.toThrow(
+      ServiceUnavailableException,
+    )
+  })
+
+  it('keeps rows from readable chunks and counts the unreadable one', async () => {
+    extractor.extractFromBuffer.mockResolvedValue(
+      document([`${'A'.repeat(3000)}`, `${'B'.repeat(3000)}`].join('\n')),
+    )
+    llm.chat
+      .mockResolvedValueOnce('not json')
+      .mockResolvedValueOnce(
+        '[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]',
+      )
+
+    const result = await service.parse(file('application/pdf') as never, scope)
+
+    expect(result.rows).toHaveLength(1)
+    expect(result.droppedCount).toBe(0)
+    expect(result.unreadableChunkCount).toBe(1)
+  })
+
+  it('returns 502 when every chunk is unreadable', async () => {
+    llm.chat.mockResolvedValue('not json')
+    await expect(service.parse(file('application/pdf') as never, scope)).rejects.toThrow(
+      BadGatewayException,
+    )
+  })
+
+  it('drops invalid AI rows and returns how many', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"},{"courseCode":"CS102","date":"2026-02-31","startsAt":"09:00","title":"Bad date"},"junk",{"courseCode":"","date":"2026-12-10","startsAt":"09:00","title":"x"}]',
+    )
+
+    const result = await service.parse(file('application/pdf') as never, scope)
+
+    expect(result.rows).toHaveLength(1)
+    expect(result.droppedCount).toBe(3)
+  })
+
+  it('reports zero dropped rows when nothing is dropped', async () => {
+    llm.chat.mockResolvedValue('[]')
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result).toEqual({ rows: [], droppedCount: 0, unreadableChunkCount: 0 })
+  })
+
+  it('propagates LLM errors that are not an unreadable chunk or a busy AI', async () => {
+    llm.chat.mockRejectedValue(new Error('invalid api key'))
+    await expect(service.parse(file('application/pdf') as never, scope)).rejects.toThrow(
+      'invalid api key',
+    )
+  })
+
+  it('accepts exactly twelve chunks', async () => {
+    extractor.extractFromBuffer.mockResolvedValue(
+      document(Array(12).fill('A'.repeat(4000)).join('\n')),
+    )
+    llm.chat.mockResolvedValue('[]')
+    await service.parse(file('application/pdf') as never, scope)
+    expect(llm.chat).toHaveBeenCalledTimes(12)
+  })
+
+  it.each([
+    [
+      'a fenced reply',
+      '```json\n[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]\n```',
+    ],
+    [
+      '[TBC] prose before the list',
+      'Rooms [TBC]. Here: [{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]',
+    ],
+    [
+      'an empty [] in prose before the list',
+      'rooms: [] then [{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]',
+    ],
+    [
+      'rows wrapped in an object',
+      '{"rows":[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]}',
+    ],
+    [
+      '[TBC] prose after the list',
+      '[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"}]\nNote: room [TBC]',
+    ],
+  ])('parses %s', async (_name, reply) => {
+    llm.chat.mockResolvedValue(reply)
+    const result = await service.parse(file('application/pdf') as never, scope)
+    expect(result.rows).toHaveLength(1)
+  })
+
+  it('treats truncated JSON as an unreadable chunk', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CS101","date":"2026-12-10","startsAt":"09:00","title":"Final exam"',
+    )
+    await expect(service.parse(file('application/pdf') as never, scope)).rejects.toThrow(
+      BadGatewayException,
+    )
+  })
+
+  it('asks the LLM for up to 8000 tokens', async () => {
+    await service.parse(file('application/pdf') as never, scope)
+    expect(llm.chat.mock.calls[0][1]).toMatchObject({ maxTokens: 8000 })
   })
 })

@@ -27,6 +27,8 @@ import {
   useExamsControllerParseImport,
   getExamsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/exams/exams'
+import { ApiError } from '@/src/lib/api/fetcher'
+import { reportServerError } from '@/src/lib/api/report-server-error'
 import { type BulkCreateExamsDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
 import { ImportTimetableReview } from './import-timetable-review'
@@ -46,6 +48,20 @@ function isSupportedMimeType(mimeType: string): boolean {
 }
 
 type Step = (typeof STEPS)[number]
+
+const WARNING_NOTE_CLASS = 'm-0 shrink-0 bg-warn-soft px-5 py-2 text-sm text-warn sm:px-7'
+const PARSE_ERROR_FALLBACK = 'Could not read this timetable. Please try again.'
+
+function showParseError(error: unknown) {
+  // 400 (no text, too large, wrong type), 503 (AI off or busy) and 502 carry clear server messages.
+  if (error instanceof ApiError && [400, 502, 503].includes(error.status) && error.message) {
+    toast.error(error.message)
+  } else if (error instanceof ApiError && error.status >= 500 && error.traceId) {
+    reportServerError(error)
+  } else {
+    toast.error(PARSE_ERROR_FALLBACK)
+  }
+}
 
 function pluralLabel(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural
@@ -126,8 +142,12 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const [step, setStep] = useState<Step>('upload')
   const [rows, setRows] = useState<ReviewRow[]>([])
+  const [droppedCount, setDroppedCount] = useState(0)
+  const [unreadableChunkCount, setUnreadableChunkCount] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const { mutateAsync: parseImport, isPending: parsing } = useExamsControllerParseImport()
+  const { mutateAsync: parseImport, isPending: parsing } = useExamsControllerParseImport({
+    mutation: { meta: { reportServerError: false } },
+  })
   const {
     mutateAsync: bulkCreate,
     isPending: publishing,
@@ -155,9 +175,11 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
         data: { file: selectedFile, ...(isAdmin ? { universityId } : {}) },
       })
       setRows(parsed.data.rows.map((row, rowId) => ({ ...row, rowId })))
+      setDroppedCount(parsed.data.droppedCount)
+      setUnreadableChunkCount(parsed.data.unreadableChunkCount)
       setStep('review')
-    } catch {
-      toast.error('Could not read this timetable. Please try again.')
+    } catch (error) {
+      showParseError(error)
     } finally {
       if (inputRef.current) inputRef.current.value = ''
     }
@@ -330,6 +352,17 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
 
       {step === 'review' && (
         <>
+          {unreadableChunkCount > 0 && (
+            <p className={WARNING_NOTE_CLASS}>
+              Part of this file couldn&apos;t be read. Some exams may be missing. Check the list or
+              try again.
+            </p>
+          )}
+          {droppedCount > 0 && (
+            <p className={WARNING_NOTE_CLASS}>
+              {droppedCount} {pluralLabel(droppedCount, "row couldn't", "rows couldn't")} be read
+            </p>
+          )}
           <ImportTimetableReview
             rows={rows}
             timezone={timezone}

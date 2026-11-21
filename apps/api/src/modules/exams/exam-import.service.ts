@@ -1,8 +1,14 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common'
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import { UniversityScope } from '@/common/university-scope'
 import { LlmService } from '@/modules/ai/llm/llm.service'
 import {
   DocumentExtractorService,
+  type ExtractedDocument,
   SUPPORTED_MIME_TYPES,
 } from '@/modules/ai/extraction/document-extractor.service'
 import { CoursesService } from '@/modules/courses/courses.service'
@@ -13,6 +19,10 @@ import { ExamsRepository } from './exams.repository'
 const CHUNK_SIZE = 4_000
 const MAX_CHUNKS = 12
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
+
+class UnreadableChunkError extends Error {}
+
+type ChunkResult = { rows: DraftExamRow[]; droppedCount: number }
 
 type DraftExamRow = {
   courseCode: string
@@ -56,13 +66,29 @@ export class ExamImportService {
     if (!SUPPORTED_MIME_TYPES.includes(file.mimetype)) {
       throw new BadRequestException('Only PDF and Word documents are supported')
     }
-    if (!this.llm.enabled) throw new ServiceUnavailableException('AI service not configured')
+    if (!this.llm.enabled) {
+      throw new ServiceUnavailableException(
+        'Timetable import is unavailable because AI is not configured. Add exams by hand instead.',
+      )
+    }
 
-    const extracted = await this.extractor.extractFromBuffer(file.buffer, file.mimetype)
+    let extracted: ExtractedDocument
+    try {
+      extracted = await this.extractor.extractFromBuffer(file.buffer, file.mimetype)
+    } catch {
+      throw new BadRequestException(
+        'Could not open this file. Make sure it is a valid PDF or Word document.',
+      )
+    }
     const text = extracted.pages
       .map((page) => page.text.trim())
       .filter(Boolean)
       .join('\n\n')
+    if (!text) {
+      throw new BadRequestException(
+        'No text found in this file. Scanned timetables are not supported.',
+      )
+    }
 
     const chunks = chunkTextByLines(text)
     if (chunks.length > MAX_CHUNKS) {
@@ -70,10 +96,25 @@ export class ExamImportService {
     }
 
     const drafts: DraftExamRow[] = []
-    for (const chunk of chunks) drafts.push(...(await this.extractRows(chunk)))
+    let droppedCount = 0
+    let unreadableChunkCount = 0
+    for (const chunk of chunks) {
+      try {
+        const chunkResult = await this.extractRows(chunk)
+        drafts.push(...chunkResult.rows)
+        droppedCount += chunkResult.droppedCount
+      } catch (error) {
+        // Only unreadable output is per chunk; busy or misconfigured AI propagates unchanged.
+        if (!(error instanceof UnreadableChunkError)) throw error
+        unreadableChunkCount++
+      }
+    }
+    if (unreadableChunkCount === chunks.length) {
+      throw new BadGatewayException('The AI could not read this timetable. Try again.')
+    }
 
     const requestedCodes = new Set(drafts.map((row) => normalizeCourseCode(row.courseCode)))
-    if (requestedCodes.size === 0) return { rows: [] }
+    if (requestedCodes.size === 0) return { rows: [], droppedCount, unreadableChunkCount }
 
     const courses = await this.courses.findAllInScope(importScope)
     const byCode = new Map<string, typeof courses>()
@@ -126,6 +167,8 @@ export class ExamImportService {
             )
           : [],
       })),
+      droppedCount,
+      unreadableChunkCount,
     }
   }
 
@@ -134,7 +177,7 @@ export class ExamImportService {
     return { kind: 'university', universityId }
   }
 
-  private async extractRows(text: string): Promise<DraftExamRow[]> {
+  private async extractRows(text: string): Promise<ChunkResult> {
     const response = await this.llm.chat(
       [
         {
@@ -144,22 +187,20 @@ export class ExamImportService {
         },
         { role: 'user', content: text },
       ],
-      { maxTokens: 4000, temperature: 0 },
+      { maxTokens: 8000, temperature: 0 },
     )
-    if (!response) throw new BadRequestException('Could not read timetable rows')
+    if (!response) throw new UnreadableChunkError()
 
-    const match = response.match(/\[[\s\S]*\]/)
-    if (!match) throw new BadRequestException('Could not read timetable rows')
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(match[0])
-    } catch {
-      throw new BadRequestException('Could not read timetable rows')
-    }
-    if (!Array.isArray(parsed)) throw new BadRequestException('Could not read timetable rows')
+    const parsed = parseJsonArray(response)
+    if (!Array.isArray(parsed)) throw new UnreadableChunkError()
 
-    return parsed.flatMap((value): DraftExamRow[] => {
-      if (!value || typeof value !== 'object') return []
+    const rows: DraftExamRow[] = []
+    let droppedCount = 0
+    for (const value of parsed) {
+      if (!value || typeof value !== 'object') {
+        droppedCount++
+        continue
+      }
       const row = value as Record<string, unknown>
       const courseCode = typeof row.courseCode === 'string' ? row.courseCode.trim() : ''
       const date = typeof row.date === 'string' ? row.date : ''
@@ -175,20 +216,40 @@ export class ExamImportService {
         !TIME_PATTERN.test(startsAt) ||
         (endsAt !== null && (!TIME_PATTERN.test(endsAt) || endsAt <= startsAt))
       ) {
-        return []
+        droppedCount++
+        continue
       }
-      return [
-        {
-          courseCode,
-          date,
-          startsAt,
-          endsAt,
-          title,
-          examRoom: typeof row.room === 'string' ? row.room : null,
-        },
-      ]
-    })
+      rows.push({
+        courseCode,
+        date,
+        startsAt,
+        endsAt,
+        title,
+        examRoom: typeof row.room === 'string' ? row.room : null,
+      })
+    }
+    return { rows, droppedCount }
   }
+}
+
+function parseJsonArray(reply: string): unknown[] | null {
+  const text = reply.replace(/```(?:json)?/gi, '').trim()
+  const parse = (value: string): unknown => {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return null
+    }
+  }
+
+  const whole = parse(text)
+  if (Array.isArray(whole)) return whole
+
+  // Prose such as "[TBC]" or an object wrapper: prefer an array of objects, then a bare `[]`.
+  const list = text.match(/\[\s*\{[\s\S]*\}\s*\]/)
+  const parsed = list ? parse(list[0]) : null
+  if (Array.isArray(parsed)) return parsed
+  return /\[\s*\]/.test(text) ? [] : null
 }
 
 function chunkTextByLines(text: string): string[] {

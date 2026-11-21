@@ -36,6 +36,10 @@ export class ExamImportRowEntity {
 export class ExamImportEntity {
   @ApiProperty({ type: [ExamImportRowEntity] })
   rows: ExamImportRowEntity[]
+  @ApiProperty({ description: 'Rows the AI returned that were invalid and dropped' })
+  droppedCount: number
+  @ApiProperty({ description: 'Chunks of the file the AI could not read' })
+  unreadableChunkCount: number
 }
 
 export class ExamBulkSkippedEntity {

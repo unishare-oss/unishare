@@ -2,7 +2,11 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ApiError } from '@/src/lib/api/fetcher'
 import { ImportTimetableDialog } from './import-timetable-dialog'
+
+const toastError = vi.hoisted(() => vi.fn())
+vi.mock('sonner', () => ({ toast: { error: toastError, success: vi.fn() } }))
 
 const mocks = vi.hoisted(() => ({
   parseImport: vi.fn(),
@@ -499,5 +503,97 @@ describe('ImportTimetableDialog', () => {
 
     expect(screen.queryByLabelText('Exam row 3')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Publish 2 exams' })).toBeEnabled()
+  })
+
+  it.each([
+    [400, 'No text found in this file.', 'No text found in this file.'],
+    [
+      400,
+      'Timetable is too large; split it by faculty',
+      'Timetable is too large; split it by faculty',
+    ],
+    [400, 'Only PDF and Word documents are supported', 'Only PDF and Word'],
+    [
+      503,
+      'Timetable import is unavailable because AI is not configured. Add exams by hand instead.',
+      'Add exams by hand',
+    ],
+    [503, 'The AI service is busy. Please try again shortly.', 'busy'],
+    [
+      502,
+      'The AI could not read this timetable. Try again.',
+      'The AI could not read this timetable',
+    ],
+    [500, 'boom', 'Could not read this timetable'],
+  ])('shows a clear message for a %i parse error (%s)', async (status, message, expected) => {
+    mocks.parseImport.mockRejectedValue(new ApiError(message, status))
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['t'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(String(toastError.mock.calls[0][0])).toContain(expected)
+    expect(screen.getByRole('button', { name: 'Read timetable' })).toBeInTheDocument()
+  })
+
+  it('shows the Error ID for a 500 parse error with a trace id', async () => {
+    mocks.parseImport.mockRejectedValue(new ApiError('boom', 500, 'trace-9'))
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['t'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1))
+    expect(toastError.mock.calls[0][0]).toBe('Something went wrong on our side')
+    expect(toastError.mock.calls[0][1]).toMatchObject({ description: 'Error ID: trace-9' })
+  })
+
+  it('warns when part of the file could not be read', async () => {
+    mocks.parseImport.mockResolvedValue({
+      data: { rows: [], droppedCount: 0, unreadableChunkCount: 1 },
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['t'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    expect(
+      await screen.findByText(
+        "Part of this file couldn't be read. Some exams may be missing. Check the list or try again.",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows how many rows could not be read on the review step', async () => {
+    mocks.parseImport.mockResolvedValue({
+      data: { rows: [], droppedCount: 2, unreadableChunkCount: 0 },
+    })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['t'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    expect(await screen.findByText("2 rows couldn't be read")).toBeInTheDocument()
   })
 })
