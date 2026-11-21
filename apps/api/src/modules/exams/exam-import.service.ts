@@ -72,6 +72,15 @@ export class ExamImportService {
           ...row,
           courseId: match?.id ?? null,
           courseName: match?.name ?? null,
+          candidates:
+            matches.length > 1
+              ? matches.map(({ id, code, name, department }) => ({
+                  id,
+                  code,
+                  name,
+                  departmentName: department.name,
+                }))
+              : [],
           matchStatus:
             matches.length === 1 ? 'matched' : matches.length > 1 ? 'ambiguous' : 'unmatched',
         }

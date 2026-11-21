@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger'
 
+export class ExamImportCourseCandidateEntity {
+  @ApiProperty() id: string
+  @ApiProperty() code: string
+  @ApiProperty() name: string
+  @ApiProperty() departmentName: string
+}
+
 export class ExamImportRowEntity {
   @ApiProperty() courseCode: string
   @ApiProperty({ type: String, nullable: true }) courseId: string | null
@@ -9,6 +16,8 @@ export class ExamImportRowEntity {
   @ApiProperty({ type: String, nullable: true }) endsAt: string | null
   @ApiProperty() title: string
   @ApiProperty({ type: String, nullable: true }) examRoom: string | null
+  @ApiProperty({ type: [ExamImportCourseCandidateEntity] })
+  candidates: ExamImportCourseCandidateEntity[]
   @ApiProperty({ enum: ['matched', 'ambiguous', 'unmatched'] }) matchStatus: string
 }
 

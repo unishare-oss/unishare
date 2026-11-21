@@ -1,11 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ImportTimetableDialog } from './import-timetable-dialog'
 
 const mocks = vi.hoisted(() => ({
   parseImport: vi.fn(),
   bulkCreate: vi.fn(),
+  courses: [] as Array<{ id: string; code: string; name: string }>,
 }))
 
 vi.mock('@/src/lib/api/generated/exams/exams', async () => {
@@ -16,13 +18,19 @@ vi.mock('@/src/lib/api/generated/exams/exams', async () => {
     getExamsControllerFindAllQueryKey: () => ['exams'],
   }
 })
+vi.mock('@/src/lib/api/generated/courses/courses', () => ({
+  useCoursesControllerFindAll: () => ({ data: { items: mocks.courses } }),
+}))
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  mocks.courses = []
 })
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = () => {}
+  Element.prototype.hasPointerCapture ??= () => false
+  Element.prototype.releasePointerCapture ??= () => {}
   window.scrollTo = vi.fn()
 })
 
@@ -43,6 +51,7 @@ describe('ImportTimetableDialog', () => {
             courseCode: 'CS101',
             courseId: 'course-1',
             courseName: 'Programming',
+            candidates: [],
             date: '2026-12-10',
             startsAt: '09:00',
             endsAt: '12:00',
@@ -112,5 +121,134 @@ describe('ImportTimetableDialog', () => {
       })
     })
     expect(await screen.findByText('1 exams added to the calendar.')).toBeInTheDocument()
+  })
+
+  it('lets moderators pick ambiguous courses and search for unmatched courses', async () => {
+    const user = userEvent.setup()
+    mocks.courses = [
+      { id: 'course-math-1', code: 'MATH201', name: 'Calculus II' },
+      { id: 'course-math-2', code: 'MATH220', name: 'Linear Algebra' },
+    ]
+    mocks.parseImport.mockResolvedValue({
+      data: {
+        rows: [
+          {
+            courseCode: 'CSC219',
+            courseId: null,
+            courseName: null,
+            candidates: [
+              {
+                id: 'course-csc-1',
+                code: 'CSC219',
+                name: 'Data Structures',
+                departmentName: 'Computer Science',
+              },
+              {
+                id: 'course-csc-2',
+                code: 'CSC 219',
+                name: 'Algorithms',
+                departmentName: 'Computing',
+              },
+            ],
+            date: '2026-12-10',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'ambiguous',
+          },
+          {
+            courseCode: 'MATH999',
+            courseId: null,
+            courseName: null,
+            candidates: [],
+            date: '2026-12-11',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'unmatched',
+          },
+          {
+            courseCode: 'MATH998',
+            courseId: null,
+            courseName: null,
+            candidates: [],
+            date: '2026-12-12',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'unmatched',
+          },
+        ],
+      },
+    })
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['timetable'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    await user.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    const ambiguousRow = await screen.findByLabelText('Exam row 1')
+    const ambiguousPicker = within(ambiguousRow).getByRole('combobox', {
+      name: 'Course for row 1',
+    })
+    expect(within(ambiguousRow).getAllByText('Pick a course')).toHaveLength(2)
+    await user.click(ambiguousPicker)
+    await user.click(
+      await screen.findByRole('option', { name: 'CSC 219 — Algorithms (Computing)' }),
+    )
+    expect(within(ambiguousRow).getByText('Picked')).toBeInTheDocument()
+    expect(within(ambiguousRow).getByText('Algorithms')).toBeInTheDocument()
+    await user.click(within(ambiguousRow).getByRole('combobox', { name: 'Course for row 1' }))
+    await user.click(
+      await screen.findByRole('option', {
+        name: 'CSC219 — Data Structures (Computer Science)',
+      }),
+    )
+    expect(within(ambiguousRow).getByText('Data Structures')).toBeInTheDocument()
+
+    const searchableRow = screen.getByLabelText('Exam row 2')
+    const search = within(searchableRow).getByRole('textbox', { name: 'Course for row 2' })
+    await user.click(search)
+    await user.keyboard('no such course')
+    expect(screen.getByText('No results found...')).toBeInTheDocument()
+    expect(within(searchableRow).getByText('Course not found')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish 3 exams' })).toBeDisabled()
+
+    await user.keyboard('{Control>}a{/Control}{Backspace}Calculus II')
+    const courseOption = await screen.findByText('MATH201 — Calculus II')
+    const popover = courseOption.closest('[data-slot="popover-content"]')
+    expect(popover).not.toBeNull()
+    expect(popover?.closest('[data-slot="dialog-content"]')).not.toBeNull()
+    await user.keyboard('{ArrowDown}{Enter}')
+    expect(within(searchableRow).getByText('Picked')).toBeInTheDocument()
+
+    const removableRow = screen.getByLabelText('Exam row 3')
+    const removableSearch = within(removableRow).getByRole('textbox', { name: 'Course for row 3' })
+    await user.click(removableSearch)
+    await user.keyboard('nothing matches')
+    const noResults = screen.getByText('No results found...')
+    expect(noResults.closest('[data-slot="popover-content"]')).not.toBeNull()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByText('No results found...')).not.toBeInTheDocument()
+
+    await user.click(removableSearch)
+    await user.keyboard('MATH')
+    expect(await screen.findByText('MATH201 — Calculus II')).toBeInTheDocument()
+    await user.click(within(removableRow).getByText('Course not found'))
+    expect(screen.queryByText('MATH201 — Calculus II')).not.toBeInTheDocument()
+
+    await user.click(within(removableRow).getByRole('button', { name: 'Remove row 3' }))
+
+    expect(screen.queryByLabelText('Exam row 3')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Publish 2 exams' })).toBeEnabled()
   })
 })

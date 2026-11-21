@@ -1,8 +1,25 @@
 import { Clock3, X } from 'lucide-react'
+import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SearchSelect, type SearchSelectOption } from '@/components/ui/search-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { isResolved, needsCourseSearch } from './import-timetable-rows'
 import type { ReviewRow } from './import-timetable.types'
+
+const STATUS_BADGE: Record<ReviewRow['matchStatus'], { label: string; className: string }> = {
+  matched: { label: 'Matched', className: 'bg-ok-soft text-ok' },
+  ambiguous: { label: 'Pick a course', className: 'bg-warn-soft text-warn' },
+  unmatched: { label: 'Course not found', className: 'bg-bad-soft text-bad' },
+  picked: { label: 'Picked', className: 'bg-ok-soft text-ok' },
+}
 
 interface ImportTimetableReviewProps {
   rows: ReviewRow[]
@@ -12,24 +29,60 @@ interface ImportTimetableReviewProps {
 }
 
 function StatusBadge({ row }: { row: ReviewRow }) {
-  const label =
-    row.matchStatus === 'matched'
-      ? 'Matched'
-      : row.matchStatus === 'ambiguous'
-        ? 'Pick a course'
-        : 'Course not found'
-  const statusClass =
-    row.matchStatus === 'matched'
-      ? 'bg-ok-soft text-ok'
-      : row.matchStatus === 'ambiguous'
-        ? 'bg-warn-soft text-warn'
-        : 'bg-bad-soft text-bad'
+  const { label, className } = STATUS_BADGE[row.matchStatus]
 
   return (
-    <Badge className={`border-transparent ${statusClass}`} variant="outline">
+    <Badge className={`border-transparent ${className}`} variant="outline">
       {label}
     </Badge>
   )
+}
+
+function CourseChoice({
+  row,
+  rowNumber,
+  courseOptions,
+  onSelect,
+}: {
+  row: ReviewRow
+  rowNumber: number
+  courseOptions: SearchSelectOption[]
+  onSelect: (courseId: string) => void
+}) {
+  if (needsCourseSearch(row)) {
+    return (
+      <SearchSelect
+        options={courseOptions}
+        value={row.courseId ?? ''}
+        onChange={onSelect}
+        placeholder="Search for a course"
+        ariaLabel={`Course for row ${rowNumber}`}
+      />
+    )
+  }
+
+  if (row.candidates.length > 0) {
+    return (
+      <Select value={row.courseId ?? undefined} onValueChange={onSelect}>
+        <SelectTrigger
+          className="w-full min-w-0"
+          size="sm"
+          aria-label={`Course for row ${rowNumber}`}
+        >
+          <SelectValue placeholder="Pick a course" />
+        </SelectTrigger>
+        <SelectContent>
+          {row.candidates.map((course) => (
+            <SelectItem key={course.id} value={course.id}>
+              {course.code} — {course.name} ({course.departmentName})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  return null
 }
 
 export function ImportTimetableReview({
@@ -38,7 +91,28 @@ export function ImportTimetableReview({
   onUpdate,
   onRemove,
 }: ImportTimetableReviewProps) {
-  const matchedCount = rows.filter((row) => row.matchStatus === 'matched').length
+  const matchedCount = rows.filter(isResolved).length
+  const { data: coursesData } = useCoursesControllerFindAll(
+    { limit: 100 },
+    { query: { select: (response) => response.data, enabled: rows.some(needsCourseSearch) } },
+  )
+  const courseOptions = (coursesData?.items ?? []).map((course) => ({
+    value: course.id,
+    label: `${course.code} — ${course.name}`,
+  }))
+
+  function selectCourse(row: ReviewRow, courseId: string) {
+    const course =
+      row.candidates.find((candidate) => candidate.id === courseId) ??
+      coursesData?.items.find((candidate) => candidate.id === courseId)
+    if (!course) return
+
+    onUpdate(row.rowId, {
+      courseId: course.id,
+      courseName: course.name,
+      matchStatus: 'picked',
+    })
+  }
 
   return (
     <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-7">
@@ -87,6 +161,12 @@ export function ImportTimetableReview({
                     <span className="truncate text-xs text-text-muted">
                       {row.courseName ?? 'Course not matched'}
                     </span>
+                    <CourseChoice
+                      row={row}
+                      rowNumber={index + 1}
+                      courseOptions={courseOptions}
+                      onSelect={(courseId) => selectCourse(row, courseId)}
+                    />
                   </div>
                 </td>
                 <td className="px-2.5 py-2.5 align-top">
@@ -179,6 +259,12 @@ export function ImportTimetableReview({
               <span className="text-xs text-text-muted">
                 {row.courseName ?? 'Course not matched'}
               </span>
+              <CourseChoice
+                row={row}
+                rowNumber={index + 1}
+                courseOptions={courseOptions}
+                onSelect={(courseId) => selectCourse(row, courseId)}
+              />
             </div>
             <label className="grid gap-1 text-xs text-text-muted">
               Title

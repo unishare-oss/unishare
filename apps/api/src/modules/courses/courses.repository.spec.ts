@@ -50,8 +50,13 @@ describe('CoursesRepository university scope', () => {
 
   it('findAllInScope returns selected course fields from the requested university', async () => {
     const scopedCourses = [
-      { id: 'c1', code: 'CSC219', name: 'Data Structures' },
-      { id: 'c2', code: 'MTH101', name: 'Calculus' },
+      {
+        id: 'c1',
+        code: 'CSC219',
+        name: 'Data Structures',
+        department: { name: 'Computer Science' },
+      },
+      { id: 'c2', code: 'MTH101', name: 'Calculus', department: { name: 'Mathematics' } },
     ]
     prisma.course.findMany.mockResolvedValue(scopedCourses)
 
@@ -59,7 +64,7 @@ describe('CoursesRepository university scope', () => {
 
     expect(prisma.course.findMany).toHaveBeenCalledWith({
       where: IN_U1,
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, name: true, department: { select: { name: true } } },
     })
   })
 

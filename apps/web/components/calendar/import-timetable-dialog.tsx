@@ -20,6 +20,7 @@ import {
 import { type BulkCreateExamsDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
 import { ImportTimetableReview } from './import-timetable-review'
+import { isResolved } from './import-timetable-rows'
 import type { ReviewRow } from './import-timetable.types'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -48,7 +49,9 @@ function toLocalIso(date: string, time: string): string | null {
 }
 
 function toExam(row: ReviewRow): BulkCreateExamsDto['exams'][number] | null {
-  if (row.matchStatus !== 'matched' || !row.courseId || !row.title.trim()) return null
+  if (!isResolved(row) || !row.courseId || !row.title.trim()) {
+    return null
+  }
 
   const startsAt = toLocalIso(row.date, row.startsAt)
   if (!startsAt) return null
@@ -86,7 +89,7 @@ function getTimezoneLabel(): string {
 export function ImportTimetableDialog({ open, onOpenChange }: ImportTimetableDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-24px)] max-w-none flex-col overflow-hidden rounded-2xl p-0 max-[639px]:h-[100dvh] max-[639px]:max-h-none max-[639px]:w-screen max-[639px]:rounded-none sm:max-w-[940px]">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-24px)] max-w-none flex-col overflow-visible rounded-2xl p-0 max-[639px]:h-[100dvh] max-[639px]:max-h-none max-[639px]:w-screen max-[639px]:rounded-none sm:max-w-[940px]">
         {open && <ImportTimetableDialogContent onClose={() => onOpenChange(false)} />}
       </DialogContent>
     </Dialog>

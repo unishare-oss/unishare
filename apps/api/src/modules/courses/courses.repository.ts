@@ -56,7 +56,7 @@ export class CoursesRepository {
   findAllInScope(scope: UniversityScope) {
     return this.prisma.course.findMany({
       where: courseInScope(scope),
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, name: true, department: { select: { name: true } } },
     })
   }
 

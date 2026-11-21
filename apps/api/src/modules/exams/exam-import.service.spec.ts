@@ -49,6 +49,7 @@ describe('ExamImportService.parse', () => {
         courseCode: 'CS101',
         courseId: 'course-1',
         courseName: 'Programming',
+        candidates: [],
         date: '2026-12-10',
         startsAt: '09:00',
         endsAt: '12:00',
@@ -72,6 +73,56 @@ describe('ExamImportService.parse', () => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     )
     expect(result.rows[0]).toMatchObject({ courseId: 'course-1', matchStatus: 'matched' })
+  })
+
+  it('returns scoped candidates for ambiguous rows and preserves all three match statuses', async () => {
+    llm.chat.mockResolvedValue(
+      '[{"courseCode":"CSC219","date":"2026-12-10","startsAt":"09:00","title":"Final exam"},{"courseCode":"CS101","date":"2026-12-11","startsAt":"09:00","title":"Final exam"},{"courseCode":"MATH999","date":"2026-12-12","startsAt":"09:00","title":"Final exam"}]',
+    )
+    courses.findAllInScope.mockResolvedValue([
+      {
+        id: 'course-csc-1',
+        code: 'CSC219',
+        name: 'Intro to data structures',
+        department: { name: 'Computer Science' },
+      },
+      {
+        id: 'course-csc-2',
+        code: 'CSC 219',
+        name: 'Data structures and algorithms',
+        department: { name: 'Computing' },
+      },
+      { id: 'course-cs101', code: 'CS101', name: 'Programming' },
+    ])
+
+    const result = await service.parse(file('application/pdf') as never, scope)
+
+    expect(result.rows.map(({ matchStatus }) => matchStatus)).toEqual([
+      'ambiguous',
+      'matched',
+      'unmatched',
+    ])
+    expect(result.rows[0]).toMatchObject({
+      courseId: null,
+      courseName: null,
+      candidates: [
+        {
+          id: 'course-csc-1',
+          code: 'CSC219',
+          name: 'Intro to data structures',
+          departmentName: 'Computer Science',
+        },
+        {
+          id: 'course-csc-2',
+          code: 'CSC 219',
+          name: 'Data structures and algorithms',
+          departmentName: 'Computing',
+        },
+      ],
+    })
+    expect(result.rows[1].candidates).toEqual([])
+    expect(result.rows[2].candidates).toEqual([])
+    expect(courses.findAllInScope).toHaveBeenCalledWith(scope)
   })
 
   it('rejects an unsupported MIME type before extraction', async () => {
