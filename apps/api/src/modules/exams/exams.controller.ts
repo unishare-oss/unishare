@@ -26,7 +26,7 @@ import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
 import { ListExamsDto } from './dto/list-exams.dto'
 import { ExamEntity } from './entities/exam.entity'
-import { ExamImportEntity } from './entities/exam-import.entity'
+import { ExamBulkCreateEntity, ExamImportEntity } from './entities/exam-import.entity'
 import { BulkCreateExamsDto } from './dto/bulk-create-exams.dto'
 import { ExamImportService } from './exam-import.service'
 import { MAX_EXAM_TIMETABLE_FILE_SIZE } from './exam-import.constants'
@@ -74,8 +74,8 @@ export class ExamsController {
 
   @Post('bulk')
   @Roles(['ADMIN', 'MODERATOR'])
-  @ApiCreatedResponse({ type: [ExamEntity] })
-  @ResponseMessage('Exams created successfully')
+  @ApiCreatedResponse({ type: ExamBulkCreateEntity })
+  @ResponseMessage('Exam timetable published successfully')
   bulkCreate(
     @Body() dto: BulkCreateExamsDto,
     @Session() session: UserSession,

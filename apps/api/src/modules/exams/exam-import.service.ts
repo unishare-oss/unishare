@@ -7,6 +7,7 @@ import {
 } from '@/modules/ai/extraction/document-extractor.service'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { normalizeCourseCode } from '@/modules/courses/course-code'
+import { ExamsRepository } from './exams.repository'
 
 const CHUNK_SIZE = 4_000
 const MAX_CHUNKS = 12
@@ -27,6 +28,7 @@ export class ExamImportService {
     private readonly extractor: DocumentExtractorService,
     private readonly llm: LlmService,
     private readonly courses: CoursesService,
+    private readonly exams: ExamsRepository,
   ) {}
 
   async parse(file: Express.Multer.File | undefined, scope: UniversityScope) {
@@ -64,27 +66,49 @@ export class ExamImportService {
       byCode.set(code, [...(byCode.get(code) ?? []), course])
     }
 
+    const rows = drafts.map((row) => {
+      const matches = byCode.get(normalizeCourseCode(row.courseCode)) ?? []
+      const match = matches.length === 1 ? matches[0] : null
+      return {
+        ...row,
+        courseId: match?.id ?? null,
+        courseName: match?.name ?? null,
+        candidates:
+          matches.length > 1
+            ? matches.map(({ id, code, name, department }) => ({
+                id,
+                code,
+                name,
+                departmentName: department.name,
+              }))
+            : [],
+        matchStatus:
+          matches.length === 1 ? 'matched' : matches.length > 1 ? 'ambiguous' : 'unmatched',
+      }
+    })
+    const courseIds = [...new Set(rows.flatMap((row) => (row.courseId ? [row.courseId] : [])))]
+    const existingExams =
+      courseIds.length > 0 ? await this.exams.findUpcomingForCourses(courseIds, new Date()) : []
+    const examsByCourse = new Map<string, typeof existingExams>()
+    for (const exam of existingExams) {
+      examsByCourse.set(exam.courseId, [...(examsByCourse.get(exam.courseId) ?? []), exam])
+    }
+
     return {
-      rows: drafts.map((row) => {
-        const matches = byCode.get(normalizeCourseCode(row.courseCode)) ?? []
-        const match = matches.length === 1 ? matches[0] : null
-        return {
-          ...row,
-          courseId: match?.id ?? null,
-          courseName: match?.name ?? null,
-          candidates:
-            matches.length > 1
-              ? matches.map(({ id, code, name, department }) => ({
-                  id,
-                  code,
-                  name,
-                  departmentName: department.name,
-                }))
-              : [],
-          matchStatus:
-            matches.length === 1 ? 'matched' : matches.length > 1 ? 'ambiguous' : 'unmatched',
-        }
-      }),
+      rows: rows.map((row) => ({
+        ...row,
+        existingExams: row.courseId
+          ? (examsByCourse.get(row.courseId) ?? []).map(
+              ({ id, title, startsAt, endsAt, examRoom }) => ({
+                id,
+                title,
+                startsAt: startsAt.toISOString(),
+                endsAt: endsAt?.toISOString() ?? null,
+                examRoom,
+              }),
+            )
+          : [],
+      })),
     }
   }
 

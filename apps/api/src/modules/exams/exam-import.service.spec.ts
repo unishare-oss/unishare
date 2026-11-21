@@ -7,6 +7,7 @@ describe('ExamImportService.parse', () => {
   let extractor: { extractFromBuffer: jest.Mock }
   let llm: { enabled: boolean; chat: jest.Mock }
   let courses: { findAllInScope: jest.Mock }
+  let exams: { findUpcomingForCourses: jest.Mock }
   const buffer = Buffer.from('document')
   const document = (text: string) => ({ pages: [{ num: 1, text }], hasPageNumbers: true })
   const file = (mimetype: string, size = buffer.length) => ({
@@ -37,7 +38,13 @@ describe('ExamImportService.parse', () => {
           { id: 'course-1', code: 'CS 101', name: 'Programming', department: { id: 'dept-1' } },
         ]),
     }
-    service = new ExamImportService(extractor as never, llm as never, courses as never)
+    exams = { findUpcomingForCourses: jest.fn().mockResolvedValue([]) }
+    service = new ExamImportService(
+      extractor as never,
+      llm as never,
+      courses as never,
+      exams as never,
+    )
   })
 
   it('extracts and matches a PDF buffer without storing it', async () => {
@@ -55,12 +62,41 @@ describe('ExamImportService.parse', () => {
         endsAt: '12:00',
         title: 'Final exam',
         examRoom: 'A-101',
+        existingExams: [],
         matchStatus: 'matched',
       },
     ])
     expect(extractor.extractFromBuffer).toHaveBeenCalledWith(buffer, 'application/pdf')
     expect(llm.chat).toHaveBeenCalledTimes(1)
     expect(courses.findAllInScope).toHaveBeenCalledWith(scope)
+  })
+
+  it('attaches upcoming exams for the uniquely matched course', async () => {
+    exams.findUpcomingForCourses.mockResolvedValue([
+      {
+        id: 'exam-existing',
+        courseId: 'course-1',
+        title: 'Final exam',
+        startsAt: new Date('2026-12-09T02:00:00.000Z'),
+        endsAt: new Date('2026-12-09T05:00:00.000Z'),
+        examRoom: 'B-12',
+      },
+    ])
+
+    const result = await service.parse(file('application/pdf') as never, scope)
+
+    expect(exams.findUpcomingForCourses).toHaveBeenCalledWith(['course-1'], expect.any(Date))
+    expect(result.rows[0]).toMatchObject({
+      existingExams: [
+        {
+          id: 'exam-existing',
+          title: 'Final exam',
+          startsAt: '2026-12-09T02:00:00.000Z',
+          endsAt: '2026-12-09T05:00:00.000Z',
+          examRoom: 'B-12',
+        },
+      ],
+    })
   })
 
   it('extracts a Word buffer using its MIME type', async () => {
@@ -181,6 +217,16 @@ describe('ExamImportService.parse', () => {
 
     expect(result.rows).toEqual([])
     expect(courses.findAllInScope).not.toHaveBeenCalled()
+    expect(exams.findUpcomingForCourses).not.toHaveBeenCalled()
+  })
+
+  it('does not query existing exams when no rows matched a course', async () => {
+    courses.findAllInScope.mockResolvedValue([])
+
+    const result = await service.parse(file('application/pdf') as never, scope)
+
+    expect(result.rows[0]).toMatchObject({ courseId: null, existingExams: [] })
+    expect(exams.findUpcomingForCourses).not.toHaveBeenCalled()
   })
 
   it('surfaces extraction failures', async () => {

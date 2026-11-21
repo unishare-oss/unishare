@@ -43,6 +43,30 @@ export class ExamsRepository {
     })
   }
 
+  findByCourseAndStart(pairs: { courseId: string; startsAt: Date }[]) {
+    return this.prisma.exam.findMany({
+      where: {
+        OR: pairs.map(({ courseId, startsAt }) => ({ courseId, startsAt })),
+      },
+      select: { courseId: true, startsAt: true },
+    })
+  }
+
+  findUpcomingForCourses(courseIds: string[], now: Date) {
+    return this.prisma.exam.findMany({
+      where: { courseId: { in: courseIds }, startsAt: { gte: now } },
+      select: {
+        id: true,
+        courseId: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        examRoom: true,
+      },
+      orderBy: { startsAt: 'asc' },
+    })
+  }
+
   findById(id: string, scope: UniversityScope) {
     return this.prisma.exam.findUnique({
       where: { id, AND: [{ course: courseInScope(scope) }] },

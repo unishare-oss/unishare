@@ -52,6 +52,7 @@ describe('ImportTimetableDialog', () => {
             courseId: 'course-1',
             courseName: 'Programming',
             candidates: [],
+            existingExams: [],
             date: '2026-12-10',
             startsAt: '09:00',
             endsAt: '12:00',
@@ -62,7 +63,7 @@ describe('ImportTimetableDialog', () => {
         ],
       },
     }
-    mocks.bulkCreate.mockResolvedValue({ data: [{ id: 'exam-1' }] })
+    mocks.bulkCreate.mockResolvedValue({ data: { created: [{ id: 'exam-1' }], skipped: [] } })
     const onOpenChange = vi.fn()
     const queryClient = new QueryClient()
 
@@ -103,7 +104,7 @@ describe('ImportTimetableDialog', () => {
     fireEvent.change(screen.getByLabelText('Title for row 1'), {
       target: { value: 'Updated final' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Publish 1 exams' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Publish 1 exam' }))
 
     await waitFor(() => {
       expect(mocks.bulkCreate.mock.calls[0]?.[0]).toEqual({
@@ -120,7 +121,204 @@ describe('ImportTimetableDialog', () => {
         },
       })
     })
-    expect(await screen.findByText('1 exams added to the calendar.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Exams added to the calendar' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '1 exam created' })).toBeInTheDocument()
+    const skippedStat = screen.getByRole('group', { name: '0 skipped' })
+    expect(skippedStat).toHaveTextContent('skipped')
+    expect(skippedStat).not.toHaveTextContent('already on the calendar')
+  })
+
+  it('shows a moved warning and created/skipped counts after publishing', async () => {
+    mocks.parseImport.mockResolvedValue({
+      data: {
+        rows: [
+          {
+            courseCode: 'CS101',
+            courseId: 'course-1',
+            courseName: 'Programming',
+            candidates: [],
+            existingExams: [
+              {
+                id: 'exam-existing',
+                title: '  FINAL EXAM  ',
+                startsAt: '2026-12-09T02:00:00.000Z',
+                endsAt: null,
+                examRoom: null,
+              },
+            ],
+            date: '2026-12-10',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'matched',
+          },
+          {
+            courseCode: 'CS101',
+            courseId: 'course-1',
+            courseName: 'Programming',
+            candidates: [],
+            existingExams: [],
+            date: '2026-12-10',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Duplicate final exam',
+            examRoom: null,
+            matchStatus: 'matched',
+          },
+          {
+            courseCode: 'CS102',
+            courseId: 'course-2',
+            courseName: 'Data Structures',
+            candidates: [],
+            existingExams: [],
+            date: '2026-12-16',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Algorithms exam',
+            examRoom: null,
+            matchStatus: 'matched',
+          },
+        ],
+      },
+    })
+    mocks.bulkCreate.mockResolvedValue({
+      data: {
+        created: [{ id: 'exam-new' }],
+        skipped: [
+          { index: 0, reason: 'existing' },
+          { index: 1, reason: 'duplicate_in_request' },
+        ],
+      },
+    })
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['timetable'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    const movedWarnings = await screen.findAllByText(/Already has an exam on/)
+    expect(movedWarnings).toHaveLength(2)
+    expect(movedWarnings[0]).toHaveTextContent(
+      /Already has an exam on .+\. Moved\? Delete the old one after publishing\./,
+    )
+    expect(
+      within(screen.getByLabelText('Exam row 2')).queryByText(/Already has an exam on/),
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Publish 3 exams' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Exams added to the calendar' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '1 exam created' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '2 skipped' })).toBeInTheDocument()
+    expect(screen.getAllByText('CS101')).toHaveLength(2)
+    expect(
+      screen.getByText('Programming · 10 Dec, 09:00 · already on the calendar'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Programming · 10 Dec, 09:00 · duplicate row in this file'),
+    ).toBeInTheDocument()
+  })
+
+  it('describes duplicate-only skips without mentioning zero existing exams', async () => {
+    mocks.parseImport.mockResolvedValue({
+      data: {
+        rows: [
+          {
+            courseCode: 'CS101',
+            courseId: 'course-1',
+            courseName: 'Programming',
+            candidates: [],
+            existingExams: [],
+            date: '2026-12-10',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'matched',
+          },
+        ],
+      },
+    })
+    mocks.bulkCreate.mockResolvedValue({
+      data: { created: [], skipped: [{ index: 0, reason: 'duplicate_in_request' }] },
+    })
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['timetable'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+    await screen.findByLabelText('Title for row 1')
+    fireEvent.click(screen.getByRole('button', { name: 'Publish 1 exam' }))
+
+    const skippedStat = await screen.findByRole('group', { name: '1 skipped' })
+    expect(skippedStat).toHaveTextContent('1 duplicate row in this file')
+    expect(skippedStat).not.toHaveTextContent(/\b0 already on the calendar/)
+    expect(
+      screen.getByText('Programming · 10 Dec, 09:00 · duplicate row in this file'),
+    ).toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      label: 'an existing exam at the same start',
+      title: 'Final exam',
+      startsAt: new Date('2026-12-10T09:00:00').toISOString(),
+    },
+    {
+      label: 'a different-title exam at another time',
+      title: 'Midterm',
+      startsAt: '2026-12-09T02:00:00.000Z',
+    },
+  ])('does not show a moved warning for $label', async ({ title, startsAt }) => {
+    mocks.parseImport.mockResolvedValue({
+      data: {
+        rows: [
+          {
+            courseCode: 'CS101',
+            courseId: 'course-1',
+            courseName: 'Programming',
+            candidates: [],
+            existingExams: [{ id: 'exam-existing', title, startsAt, endsAt: null, examRoom: null }],
+            date: '2026-12-10',
+            startsAt: '09:00',
+            endsAt: null,
+            title: 'Final exam',
+            examRoom: null,
+            matchStatus: 'matched',
+          },
+        ],
+      },
+    })
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [new File(['timetable'], 'term.pdf', { type: 'application/pdf' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+
+    expect(await screen.findByLabelText('Title for row 1')).toHaveValue('Final exam')
+    expect(screen.queryByText(/Already has an exam on/)).not.toBeInTheDocument()
   })
 
   it('lets moderators pick ambiguous courses and search for unmatched courses', async () => {
@@ -150,6 +348,7 @@ describe('ImportTimetableDialog', () => {
                 departmentName: 'Computing',
               },
             ],
+            existingExams: [],
             date: '2026-12-10',
             startsAt: '09:00',
             endsAt: null,
@@ -162,6 +361,7 @@ describe('ImportTimetableDialog', () => {
             courseId: null,
             courseName: null,
             candidates: [],
+            existingExams: [],
             date: '2026-12-11',
             startsAt: '09:00',
             endsAt: null,
@@ -174,6 +374,7 @@ describe('ImportTimetableDialog', () => {
             courseId: null,
             courseName: null,
             candidates: [],
+            existingExams: [],
             date: '2026-12-12',
             startsAt: '09:00',
             endsAt: null,

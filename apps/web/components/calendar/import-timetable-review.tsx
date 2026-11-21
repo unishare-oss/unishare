@@ -1,4 +1,4 @@
-import { Clock3, X } from 'lucide-react'
+import { Clock3, TriangleAlert, X } from 'lucide-react'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { isResolved, needsCourseSearch } from './import-timetable-rows'
+import { formatExamDateTime, isResolved, needsCourseSearch } from './import-timetable-rows'
 import type { ReviewRow } from './import-timetable.types'
 
 const STATUS_BADGE: Record<ReviewRow['matchStatus'], { label: string; className: string }> = {
@@ -35,6 +35,34 @@ function StatusBadge({ row }: { row: ReviewRow }) {
     <Badge className={`border-transparent ${className}`} variant="outline">
       {label}
     </Badge>
+  )
+}
+
+function movedExamDate(row: ReviewRow): string | null {
+  const proposedStart = new Date(`${row.date}T${row.startsAt}:00`).getTime()
+  const existingExams = row.existingExams
+  if (existingExams.some((exam) => new Date(exam.startsAt).getTime() === proposedStart)) {
+    return null
+  }
+
+  const title = row.title.trim().toLowerCase()
+  const moved = existingExams.find((exam) => exam.title.trim().toLowerCase() === title)
+  if (!moved) return null
+
+  return formatExamDateTime(moved.startsAt)
+}
+
+function MovedExamWarning({ row }: { row: ReviewRow }) {
+  const date = movedExamDate(row)
+  if (!date) return null
+
+  return (
+    <div className="mt-1 flex items-start gap-2 text-[12.5px] leading-snug text-warn">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <span>
+        Already has an exam on <strong>{date}</strong>. Moved? Delete the old one after publishing.
+      </span>
+    </div>
   )
 }
 
@@ -167,6 +195,7 @@ export function ImportTimetableReview({
                       courseOptions={courseOptions}
                       onSelect={(courseId) => selectCourse(row, courseId)}
                     />
+                    <MovedExamWarning row={row} />
                   </div>
                 </td>
                 <td className="px-2.5 py-2.5 align-top">
@@ -266,6 +295,7 @@ export function ImportTimetableReview({
                 onSelect={(courseId) => selectCourse(row, courseId)}
               />
             </div>
+            <MovedExamWarning row={row} />
             <label className="grid gap-1 text-xs text-text-muted">
               Title
               <Input

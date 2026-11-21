@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Clock3, FileText, UploadCloud } from 'lucide-react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
 import { type BulkCreateExamsDto } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { useQueryClient } from '@tanstack/react-query'
 import { ImportTimetableReview } from './import-timetable-review'
-import { isResolved } from './import-timetable-rows'
+import { formatExamDateTime, isResolved } from './import-timetable-rows'
 import type { ReviewRow } from './import-timetable.types'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -36,6 +37,15 @@ function isSupportedMimeType(mimeType: string): boolean {
 }
 
 type Step = (typeof STEPS)[number]
+
+function pluralLabel(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural
+}
+
+function examLabel(count: number, includeCount = true): string {
+  const label = pluralLabel(count, 'exam', 'exams')
+  return includeCount ? `${count} ${label}` : label
+}
 
 interface ImportTimetableDialogProps {
   open: boolean
@@ -157,6 +167,17 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
   }
 
   const canPublish = rows.length > 0 && rows.every((row) => toExam(row) !== null)
+  const publishResult = bulkCreateResult?.data
+  const skipped = publishResult?.skipped ?? []
+  const existingSkipped = skipped.filter(({ reason }) => reason === 'existing').length
+  const duplicateSkipped = skipped.filter(({ reason }) => reason === 'duplicate_in_request').length
+  const skippedDetails = [
+    existingSkipped > 0 ? `${existingSkipped} already on the calendar` : null,
+    duplicateSkipped > 0
+      ? `${duplicateSkipped} ${pluralLabel(duplicateSkipped, 'duplicate row', 'duplicate rows')} in this file`
+      : null,
+  ].filter((detail) => detail !== null)
+  const skippedDescription = skippedDetails.length > 0 ? skippedDetails.join(' · ') : 'skipped'
 
   const timezone = getTimezoneLabel()
 
@@ -284,7 +305,7 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
           <DialogFooter className="shrink-0 border-t border-line px-5 py-3 sm:flex-row sm:items-center sm:px-7">
             <span className="text-left text-sm text-text-muted sm:mr-auto">
               {canPublish
-                ? `Ready to publish ${rows.length} exams.`
+                ? `Ready to publish ${examLabel(rows.length)}.`
                 : 'Resolve course matches and invalid details before publishing.'}
             </span>
             <Button type="button" variant="quiet" onClick={onClose}>
@@ -296,7 +317,7 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
               disabled={!canPublish || publishing}
               onClick={() => void publish()}
             >
-              {publishing ? 'Publishing…' : `Publish ${rows.length} exams`}
+              {publishing ? 'Publishing…' : `Publish ${examLabel(rows.length)}`}
             </Button>
           </DialogFooter>
         </>
@@ -326,16 +347,82 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
       )}
 
       {step === 'done' && (
-        <div className="px-5 py-10 text-center sm:px-7">
-          <h3 className="font-display text-2xl font-bold text-ink">Timetable published</h3>
-          <p className="mt-2 text-text-muted">
-            {bulkCreateResult?.data.length ?? 0} exams added to the calendar.
-          </p>
-          <DialogFooter className="mt-8">
-            <Button type="button" variant="brand" onClick={onClose}>
-              Done
-            </Button>
-          </DialogFooter>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
+          <div className="grid justify-items-start gap-4">
+            <Badge className="gap-1.5 border-transparent bg-ok-soft text-ok" variant="outline">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+              Published
+            </Badge>
+            <h3 className="font-display text-3xl font-extrabold text-ink">
+              Exams added to the calendar
+            </h3>
+            <div className="flex flex-wrap gap-3" aria-label="Publish results">
+              <div
+                role="group"
+                aria-label={`${examLabel(publishResult?.created.length ?? 0)} created`}
+                className="grid min-w-[150px] gap-1 rounded-xl border border-line px-4 py-3"
+              >
+                <strong className="font-display text-3xl font-extrabold leading-none tabular-nums text-ink">
+                  {publishResult?.created.length ?? 0}
+                </strong>
+                <span className="text-sm text-text-muted">
+                  {examLabel(publishResult?.created.length ?? 0, false)} created
+                </span>
+              </div>
+              <div
+                role="group"
+                aria-label={`${skipped.length} skipped`}
+                className="grid min-w-[150px] gap-1 rounded-xl border border-line px-4 py-3"
+              >
+                <strong className="font-display text-3xl font-extrabold leading-none tabular-nums text-ink">
+                  {skipped.length}
+                </strong>
+                <span className="text-sm text-text-muted">{skippedDescription}</span>
+              </div>
+            </div>
+            {skipped.length > 0 && (
+              <section className="grid gap-2" aria-labelledby="skipped-exams-heading">
+                <h4
+                  id="skipped-exams-heading"
+                  className="font-mono text-[11px] uppercase tracking-wide text-text-muted"
+                >
+                  Skipped
+                </h4>
+                <ul className="m-0 grid list-none gap-1 p-0 text-sm text-text-muted">
+                  {skipped.map(({ index, reason }) => {
+                    const row = rows[index]
+                    if (!row) return null
+                    const dateTime = formatExamDateTime(`${row.date}T${row.startsAt}:00`)
+
+                    return (
+                      <li key={`${index}-${reason}`} className="flex items-baseline gap-3">
+                        <span className="font-mono text-[12.5px] font-medium text-ink">
+                          {row.courseCode}
+                        </span>
+                        <span>
+                          {row.courseName ?? 'Course not matched'} · {dateTime}
+                          {reason === 'existing'
+                            ? ' · already on the calendar'
+                            : ' · duplicate row in this file'}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+            <div className="flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2.5 text-sm text-ink">
+              <Clock3 className="mt-0.5 size-4 shrink-0 text-sky" aria-hidden="true" />
+              <span>
+                Exams starting within 14 days are reminded as soon as they&apos;re published.
+              </span>
+            </div>
+            <DialogFooter className="w-full">
+              <Button type="button" variant="brand" onClick={onClose}>
+                Done
+              </Button>
+            </DialogFooter>
+          </div>
         </div>
       )}
     </>

@@ -58,12 +58,13 @@ describe('ExamsRepository.findDueForReminder', () => {
 })
 
 describe('ExamsRepository.bulkCreate', () => {
-  it('creates the batch directly and returns the exams with their course details', async () => {
+  it('writes the supplied rows directly with course details', async () => {
     const created = [{ id: 'e1' }]
     const createManyAndReturn = jest.fn().mockResolvedValue(created)
+    const findMany = jest.fn()
     const transaction = jest.fn()
     const repository = new ExamsRepository({
-      exam: { createManyAndReturn },
+      exam: { createManyAndReturn, findMany },
       $transaction: transaction,
     } as any)
     const rows = [
@@ -91,5 +92,43 @@ describe('ExamsRepository.bulkCreate', () => {
       include: { course: { include: { department: true } } },
     })
     expect(transaction).not.toHaveBeenCalled()
+    expect(findMany).not.toHaveBeenCalled()
+  })
+
+  it('queries the supplied course and start pairs without filtering', async () => {
+    const findMany = jest.fn().mockResolvedValue([])
+    const repository = new ExamsRepository({ exam: { findMany } } as any)
+    const pairs = [
+      { courseId: 'c1', startsAt: new Date('2026-12-01T02:00:00.000Z') },
+      { courseId: 'c2', startsAt: new Date('2026-12-02T02:00:00.000Z') },
+    ]
+
+    await repository.findByCourseAndStart(pairs)
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { OR: pairs },
+      select: { courseId: true, startsAt: true },
+    })
+  })
+
+  it('returns upcoming exams only for requested courses', async () => {
+    const findMany = jest.fn().mockResolvedValue([])
+    const repository = new ExamsRepository({ exam: { findMany } } as any)
+    const now = new Date('2026-11-21T00:00:00.000Z')
+
+    await repository.findUpcomingForCourses(['c1', 'c2'], now)
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { courseId: { in: ['c1', 'c2'] }, startsAt: { gte: now } },
+      select: {
+        id: true,
+        courseId: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        examRoom: true,
+      },
+      orderBy: { startsAt: 'asc' },
+    })
   })
 })
