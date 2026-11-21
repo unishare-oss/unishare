@@ -10,10 +10,11 @@ import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { McpController } from './mcp.controller'
 import { McpService } from './mcp.service'
 import { McpRepository } from './mcp.repository'
+import { McpToolsService } from './mcp-tools.service'
 
 @Module({
   imports: [CollabModule, PostsModule, CoursesModule, PrismaModule, FilesModule],
   controllers: isMcpEnabled ? [McpController] : [],
-  providers: [McpService, McpRepository, McpAuthGuard, UserThrottlerGuard],
+  providers: [McpService, McpToolsService, McpRepository, McpAuthGuard, UserThrottlerGuard],
 })
 export class McpModule {}

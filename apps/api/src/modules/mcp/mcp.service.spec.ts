@@ -1,16 +1,16 @@
 import { RequireScope } from '@/common/decorators/require-scope.decorator'
 import { createPostToolDescription, McpService } from './mcp.service'
-import type { McpRepository } from './mcp.repository'
+import type { McpToolsService } from './mcp-tools.service'
 import type { McpAuthSession } from './dto/mcp-auth-session.dto'
 import { drawingGuide } from './mcp-drawing-guide'
 import { postGuide } from './mcp-post-guide'
 
-jest.mock('./mcp.repository', () => ({
-  McpRepository: class McpRepository {},
+jest.mock('./mcp-tools.service', () => ({
+  McpToolsService: class McpToolsService {},
 }))
 
 describe('McpService', () => {
-  const mcpRepository = {
+  const mcpToolsService = {
     listBoards: jest.fn(),
     createBoard: jest.fn(),
     getBoard: jest.fn(),
@@ -21,7 +21,7 @@ describe('McpService', () => {
     createPost: jest.fn(),
     deletePost: jest.fn(),
   }
-  const service = new McpService(mcpRepository as unknown as McpRepository)
+  const service = new McpService(mcpToolsService as unknown as McpToolsService)
 
   beforeEach(() => {
     jest.clearAllMocks()
