@@ -28,6 +28,7 @@ import { ListExamsDto } from './dto/list-exams.dto'
 import { ExamEntity } from './entities/exam.entity'
 import { ExamBulkCreateEntity, ExamImportEntity } from './entities/exam-import.entity'
 import { BulkCreateExamsDto } from './dto/bulk-create-exams.dto'
+import { ParseExamImportDto } from './dto/parse-exam-import.dto'
 import { ExamImportService } from './exam-import.service'
 import { MAX_EXAM_TIMETABLE_FILE_SIZE } from './exam-import.constants'
 
@@ -60,16 +61,20 @@ export class ExamsController {
     schema: {
       type: 'object',
       required: ['file'],
-      properties: { file: { type: 'string', format: 'binary' } },
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        universityId: { type: 'string' },
+      },
     },
   })
   @ApiCreatedResponse({ type: ExamImportEntity })
   @ResponseMessage('Exam timetable parsed successfully')
   parseImport(
     @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: ParseExamImportDto,
     @UniversityScopeParam() scope: UniversityScope,
   ) {
-    return this.examImportService.parse(file, scope)
+    return this.examImportService.parse(file, scope, dto.universityId)
   }
 
   @Post('bulk')

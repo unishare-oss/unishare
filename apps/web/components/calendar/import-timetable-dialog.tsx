@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Clock3, FileText, UploadCloud } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/auth-context'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +14,14 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import {
   useExamsControllerBulkCreate,
   useExamsControllerParseImport,
@@ -107,6 +116,12 @@ export function ImportTimetableDialog({ open, onOpenChange }: ImportTimetableDia
 }
 
 function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const [universityId, setUniversityId] = useState('')
+  const { data: universities } = useUniversitiesControllerFindAll({
+    query: { select: (response) => response.data, enabled: isAdmin },
+  })
   const inputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
   const [step, setStep] = useState<Step>('upload')
@@ -136,7 +151,9 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
   async function readTimetable() {
     if (!selectedFile) return
     try {
-      const parsed = await parseImport({ data: { file: selectedFile } })
+      const parsed = await parseImport({
+        data: { file: selectedFile, ...(isAdmin ? { universityId } : {}) },
+      })
       setRows(parsed.data.rows.map((row, rowId) => ({ ...row, rowId })))
       setStep('review')
     } catch {
@@ -238,6 +255,25 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
             aria-label="Choose exam timetable file"
             onChange={(event) => selectFile(event.currentTarget.files?.[0])}
           />
+          {isAdmin && (
+            <div className="mb-4 grid gap-2">
+              <label htmlFor="import-university" className="text-sm font-medium text-ink">
+                University
+              </label>
+              <Select value={universityId} onValueChange={setUniversityId}>
+                <SelectTrigger id="import-university" aria-label="University" className="w-full">
+                  <SelectValue placeholder="Choose a university" />
+                </SelectTrigger>
+                <SelectContent>
+                  {universities?.map((university) => (
+                    <SelectItem key={university.id} value={university.id}>
+                      {university.name} ({university.shortName})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
@@ -337,7 +373,7 @@ function ImportTimetableDialogContent({ onClose }: { onClose: () => void }) {
             <Button
               type="button"
               variant="brand"
-              disabled={!selectedFile}
+              disabled={!selectedFile || (isAdmin && !universityId)}
               onClick={() => void readTimetable()}
             >
               Read timetable

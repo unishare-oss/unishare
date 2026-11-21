@@ -48,6 +48,17 @@ describe('CalendarPage', () => {
     expect(screen.queryByRole('button', { name: 'Import timetable' })).not.toBeInTheDocument()
   })
 
+  it('shows timetable import to admins', () => {
+    auth.role = 'ADMIN'
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CalendarPage />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Import timetable' })).toBeInTheDocument()
+  })
+
   it('shows one calendar design', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>

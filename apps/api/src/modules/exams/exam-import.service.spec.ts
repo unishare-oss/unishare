@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ExamImportService } from './exam-import.service'
 
 describe('ExamImportService.parse', () => {
@@ -7,6 +7,7 @@ describe('ExamImportService.parse', () => {
   let extractor: { extractFromBuffer: jest.Mock }
   let llm: { enabled: boolean; chat: jest.Mock }
   let courses: { findAllInScope: jest.Mock }
+  let universities: { findById: jest.Mock }
   let exams: { findUpcomingForCourses: jest.Mock }
   const buffer = Buffer.from('document')
   const document = (text: string) => ({ pages: [{ num: 1, text }], hasPageNumbers: true })
@@ -39,11 +40,13 @@ describe('ExamImportService.parse', () => {
         ]),
     }
     exams = { findUpcomingForCourses: jest.fn().mockResolvedValue([]) }
+    universities = { findById: jest.fn().mockResolvedValue({ id: 'university-1' }) }
     service = new ExamImportService(
       extractor as never,
       llm as never,
       courses as never,
       exams as never,
+      universities as never,
     )
   })
 
@@ -168,11 +171,54 @@ describe('ExamImportService.parse', () => {
     expect(extractor.extractFromBuffer).not.toHaveBeenCalled()
   })
 
-  it('rejects a scope that includes multiple universities before extraction', async () => {
+  it('requires admins to choose an existing university and matches only its courses', async () => {
     await expect(service.parse(file('application/pdf') as never, { kind: 'all' })).rejects.toThrow(
       BadRequestException,
     )
+    universities.findById.mockResolvedValue({ id: 'university-2' })
+    courses.findAllInScope.mockResolvedValue([
+      { id: 'course-2', code: 'CS 101', name: 'Other Programming', department: { id: 'dept-2' } },
+    ])
+
+    const result = await service.parse(
+      file('application/pdf') as never,
+      { kind: 'all' },
+      'university-2',
+    )
+
+    expect(universities.findById).toHaveBeenCalledWith('university-2')
+    expect(courses.findAllInScope).toHaveBeenCalledWith({
+      kind: 'university',
+      universityId: 'university-2',
+    })
+    expect(result.rows[0]).toMatchObject({ courseId: 'course-2', courseName: 'Other Programming' })
+  })
+
+  it('rejects a moderator without a university before extraction or LLM parsing', async () => {
+    await expect(service.parse(file('application/pdf') as never, { kind: 'none' })).rejects.toThrow(
+      BadRequestException,
+    )
+
     expect(extractor.extractFromBuffer).not.toHaveBeenCalled()
+    expect(llm.chat).not.toHaveBeenCalled()
+  })
+
+  it('returns not found for an unknown admin university', async () => {
+    universities.findById.mockRejectedValue(new NotFoundException())
+    await expect(
+      service.parse(file('application/pdf') as never, { kind: 'all' }, 'unknown'),
+    ).rejects.toThrow(NotFoundException)
+    expect(extractor.extractFromBuffer).not.toHaveBeenCalled()
+  })
+
+  it('rejects a moderator university override and preserves their own scope', async () => {
+    await expect(
+      service.parse(file('application/pdf') as never, scope, 'university-2'),
+    ).rejects.toThrow(BadRequestException)
+    expect(courses.findAllInScope).not.toHaveBeenCalled()
+
+    await service.parse(file('application/pdf') as never, scope)
+    expect(courses.findAllInScope).toHaveBeenCalledWith(scope)
   })
 
   it('rejects a missing file', async () => {

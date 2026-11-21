@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   parseImport: vi.fn(),
   bulkCreate: vi.fn(),
   courses: [] as Array<{ id: string; code: string; name: string }>,
+  role: 'MODERATOR',
 }))
 
 vi.mock('@/src/lib/api/generated/exams/exams', async () => {
@@ -21,10 +22,20 @@ vi.mock('@/src/lib/api/generated/exams/exams', async () => {
 vi.mock('@/src/lib/api/generated/courses/courses', () => ({
   useCoursesControllerFindAll: () => ({ data: { items: mocks.courses } }),
 }))
+vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ user: { role: mocks.role } }) }))
+vi.mock('@/src/lib/api/generated/universities/universities', () => ({
+  useUniversitiesControllerFindAll: () => ({
+    data: [
+      { id: 'university-1', name: 'Example University', shortName: 'EU' },
+      { id: 'university-2', name: 'Other University', shortName: 'OU' },
+    ],
+  }),
+}))
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
   mocks.courses = []
+  mocks.role = 'MODERATOR'
 })
 
 beforeAll(() => {
@@ -35,6 +46,43 @@ beforeAll(() => {
 })
 
 describe('ImportTimetableDialog', () => {
+  it('requires admins to choose a university before reading and submits the choice', async () => {
+    mocks.role = 'ADMIN'
+    mocks.parseImport.mockResolvedValue({ data: { rows: [] } })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    const selectedFile = new File(['timetable'], 'term.pdf', { type: 'application/pdf' })
+    fireEvent.change(screen.getByLabelText('Choose exam timetable file'), {
+      target: { files: [selectedFile] },
+    })
+    expect(screen.getByRole('button', { name: 'Read timetable' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'University' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Example University (EU)' }))
+    expect(screen.getByRole('button', { name: 'Read timetable' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read timetable' }))
+    await waitFor(() =>
+      expect(mocks.parseImport.mock.calls[0]?.[0]).toEqual({
+        data: { file: selectedFile, universityId: 'university-1' },
+      }),
+    )
+  })
+
+  it('does not show the university picker to moderators', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ImportTimetableDialog open onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.queryByRole('combobox', { name: 'University' })).not.toBeInTheDocument()
+  })
+
   it('selects a file, reads it on request, reviews rows, then publishes', async () => {
     let finishParsing:
       ((value: { data: { rows: Array<Record<string, unknown>> } }) => void) | null = null

@@ -189,11 +189,9 @@ export default function CalendarPage() {
         action={
           canManage && (
             <div className="flex gap-2">
-              {user?.role === 'MODERATOR' && (
-                <Button onClick={() => setImportOpen(true)} size="sm" variant="quiet">
-                  Import timetable
-                </Button>
-              )}
+              <Button onClick={() => setImportOpen(true)} size="sm" variant="quiet">
+                Import timetable
+              </Button>
               <Button onClick={openCreateModal} size="sm" variant="brand">
                 <Plus className="size-3.5" strokeWidth={1.5} />
                 Add Exam
@@ -245,9 +243,7 @@ export default function CalendarPage() {
           submitting={creating || updating}
         />
       )}
-      {user?.role === 'MODERATOR' && (
-        <ImportTimetableDialog open={importOpen} onOpenChange={setImportOpen} />
-      )}
+      {canManage && <ImportTimetableDialog open={importOpen} onOpenChange={setImportOpen} />}
     </div>
   )
 }

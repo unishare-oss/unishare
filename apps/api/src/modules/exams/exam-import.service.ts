@@ -7,6 +7,7 @@ import {
 } from '@/modules/ai/extraction/document-extractor.service'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { normalizeCourseCode } from '@/modules/courses/course-code'
+import { UniversitiesService } from '@/modules/universities/universities.service'
 import { ExamsRepository } from './exams.repository'
 
 const CHUNK_SIZE = 4_000
@@ -29,11 +30,27 @@ export class ExamImportService {
     private readonly llm: LlmService,
     private readonly courses: CoursesService,
     private readonly exams: ExamsRepository,
+    private readonly universities: UniversitiesService,
   ) {}
 
-  async parse(file: Express.Multer.File | undefined, scope: UniversityScope) {
-    if (scope.kind !== 'university') {
+  async parse(
+    file: Express.Multer.File | undefined,
+    scope: UniversityScope,
+    universityId?: string,
+  ) {
+    let importScope: UniversityScope
+    if (scope.kind === 'all') {
+      if (!universityId) {
+        throw new BadRequestException('A university scope is required to import exams')
+      }
+      importScope = await this.requireUniversityScope(universityId)
+    } else if (scope.kind === 'none') {
       throw new BadRequestException('A university scope is required to import exams')
+    } else {
+      if (universityId) {
+        throw new BadRequestException('Moderators cannot choose a university')
+      }
+      importScope = scope
     }
     if (!file) throw new BadRequestException('Timetable file is required')
     if (!SUPPORTED_MIME_TYPES.includes(file.mimetype)) {
@@ -58,7 +75,7 @@ export class ExamImportService {
     const requestedCodes = new Set(drafts.map((row) => normalizeCourseCode(row.courseCode)))
     if (requestedCodes.size === 0) return { rows: [] }
 
-    const courses = await this.courses.findAllInScope(scope)
+    const courses = await this.courses.findAllInScope(importScope)
     const byCode = new Map<string, typeof courses>()
     for (const course of courses) {
       const code = normalizeCourseCode(course.code)
@@ -110,6 +127,11 @@ export class ExamImportService {
           : [],
       })),
     }
+  }
+
+  private async requireUniversityScope(universityId: string): Promise<UniversityScope> {
+    await this.universities.findById(universityId)
+    return { kind: 'university', universityId }
   }
 
   private async extractRows(text: string): Promise<DraftExamRow[]> {
