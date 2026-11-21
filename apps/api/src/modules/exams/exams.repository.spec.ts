@@ -56,3 +56,40 @@ describe('ExamsRepository.findDueForReminder', () => {
     )
   })
 })
+
+describe('ExamsRepository.bulkCreate', () => {
+  it('creates the batch directly and returns the exams with their course details', async () => {
+    const created = [{ id: 'e1' }]
+    const createManyAndReturn = jest.fn().mockResolvedValue(created)
+    const transaction = jest.fn()
+    const repository = new ExamsRepository({
+      exam: { createManyAndReturn },
+      $transaction: transaction,
+    } as any)
+    const rows = [
+      {
+        courseId: 'c1',
+        title: 'Final exam',
+        startsAt: '2026-12-01T02:00:00.000Z',
+        endsAt: '2026-12-01T05:00:00.000Z',
+        examRoom: 'A-101',
+      },
+    ]
+
+    await expect(repository.bulkCreate(rows, 'moderator-1')).resolves.toBe(created)
+
+    expect(createManyAndReturn).toHaveBeenCalledWith({
+      data: [
+        {
+          ...rows[0],
+          startsAt: new Date(rows[0].startsAt),
+          endsAt: new Date(rows[0].endsAt),
+          notes: undefined,
+          createdBy: 'moderator-1',
+        },
+      ],
+      include: { course: { include: { department: true } } },
+    })
+    expect(transaction).not.toHaveBeenCalled()
+  })
+})

@@ -18,11 +18,12 @@ describe('ExamsService', () => {
     findById: jest.Mock
     update: jest.Mock
     remove: jest.Mock
+    bulkCreate: jest.Mock
     findDueForReminder: jest.Mock
     markReminderSent: jest.Mock
     findReminderRecipientIds: jest.Mock
   }
-  let coursesService: { findOne: jest.Mock }
+  let coursesService: { findOne: jest.Mock; findIdsInScope: jest.Mock }
   let notificationsService: { notifyExamReminder: jest.Mock }
 
   beforeEach(async () => {
@@ -32,11 +33,12 @@ describe('ExamsService', () => {
       findById: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
+      bulkCreate: jest.fn(),
       findDueForReminder: jest.fn(),
       markReminderSent: jest.fn(),
       findReminderRecipientIds: jest.fn(),
     }
-    coursesService = { findOne: jest.fn() }
+    coursesService = { findOne: jest.fn(), findIdsInScope: jest.fn() }
     notificationsService = { notifyExamReminder: jest.fn() }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -94,6 +96,55 @@ describe('ExamsService', () => {
         ),
       ).rejects.toThrow(BadRequestException)
       expect(repo.create).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('bulkCreate', () => {
+    it('delegates the empty course lookup to CoursesService', async () => {
+      coursesService.findIdsInScope.mockResolvedValue([])
+      repo.bulkCreate.mockResolvedValue([])
+
+      await expect(service.bulkCreate([], 'moderator-1', U1)).resolves.toEqual([])
+
+      expect(coursesService.findIdsInScope).toHaveBeenCalledWith([], U1)
+      expect(repo.bulkCreate).toHaveBeenCalledWith([], 'moderator-1')
+    })
+
+    it('validates every course before creating the batch and reminds each created exam', async () => {
+      const rows = [
+        { courseId: 'c1', title: 'Final exam', startsAt: '2026-11-25T02:00:00.000Z' },
+        { courseId: 'c2', title: 'Midterm', startsAt: '2026-12-01T02:00:00.000Z' },
+      ]
+      const exams = [
+        { id: 'e1', startsAt: new Date('2026-11-25T02:00:00.000Z'), course: { code: 'CS101' } },
+        { id: 'e2', startsAt: new Date('2026-12-01T02:00:00.000Z'), course: { code: 'CS102' } },
+      ]
+      coursesService.findIdsInScope.mockResolvedValue(['c1', 'c2'])
+      repo.bulkCreate.mockResolvedValue(exams)
+      const reminderSpy = jest.spyOn(service, 'remindIfDue').mockResolvedValue()
+
+      await expect(service.bulkCreate(rows, 'moderator-1', U1)).resolves.toBe(exams)
+
+      expect(coursesService.findIdsInScope).toHaveBeenCalledWith(['c1', 'c2'], U1)
+      expect(repo.bulkCreate).toHaveBeenCalledWith(rows, 'moderator-1')
+      expect(reminderSpy.mock.calls.map(([exam]) => exam.id)).toEqual(['e1', 'e2'])
+    })
+
+    it('rejects the first course outside the moderator university without creating any rows', async () => {
+      coursesService.findIdsInScope.mockResolvedValue(['c1'])
+      const rows = [
+        { courseId: 'c1', title: 'Final exam', startsAt: '2026-11-25T02:00:00.000Z' },
+        {
+          courseId: 'other-university-course',
+          title: 'Midterm',
+          startsAt: '2026-12-01T02:00:00.000Z',
+        },
+      ]
+
+      await expect(service.bulkCreate(rows, 'moderator-1', U1)).rejects.toThrow(
+        'Course in row 2 was not found',
+      )
+      expect(repo.bulkCreate).not.toHaveBeenCalled()
     })
   })
 

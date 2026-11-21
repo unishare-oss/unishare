@@ -39,6 +39,29 @@ export class ExamsService {
     return exam
   }
 
+  async bulkCreate(rows: CreateExamDto[], createdBy: string, scope: UniversityScope) {
+    if (scope.kind !== 'university') {
+      throw new BadRequestException('A university scope is required to publish exams')
+    }
+    const courseIds = [...new Set(rows.map(({ courseId }) => courseId))]
+    const validCourseIds = new Set(await this.coursesService.findIdsInScope(courseIds, scope))
+    const invalidCourseIndex = rows.findIndex(({ courseId }) => !validCourseIds.has(courseId))
+    if (invalidCourseIndex >= 0) {
+      throw new NotFoundException(`Course in row ${invalidCourseIndex + 1} was not found`)
+    }
+    rows.forEach((row, index) => {
+      try {
+        this.assertValidTimeRange(row.startsAt, row.endsAt)
+      } catch {
+        throw new BadRequestException(`Invalid time range in row ${index + 1}`)
+      }
+    })
+
+    const exams = await this.examsRepository.bulkCreate(rows, createdBy)
+    await Promise.all(exams.map((exam) => this.remindIfDue(exam, new Date())))
+    return exams
+  }
+
   async findInRange(
     from: string,
     to: string,

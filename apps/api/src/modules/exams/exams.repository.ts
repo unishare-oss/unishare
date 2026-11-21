@@ -28,6 +28,21 @@ export class ExamsRepository {
     })
   }
 
+  bulkCreate(rows: CreateExamDto[], createdBy: string) {
+    return this.prisma.exam.createManyAndReturn({
+      data: rows.map((dto) => ({
+        courseId: dto.courseId,
+        title: dto.title,
+        startsAt: new Date(dto.startsAt),
+        endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
+        examRoom: dto.examRoom ?? undefined,
+        notes: dto.notes ?? undefined,
+        createdBy,
+      })),
+      include: EXAM_INCLUDE,
+    })
+  }
+
   findById(id: string, scope: UniversityScope) {
     return this.prisma.exam.findUnique({
       where: { id, AND: [{ course: courseInScope(scope) }] },

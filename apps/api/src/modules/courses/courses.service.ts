@@ -60,6 +60,16 @@ export class CoursesService {
     return this.coursesRepository.findAll(pagination, scope, departmentId, hasOutline)
   }
 
+  findAllInScope(scope: UniversityScope) {
+    return this.coursesRepository.findAllInScope(scope)
+  }
+
+  async findIdsInScope(ids: string[], scope: UniversityScope) {
+    if (ids.length === 0) return []
+    const courses = await this.coursesRepository.findIdsInScope(ids, scope)
+    return courses.map(({ id }) => id)
+  }
+
   async suggest(dto: SuggestCoursesDto, userId: string, scope: UniversityScope) {
     const department = await this.coursesRepository.findDepartmentInScope(dto.departmentId, scope)
     if (!department) throw new NotFoundException('Department not found')
