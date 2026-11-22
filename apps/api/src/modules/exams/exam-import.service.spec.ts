@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common'
+import * as ExamTimetableLayout from './exam-timetable-layout'
 import { ExamImportService } from './exam-import.service'
 
 describe('ExamImportService.parse', () => {
@@ -15,7 +16,10 @@ describe('ExamImportService.parse', () => {
   let universities: { findById: jest.Mock }
   let exams: { findUpcomingForCourses: jest.Mock }
   const buffer = Buffer.from('document')
-  const document = (text: string) => ({ pages: [{ num: 1, text }], hasPageNumbers: true })
+  const document = (...texts: string[]) => ({
+    pages: texts.map((text, index) => ({ num: index + 1, text })),
+    hasPageNumbers: true,
+  })
   const file = (mimetype: string, size = buffer.length) => ({
     fieldname: 'file',
     originalname: 'timetable',
@@ -71,6 +75,7 @@ describe('ExamImportService.parse', () => {
 
   afterEach(() => {
     jest.useRealTimers()
+    jest.restoreAllMocks()
   })
 
   it('extracts and matches a PDF buffer without storing it', async () => {
@@ -95,6 +100,136 @@ describe('ExamImportService.parse', () => {
     expect(extractor.extractFromBuffer).toHaveBeenCalledWith(buffer, 'application/pdf')
     expect(llm.chat).toHaveBeenCalledTimes(1)
     expect(courses.findAllInScope).toHaveBeenCalledWith(scope)
+  })
+
+  it('sends rebuilt PDF rows to the AI with one line per row', async () => {
+    jest.spyOn(ExamTimetableLayout, 'readPositionedPdfPages').mockResolvedValue([
+      [
+        { str: '1', x: 63, y: 100 },
+        { str: 'Mon. 30 Nov., 2026', x: 80, y: 90 },
+        { str: '9.30-11.30', x: 255, y: 100 },
+        { str: 'CSC352 Security Management', x: 350, y: 100 },
+        { str: '2', x: 63, y: 80 },
+        { str: '9.30-11.30', x: 255, y: 80 },
+        { str: 'CSC353 Security Management', x: 350, y: 80 },
+      ],
+    ])
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    expect(llm.chat.mock.calls[0][0][0].content).toContain(
+      'Lines that start with a date are one exam row each.',
+    )
+    expect(llm.chat.mock.calls[0][0][1].content).toBe(
+      'Mon. 30 Nov., 2026 1 9.30-11.30 CSC352 Security Management\n' +
+        'Mon. 30 Nov., 2026 2 9.30-11.30 CSC353 Security Management',
+    )
+  })
+
+  it('keeps page context and rebuilds consecutive row numbers across two pages', async () => {
+    const positionedPage = (numbers: [number, number], date: string, context = false) => [
+      ...(context
+        ? [
+            { str: 'Semester 1/2026', x: 63, y: 140 },
+            { str: 'Date Time Subject', x: 63, y: 125 },
+          ]
+        : []),
+      { str: String(numbers[0]), x: 63, y: 100 },
+      { str: date, x: 80, y: 90 },
+      { str: '9.30-11.30', x: 255, y: 100 },
+      { str: `CSC${numbers[0]}`, x: 350, y: 100 },
+      { str: String(numbers[1]), x: 63, y: 80 },
+      { str: '9.30-11.30', x: 255, y: 80 },
+      { str: `CSC${numbers[1]}`, x: 350, y: 80 },
+    ]
+    jest
+      .spyOn(ExamTimetableLayout, 'readPositionedPdfPages')
+      .mockResolvedValue([
+        positionedPage([1, 2], 'Mon. 30 Nov., 2026', true),
+        positionedPage([17, 18], 'Tue. 1 Dec., 2026'),
+      ])
+    extractor.extractFromBuffer.mockResolvedValue(document('page one plain', 'page two plain'))
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    const prompt = llm.chat.mock.calls[0][0][1].content as string
+    expect(prompt).toContain('Semester 1/2026\nDate Time Subject')
+    expect(prompt).toContain('Tue. 1 Dec., 2026 17 9.30-11.30 CSC17')
+    expect(prompt).toContain('Tue. 1 Dec., 2026 18 9.30-11.30 CSC18')
+    expect(prompt).not.toContain('page one plain')
+    expect(prompt).not.toContain('page two plain')
+  })
+
+  it('falls back to plain text only for pages whose layout does not fit', async () => {
+    jest.spyOn(ExamTimetableLayout, 'readPositionedPdfPages').mockResolvedValue([
+      [
+        { str: '1', x: 63, y: 100 },
+        { str: 'Mon. 30 Nov., 2026', x: 80, y: 100 },
+        { str: '9.30-11.30', x: 255, y: 100 },
+        { str: 'CSC101 Security', x: 350, y: 100 },
+      ],
+      [{ str: '17', x: 63, y: 100 }],
+    ])
+    extractor.extractFromBuffer.mockResolvedValue(
+      document('page one plain', 'original page two text'),
+    )
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    const prompt = llm.chat.mock.calls[0][0][1].content as string
+    expect(prompt).toContain('Mon. 30 Nov., 2026 1 9.30-11.30 CSC101 Security')
+    expect(prompt).toContain('original page two text')
+    expect(prompt).not.toContain('page one plain')
+  })
+
+  it('uses plain text when rebuilding would exceed the chunk limit but plain text fits', async () => {
+    const rowYs = Array.from({ length: 13 }, (_, index) => 160 - index * 10)
+    const positionedItems = rowYs.flatMap((y, index) => [
+      { str: String(index + 1), x: 63, y },
+      { str: 'CSC352', x: 350, y },
+    ])
+    positionedItems.push({ str: 'Mon. 30 Nov., 2026', x: 80, y: 100 })
+    jest
+      .spyOn(ExamTimetableLayout, 'readPositionedPdfPages')
+      .mockResolvedValue([
+        positionedItems.map((item) => (item.x === 350 ? { ...item, str: 'X'.repeat(3990) } : item)),
+      ])
+    const plainText = Array(12).fill('P'.repeat(4000)).join('\n')
+    extractor.extractFromBuffer.mockResolvedValue(document(plainText))
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    expect(llm.chat).toHaveBeenCalledTimes(12)
+    expect(llm.chat.mock.calls[0][0][1].content).toBe('P'.repeat(4000))
+    expect(llm.chat.mock.calls[0][0][0].content).not.toContain(
+      'Lines that start with a date are one exam row each.',
+    )
+  })
+
+  it('falls back to extracted plain text when positioned PDF reading fails', async () => {
+    jest.spyOn(ExamTimetableLayout, 'readPositionedPdfPages').mockRejectedValue(new Error('pdfjs'))
+    extractor.extractFromBuffer.mockResolvedValue(document('plain PDF text'))
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    expect(llm.chat.mock.calls[0][0][1].content).toBe('plain PDF text')
+    expect(llm.chat.mock.calls[0][0][0].content).not.toContain(
+      'Lines that start with a date are one exam row each.',
+    )
+  })
+
+  it('falls back to extracted plain text when the PDF layout does not fit the rule', async () => {
+    jest
+      .spyOn(ExamTimetableLayout, 'readPositionedPdfPages')
+      .mockResolvedValue([[{ str: '1', x: 63, y: 100 }]])
+    extractor.extractFromBuffer.mockResolvedValue(document('plain PDF text'))
+
+    await service.parse(file('application/pdf') as never, scope)
+
+    expect(llm.chat.mock.calls[0][0][1].content).toBe('plain PDF text')
+    expect(llm.chat.mock.calls[0][0][0].content).not.toContain(
+      'Lines that start with a date are one exam row each.',
+    )
   })
 
   it('attaches upcoming exams for the uniquely matched course', async () => {

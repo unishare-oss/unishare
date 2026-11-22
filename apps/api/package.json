@@ -78,6 +78,7 @@
     "multer": "^2.5.0",
     "nanoid": "^5.1.16",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "5.4.296",
     "pg": "^8.22.0",
     "prisma": "^7.9.1",
     "prom-client": "^15.1.3",
