@@ -15,6 +15,7 @@ import { CoursesService } from '@/modules/courses/courses.service'
 import { normalizeCourseCode } from '@/modules/courses/course-code'
 import { UniversitiesService } from '@/modules/universities/universities.service'
 import { ExamsRepository } from './exams.repository'
+import * as ExamTimetableLayout from './exam-timetable-layout'
 
 const CHUNK_SIZE = 4_000
 const MAX_CHUNKS = 12
@@ -80,17 +81,29 @@ export class ExamImportService {
         'Could not open this file. Make sure it is a valid PDF or Word document.',
       )
     }
-    const text = extracted.pages
+    const plainText = extracted.pages
       .map((page) => page.text.trim())
       .filter(Boolean)
       .join('\n\n')
-    if (!text) {
+    if (!plainText) {
       throw new BadRequestException(
         'No text found in this file. Scanned timetables are not supported.',
       )
     }
 
-    const chunks = chunkTextByLines(text)
+    const rebuiltPdfText =
+      file.mimetype === 'application/pdf' ? await this.rebuildPdfText(file, extracted) : null
+    let rowsRebuilt = rebuiltPdfText !== null
+    const text = rebuiltPdfText ?? plainText
+
+    let chunks = chunkTextByLines(text)
+    if (chunks.length > MAX_CHUNKS && rowsRebuilt) {
+      const plainTextChunks = chunkTextByLines(plainText)
+      if (plainTextChunks.length <= MAX_CHUNKS) {
+        chunks = plainTextChunks
+        rowsRebuilt = false
+      }
+    }
     if (chunks.length > MAX_CHUNKS) {
       throw new BadRequestException('Timetable is too large; split it by faculty')
     }
@@ -100,7 +113,7 @@ export class ExamImportService {
     let unreadableChunkCount = 0
     for (const chunk of chunks) {
       try {
-        const chunkResult = await this.extractRows(chunk)
+        const chunkResult = await this.extractRows(chunk, rowsRebuilt)
         drafts.push(...chunkResult.rows)
         droppedCount += chunkResult.droppedCount
       } catch (error) {
@@ -172,18 +185,46 @@ export class ExamImportService {
     }
   }
 
+  private async rebuildPdfText(
+    file: Express.Multer.File,
+    extracted: ExtractedDocument,
+  ): Promise<string | null> {
+    let positionedPages: ExamTimetableLayout.PositionedTextItem[][]
+    try {
+      positionedPages = await ExamTimetableLayout.readPositionedPdfPages(file.buffer)
+    } catch {
+      return null
+    }
+
+    let rebuiltAnyPage = false
+    const pageTexts = extracted.pages.map((page, index) => {
+      const rebuilt = ExamTimetableLayout.rebuildTimetableRows(positionedPages[index] ?? [])
+      if (!rebuilt) return page.text.trim()
+
+      rebuiltAnyPage = true
+      return rebuilt.join('\n')
+    })
+    return rebuiltAnyPage ? pageTexts.join('\n\n') : null
+  }
+
   private async requireUniversityScope(universityId: string): Promise<UniversityScope> {
     await this.universities.findById(universityId)
     return { kind: 'university', universityId }
   }
 
-  private async extractRows(text: string): Promise<ChunkResult> {
+  private async extractRows(text: string, rowsRebuilt: boolean): Promise<ChunkResult> {
+    const rowInstruction = rowsRebuilt ? 'Lines that start with a date are one exam row each.' : ''
     const response = await this.llm.chat(
       [
         {
           role: 'system',
-          content:
-            'Extract exam timetable rows from the supplied text. Return only a JSON array of objects with courseCode, date (YYYY-MM-DD), startsAt and optional endsAt (HH:mm), title, and optional room. Do not invent values; omit rows missing a course code, valid date, start time, or title. Keep times local as printed. Dates must use the Gregorian calendar; convert Thai Buddhist-era years (for example 2569) by subtracting 543.',
+          content: [
+            'Extract exam timetable rows from the supplied text.',
+            rowInstruction,
+            'Return only a JSON array of objects with courseCode, date (YYYY-MM-DD), startsAt and optional endsAt (HH:mm), title, and optional room. Do not invent values; omit rows missing a course code, valid date, start time, or title. Keep times local as printed. Dates must use the Gregorian calendar; convert Thai Buddhist-era years (for example 2569) by subtracting 543.',
+          ]
+            .filter(Boolean)
+            .join(' '),
         },
         { role: 'user', content: text },
       ],
