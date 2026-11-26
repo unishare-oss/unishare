@@ -370,10 +370,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 )}
 
                 {quiz && (
-                  <div
-                    key={quizRound}
-                    className="rounded-md border border-border bg-background p-3 max-h-96 overflow-y-auto"
-                  >
+                  <div key={quizRound} className="max-h-96 overflow-y-auto">
                     <PracticeQuiz quiz={quiz} />
                   </div>
                 )}
