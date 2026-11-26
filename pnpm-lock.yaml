@@ -98,7 +98,7 @@ importers:
         version: 25.0.9(typescript@6.0.3)
       turbo:
         specifier: latest
-        version: 2.11.10
+        version: 2.11.13
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -382,6 +382,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@a2ui/react':
+        specifier: 0.16.1
+        version: 0.16.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.6.7)
+      '@a2ui/web_core':
+        specifier: 0.16.1
+        version: 0.16.1
       '@embedpdf/core':
         specifier: ^2.14.4
         version: 2.15.0(preact@10.28.4)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(svelte@5.55.7(@typescript-eslint/types@8.67.0))(vue@3.5.42(typescript@6.0.3))
@@ -591,6 +597,31 @@ importers:
         version: link:../tsconfig
 
 packages:
+  '@a2ui/markdown-it@0.2.4':
+    resolution:
+      {
+        integrity: sha512-7gqKNyIxkFfkjtxXuDtJ0Lu07NFtf15x1JdyXC7VE0Q+tpk4LjD2RL+GRM19SyDFPc3dbN7bTQnD+wnsmMY/Sg==,
+      }
+    peerDependencies:
+      '@a2ui/web_core': ^0.16.1
+
+  '@a2ui/react@0.16.1':
+    resolution:
+      {
+        integrity: sha512-5KYlQn+3WAuYtmbXi1Wfv4C//YQqw8EsSs1dV2cVss3Ga9sl239Zj2XZ9gIXgqxsKtjANq5lgXDUPhU3GJRuSw==,
+      }
+    engines: { node: '>=18.0.0' }
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+      zod: ^3.25.76
+
+  '@a2ui/web_core@0.16.1':
+    resolution:
+      {
+        integrity: sha512-sdQ8q4RNAaKla18AAXIGdAvfbzpE8+qay2vXMSPmgnBVUMZmi7ZwguzVsoCeRQSzvyAgNMjde/CcclARv7SzQw==,
+      }
+
   '@actions/core@3.0.0':
     resolution:
       {
@@ -3192,6 +3223,24 @@ packages:
         integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==,
       }
 
+  '@lit-labs/ssr-dom-shim@1.6.0':
+    resolution:
+      {
+        integrity: sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ==,
+      }
+
+  '@lit/context@1.1.6':
+    resolution:
+      {
+        integrity: sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A==,
+      }
+
+  '@lit/reactive-element@2.1.2':
+    resolution:
+      {
+        integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==,
+      }
+
   '@lukeed/csprng@1.1.0':
     resolution:
       {
@@ -4498,6 +4547,12 @@ packages:
         integrity: sha512-h104Kh26rR8tm+a3Qkc5S4VLYint3FE48as7+/5oCEcKR2idC/pF1G6AhIXKI+eHPJa/3J9i5z0Al47IeGHPkA==,
       }
     engines: { node: '>=12' }
+
+  '@preact/signals-core@1.14.5':
+    resolution:
+      {
+        integrity: sha512-vcRv7Ityz5JVmeiVqIluLFzT/PDS/AlhHUpw3/aUWqcVUs6bDGIPXE/6RSC4evBNWYvnniozg5Syfj33al3gkg==,
+      }
 
   '@prisma/adapter-pg@7.9.1':
     resolution:
@@ -6416,6 +6471,9 @@ packages:
         integrity: sha512-CUGXpnPkVdjUCbix+83sWLW9VFgQOm44MDOx/ihITJMAnOZKvL8YYIc7DR9pP/tZ8CIRvMiON/TucvygqbHO3w==,
       }
     engines: { node: '>=18.0.0' }
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution:
@@ -6909,50 +6967,50 @@ packages:
         integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==,
       }
 
-  '@turbo/darwin-64@2.11.10':
+  '@turbo/darwin-64@2.11.13':
     resolution:
       {
-        integrity: sha512-By4idRap5+nLnMuRzLB4qkOPRlvNdyY1ne4VJYDyUoUB11H94k7uif9mbe3JT8JSNXs1D68uMcBj6hJ/jMQRvA==,
+        integrity: sha512-5IT29i4j55E5O66+la7L8Y46ut7dFaNZqrgUIYYNtcpMt9Ql7aYnSQb/6tZ+prE2AfX1RBCAtRJE41txS2rG3w==,
       }
     cpu: [x64]
     os: [darwin]
 
-  '@turbo/darwin-arm64@2.11.10':
+  '@turbo/darwin-arm64@2.11.13':
     resolution:
       {
-        integrity: sha512-pyEYlVcuexOPa92p0Wlwl9YT1Is5D60lxN3ItWm3g30YLvFaUq86TF4BBWg5ZAc0uMTnrOzCvuCsOBTdzUWnRQ==,
+        integrity: sha512-YFJPayVNlhSPRIZSeERiZYGKKqPs6N6qGhim8J3GtBdv5ZjUNF1ixfnAAyCVTqFEnMSkn1W7F0Y07kca8EjWsg==,
       }
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.11.10':
+  '@turbo/linux-64@2.11.13':
     resolution:
       {
-        integrity: sha512-1tYeR/IDZ5HEdsb0jNq2L2xam5nMQ+g80tlV2BZmv4OFw+pMcUM0mMmUcfc5wXPPNHVNPuDMjh9Y8G8HgXPLZA==,
+        integrity: sha512-R5RIQflV4ffBDNuUwjmtmzIr6Y2UeyeeHTtultYF7cnFn3tG1RZ4GRBlpjUhHB6JxuR7l1B450hlbzdtlD3ghg==,
       }
     cpu: [x64]
     os: [android, linux]
 
-  '@turbo/linux-arm64@2.11.10':
+  '@turbo/linux-arm64@2.11.13':
     resolution:
       {
-        integrity: sha512-HuekQxvVGhUd46g1Im/DKdOtglHr4/gguZAvzEpPUgtxNkztSa8lWhQEGQ+EmPQ0n7w19qjThFU+OfEEd0uvlw==,
+        integrity: sha512-AwV8pVO/cH/lwx1B7SGfzUA/3e6vmPaygFp9NOSRESs6t3Wr63zrBuXlluDogAOIxIMlHDB2ZbBueDsBnQxh2Q==,
       }
     cpu: [arm64]
     os: [android, linux]
 
-  '@turbo/windows-64@2.11.10':
+  '@turbo/windows-64@2.11.13':
     resolution:
       {
-        integrity: sha512-UJOP3BkbreY3/JlMgJR6ZiimxYIBn+c+B4tnBIxD0E9c3Estmk+XoVNVBNBottZLNRXe3/ScgOU4+/k8tIWysg==,
+        integrity: sha512-PGXYTaFaN3FZloe4RffNGJmfB+TIWlqQgKK1PVyKwPN+PUzxGa+byxHBWFHredMaVbnUc6L/F6/QR4iHyM/wug==,
       }
     cpu: [x64]
     os: [win32]
 
-  '@turbo/windows-arm64@2.11.10':
+  '@turbo/windows-arm64@2.11.13':
     resolution:
       {
-        integrity: sha512-xOkEjF3ws/b/YNlc+bvJHMYBn+vL+QbEISZFVi0qS+ImmhA1X3/gmNmBrjjIG3dg6aeN+n6gQitzSkXQ286qJQ==,
+        integrity: sha512-YdRHWstBUHWt/eChOEM4f9LT0dPiWK5SNgtV77bLCr3JNke9M5E7metqelNYj+tXe36dH0BZrk2CMnFlWqHKng==,
       }
     cpu: [arm64]
     os: [win32]
@@ -13505,6 +13563,24 @@ packages:
     engines: { node: '>=22.22.1' }
     hasBin: true
 
+  lit-element@4.2.2:
+    resolution:
+      {
+        integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==,
+      }
+
+  lit-html@3.3.3:
+    resolution:
+      {
+        integrity: sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA==,
+      }
+
+  lit@3.3.3:
+    resolution:
+      {
+        integrity: sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw==,
+      }
+
   load-esm@1.0.3:
     resolution:
       {
@@ -14340,6 +14416,7 @@ packages:
       {
         integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==,
       }
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-emoji@1.11.0:
     resolution:
@@ -17156,10 +17233,10 @@ packages:
       }
     engines: { node: '>=0.6.11 <=0.7.0 || >=0.7.3' }
 
-  turbo@2.11.10:
+  turbo@2.11.13:
     resolution:
       {
-        integrity: sha512-3GJYwig8ygEI89oaOZdduJX8/aw6O9eRPYHoIt6T3FZl9hkKjiyIspufJoVgqXihPoJu8M5CSV0DlZvzfohBCw==,
+        integrity: sha512-2EZ8StW6tqaj71HGF60oUOmJrPQHidmZ5dcwv2VORofya9JthVrfZhxbzRMx/QxjPwYi754i2h5RFsZSDzpnaQ==,
       }
     hasBin: true
 
@@ -17581,6 +17658,12 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  validate-color@2.2.4:
+    resolution:
+      {
+        integrity: sha512-Znolz+b6CwW6eBXYld7MFM3O7funcdyRfjKC/X9hqYV/0VcC5LB/L45mff7m3dIn9wdGdNOAQ/fybNuD5P/HDw==,
+      }
 
   validate-npm-package-license@3.0.4:
     resolution:
@@ -18141,6 +18224,12 @@ packages:
     peerDependencies:
       zod: ^4.6.6
 
+  zod@3.25.76:
+    resolution:
+      {
+        integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==,
+      }
+
   zod@4.6.7:
     resolution:
       {
@@ -18193,6 +18282,31 @@ packages:
       }
 
 snapshots:
+  '@a2ui/markdown-it@0.2.4(@a2ui/web_core@0.16.1)':
+    dependencies:
+      '@a2ui/web_core': 0.16.1
+      dompurify: 3.4.17
+      markdown-it: 14.3.3
+
+  '@a2ui/react@0.16.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.6.7)':
+    dependencies:
+      '@a2ui/markdown-it': 0.2.4(@a2ui/web_core@0.16.1)
+      '@a2ui/web_core': 0.16.1
+      clsx: 2.1.1
+      markdown-it: 14.3.3
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+      zod: 4.6.7
+
+  '@a2ui/web_core@0.16.1':
+    dependencies:
+      '@lit/context': 1.1.6
+      '@preact/signals-core': 1.14.5
+      lit: 3.3.3
+      validate-color: 2.2.4
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.2(zod@3.25.76)
+
   '@actions/core@3.0.0':
     dependencies:
       '@actions/exec': 3.0.0
@@ -20047,6 +20161,16 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
+  '@lit-labs/ssr-dom-shim@1.6.0': {}
+
+  '@lit/context@1.1.6':
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+
+  '@lit/reactive-element@2.1.2':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.6.0
+
   '@lukeed/csprng@1.1.0': {}
 
   '@manypkg/find-root@1.1.0':
@@ -20942,6 +21066,8 @@ snapshots:
       '@pnpm/config.env-replace': 1.1.0
       '@pnpm/network.ca-file': 1.0.2
       config-chain: 1.1.13
+
+  '@preact/signals-core@1.14.5': {}
 
   '@prisma/adapter-pg@7.9.1':
     dependencies:
@@ -22679,22 +22805,22 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@turbo/darwin-64@2.11.10':
+  '@turbo/darwin-64@2.11.13':
     optional: true
 
-  '@turbo/darwin-arm64@2.11.10':
+  '@turbo/darwin-arm64@2.11.13':
     optional: true
 
-  '@turbo/linux-64@2.11.10':
+  '@turbo/linux-64@2.11.13':
     optional: true
 
-  '@turbo/linux-arm64@2.11.10':
+  '@turbo/linux-arm64@2.11.13':
     optional: true
 
-  '@turbo/windows-64@2.11.10':
+  '@turbo/windows-64@2.11.13':
     optional: true
 
-  '@turbo/windows-arm64@2.11.10':
+  '@turbo/windows-arm64@2.11.13':
     optional: true
 
   '@tybys/wasm-util@0.10.2':
@@ -26984,7 +27110,6 @@ snapshots:
   linkify-it@5.0.2:
     dependencies:
       uc.micro: 2.1.0
-    optional: true
 
   lint-staged@17.3.0:
     dependencies:
@@ -26993,6 +27118,22 @@ snapshots:
       tinyexec: 1.3.0
     optionalDependencies:
       yaml: 2.9.0
+
+  lit-element@4.2.2:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.6.0
+      '@lit/reactive-element': 2.1.2
+      lit-html: 3.3.3
+
+  lit-html@3.3.3:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.3.3:
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+      lit-element: 4.2.2
+      lit-html: 3.3.3
 
   load-esm@1.0.3: {}
 
@@ -27131,7 +27272,6 @@ snapshots:
       mdurl: 2.1.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
-    optional: true
 
   marked-terminal@7.3.0(marked@15.0.12):
     dependencies:
@@ -27241,8 +27381,7 @@ snapshots:
 
   mdn-data@2.27.1: {}
 
-  mdurl@2.1.0:
-    optional: true
+  mdurl@2.1.0: {}
 
   media-typer@0.3.0: {}
 
@@ -28171,8 +28310,7 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
-  punycode.js@2.3.1:
-    optional: true
+  punycode.js@2.3.1: {}
 
   punycode@2.3.1: {}
 
@@ -29426,14 +29564,14 @@ snapshots:
 
   tunnel@0.0.6: {}
 
-  turbo@2.11.10:
+  turbo@2.11.13:
     optionalDependencies:
-      '@turbo/darwin-64': 2.11.10
-      '@turbo/darwin-arm64': 2.11.10
-      '@turbo/linux-64': 2.11.10
-      '@turbo/linux-arm64': 2.11.10
-      '@turbo/windows-64': 2.11.10
-      '@turbo/windows-arm64': 2.11.10
+      '@turbo/darwin-64': 2.11.13
+      '@turbo/darwin-arm64': 2.11.13
+      '@turbo/linux-64': 2.11.13
+      '@turbo/linux-arm64': 2.11.13
+      '@turbo/windows-64': 2.11.13
+      '@turbo/windows-arm64': 2.11.13
 
   tw-animate-css@1.4.0: {}
 
@@ -29529,8 +29667,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  uc.micro@2.1.0:
-    optional: true
+  uc.micro@2.1.0: {}
 
   uglify-js@3.19.3:
     optional: true
@@ -29691,6 +29828,8 @@ snapshots:
   valibot@1.4.2(typescript@6.0.3):
     optionalDependencies:
       typescript: 6.0.3
+
+  validate-color@2.2.4: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:
@@ -30027,6 +30166,10 @@ snapshots:
 
   zimmerframe@1.1.5: {}
 
+  zod-to-json-schema@3.25.2(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
+
   zod-to-json-schema@3.25.2(zod@4.6.7):
     dependencies:
       zod: 4.6.7
@@ -30034,6 +30177,8 @@ snapshots:
   zod-validation-error@4.0.2(zod@4.6.7):
     dependencies:
       zod: 4.6.7
+
+  zod@3.25.76: {}
 
   zod@4.6.7: {}
 
