@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, KeyboardEvent } from 'react'
-import { Bot, ChevronDown, Send, AlertCircle, Loader2 } from 'lucide-react'
+import { Bot, ChevronDown, GraduationCap, Send, AlertCircle, Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { usePostAiChat, type AiChatCitation } from '@/hooks/use-post-ai-chat'
 import { AiReply } from '@/components/post-detail/ai-reply'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
+import { usePracticeQuiz } from '@/hooks/use-practice-quiz'
+import { PracticeQuiz } from '@/components/post-detail/practice-quiz'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 // Mirrors SUPPORTED_MIME_TYPES in apps/api/src/modules/ai/extraction/document-extractor.service.ts,
@@ -161,6 +163,13 @@ export function PostAiChat({ post }: PostAiChatProps) {
   const hasSupportedFiles = supportedFiles.length > 0
 
   const { messages, sendMessage, isPending } = usePostAiChat(post.id)
+  const {
+    quiz,
+    round: quizRound,
+    isLoading: isQuizLoading,
+    error: quizError,
+    start: startQuiz,
+  } = usePracticeQuiz(post.id)
   const { status: indexStatus } = useAiIndexStatus(post.id, hasSupportedFiles)
 
   const isPreparing = indexStatus?.state === 'preparing'
@@ -353,6 +362,42 @@ export function PostAiChat({ post }: PostAiChatProps) {
                     Not saved
                   </p>
                 )}
+
+                {quizError && (
+                  <p role="status" className="text-xs text-text-muted">
+                    {quizError}
+                  </p>
+                )}
+
+                {quiz && (
+                  <div
+                    key={quizRound}
+                    className="rounded-md border border-border bg-background p-3 max-h-96 overflow-y-auto"
+                  >
+                    <PracticeQuiz quiz={quiz} />
+                  </div>
+                )}
+
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startQuiz}
+                    disabled={isQuizLoading || isPending}
+                    className="gap-1.5 text-xs"
+                  >
+                    {isQuizLoading ? (
+                      <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+                    ) : (
+                      <GraduationCap className="size-3.5" strokeWidth={1.5} />
+                    )}
+                    {isQuizLoading
+                      ? 'Writing questions…'
+                      : quiz
+                        ? 'New practice questions'
+                        : 'Quiz me on this post'}
+                  </Button>
+                </div>
 
                 <div className="flex gap-2 items-end">
                   <Textarea
