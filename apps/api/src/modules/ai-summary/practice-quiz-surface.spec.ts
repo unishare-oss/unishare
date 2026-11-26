@@ -34,8 +34,8 @@ describe('buildPracticeQuiz', () => {
     const { messages, answers } = buildPracticeQuiz(questions)
 
     expect(answers).toEqual([
-      { correct: 0, explanation: 'Av = λv, and λ is the scalar.' },
-      { correct: 1, explanation: 'The spectral theorem.' },
+      { correct: 0, correctLabel: 'A scalar', explanation: 'Av = λv, and λ is the scalar.' },
+      { correct: 1, correctLabel: 'Symmetric real', explanation: 'The spectral theorem.' },
     ])
     expect(JSON.stringify(messages)).not.toContain('spectral theorem')
     expect(JSON.stringify(messages)).not.toContain('correct')

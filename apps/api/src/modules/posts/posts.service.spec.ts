@@ -691,7 +691,9 @@ describe('PostsService', () => {
       const result = await service.practiceQuiz('p2', {}, ALL)
 
       expect(aiSummaryMock.generateQuizQuestions).toHaveBeenCalledWith('A summary of the notes.', 3)
-      expect(result.answers).toEqual([{ correct: 0, explanation: 'Av = λv.' }])
+      expect(result.answers).toEqual([
+        { correct: 0, correctLabel: 'A scalar', explanation: 'Av = λv.' },
+      ])
       expect(result.messages).toHaveLength(3)
     })
 

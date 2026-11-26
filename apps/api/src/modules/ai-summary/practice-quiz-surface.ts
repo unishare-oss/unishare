@@ -26,6 +26,8 @@ export interface PracticeQuestion {
 export interface PracticeQuizAnswer {
   /** Index into the question's `options`. */
   correct: number
+  /** The text of that option, so the client can name it without reading the surface. */
+  correctLabel: string
   explanation: string
 }
 
@@ -96,6 +98,10 @@ export function buildPracticeQuiz(questions: PracticeQuestion[]): PracticeQuiz {
         },
       },
     ],
-    answers: questions.map((q) => ({ correct: q.correctAnswer, explanation: q.explanation })),
+    answers: questions.map((q) => ({
+      correct: q.correctAnswer,
+      correctLabel: q.options[q.correctAnswer],
+      explanation: q.explanation,
+    })),
   }
 }
