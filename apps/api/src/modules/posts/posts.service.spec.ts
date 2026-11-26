@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import {
+  BadGatewayException,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import {
   IngestStatus,
   PostPublicationStatus,
@@ -47,6 +53,7 @@ describe('PostsService', () => {
   let aiSummaryMock: {
     chatWithPost: jest.Mock
     chatWithPostStream: jest.Mock
+    generateQuizQuestions: jest.Mock
     summarizePost: jest.Mock
   }
 
@@ -60,6 +67,7 @@ describe('PostsService', () => {
     aiSummaryMock = {
       chatWithPost: jest.fn().mockResolvedValue({ reply: 'ok' }),
       chatWithPostStream: jest.fn().mockResolvedValue([]),
+      generateQuizQuestions: jest.fn(),
       summarizePost: jest.fn(),
     }
     repoMock = {
@@ -629,5 +637,87 @@ describe('PostsService', () => {
     await expect(service.clearSummary('p1')).resolves.toBeUndefined()
 
     expect(repoMock.clearSummary).toHaveBeenCalledWith('p1')
+  })
+
+  describe('practiceQuiz', () => {
+    const question = {
+      content: 'What is an eigenvalue?',
+      options: ['A scalar', 'A matrix', 'A vector', 'A basis'],
+      correctAnswer: 0,
+      explanation: 'Av = λv.',
+      difficulty: 'easy' as const,
+    }
+
+    function givenChatablePostWithSummary(summary: string | null = 'A summary of the notes.') {
+      prismaMock.post.findFirst
+        .mockResolvedValueOnce({
+          id: 'p2',
+          publicationStatus: PostPublicationStatus.PUBLISHED,
+          status: PostStatus.APPROVED,
+        })
+        .mockResolvedValueOnce({ summary })
+    }
+
+    it('answers 404 for a post outside the university and generates nothing', async () => {
+      prismaMock.post.findFirst.mockResolvedValue(null)
+
+      await expect(service.practiceQuiz('p2', {}, U1)).rejects.toThrow(NotFoundException)
+      expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([IN_U1])
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it('answers 403 for a post that is not published and approved', async () => {
+      prismaMock.post.findFirst.mockResolvedValue({
+        id: 'p2',
+        publicationStatus: PostPublicationStatus.DRAFT,
+        status: PostStatus.APPROVED,
+      })
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(ForbiddenException)
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it.each([[null], ['   ']])('answers 400 when the post summary is %j', async (summary) => {
+      givenChatablePostWithSummary(summary)
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(BadRequestException)
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it('asks for three questions by default and returns the surface with the answers', async () => {
+      givenChatablePostWithSummary('A summary of the notes.')
+      aiSummaryMock.generateQuizQuestions.mockResolvedValue([question])
+
+      const result = await service.practiceQuiz('p2', {}, ALL)
+
+      expect(aiSummaryMock.generateQuizQuestions).toHaveBeenCalledWith('A summary of the notes.', 3)
+      expect(result.answers).toEqual([{ correct: 0, explanation: 'Av = λv.' }])
+      expect(result.messages).toHaveLength(3)
+    })
+
+    it('asks for the requested number of questions', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockResolvedValue([question])
+
+      await service.practiceQuiz('p2', { count: 5 }, ALL)
+
+      expect(aiSummaryMock.generateQuizQuestions).toHaveBeenCalledWith(expect.any(String), 5)
+    })
+
+    it('keeps an unconfigured AI provider a 503', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockRejectedValue(
+        new ServiceUnavailableException('AI service not configured'),
+      )
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(ServiceUnavailableException)
+    })
+
+    it('reports any other generation failure as a bad gateway', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockRejectedValue(new Error('Invalid response format'))
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(BadGatewayException)
+    })
   })
 })

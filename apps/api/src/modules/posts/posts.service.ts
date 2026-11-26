@@ -1,9 +1,11 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
 import {
@@ -20,6 +22,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
 import { AiChatStreamEvent, AiSummaryService } from '../ai-summary/ai-summary.service'
+import { buildPracticeQuiz, type PracticeQuiz } from '../ai-summary/practice-quiz-surface'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -28,6 +31,7 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
 import { AiChatDto, AiChatResponse } from './dto/ai-chat.dto'
+import { PRACTICE_QUIZ_DEFAULT_COUNT, PracticeQuizDto } from './dto/practice-quiz.dto'
 import { AiIndexState, AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { SUPPORTED_MIME_TYPES } from '../ai/extraction/document-extractor.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
@@ -610,6 +614,42 @@ export class PostsService {
   ): Promise<AsyncIterable<AiChatStreamEvent>> {
     await this.assertChatable(postId, scope)
     return this.aiSummaryService.chatWithPostStream(postId, dto.messages)
+  }
+
+  /**
+   * A few multiple-choice questions about the post, as an A2UI surface the chat can draw.
+   *
+   * Built from the post's stored summary, as `QuizzesService.generateQuizFromPost` is, and unlike
+   * that method nothing is saved: these are for the student who asked, not a quiz others take.
+   * Same access gate as chat, so it is reachable on exactly the posts chat is.
+   */
+  async practiceQuiz(
+    postId: string,
+    dto: PracticeQuizDto,
+    scope: UniversityScope,
+  ): Promise<PracticeQuiz> {
+    await this.assertChatable(postId, scope)
+
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
+      select: { summary: true },
+    })
+    if (!post?.summary?.trim()) {
+      throw new BadRequestException('This post does not have an AI summary yet')
+    }
+
+    try {
+      const questions = await this.aiSummaryService.generateQuizQuestions(
+        post.summary,
+        dto.count ?? PRACTICE_QUIZ_DEFAULT_COUNT,
+      )
+      return buildPracticeQuiz(questions)
+    } catch (err) {
+      // An unconfigured provider is a deployment state and must stay a 503, as it is for chat.
+      if (err instanceof ServiceUnavailableException) throw err
+      this.logger.warn(`Practice quiz failed for post ${postId}: ${(err as Error).message}`)
+      throw new BadGatewayException('Could not generate practice questions')
+    }
   }
 
   /**
