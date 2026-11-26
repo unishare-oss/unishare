@@ -37,6 +37,13 @@ describe('A2uiSurfaces', () => {
     expect(screen.getByText('Option A')).toBeTruthy()
   })
 
+  it('wraps surfaces in the themed container that maps A2UI variables to app tokens', async () => {
+    const { container } = render(<A2uiSurfaces messages={[create, components, data]} />)
+    await screen.findByText('Option A')
+
+    expect(container.querySelector('.a2ui-themed')).not.toBeNull()
+  })
+
   it('applies messages that arrive after the first render', async () => {
     const { rerender } = render(<A2uiSurfaces messages={[create, components]} />)
     expect(await screen.findByText('Option A')).toBeTruthy()

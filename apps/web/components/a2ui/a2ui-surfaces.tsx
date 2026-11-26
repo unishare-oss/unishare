@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import { A2uiSurface, MarkdownComponentContext, type MarkdownComponentProps } from '@a2ui/react'
 import { MessageProcessor } from '@a2ui/web_core'
 import { basicCatalog } from '@a2ui/web_core/catalogs/basic/v1'
+import './a2ui-theme.css'
 
 /**
  * One A2UI v1.0 message: `createSurface`, `updateComponents` or `updateDataModel`.
@@ -106,9 +107,11 @@ export function A2uiSurfaces({
 
   return (
     <MarkdownComponentContext.Provider value={PlainText}>
-      {surfaces.map((surface) => (
-        <A2uiSurface key={surface.id} surface={surface} />
-      ))}
+      <div className="a2ui-themed">
+        {surfaces.map((surface) => (
+          <A2uiSurface key={surface.id} surface={surface} />
+        ))}
+      </div>
     </MarkdownComponentContext.Provider>
   )
 }
