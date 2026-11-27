@@ -33,6 +33,16 @@ const SUPPORTED_MIME_TYPES = [
  * Deliberately no percentage or ratio: the total chunk count is unknown until chunking finishes,
  * so any denominator would be invented.
  */
+/**
+ * One-tap openers shown before the first message. Each is answerable from any document, so none
+ * can come back as an off-topic refusal, and each is sent as the student's own message.
+ */
+const SUGGESTED_PROMPTS = [
+  'Summarize this document',
+  'What are the key points?',
+  'Explain the main concepts simply',
+]
+
 function preparingMessage(indexedChunks: number): string {
   const label = indexedChunks === 1 ? 'section' : 'sections'
   return (
@@ -244,6 +254,22 @@ export function PostAiChat({ post }: PostAiChatProps) {
                     Ask a question about this document. This conversation isn&apos;t saved — it
                     clears when you leave the page.
                   </p>
+                )}
+
+                {messages.length === 0 && (
+                  <div className="flex flex-wrap gap-1.5" aria-label="Suggested questions">
+                    {SUGGESTED_PROMPTS.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => sendMessage(prompt)}
+                        disabled={isPending}
+                        className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
                 )}
 
                 {messages.length > 0 && (
