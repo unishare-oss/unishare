@@ -123,6 +123,34 @@ describe('LlmService', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('')
       expect(reply).toBe('quiz json')
     })
+
+    it("talks to Google's own endpoint when no base URL is set", async () => {
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }])
+
+      expect(mockGetGenerativeModel.mock.calls[0]).toHaveLength(2)
+      expect((mockGetGenerativeModel.mock.calls[0] as unknown[])[1]).toBeUndefined()
+    })
+
+    it('sends requests through the configured base URL, such as a Gemini proxy', async () => {
+      configValues.AI_SUMMARY_BASE_URL = 'https://gemini-proxy.example'
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }])
+
+      expect((mockGetGenerativeModel.mock.calls[0] as unknown[])[1]).toEqual({
+        baseUrl: 'https://gemini-proxy.example',
+      })
+    })
+
+    it('caps the output at the caller’s token budget', async () => {
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }], { maxTokens: 300, temperature: 0.2 })
+
+      expect(
+        (mockGetGenerativeModel.mock.calls[0] as unknown as [{ generationConfig: object }])[0]
+          .generationConfig,
+      ).toEqual({ temperature: 0.2, maxOutputTokens: 300 })
+    })
   })
 
   describe('a rate-limited provider is retryable, not a server fault', () => {
