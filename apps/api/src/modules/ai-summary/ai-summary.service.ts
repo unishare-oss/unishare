@@ -776,6 +776,9 @@ export class AiSummaryService {
 
       this.logger.log(`Summarized post ${postId} from ${windows.length} window(s)`)
 
+      // Written now, with the summary, so opening the chat panel never waits on a model call.
+      await this.generateAndStoreSuggestions(postId, summary)
+
       // Auto-tag only if post has no existing tags
       if (post.tags.length === 0) {
         await this.autoTagPost(postId, summary)
@@ -1102,6 +1105,29 @@ export class AiSummaryService {
       temperature: 0.3,
     })
     return parseSuggestedQuestions(reply)
+  }
+
+  /**
+   * Writes the suggested questions for a post and saves them on it.
+   *
+   * Never throws: the summary they come from is already stored, and a failed or empty attempt just
+   * leaves the post without suggestions, which the chat panel covers with generic prompts.
+   * Returns what was saved.
+   */
+  async generateAndStoreSuggestions(postId: string, summary: string): Promise<string[]> {
+    try {
+      const questions = await this.generateSuggestedQuestions(summary)
+      if (questions.length === 0) return []
+
+      await this.prisma.post.update({
+        where: { id: postId },
+        data: { suggestedQuestions: questions },
+      })
+      return questions
+    } catch (err) {
+      this.logger.warn(`Suggested questions failed for post ${postId}: ${(err as Error).message}`)
+      return []
+    }
   }
 
   /**

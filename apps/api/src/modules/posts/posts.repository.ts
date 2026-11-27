@@ -118,7 +118,7 @@ export class PostsRepository {
   clearSummary(postId: string) {
     return this.prisma.post.update({
       where: { id: postId },
-      data: { summary: null, summarizedAt: null },
+      data: { summary: null, summarizedAt: null, suggestedQuestions: [] },
     })
   }
 

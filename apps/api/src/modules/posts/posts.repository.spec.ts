@@ -30,12 +30,12 @@ describe('PostsRepository university scope', () => {
 
   const whereOf = (mock: jest.Mock) => mock.mock.calls[0][0].where
 
-  it('clears the summary and summarizedAt for a post', async () => {
+  it('clears the summary, its timestamp and its suggested questions for a post', async () => {
     await repository.clearSummary('p1')
 
     expect(prisma.post.update).toHaveBeenCalledWith({
       where: { id: 'p1' },
-      data: { summary: null, summarizedAt: null },
+      data: { summary: null, summarizedAt: null, suggestedQuestions: [] },
     })
   })
 
