@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { AiReply } from '@/components/post-detail/ai-reply'
+import { AiReply } from '@/components/ai/ai-reply'
 
 describe('AiReply tables', () => {
   const table =
