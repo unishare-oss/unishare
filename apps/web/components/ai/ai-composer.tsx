@@ -12,6 +12,12 @@ interface AiComposerProps {
   disabled?: boolean
   placeholder?: string
   maxLength?: number
+  /**
+   * The draft, when the host keeps it. A panel that unmounts its composer on close loses the draft
+   * unless the host holds it; leave both props out and the composer keeps its own.
+   */
+  value?: string
+  onValueChange?: (value: string) => void
 }
 
 /**
@@ -25,8 +31,16 @@ export function AiComposer({
   disabled = false,
   placeholder = 'Ask a question…',
   maxLength = 500,
+  value,
+  onValueChange,
 }: AiComposerProps) {
-  const [input, setInput] = useState('')
+  const [ownInput, setOwnInput] = useState('')
+  const controlled = value !== undefined
+  const input = controlled ? value : ownInput
+  const setInput = (next: string) => {
+    if (!controlled) setOwnInput(next)
+    onValueChange?.(next)
+  }
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   async function send() {

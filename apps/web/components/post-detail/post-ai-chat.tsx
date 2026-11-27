@@ -160,6 +160,9 @@ interface PostAiChatProps {
 
 export function PostAiChat({ post }: PostAiChatProps) {
   const [open, setOpen] = useState(false)
+  // Held here, not in the composer: the panel unmounts its contents when it closes, and a half-typed
+  // question should still be there when the student comes back to it.
+  const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Only indexable files count — a PDF next to a screenshot still has one source of pages.
@@ -377,6 +380,8 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 </div>
 
                 <AiComposer
+                  value={draft}
+                  onValueChange={setDraft}
                   onSend={sendMessage}
                   disabled={isPending}
                   placeholder="Ask about this document…"
