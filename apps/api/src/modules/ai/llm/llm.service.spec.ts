@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
-import { ServiceUnavailableException } from '@nestjs/common'
+import { Logger, ServiceUnavailableException } from '@nestjs/common'
 import { LlmService } from './llm.service'
+import { DEFAULT_THINKING_HEADROOM } from './providers/gemini.provider'
 
 const mockSendMessage = jest.fn()
 const mockStartChat = jest.fn(() => ({ sendMessage: mockSendMessage }))
@@ -142,14 +143,60 @@ describe('LlmService', () => {
       })
     })
 
-    it('caps the output at the caller’s token budget', async () => {
+    const generationConfig = () =>
+      (mockGetGenerativeModel.mock.calls[0] as unknown as [{ generationConfig: object }])[0]
+        .generationConfig
+
+    it('caps the output at the caller’s budget plus room for thinking', async () => {
       service = await build()
       await service.chat([{ role: 'user', content: 'hi' }], { maxTokens: 300, temperature: 0.2 })
 
-      expect(
-        (mockGetGenerativeModel.mock.calls[0] as unknown as [{ generationConfig: object }])[0]
-          .generationConfig,
-      ).toEqual({ temperature: 0.2, maxOutputTokens: 300 })
+      expect(generationConfig()).toEqual({
+        temperature: 0.2,
+        maxOutputTokens: 300 + DEFAULT_THINKING_HEADROOM,
+      })
+    })
+
+    it.each([
+      ['a configured amount', '512', 300 + 512],
+      ['zero, which turns the headroom off', '0', 300],
+      ['an unreadable value, which falls back to the default', 'lots', 300 + 2048],
+      ['a negative value, which falls back to the default', '-5', 300 + 2048],
+    ])('uses %s for the thinking headroom', async (_name, setting, expected) => {
+      configValues.AI_SUMMARY_THINKING_HEADROOM = setting
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }], { maxTokens: 300, temperature: 0 })
+
+      expect(generationConfig()).toMatchObject({ maxOutputTokens: expected })
+    })
+
+    it('warns with the token counts when a reply is cut off at the cap', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+      mockSendMessage.mockResolvedValue({
+        response: {
+          text: () => 'The key points are:',
+          candidates: [{ finishReason: 'MAX_TOKENS' }],
+          usageMetadata: { candidatesTokenCount: 6, thoughtsTokenCount: 594 },
+        },
+      })
+      service = await build()
+
+      const reply = await service.chat([{ role: 'user', content: 'hi' }], { maxTokens: 600 })
+
+      expect(reply).toBe('The key points are:')
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/answer 6 tokens, thinking 594/))
+    })
+
+    it('stays quiet when a reply finished normally', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+      mockSendMessage.mockResolvedValue({
+        response: { text: () => 'Done.', candidates: [{ finishReason: 'STOP' }] },
+      })
+      service = await build()
+
+      await service.chat([{ role: 'user', content: 'hi' }])
+
+      expect(warn).not.toHaveBeenCalled()
     })
   })
 
