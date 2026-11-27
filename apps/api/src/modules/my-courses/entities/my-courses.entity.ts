@@ -9,6 +9,9 @@ export class MyCourseEntity extends PickType(CourseEntity, [
 ] as const) {}
 
 export class MyCoursesEntity {
+  @ApiProperty()
+  academicYear: number
+
   @ApiProperty({ type: [MyCourseEntity] })
   automatic: MyCourseEntity[]
 
