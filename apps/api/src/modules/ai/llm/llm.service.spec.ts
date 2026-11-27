@@ -123,6 +123,71 @@ describe('LlmService', () => {
       expect(mockSendMessage).toHaveBeenCalledWith('')
       expect(reply).toBe('quiz json')
     })
+
+    it("talks to Google's own endpoint when no base URL is set", async () => {
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }])
+
+      expect(mockGetGenerativeModel.mock.calls[0]).toHaveLength(2)
+      expect((mockGetGenerativeModel.mock.calls[0] as unknown[])[1]).toBeUndefined()
+    })
+
+    it('sends requests through the configured base URL, such as a Gemini proxy', async () => {
+      configValues.AI_SUMMARY_BASE_URL = 'https://gemini-proxy.example'
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }])
+
+      expect((mockGetGenerativeModel.mock.calls[0] as unknown[])[1]).toEqual({
+        baseUrl: 'https://gemini-proxy.example',
+      })
+    })
+
+    it('caps the output at the caller’s token budget', async () => {
+      service = await build()
+      await service.chat([{ role: 'user', content: 'hi' }], { maxTokens: 300, temperature: 0.2 })
+
+      expect(
+        (mockGetGenerativeModel.mock.calls[0] as unknown as [{ generationConfig: object }])[0]
+          .generationConfig,
+      ).toEqual({ temperature: 0.2, maxOutputTokens: 300 })
+    })
+  })
+
+  describe('a provider that refuses on spending limit or a paused key', () => {
+    beforeEach(() => {
+      configValues.AI_SUMMARY_PROVIDER = 'gemini'
+      configValues.AI_SUMMARY_API_KEY = 'test-key'
+      mockSendMessage.mockReset()
+    })
+
+    it.each([
+      [402, 'the spending limit is used up'],
+      [403, 'the key is paused'],
+    ])('answers 503 without retrying when %i says %s', async (status) => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('refused'), { status }))
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      )
+      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+    })
+
+    it('does the same for a streamed turn', async () => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('refused'), { status: 402 }))
+      service = await build()
+
+      const stream = service.chatStream([{ role: 'user', content: 'hi' }])
+      await expect(stream.next()).rejects.toBeInstanceOf(ServiceUnavailableException)
+      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+    })
+
+    it('still lets a plain bad request through unchanged', async () => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('bad model'), { status: 404 }))
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow('bad model')
+    })
   })
 
   describe('a rate-limited provider is retryable, not a server fault', () => {
