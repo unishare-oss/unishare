@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AiReply } from '@/components/ai/ai-reply'
 import { CopyReplyButton } from '@/components/ai/copy-reply-button'
+import { useSmoothText } from '@/components/ai/use-smooth-text'
 
 /** What every AI conversation shares: who spoke, what they said, and whether it was a refusal. */
 export interface AiMessageData {
@@ -33,6 +34,11 @@ interface AiMessageProps {
    * the host knows both, this component does not.
    */
   onRegenerate?: () => void
+  /**
+   * Runs each time more of a streaming reply is revealed, so the host can keep the newest words in
+   * view. The text grows between chunks too, so watching the message list alone would miss it.
+   */
+  onReveal?: () => void
 }
 
 /**
@@ -50,9 +56,24 @@ export function AiMessage({
   showCopy = true,
   streaming = false,
   onRegenerate,
+  onReveal,
 }: AiMessageProps) {
   const isUser = message.role === 'user'
-  const canCopy = !isUser && !message.offTopic && Boolean(message.content) && showCopy
+  // Providers send replies in uneven chunks, and Gemini in large ones, so the reply is revealed
+  // a little each frame rather than a chunk at a time. The student's own text is never animated.
+  const { shown, revealing } = useSmoothText(message.content, streaming && !isUser)
+  const typing = streaming || revealing
+  // Copy and retry wait until the whole reply is on screen, not just until it has arrived.
+  const canCopy = !isUser && !message.offTopic && Boolean(message.content) && showCopy && !revealing
+  const canRegenerate = Boolean(onRegenerate) && !revealing
+
+  const onRevealRef = useRef(onReveal)
+  useEffect(() => {
+    onRevealRef.current = onReveal
+  }, [onReveal])
+  useEffect(() => {
+    if (typing) onRevealRef.current?.()
+  }, [shown, typing])
 
   return (
     <div className={cn('flex gap-2 text-sm', isUser ? 'justify-end' : 'justify-start')}>
@@ -74,17 +95,17 @@ export function AiMessage({
             {isUser ? (
               <span>{message.content}</span>
             ) : (
-              <AiReply streaming={streaming}>{message.content}</AiReply>
+              <AiReply streaming={typing}>{shown}</AiReply>
             )}
           </div>
           {footer}
         </div>
       </div>
       {/* Beside the bubble, not in it, so the order of answer then footer inside it is untouched. */}
-      {!isUser && (canCopy || onRegenerate) && (
+      {!isUser && (canCopy || canRegenerate) && (
         <div className="flex flex-col items-start justify-end gap-0.5">
           {canCopy && <CopyReplyButton text={message.content} />}
-          {onRegenerate && (
+          {canRegenerate && (
             <button
               type="button"
               onClick={onRegenerate}

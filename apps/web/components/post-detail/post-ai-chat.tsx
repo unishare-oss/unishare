@@ -270,6 +270,11 @@ export function PostAiChat({ post }: PostAiChatProps) {
                         streaming={
                           isPending && i === messages.length - 1 && msg.role === 'assistant'
                         }
+                        onReveal={
+                          i === messages.length - 1
+                            ? () => bottomRef.current?.scrollIntoView({ block: 'nearest' })
+                            : undefined
+                        }
                         onRegenerate={
                           !isPending && i === messages.length - 1 && msg.role === 'assistant'
                             ? regenerate

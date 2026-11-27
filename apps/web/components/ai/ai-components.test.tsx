@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AiMessage, AiThinking, STILL_THINKING_AFTER_MS } from '@/components/ai/ai-message'
 import { AiSuggestedPrompts } from '@/components/ai/ai-suggested-prompts'
@@ -83,14 +83,41 @@ describe('AiMessage retry and streaming', () => {
     expect(screen.queryByRole('button', { name: 'Copy reply' })).toBeNull()
   })
 
-  it('marks the last block with a caret only while the reply is arriving', () => {
+  it('keeps the caret until the whole reply is on screen, then drops it', async () => {
     const { container, rerender } = render(
       <AiMessage message={{ role: 'assistant', content: 'Half an ans' }} streaming />,
     )
     expect(container.innerHTML).toContain('after:content-')
 
-    rerender(<AiMessage message={{ role: 'assistant', content: 'Half an ans' }} />)
-    expect(container.innerHTML).not.toContain('after:content-')
+    rerender(<AiMessage message={{ role: 'assistant', content: 'Half an answer.' }} />)
+
+    await waitFor(() => expect(container.textContent).toContain('Half an answer.'))
+    await waitFor(() => expect(container.innerHTML).not.toContain('after:content-'))
+  })
+
+  it('reveals a streaming reply gradually and holds copy and retry until it is all shown', async () => {
+    const long = 'An eigenvalue is a scalar that stretches its eigenvector. '.repeat(6).trim()
+    const { container, rerender } = render(
+      <AiMessage message={{ role: 'assistant', content: long }} streaming showCopy={false} />,
+    )
+    expect(container.textContent?.length ?? 0).toBeLessThan(long.length)
+
+    rerender(<AiMessage message={{ role: 'assistant', content: long }} onRegenerate={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Copy reply' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Regenerate reply' })).toBeNull()
+
+    // About 50 animation frames in jsdom, which slows down when the suite runs in parallel.
+    expect(
+      await screen.findByRole('button', { name: 'Copy reply' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Regenerate reply' })).toBeInTheDocument()
+    expect(container.textContent).toContain(long)
+  })
+
+  it('never animates the student’s own message', () => {
+    render(<AiMessage message={{ role: 'user', content: 'My whole question?' }} streaming />)
+
+    expect(screen.getByText('My whole question?')).toBeInTheDocument()
   })
 })
 
