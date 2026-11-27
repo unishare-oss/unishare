@@ -54,6 +54,29 @@ describe('AiReply math', () => {
   })
 })
 
+describe('AiReply code blocks', () => {
+  it('colours the tokens of a language it knows', () => {
+    const { container } = render(<AiReply>{'```python\ndef f(x):\n    return x + 1\n```'}</AiReply>)
+
+    expect(container.querySelector('pre code span.font-medium')?.textContent).toBe('def')
+    expect(container.querySelector('pre')?.textContent).toBe('def f(x):\n    return x + 1')
+  })
+
+  it('shows a block with an unknown or missing language as plain text', () => {
+    const { container } = render(<AiReply>{'```\nsome notes\n```'}</AiReply>)
+
+    expect(container.querySelector('pre')?.textContent).toBe('some notes')
+    expect(container.querySelectorAll('pre span')).toHaveLength(0)
+  })
+
+  it('keeps markup in code as text', () => {
+    const { container } = render(<AiReply>{'```html\n<img src=x onerror=alert(1)>\n```'}</AiReply>)
+
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.querySelector('pre')?.textContent).toContain('<img src=x onerror=alert(1)>')
+  })
+})
+
 describe('AiReply links stay plain text alongside the new syntax', () => {
   it('does not link a bare URL, which GFM would otherwise turn into an anchor', () => {
     const { container } = render(<AiReply>{'Visit https://evil.example now'}</AiReply>)

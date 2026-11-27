@@ -1,6 +1,8 @@
 'use client'
 
 import ReactMarkdown from 'react-markdown'
+import { Children, isValidElement, type ReactNode } from 'react'
+import { CodeBlock } from '@/components/ai/code-block'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -111,11 +113,21 @@ export function AiReply({ children }: { children: string }) {
               {children}
             </code>
           ),
-          pre: ({ children }) => (
-            <pre className="font-mono text-[0.85em] p-2 rounded bg-background border border-border overflow-x-auto">
-              {children}
-            </pre>
-          ),
+          pre: ({ children }) => {
+            const code = Children.toArray(children)[0]
+            if (isValidElement<{ className?: string; children?: ReactNode }>(code)) {
+              const { className, children: text } = code.props
+              if (typeof text === 'string') {
+                const language = /language-([\w+-]+)/.exec(className ?? '')?.[1]
+                return <CodeBlock code={text.replace(/\n$/, '')} language={language} />
+              }
+            }
+            return (
+              <pre className="font-mono text-[0.85em] p-2 rounded bg-background border border-border overflow-x-auto">
+                {children}
+              </pre>
+            )
+          },
           h1: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
           h2: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
           h3: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
