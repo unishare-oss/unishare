@@ -37,6 +37,17 @@ describe('prisma migrations', () => {
     expect(migrationFiles().length).toBeGreaterThan(0)
   })
 
+  // A migration holding only comments applies cleanly and changes nothing, so the schema and the
+  // database drift apart with no error until the code touches the missing column. Seen once: a
+  // shell mishap wrote a file containing just `--`.
+  it('has no migration that is only comments', () => {
+    const hollow = migrationFiles()
+      .filter((m) => m.sql.replace(/--[^\n]*/g, '').trim() === '')
+      .map((m) => m.name)
+
+    expect(hollow).toEqual([])
+  })
+
   it.each(Object.keys(PROTECTED_INDEXES))(
     'no migration drops %s without recreating it',
     (indexName) => {

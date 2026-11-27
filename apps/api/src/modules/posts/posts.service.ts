@@ -653,6 +653,36 @@ export class PostsService {
   }
 
   /**
+   * Questions a student might ask about this post, for the chat panel's one-tap suggestions.
+   *
+   * Written when the summary is, so this normally just reads them back. A post summarised before
+   * that existed, or one whose summary was supplied by a client, has none stored, so they are
+   * written and saved here on first request and read from the post after that.
+   *
+   * Never an error for a missing summary or a model with nothing to say: the panel falls back to
+   * generic prompts on an empty list, and a suggestion is not worth a failed request. The access
+   * gate still applies, so it is reachable on exactly the posts chat is.
+   */
+  async suggestedQuestions(
+    postId: string,
+    scope: UniversityScope,
+  ): Promise<{ questions: string[] }> {
+    await this.assertChatable(postId, scope)
+
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
+      select: { summary: true, suggestedQuestions: true },
+    })
+    // No summary, no suggestions, whatever is stored: questions outlive nothing they came from.
+    if (!post?.summary?.trim()) return { questions: [] }
+    if (post.suggestedQuestions.length > 0) return { questions: post.suggestedQuestions }
+
+    // The summary goes in exactly as stored, because the save is conditional on it still matching.
+    const questions = await this.aiSummaryService.generateAndStoreSuggestions(postId, post.summary)
+    return { questions }
+  }
+
+  /**
    * The access gate both chat paths share, so neither can be reachable on a post the other refuses.
    * Looked up in scope first, so another university's post is a 404 and no AI call is made.
    */

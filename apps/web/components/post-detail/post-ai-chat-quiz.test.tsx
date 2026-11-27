@@ -18,6 +18,8 @@ vi.mock('@/hooks/use-ai-index-status', () => ({
   }),
 }))
 
+vi.mock('@/hooks/use-suggested-questions', () => ({ useSuggestedQuestions: () => [] }))
+
 vi.mock('@/hooks/use-post-ai-chat', () => ({
   usePostAiChat: () => ({ messages: [], sendMessage: vi.fn(), isPending: false, reset: vi.fn() }),
 }))
