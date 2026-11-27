@@ -40,16 +40,9 @@ import { AuditAction } from '../audit/audit.actions'
 
 type PostSummaryOptions = { summary: string; summarizedAt: Date }
 
-const SUGGESTION_TTL_MS = 60 * 60 * 1000
-const SUGGESTION_CACHE_MAX = 200
-
 @Injectable()
 export class PostsService {
   private readonly logger = new Logger(PostsService.name)
-  private readonly suggestionCache = new Map<
-    string,
-    { summary: string; questions: string[]; at: number }
-  >()
 
   constructor(
     private readonly postsRepository: PostsRepository,
@@ -660,15 +653,15 @@ export class PostsService {
   }
 
   /**
-   * Questions a student might ask about this post, written from its summary, for the chat panel's
-   * one-tap suggestions.
+   * Questions a student might ask about this post, for the chat panel's one-tap suggestions.
    *
-   * Never an error for a missing summary or a model that has nothing to say: the panel falls back
-   * to generic prompts on an empty list, and a suggestion is not worth a failed request. The
-   * access gate still applies, so it is reachable on exactly the posts chat is.
+   * Written when the summary is, so this normally just reads them back. A post summarised before
+   * that existed, or one whose summary was supplied by a client, has none stored, so they are
+   * written and saved here on first request and read from the post after that.
    *
-   * Cached per instance, keyed on the summary the questions were written from, so regenerating a
-   * summary makes the old questions miss. Without it every panel open would cost an LLM call.
+   * Never an error for a missing summary or a model with nothing to say: the panel falls back to
+   * generic prompts on an empty list, and a suggestion is not worth a failed request. The access
+   * gate still applies, so it is reachable on exactly the posts chat is.
    */
   async suggestedQuestions(
     postId: string,
@@ -678,30 +671,15 @@ export class PostsService {
 
     const post = await this.prisma.post.findFirst({
       where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
-      select: { summary: true },
+      select: { summary: true, suggestedQuestions: true },
     })
+    if (post && post.suggestedQuestions.length > 0) return { questions: post.suggestedQuestions }
+
     const summary = post?.summary?.trim()
     if (!summary) return { questions: [] }
 
-    const cached = this.suggestionCache.get(postId)
-    if (cached && cached.summary === summary && Date.now() - cached.at < SUGGESTION_TTL_MS) {
-      return { questions: cached.questions }
-    }
-
-    try {
-      const questions = await this.aiSummaryService.generateSuggestedQuestions(summary)
-      if (questions.length > 0) {
-        if (this.suggestionCache.size >= SUGGESTION_CACHE_MAX) {
-          const oldest = this.suggestionCache.keys().next().value
-          if (oldest !== undefined) this.suggestionCache.delete(oldest)
-        }
-        this.suggestionCache.set(postId, { summary, questions, at: Date.now() })
-      }
-      return { questions }
-    } catch (err) {
-      this.logger.warn(`Suggested questions failed for post ${postId}: ${(err as Error).message}`)
-      return { questions: [] }
-    }
+    const questions = await this.aiSummaryService.generateAndStoreSuggestions(postId, summary)
+    return { questions }
   }
 
   /**

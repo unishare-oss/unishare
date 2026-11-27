@@ -54,7 +54,7 @@ describe('PostsService', () => {
     chatWithPost: jest.Mock
     chatWithPostStream: jest.Mock
     generateQuizQuestions: jest.Mock
-    generateSuggestedQuestions: jest.Mock
+    generateAndStoreSuggestions: jest.Mock
     summarizePost: jest.Mock
   }
 
@@ -69,7 +69,7 @@ describe('PostsService', () => {
       chatWithPost: jest.fn().mockResolvedValue({ reply: 'ok' }),
       chatWithPostStream: jest.fn().mockResolvedValue([]),
       generateQuizQuestions: jest.fn(),
-      generateSuggestedQuestions: jest.fn(),
+      generateAndStoreSuggestions: jest.fn().mockResolvedValue([]),
       summarizePost: jest.fn(),
     }
     repoMock = {
@@ -642,21 +642,21 @@ describe('PostsService', () => {
   })
 
   describe('suggestedQuestions', () => {
-    function givenChatablePostWithSummary(summary: string | null = 'A summary of the notes.') {
+    function givenChatablePost(post: { summary: string | null; suggestedQuestions: string[] }) {
       prismaMock.post.findFirst
         .mockResolvedValueOnce({
           id: 'p2',
           publicationStatus: PostPublicationStatus.PUBLISHED,
           status: PostStatus.APPROVED,
         })
-        .mockResolvedValueOnce({ summary })
+        .mockResolvedValueOnce(post)
     }
 
-    it('answers 404 for a post outside the university and asks the model nothing', async () => {
+    it('answers 404 for a post outside the university and writes nothing', async () => {
       prismaMock.post.findFirst.mockResolvedValue(null)
 
       await expect(service.suggestedQuestions('p2', U1)).rejects.toThrow(NotFoundException)
-      expect(aiSummaryMock.generateSuggestedQuestions).not.toHaveBeenCalled()
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
     })
 
     it('answers 403 for a post that is not published and approved', async () => {
@@ -669,64 +669,35 @@ describe('PostsService', () => {
       await expect(service.suggestedQuestions('p2', ALL)).rejects.toThrow(ForbiddenException)
     })
 
-    it.each([[null], ['  ']])('returns no questions when the summary is %j', async (summary) => {
-      givenChatablePostWithSummary(summary)
+    it('returns the questions stored on the post without asking the model', async () => {
+      givenChatablePost({ summary: 'A summary.', suggestedQuestions: ['What is a norm?'] })
 
-      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
-      expect(aiSummaryMock.generateSuggestedQuestions).not.toHaveBeenCalled()
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({
+        questions: ['What is a norm?'],
+      })
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
     })
 
-    it('returns the questions written from the summary', async () => {
-      givenChatablePostWithSummary('A summary of the notes.')
-      aiSummaryMock.generateSuggestedQuestions.mockResolvedValue(['What is a norm?'])
+    it('writes and saves them on first request when a post has a summary but none stored', async () => {
+      givenChatablePost({ summary: '  A summary.  ', suggestedQuestions: [] })
+      aiSummaryMock.generateAndStoreSuggestions.mockResolvedValue(['What is a norm?'])
 
       const result = await service.suggestedQuestions('p2', ALL)
 
       expect(result).toEqual({ questions: ['What is a norm?'] })
-      expect(aiSummaryMock.generateSuggestedQuestions).toHaveBeenCalledWith(
-        'A summary of the notes.',
-      )
+      expect(aiSummaryMock.generateAndStoreSuggestions).toHaveBeenCalledWith('p2', 'A summary.')
     })
 
-    it('reuses the questions for the same summary instead of asking again', async () => {
-      aiSummaryMock.generateSuggestedQuestions.mockResolvedValue(['What is a norm?'])
-      givenChatablePostWithSummary('Same summary.')
-      await service.suggestedQuestions('p2', ALL)
-      givenChatablePostWithSummary('Same summary.')
+    it.each([[null], ['  ']])('returns no questions when the summary is %j', async (summary) => {
+      givenChatablePost({ summary, suggestedQuestions: [] })
 
-      const again = await service.suggestedQuestions('p2', ALL)
-
-      expect(again).toEqual({ questions: ['What is a norm?'] })
-      expect(aiSummaryMock.generateSuggestedQuestions).toHaveBeenCalledTimes(1)
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
     })
 
-    it('asks again once the summary has changed', async () => {
-      aiSummaryMock.generateSuggestedQuestions.mockResolvedValue(['What is a norm?'])
-      givenChatablePostWithSummary('Old summary.')
-      await service.suggestedQuestions('p2', ALL)
-      givenChatablePostWithSummary('New summary.')
-
-      await service.suggestedQuestions('p2', ALL)
-
-      expect(aiSummaryMock.generateSuggestedQuestions).toHaveBeenCalledTimes(2)
-    })
-
-    it('does not cache an empty answer', async () => {
-      aiSummaryMock.generateSuggestedQuestions.mockResolvedValue([])
-      givenChatablePostWithSummary('A summary.')
-      await service.suggestedQuestions('p2', ALL)
-      givenChatablePostWithSummary('A summary.')
-
-      await service.suggestedQuestions('p2', ALL)
-
-      expect(aiSummaryMock.generateSuggestedQuestions).toHaveBeenCalledTimes(2)
-    })
-
-    it('returns no questions rather than failing when generation breaks', async () => {
-      givenChatablePostWithSummary()
-      aiSummaryMock.generateSuggestedQuestions.mockRejectedValue(
-        new ServiceUnavailableException('AI service not configured'),
-      )
+    it('returns no questions when the model has none to give', async () => {
+      givenChatablePost({ summary: 'A summary.', suggestedQuestions: [] })
+      aiSummaryMock.generateAndStoreSuggestions.mockResolvedValue([])
 
       await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
     })
