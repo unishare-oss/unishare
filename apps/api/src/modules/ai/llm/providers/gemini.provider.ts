@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { ChatSession, GenerateContentResponse } from '@google/generative-ai'
 import { LlmChatOptions, LlmMessage, LlmProvider } from '../llm.types'
 
 /**
@@ -12,19 +13,53 @@ import { LlmChatOptions, LlmMessage, LlmProvider } from '../llm.types'
  */
 export const DEFAULT_THINKING_HEADROOM = 2048
 
+/** A chat ready to send its last turn, and the cap it was opened with, for the cut-off warning. */
+interface PreparedChat {
+  session: ChatSession
+  lastTurn: string
+  maxOutputTokens: number | undefined
+}
+
 export class GeminiProvider implements LlmProvider {
   private readonly logger = new Logger(GeminiProvider.name)
 
   constructor(private readonly config: ConfigService) {}
 
-  private thinkingHeadroom(): number {
-    const raw = this.config.get<string>('AI_SUMMARY_THINKING_HEADROOM')
-    if (raw === undefined || raw === '') return DEFAULT_THINKING_HEADROOM
-    const value = Number(raw)
-    return Number.isInteger(value) && value >= 0 ? value : DEFAULT_THINKING_HEADROOM
+  async chat(messages: LlmMessage[], options: LlmChatOptions): Promise<string | null> {
+    const prepared = await this.prepare(messages, options)
+    if (!prepared) return null
+
+    const result = await prepared.session.sendMessage(prepared.lastTurn)
+    this.warnIfCutOff(result.response, prepared.maxOutputTokens)
+    return result.response.text().trim() || null
   }
 
-  async chat(messages: LlmMessage[], options: LlmChatOptions): Promise<string | null> {
+  /**
+   * Deltas are yielded RAW, with no per-delta `trim()`, for the reason given on GroqProvider:
+   * trimming each piece would delete the spaces between them.
+   */
+  async *chatStream(messages: LlmMessage[], options: LlmChatOptions): AsyncIterable<string> {
+    const prepared = await this.prepare(messages, options)
+    if (!prepared) return
+
+    const result = await prepared.session.sendMessageStream(prepared.lastTurn)
+    for await (const chunk of result.stream) {
+      const delta = chunk.text()
+      if (delta) yield delta
+    }
+    // The aggregated response settles once the stream has ended, and carries the finish reason
+    // and token counts that no single chunk has.
+    this.warnIfCutOff(await result.response, prepared.maxOutputTokens)
+  }
+
+  private async prepare(
+    messages: LlmMessage[],
+    options: LlmChatOptions,
+  ): Promise<PreparedChat | null> {
+    const turns = messages.filter((m) => m.role !== 'system')
+    const last = turns[turns.length - 1]
+    if (!last) return null
+
     const { GoogleGenerativeAI } = await import('@google/generative-ai')
     const genAI = new GoogleGenerativeAI(this.config.getOrThrow('AI_SUMMARY_API_KEY'))
     const model = this.config.get('AI_SUMMARY_MODEL') || 'gemini-2.5-flash'
@@ -38,7 +73,6 @@ export class GeminiProvider implements LlmProvider {
       .filter((m) => m.role === 'system')
       .map((m) => m.content)
       .join('\n\n')
-    const turns = messages.filter((m) => m.role !== 'system')
 
     const genModel = genAI.getGenerativeModel(
       {
@@ -55,24 +89,28 @@ export class GeminiProvider implements LlmProvider {
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }))
-    const last = turns[turns.length - 1]
-    if (!last) return null
 
-    const chat = genModel.startChat({ history })
-    const result = await chat.sendMessage(last.content)
+    return { session: genModel.startChat({ history }), lastTurn: last.content, maxOutputTokens }
+  }
 
-    // A reply that hit the cap reads like a finished one that simply stopped, so say so where it
-    // can be seen. The counts show whether thinking or the answer used the budget.
-    const finishReason = result.response.candidates?.[0]?.finishReason
-    if (finishReason === 'MAX_TOKENS') {
-      const usage = result.response.usageMetadata as
-        { candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined
-      this.logger.warn(
-        `Gemini reply cut off at the output cap (${maxOutputTokens}): ` +
-          `answer ${usage?.candidatesTokenCount ?? '?'} tokens, thinking ${usage?.thoughtsTokenCount ?? '?'} tokens`,
-      )
-    }
+  private thinkingHeadroom(): number {
+    const raw = this.config.get<string>('AI_SUMMARY_THINKING_HEADROOM')
+    if (raw === undefined || raw === '') return DEFAULT_THINKING_HEADROOM
+    const value = Number(raw)
+    return Number.isInteger(value) && value >= 0 ? value : DEFAULT_THINKING_HEADROOM
+  }
 
-    return result.response.text().trim() || null
+  /**
+   * A reply that hit the cap reads like a finished one that simply stopped, so say so where it can
+   * be seen. The counts show whether thinking or the answer used the budget.
+   */
+  private warnIfCutOff(response: GenerateContentResponse, maxOutputTokens: number | undefined) {
+    if (response.candidates?.[0]?.finishReason !== 'MAX_TOKENS') return
+    const usage = response.usageMetadata as
+      { candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined
+    this.logger.warn(
+      `Gemini reply cut off at the output cap (${maxOutputTokens}): ` +
+        `answer ${usage?.candidatesTokenCount ?? '?'} tokens, thinking ${usage?.thoughtsTokenCount ?? '?'} tokens`,
+    )
   }
 }

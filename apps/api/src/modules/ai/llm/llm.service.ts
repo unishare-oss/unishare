@@ -103,7 +103,8 @@ export class LlmService {
    *
    * Providers without streaming support are NOT excluded — they yield the finished reply as one
    * delta, so every caller sees the same event shape and the fallback is invisible from the
-   * outside. Today Groq and Ollama stream; Gemini takes the fallback.
+   * outside. Groq, Ollama and Gemini all stream today; the fallback is for any provider that
+   * does not.
    *
    * The try/catch spans the whole generator rather than just its first `await`, because that is
    * the difference this method exists to get right: a 429 arriving after fifty tokens is exactly

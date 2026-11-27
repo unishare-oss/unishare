@@ -5,7 +5,24 @@ import { LlmService } from './llm.service'
 import { DEFAULT_THINKING_HEADROOM } from './providers/gemini.provider'
 
 const mockSendMessage = jest.fn()
-const mockStartChat = jest.fn(() => ({ sendMessage: mockSendMessage }))
+const mockSendMessageStream = jest.fn()
+const mockStartChat = jest.fn(() => ({
+  sendMessage: mockSendMessage,
+  sendMessageStream: mockSendMessageStream,
+}))
+
+/** What `sendMessageStream` resolves to: chunks as they arrive, and the response once they end. */
+function geminiStream(
+  chunks: string[],
+  response: object = { candidates: [{ finishReason: 'STOP' }] },
+) {
+  return {
+    stream: (async function* () {
+      for (const text of chunks) yield { text: () => text }
+    })(),
+    response: Promise.resolve(response),
+  }
+}
 const mockGetGenerativeModel = jest.fn(() => ({ startChat: mockStartChat }))
 const mockGoogleGenerativeAI = jest.fn(() => ({ getGenerativeModel: mockGetGenerativeModel }))
 
@@ -221,12 +238,13 @@ describe('LlmService', () => {
     })
 
     it('does the same for a streamed turn', async () => {
-      mockSendMessage.mockRejectedValue(Object.assign(new Error('refused'), { status: 402 }))
+      mockSendMessageStream.mockReset()
+      mockSendMessageStream.mockRejectedValue(Object.assign(new Error('refused'), { status: 402 }))
       service = await build()
 
       const stream = service.chatStream([{ role: 'user', content: 'hi' }])
       await expect(stream.next()).rejects.toBeInstanceOf(ServiceUnavailableException)
-      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+      expect(mockSendMessageStream).toHaveBeenCalledTimes(1)
     })
 
     it('still lets a plain bad request through unchanged', async () => {
@@ -489,9 +507,17 @@ describe('LlmService', () => {
         mockSendMessage.mockResolvedValue({ response: { text: () => 'the whole answer' } })
       })
 
+      /** Gemini streams now, so the fallback is exercised by taking its streaming away. */
+      async function buildWithoutStreaming() {
+        const built = await build()
+        ;(built as unknown as { provider: { chatStream?: unknown } }).provider.chatStream =
+          undefined
+        return built
+      }
+
       it('falls back to one delta carrying the complete reply', async () => {
         // The fallback has to be invisible: same event shape, same text, just delivered at once.
-        service = await build()
+        service = await buildWithoutStreaming()
 
         expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
           'the whole answer',
@@ -501,13 +527,89 @@ describe('LlmService', () => {
       it('maps a transient failure the same way the streaming providers do', async () => {
         jest.useFakeTimers()
         mockSendMessage.mockRejectedValue(Object.assign(new Error('rate limited'), { status: 429 }))
-        service = await build()
+        service = await buildWithoutStreaming()
 
         const assertion = expect(
           drain(service.chatStream([{ role: 'user', content: 'hi' }])),
         ).rejects.toBeInstanceOf(ServiceUnavailableException)
         await jest.runAllTimersAsync()
         await assertion
+        jest.useRealTimers()
+      })
+    })
+
+    describe('gemini streaming', () => {
+      beforeEach(() => {
+        configValues.AI_SUMMARY_PROVIDER = 'gemini'
+        configValues.AI_SUMMARY_API_KEY = 'test-key'
+        mockSendMessageStream.mockReset()
+        mockGetGenerativeModel.mockClear()
+      })
+
+      it('yields each chunk as it arrives, untrimmed', async () => {
+        mockSendMessageStream.mockResolvedValue(
+          geminiStream(['An eigen', 'value is ', 'a scalar.']),
+        )
+        service = await build()
+
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
+          'An eigen',
+          'value is ',
+          'a scalar.',
+        ])
+      })
+
+      it('skips empty chunks', async () => {
+        mockSendMessageStream.mockResolvedValue(geminiStream(['', 'Hello', '']))
+        service = await build()
+
+        expect(await drain(service.chatStream([{ role: 'user', content: 'hi' }]))).toEqual([
+          'Hello',
+        ])
+      })
+
+      it('streams with the same cap and proxy settings as a one-shot reply', async () => {
+        configValues.AI_SUMMARY_BASE_URL = 'https://gemini-proxy.example'
+        mockSendMessageStream.mockResolvedValue(geminiStream(['ok']))
+        service = await build()
+
+        await drain(service.chatStream([{ role: 'user', content: 'hi' }], { maxTokens: 600 }))
+
+        const [params, requestOptions] = mockGetGenerativeModel.mock.calls[0] as unknown as [
+          { generationConfig: { maxOutputTokens: number } },
+          unknown,
+        ]
+        expect(params.generationConfig.maxOutputTokens).toBe(600 + DEFAULT_THINKING_HEADROOM)
+        expect(requestOptions).toEqual({ baseUrl: 'https://gemini-proxy.example' })
+      })
+
+      it('warns once the stream ends if the reply hit the cap', async () => {
+        const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+        mockSendMessageStream.mockResolvedValue(
+          geminiStream(['The key points are:'], {
+            candidates: [{ finishReason: 'MAX_TOKENS' }],
+            usageMetadata: { candidatesTokenCount: 6, thoughtsTokenCount: 594 },
+          }),
+        )
+        service = await build()
+
+        await drain(service.chatStream([{ role: 'user', content: 'hi' }], { maxTokens: 600 }))
+
+        expect(warn).toHaveBeenCalledWith(expect.stringMatching(/answer 6 tokens, thinking 594/))
+      })
+
+      it('retries a 429 that arrives before any text', async () => {
+        jest.useFakeTimers()
+        mockSendMessageStream
+          .mockRejectedValueOnce(Object.assign(new Error('busy'), { status: 429 }))
+          .mockResolvedValueOnce(geminiStream(['second try']))
+        service = await build()
+
+        const result = drain(service.chatStream([{ role: 'user', content: 'hi' }]))
+        await jest.runAllTimersAsync()
+
+        expect(await result).toEqual(['second try'])
+        expect(mockSendMessageStream).toHaveBeenCalledTimes(2)
         jest.useRealTimers()
       })
     })
