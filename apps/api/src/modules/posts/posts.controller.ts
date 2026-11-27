@@ -293,6 +293,20 @@ export class PostsController {
   }
 
   /**
+   * Questions the student might ask about a post, for the chat panel's one-tap suggestions.
+   * Hidden from Swagger like the other chat helpers; the frontend reads it with `fetch`.
+   */
+  @Get(':id/ai-chat/suggestions')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ThrottleBucket('ai-chat')
+  @ApiExcludeEndpoint()
+  @ResponseMessage('Suggested questions generated')
+  aiChatSuggestions(@Param('id') id: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.postsService.suggestedQuestions(id, scope)
+  }
+
+  /**
    * Practice questions about a post, as A2UI messages for the chat to draw.
    *
    * Excluded from Swagger like the stream endpoint: the response is A2UI protocol messages, not
