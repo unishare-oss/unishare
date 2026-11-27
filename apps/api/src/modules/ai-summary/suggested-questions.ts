@@ -16,7 +16,7 @@ Rules:
 export function buildSuggestionPrompt(summary: string): LlmMessage[] {
   return [
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: `Summary:\n${summary.slice(0, SUMMARY_MAX_CHARS)}` },
+    { role: 'user', content: `Summary:\n${summary.trim().slice(0, SUMMARY_MAX_CHARS)}` },
   ]
 }
 

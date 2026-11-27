@@ -1113,17 +1113,22 @@ export class AiSummaryService {
    * Never throws: the summary they come from is already stored, and a failed or empty attempt just
    * leaves the post without suggestions, which the chat panel covers with generic prompts.
    * Returns what was saved.
+   *
+   * The write is conditional on the post still holding `summary`, compared as stored. Generation
+   * takes a model call, and a summary can be cleared or replaced during it (a re-upload does
+   * both); an unconditional write would then pin questions about the old document to the post.
+   * When the summary has moved on, nothing is saved and nothing is returned.
    */
   async generateAndStoreSuggestions(postId: string, summary: string): Promise<string[]> {
     try {
       const questions = await this.generateSuggestedQuestions(summary)
       if (questions.length === 0) return []
 
-      await this.prisma.post.update({
-        where: { id: postId },
+      const { count } = await this.prisma.post.updateMany({
+        where: { id: postId, summary },
         data: { suggestedQuestions: questions },
       })
-      return questions
+      return count > 0 ? questions : []
     } catch (err) {
       this.logger.warn(`Suggested questions failed for post ${postId}: ${(err as Error).message}`)
       return []

@@ -669,6 +669,12 @@ describe('PostsService', () => {
       await expect(service.suggestedQuestions('p2', ALL)).rejects.toThrow(ForbiddenException)
     })
 
+    it('returns no stored questions for a post whose summary is gone', async () => {
+      givenChatablePost({ summary: null, suggestedQuestions: ['Stale question here?'] })
+
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
+    })
+
     it('returns the questions stored on the post without asking the model', async () => {
       givenChatablePost({ summary: 'A summary.', suggestedQuestions: ['What is a norm?'] })
 
@@ -685,7 +691,8 @@ describe('PostsService', () => {
       const result = await service.suggestedQuestions('p2', ALL)
 
       expect(result).toEqual({ questions: ['What is a norm?'] })
-      expect(aiSummaryMock.generateAndStoreSuggestions).toHaveBeenCalledWith('p2', 'A summary.')
+      // Exactly as stored: the save is conditional on the post still holding this very string.
+      expect(aiSummaryMock.generateAndStoreSuggestions).toHaveBeenCalledWith('p2', '  A summary.  ')
     })
 
     it.each([[null], ['  ']])('returns no questions when the summary is %j', async (summary) => {

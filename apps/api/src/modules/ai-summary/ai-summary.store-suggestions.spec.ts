@@ -10,11 +10,11 @@ import { DocumentExtractorService } from '../ai/extraction/document-extractor.se
 describe('AiSummaryService.generateAndStoreSuggestions', () => {
   let service: AiSummaryService
   let llmMock: { enabled: boolean; chat: jest.Mock }
-  let prismaMock: { post: { update: jest.Mock } }
+  let prismaMock: { post: { updateMany: jest.Mock } }
 
   beforeEach(async () => {
     llmMock = { enabled: true, chat: jest.fn() }
-    prismaMock = { post: { update: jest.fn().mockResolvedValue({}) } }
+    prismaMock = { post: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) } }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,9 +37,27 @@ describe('AiSummaryService.generateAndStoreSuggestions', () => {
     const result = await service.generateAndStoreSuggestions('p1', 'A summary.')
 
     expect(result).toEqual(['What is a norm?', 'Why does symmetry matter?'])
-    expect(prismaMock.post.update).toHaveBeenCalledWith({
-      where: { id: 'p1' },
+    expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
+      where: { id: 'p1', summary: 'A summary.' },
       data: { suggestedQuestions: ['What is a norm?', 'Why does symmetry matter?'] },
+    })
+  })
+
+  it('saves nothing, and returns nothing, when the summary changed while the model worked', async () => {
+    llmMock.chat.mockResolvedValue('What is a norm?')
+    prismaMock.post.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(service.generateAndStoreSuggestions('p1', 'Old summary.')).resolves.toEqual([])
+  })
+
+  it('matches the summary exactly as stored, whitespace included', async () => {
+    llmMock.chat.mockResolvedValue('What is a norm?')
+
+    await service.generateAndStoreSuggestions('p1', '  A summary.  ')
+
+    expect(prismaMock.post.updateMany.mock.calls[0][0].where).toEqual({
+      id: 'p1',
+      summary: '  A summary.  ',
     })
   })
 
@@ -47,14 +65,14 @@ describe('AiSummaryService.generateAndStoreSuggestions', () => {
     llmMock.chat.mockResolvedValue('no questions here')
 
     await expect(service.generateAndStoreSuggestions('p1', 'A summary.')).resolves.toEqual([])
-    expect(prismaMock.post.update).not.toHaveBeenCalled()
+    expect(prismaMock.post.updateMany).not.toHaveBeenCalled()
   })
 
   it('swallows a failure so the summary it follows is not lost', async () => {
     llmMock.chat.mockRejectedValue(new Error('provider down'))
 
     await expect(service.generateAndStoreSuggestions('p1', 'A summary.')).resolves.toEqual([])
-    expect(prismaMock.post.update).not.toHaveBeenCalled()
+    expect(prismaMock.post.updateMany).not.toHaveBeenCalled()
   })
 
   it('swallows an unconfigured provider too', async () => {

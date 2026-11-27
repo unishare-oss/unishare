@@ -673,12 +673,12 @@ export class PostsService {
       where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
       select: { summary: true, suggestedQuestions: true },
     })
-    if (post && post.suggestedQuestions.length > 0) return { questions: post.suggestedQuestions }
+    // No summary, no suggestions, whatever is stored: questions outlive nothing they came from.
+    if (!post?.summary?.trim()) return { questions: [] }
+    if (post.suggestedQuestions.length > 0) return { questions: post.suggestedQuestions }
 
-    const summary = post?.summary?.trim()
-    if (!summary) return { questions: [] }
-
-    const questions = await this.aiSummaryService.generateAndStoreSuggestions(postId, summary)
+    // The summary goes in exactly as stored, because the save is conditional on it still matching.
+    const questions = await this.aiSummaryService.generateAndStoreSuggestions(postId, post.summary)
     return { questions }
   }
 
