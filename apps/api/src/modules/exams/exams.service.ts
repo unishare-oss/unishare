@@ -10,6 +10,12 @@ import { UpdateExamDto } from './dto/update-exam.dto'
 /** How far ahead of an exam its one reminder notification fires. */
 export const EXAM_REMINDER_LEAD_DAYS = 14
 
+interface ExamRangeFilter {
+  departmentId?: string
+  courseId?: string
+  studentId?: string
+}
+
 @Injectable()
 export class ExamsService {
   private readonly logger = new Logger(ExamsService.name)
@@ -32,15 +38,22 @@ export class ExamsService {
     from: string,
     to: string,
     scope: UniversityScope,
-    departmentId?: string,
-    courseId?: string,
+    { departmentId, courseId, studentId }: ExamRangeFilter = {},
   ) {
+    let courseIds = courseId ? [courseId] : undefined
+    // With studentId, only exams for that student's final course list.
+    if (studentId) {
+      const { final } = await this.myCoursesService.getForStudent(studentId)
+      const finalIds = final.map((course) => course.id)
+      courseIds = courseId ? finalIds.filter((id) => id === courseId) : finalIds
+      if (courseIds.length === 0) return []
+    }
     return this.examsRepository.findInRange(
       new Date(from),
       new Date(to),
       scope,
       departmentId,
-      courseId,
+      courseIds,
     )
   }
 

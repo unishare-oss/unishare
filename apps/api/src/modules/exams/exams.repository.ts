@@ -39,14 +39,14 @@ export class ExamsRepository {
     to: Date,
     scope: UniversityScope,
     departmentId?: string,
-    courseId?: string,
+    courseIds?: string[],
   ) {
     return this.prisma.exam.findMany({
       where: {
         AND: [
           {
             startsAt: { gte: from, lte: to },
-            ...(courseId ? { courseId } : {}),
+            ...(courseIds ? { courseId: { in: courseIds } } : {}),
             ...(departmentId ? { course: { departmentId } } : {}),
           },
           { course: courseInScope(scope) },

@@ -23,7 +23,7 @@ describe('ExamsService', () => {
   }
   let coursesService: { findOne: jest.Mock }
   let notificationsService: { notifyExamReminder: jest.Mock }
-  let myCoursesService: { findStudentIdsTaking: jest.Mock }
+  let myCoursesService: { findStudentIdsTaking: jest.Mock; getForStudent: jest.Mock }
 
   beforeEach(async () => {
     repo = {
@@ -37,7 +37,7 @@ describe('ExamsService', () => {
     }
     coursesService = { findOne: jest.fn() }
     notificationsService = { notifyExamReminder: jest.fn() }
-    myCoursesService = { findStudentIdsTaking: jest.fn() }
+    myCoursesService = { findStudentIdsTaking: jest.fn(), getForStudent: jest.fn() }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -91,10 +91,54 @@ describe('ExamsService', () => {
     })
   })
 
+  describe('mine filter', () => {
+    const range = ['2026-10-01', '2026-10-31'] as const
+
+    it('limits exams to the final list courses', async () => {
+      myCoursesService.getForStudent.mockResolvedValue({ final: [{ id: 'c1' }, { id: 'c2' }] })
+      repo.findInRange.mockResolvedValue([])
+      await service.findInRange(...range, U1, { studentId: 's1' })
+      expect(myCoursesService.getForStudent).toHaveBeenCalledWith('s1')
+      expect(repo.findInRange).toHaveBeenCalledWith(
+        new Date(range[0]),
+        new Date(range[1]),
+        U1,
+        undefined,
+        ['c1', 'c2'],
+      )
+    })
+
+    it('returns nothing for an empty final list', async () => {
+      myCoursesService.getForStudent.mockResolvedValue({ final: [] })
+      await expect(service.findInRange(...range, U1, { studentId: 's1' })).resolves.toEqual([])
+      expect(repo.findInRange).not.toHaveBeenCalled()
+    })
+
+    it('intersects with courseId', async () => {
+      myCoursesService.getForStudent.mockResolvedValue({ final: [{ id: 'c1' }, { id: 'c2' }] })
+      repo.findInRange.mockResolvedValue([])
+      await service.findInRange(...range, U1, { courseId: 'c2', studentId: 's1' })
+      expect(repo.findInRange.mock.calls[0][4]).toEqual(['c2'])
+
+      repo.findInRange.mockClear()
+      await expect(
+        service.findInRange(...range, U1, { courseId: 'c9', studentId: 's1' }),
+      ).resolves.toEqual([])
+      expect(repo.findInRange).not.toHaveBeenCalled()
+    })
+
+    it('does not touch the final list without mine', async () => {
+      repo.findInRange.mockResolvedValue([])
+      await service.findInRange(...range, U1, { courseId: 'c1' })
+      expect(myCoursesService.getForStudent).not.toHaveBeenCalled()
+      expect(repo.findInRange.mock.calls[0][4]).toEqual(['c1'])
+    })
+  })
+
   describe('university scope', () => {
     it('lists exams with the scope', async () => {
       repo.findInRange.mockResolvedValue([])
-      await service.findInRange('2026-10-01', '2026-10-31', U1, 'd1')
+      await service.findInRange('2026-10-01', '2026-10-31', U1, { departmentId: 'd1' })
       expect(repo.findInRange).toHaveBeenCalledWith(
         new Date('2026-10-01'),
         new Date('2026-10-31'),

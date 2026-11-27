@@ -38,8 +38,13 @@ export class ExamsController {
     @Session() session: UserSession,
     @UniversityScopeParam() scope: UniversityScope,
   ) {
-    const departmentId = query.departmentId ?? session.user.departmentId ?? undefined
-    return this.examsService.findInRange(query.from, query.to, scope, departmentId, query.courseId)
+    // Mine means the final list only, so the profile department must not narrow it further.
+    const departmentId = query.departmentId ?? (query.mine ? undefined : session.user.departmentId)
+    return this.examsService.findInRange(query.from, query.to, scope, {
+      departmentId: departmentId ?? undefined,
+      courseId: query.courseId,
+      studentId: query.mine ? session.user.id : undefined,
+    })
   }
 
   @Patch(':id')
