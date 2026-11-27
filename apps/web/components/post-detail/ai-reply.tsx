@@ -1,6 +1,10 @@
 'use client'
 
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 /**
  * Renders an AI chat reply as restricted markdown.
@@ -36,13 +40,50 @@ const ALLOWED = [
   'h2',
   'h3',
   'h4',
+  // Tables, from GFM syntax.
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'th',
+  'td',
+  // What KaTeX writes for formulas. It runs before this filter, so its output has to be allowed
+  // or a formula would collapse into loose text. None of it comes from the reply's own markup:
+  // raw HTML is never parsed, so a reply cannot contain a span or svg of its own. KaTeX also
+  // runs with `trust` off, which is what keeps `\href` and `\url` from making links.
+  'span',
+  'svg',
+  'path',
+  'line',
 ]
+
+/**
+ * Models write math as `\( ... \)` and `\[ ... \]` as often as `$ ... $`, and only the dollar form
+ * is math to the parser. Rewriting the bracket forms means a formula renders whichever way the
+ * model happened to write it.
+ */
+function normaliseMath(text: string): string {
+  return text
+    .replace(
+      /\\\[([\s\S]+?)\\\]/g,
+      // Display math has to sit on lines of its own for the parser to treat it as a block.
+      (_m, body: string) => ['', '', '$$', body.trim(), '$$', '', ''].join('\n'),
+    )
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_m, body: string) => `$${body}$`)
+}
 
 export function AiReply({ children }: { children: string }) {
   return (
     <div className="flex flex-col gap-1.5 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
       <ReactMarkdown
         allowedElements={ALLOWED}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        // `output: 'html'` skips the MathML copy KaTeX also writes, which would need a dozen more
+        // element names allowed. `throwOnError: false` and `strict: 'ignore'` matter while a reply
+        // streams: a half-written formula must show as text, not throw.
+        rehypePlugins={[
+          [rehypeKatex, { output: 'html', throwOnError: false, strict: 'ignore', trust: false }],
+        ]}
         // Anything outside the allowlist keeps its TEXT and loses its markup, rather than being
         // removed. Dropping the node would silently delete the words inside a link, which is worse
         // than showing them: the student would never know something had been elided.
@@ -79,9 +120,20 @@ export function AiReply({ children }: { children: string }) {
           h2: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
           h3: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
           h4: ({ children }) => <p className="font-semibold text-foreground">{children}</p>,
+          table: ({ children }) => (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[0.95em]">{children}</table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border border-border bg-background px-2 py-1 text-left font-semibold text-foreground">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
         }}
       >
-        {children}
+        {normaliseMath(children)}
       </ReactMarkdown>
     </div>
   )
