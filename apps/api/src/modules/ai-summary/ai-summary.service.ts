@@ -19,6 +19,7 @@ import { AiChatCitationDto } from '../posts/dto/ai-chat.dto'
 import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 import { chunkDocument } from '../ai/chunking/chunker'
 import { isOffTopicReply, SentinelGate } from './off-topic'
+import { buildSuggestionPrompt, parseSuggestedQuestions } from './suggested-questions'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -1082,6 +1083,25 @@ export class AiSummaryService {
 
     this.logger.error(`Question generation failed: ${lastError.message}`)
     throw lastError
+  }
+
+  /**
+   * Three tappable questions about a document, written from its summary.
+   *
+   * Decoration for the chat panel, so a model that returns nothing usable yields an empty list
+   * rather than an error; the caller falls back to generic prompts. An unconfigured provider still
+   * throws, as every other AI entry point here does.
+   */
+  async generateSuggestedQuestions(summary: string): Promise<string[]> {
+    if (!this.llm.enabled) {
+      throw new ServiceUnavailableException('AI service not configured')
+    }
+
+    const reply = await this.llm.chat(buildSuggestionPrompt(summary), {
+      maxTokens: 150,
+      temperature: 0.3,
+    })
+    return parseSuggestedQuestions(reply)
   }
 
   /**
