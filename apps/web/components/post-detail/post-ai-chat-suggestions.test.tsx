@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   messages: [] as ChatMessage[],
   isPending: false,
   sendMessage: vi.fn(),
+  suggestions: [] as string[],
 }))
 
 vi.mock('@/hooks/use-ai-index-status', () => ({
@@ -25,6 +26,10 @@ vi.mock('@/hooks/use-post-ai-chat', () => ({
     isPending: mocks.isPending,
     reset: vi.fn(),
   }),
+}))
+
+vi.mock('@/hooks/use-suggested-questions', () => ({
+  useSuggestedQuestions: () => mocks.suggestions,
 }))
 
 vi.mock('@/hooks/use-practice-quiz', () => ({
@@ -54,6 +59,7 @@ describe('PostAiChat suggested questions', () => {
     mocks.messages = []
     mocks.isPending = false
     mocks.sendMessage.mockReset()
+    mocks.suggestions = []
   })
 
   it('offers suggested questions before the conversation starts', async () => {
@@ -64,6 +70,15 @@ describe('PostAiChat suggested questions', () => {
     expect(
       screen.getByRole('button', { name: 'Explain the main concepts simply' }),
     ).toBeInTheDocument()
+  })
+
+  it('offers questions written from the document when the server has them', async () => {
+    mocks.suggestions = ['What is a norm?', 'Why does symmetry matter?']
+    await renderOpened()
+
+    expect(screen.getByRole('button', { name: 'What is a norm?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Why does symmetry matter?' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Summarize this document' })).toBeNull()
   })
 
   it('sends the suggestion as the student’s message when tapped', async () => {

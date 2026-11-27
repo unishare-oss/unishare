@@ -22,6 +22,8 @@ vi.mock('@/hooks/use-ai-index-status', () => ({
   useAiIndexStatus: () => ({ status: mocks.status, isLoading: false }),
 }))
 
+vi.mock('@/hooks/use-suggested-questions', () => ({ useSuggestedQuestions: () => [] }))
+
 vi.mock('@/hooks/use-post-ai-chat', () => ({
   usePostAiChat: () => ({
     messages: mocks.messages,

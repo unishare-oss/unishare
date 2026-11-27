@@ -11,6 +11,7 @@ import { usePostAiChat, type AiChatCitation } from '@/hooks/use-post-ai-chat'
 import { AiReply } from '@/components/post-detail/ai-reply'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import { usePracticeQuiz } from '@/hooks/use-practice-quiz'
+import { useSuggestedQuestions } from '@/hooks/use-suggested-questions'
 import { PracticeQuiz } from '@/components/post-detail/practice-quiz'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
@@ -180,6 +181,9 @@ export function PostAiChat({ post }: PostAiChatProps) {
     error: quizError,
     start: startQuiz,
   } = usePracticeQuiz(post.id)
+  // Questions written from this post when the server has them, generic openers until then.
+  const contentSuggestions = useSuggestedQuestions(post.id, open && messages.length === 0)
+  const suggestions = contentSuggestions.length > 0 ? contentSuggestions : SUGGESTED_PROMPTS
   const { status: indexStatus } = useAiIndexStatus(post.id, hasSupportedFiles)
 
   const isPreparing = indexStatus?.state === 'preparing'
@@ -258,7 +262,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
 
                 {messages.length === 0 && (
                   <div className="flex flex-wrap gap-1.5" aria-label="Suggested questions">
-                    {SUGGESTED_PROMPTS.map((prompt) => (
+                    {suggestions.map((prompt) => (
                       <button
                         key={prompt}
                         type="button"
