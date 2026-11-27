@@ -153,6 +153,43 @@ describe('LlmService', () => {
     })
   })
 
+  describe('a provider that refuses on spending limit or a paused key', () => {
+    beforeEach(() => {
+      configValues.AI_SUMMARY_PROVIDER = 'gemini'
+      configValues.AI_SUMMARY_API_KEY = 'test-key'
+      mockSendMessage.mockReset()
+    })
+
+    it.each([
+      [402, 'the spending limit is used up'],
+      [403, 'the key is paused'],
+    ])('answers 503 without retrying when %i says %s', async (status) => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('refused'), { status }))
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      )
+      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+    })
+
+    it('does the same for a streamed turn', async () => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('refused'), { status: 402 }))
+      service = await build()
+
+      const stream = service.chatStream([{ role: 'user', content: 'hi' }])
+      await expect(stream.next()).rejects.toBeInstanceOf(ServiceUnavailableException)
+      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+    })
+
+    it('still lets a plain bad request through unchanged', async () => {
+      mockSendMessage.mockRejectedValue(Object.assign(new Error('bad model'), { status: 404 }))
+      service = await build()
+
+      await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toThrow('bad model')
+    })
+  })
+
   describe('a rate-limited provider is retryable, not a server fault', () => {
     beforeEach(() => {
       configValues.AI_SUMMARY_PROVIDER = 'ollama'
