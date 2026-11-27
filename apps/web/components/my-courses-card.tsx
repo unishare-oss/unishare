@@ -2,21 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/auth-context'
-import { useMyCoursesControllerGetMine } from '@/src/lib/api/generated/users/users'
 import { coursesHref } from '@/components/navigation/navigation-config'
+import { useMyCourses } from '@/components/my-courses/use-my-courses'
 import { MyCoursesDialog } from '@/components/my-courses/my-courses-dialog'
 import { formatAcademicYear } from '@/lib/utils'
 
 /** The student's final course list for this academic year. */
 export function MyCoursesCard() {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const { user } = useAuth()
-  const department = user?.department
-  const yearLevel = user?.yearLevel ?? null
-  const { data } = useMyCoursesControllerGetMine({
-    query: { select: (response) => response.data, enabled: !!department && yearLevel !== null },
-  })
+  const { department, yearLevel, data } = useMyCourses()
   if (!department || yearLevel === null || !data) return null
   const courses = data.final
 

@@ -11,6 +11,7 @@ import { useFeedStore, type TypeFilter } from '@/lib/store'
 import { PageRail } from '@/components/page-rail'
 import { MyCoursesCard } from '@/components/my-courses-card'
 import { PostFeed } from '@/components/feed/post-feed'
+import { CourseCheckCard } from '@/components/today/course-check-card'
 import { TodayTop } from '@/components/today/today-top'
 import type { ApiPost } from '@/lib/api-types'
 
@@ -227,6 +228,7 @@ function FeedContent() {
 
   return (
     <PageRail rail={<MyCoursesCard />}>
+      <CourseCheckCard />
       <TodayTop />
       <section aria-labelledby="feed-heading" className="grid min-w-0 gap-3.5">
         <h2 id="feed-heading" className="font-display text-[22px] font-extrabold">

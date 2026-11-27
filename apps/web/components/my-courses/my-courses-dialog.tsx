@@ -1,14 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { useCoursesControllerFindAll } from '@/src/lib/api/generated/courses/courses'
-import {
-  getMyCoursesControllerGetMineQueryKey,
-  useMyCoursesControllerSaveMine,
-} from '@/src/lib/api/generated/users/users'
 import type { MyCourseEntity, MyCoursesEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+import { useSaveMyCourses } from '@/components/my-courses/use-my-courses'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -43,7 +38,6 @@ export function MyCoursesDialog({ courses, departmentId, onOpenChange }: MyCours
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
   const saveRef = useRef<HTMLButtonElement>(null)
-  const queryClient = useQueryClient()
   const {
     data: departmentCourses,
     isPending: coursesPending,
@@ -52,16 +46,10 @@ export function MyCoursesDialog({ courses, departmentId, onOpenChange }: MyCours
     { departmentId, limit: DEPARTMENT_COURSE_LIMIT },
     { query: { select: (response) => response.data } },
   )
-  const save = useMyCoursesControllerSaveMine({
-    mutation: {
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getMyCoursesControllerGetMineQueryKey() })
-        onOpenChange(false)
-        toast.success(`Saved. Reminders follow your ${courseCount(draft.size)} this year.`)
-      },
-      onError: () => toast.error('Failed to save courses'),
-    },
-  })
+  const save = useSaveMyCourses(
+    `Saved. Reminders follow your ${courseCount(draft.size)} this year.`,
+    () => onOpenChange(false),
+  )
 
   const automaticIds = new Set(courses.automatic.map((course) => course.id))
   const query = search.trim().toLowerCase()
