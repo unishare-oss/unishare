@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AiReply } from '@/components/ai/ai-reply'
@@ -101,12 +101,43 @@ export function AiMessage({
   )
 }
 
-/** Shown from the moment a question is sent until the first word of the answer arrives. */
+/** After this long, the label says so: a thinking model can take many seconds before its first word. */
+export const STILL_THINKING_AFTER_MS = 8000
+
+/**
+ * Shown from the moment a question is sent until the first word of the answer arrives.
+ *
+ * Three dots bounce in turn, and the label changes to "Still thinking…" if the wait runs long, so
+ * a slow answer reads as work in progress rather than a stuck screen. The dots hold still for
+ * anyone who asked for less motion, and screen readers hear the label, not the dots.
+ */
 export function AiThinking() {
+  const [slow, setSlow] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), STILL_THINKING_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <div className="flex justify-start">
-      <div className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-text-muted">
-        <span className="animate-pulse">Thinking…</span>
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2 text-sm text-text-muted"
+      >
+        <span className="flex items-center gap-1" aria-hidden="true">
+          {['[animation-delay:-0.3s]', '[animation-delay:-0.15s]', ''].map((delay) => (
+            <span
+              key={delay || 'last'}
+              className={cn(
+                'size-1.5 rounded-full bg-primary animate-bounce motion-reduce:animate-none',
+                delay,
+              )}
+            />
+          ))}
+        </span>
+        <span>{slow ? 'Still thinking…' : 'Thinking…'}</span>
       </div>
     </div>
   )

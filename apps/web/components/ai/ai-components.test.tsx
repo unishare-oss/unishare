@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AiMessage, AiThinking } from '@/components/ai/ai-message'
+import { AiMessage, AiThinking, STILL_THINKING_AFTER_MS } from '@/components/ai/ai-message'
 import { AiSuggestedPrompts } from '@/components/ai/ai-suggested-prompts'
 import { AiComposer } from '@/components/ai/ai-composer'
 
@@ -95,10 +95,34 @@ describe('AiMessage retry and streaming', () => {
 })
 
 describe('AiThinking', () => {
-  it('says the assistant is working', () => {
+  it('announces that the assistant is working', () => {
     render(<AiThinking />)
 
-    expect(screen.getByText('Thinking…')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Thinking…')
+  })
+
+  it('says it is still thinking once the wait runs long', () => {
+    vi.useFakeTimers()
+    try {
+      render(<AiThinking />)
+      expect(screen.getByRole('status')).toHaveTextContent('Thinking…')
+
+      act(() => {
+        vi.advanceTimersByTime(STILL_THINKING_AFTER_MS)
+      })
+
+      expect(screen.getByRole('status')).toHaveTextContent('Still thinking…')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the dots out of what a screen reader hears, and still for reduced motion', () => {
+    const { container } = render(<AiThinking />)
+
+    const dots = container.querySelectorAll('[aria-hidden="true"] > span')
+    expect(dots).toHaveLength(3)
+    dots.forEach((dot) => expect(dot.className).toContain('motion-reduce:animate-none'))
   })
 })
 
