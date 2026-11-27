@@ -58,21 +58,70 @@ const ALLOWED = [
   'svg',
   'path',
   'line',
+  // The MathML copy KaTeX writes beside the drawn formula. The drawn tree is hidden from assistive
+  // technology, so this copy is what a screen reader reads. Without these names `unwrapDisallowed`
+  // would keep the text and drop the structure, and "x squared" would read as "x 2".
+  'math',
+  'semantics',
+  'annotation',
+  'mrow',
+  'mi',
+  'mo',
+  'mn',
+  'ms',
+  'mtext',
+  'mspace',
+  'msup',
+  'msub',
+  'msubsup',
+  'mfrac',
+  'msqrt',
+  'mroot',
+  'munder',
+  'mover',
+  'munderover',
+  'mmultiscripts',
+  'mprescripts',
+  'none',
+  'mtable',
+  'mtr',
+  'mtd',
+  'mstyle',
+  'mpadded',
+  'mphantom',
+  'menclose',
 ]
+
+/**
+ * Code, which must reach the parser untouched: an example such as `r"\(foo\)"` is the student's
+ * lesson, not a formula. Fenced blocks first, running to the end of the text when the closing
+ * fence has not arrived yet (a reply still streaming), then inline spans. Indented code blocks are
+ * not recognised: telling them from a nested list needs the full parser, and a list is the more
+ * common reason for four leading spaces in a reply.
+ */
+const CODE_SEGMENT = /(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|`[^`\n]+`)/
 
 /**
  * Models write math as `\( ... \)` and `\[ ... \]` as often as `$ ... $`, and only the dollar form
  * is math to the parser. Rewriting the bracket forms means a formula renders whichever way the
- * model happened to write it.
+ * model happened to write it. Only prose is rewritten; code is left exactly as written.
  */
 function normaliseMath(text: string): string {
+  // Splitting on a capturing group puts prose at even indices and code at odd ones.
   return text
-    .replace(
-      /\\\[([\s\S]+?)\\\]/g,
-      // Display math has to sit on lines of its own for the parser to treat it as a block.
-      (_m, body: string) => ['', '', '$$', body.trim(), '$$', '', ''].join('\n'),
+    .split(CODE_SEGMENT)
+    .map((segment, i) =>
+      i % 2 === 1
+        ? segment
+        : segment
+            .replace(
+              /\\\[([\s\S]+?)\\\]/g,
+              // Display math has to sit on lines of its own for the parser to treat it as a block.
+              (_m, body: string) => ['', '', '$$', body.trim(), '$$', '', ''].join('\n'),
+            )
+            .replace(/\\\(([\s\S]+?)\\\)/g, (_m, body: string) => `$${body}$`),
     )
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_m, body: string) => `$${body}$`)
+    .join('')
 }
 
 export function AiReply({
@@ -95,11 +144,14 @@ export function AiReply({
       <ReactMarkdown
         allowedElements={ALLOWED}
         remarkPlugins={[remarkGfm, remarkMath]}
-        // `output: 'html'` skips the MathML copy KaTeX also writes, which would need a dozen more
-        // element names allowed. `throwOnError: false` and `strict: 'ignore'` matter while a reply
-        // streams: a half-written formula must show as text, not throw.
+        // `htmlAndMathml` keeps the MathML copy that screen readers use; the drawn copy is hidden
+        // from them. `throwOnError: false` and `strict: 'ignore'` matter while a reply streams: a
+        // half-written formula must show as text, not throw.
         rehypePlugins={[
-          [rehypeKatex, { output: 'html', throwOnError: false, strict: 'ignore', trust: false }],
+          [
+            rehypeKatex,
+            { output: 'htmlAndMathml', throwOnError: false, strict: 'ignore', trust: false },
+          ],
         ]}
         // Anything outside the allowlist keeps its TEXT and loses its markup, rather than being
         // removed. Dropping the node would silently delete the words inside a link, which is worse
