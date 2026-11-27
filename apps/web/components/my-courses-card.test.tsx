@@ -7,12 +7,12 @@ const mocks = vi.hoisted(() => ({
     department?: { id: string; name: string } | null
     yearLevel?: number | null
   },
-  courses: [] as { id: string; code: string; name: string; yearLevel: number }[],
+  courses: [] as { id: string; code: string; name: string; yearLevel: number | null }[],
 }))
 
 vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ user: mocks.user }) }))
-vi.mock('@/src/lib/api/generated/courses/courses', () => ({
-  useCoursesControllerFindAll: () => ({ data: { items: mocks.courses } }),
+vi.mock('@/src/lib/api/generated/users/users', () => ({
+  useMyCoursesControllerGetMine: () => ({ data: { final: mocks.courses } }),
 }))
 
 describe('MyCoursesCard', () => {
@@ -20,7 +20,7 @@ describe('MyCoursesCard', () => {
     mocks.user = { department: { id: 'd-1', name: 'Computer Science' }, yearLevel: 2 }
     mocks.courses = [
       { id: 'c-1', code: 'CSC213', name: 'Data Structures', yearLevel: 2 },
-      { id: 'c-2', code: 'CSC401', name: 'Compilers', yearLevel: 4 },
+      { id: 'c-2', code: 'ELE101', name: 'Elective', yearLevel: null },
     ]
   })
 
@@ -29,7 +29,7 @@ describe('MyCoursesCard', () => {
     expect(screen.getByRole('heading', { name: 'My courses' })).toBeInTheDocument()
     expect(screen.getByText('Computer Science · Year 2')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /CSC213/ })).toHaveTextContent('Data Structures')
-    expect(screen.queryByText('CSC401')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /ELE101/ })).toHaveTextContent('Elective')
   })
 
   it('links to all department courses', () => {
@@ -45,14 +45,19 @@ describe('MyCoursesCard', () => {
     expect(screen.getByRole('link', { name: /CSC213/ })).toHaveAttribute('href', '/courses/c-1')
   })
 
+  it('shows the empty wording when the final list is empty', () => {
+    mocks.courses = []
+    render(<MyCoursesCard />)
+    expect(screen.getByText('No courses found for your year — add yours')).toBeInTheDocument()
+    expect(screen.getByText('Computer Science · Year 2')).toBeInTheDocument()
+  })
+
   it.each([
-    ['a guest or signed-out visitor', null, true],
-    ['a member without a department', { department: null, yearLevel: 2 }, true],
-    ['a member without a year', { department: { id: 'd-1', name: 'CS' }, yearLevel: null }, true],
-    ['a student with no courses this year', undefined, false],
-  ])('renders nothing for %s', (_label, user, hasCourses) => {
-    if (user !== undefined) mocks.user = user
-    if (!hasCourses) mocks.courses = []
+    ['a guest or signed-out visitor', null],
+    ['a member without a department', { department: null, yearLevel: 2 }],
+    ['a member without a year', { department: { id: 'd-1', name: 'CS' }, yearLevel: null }],
+  ])('renders nothing for %s', (_label, user) => {
+    mocks.user = user
     const { container } = render(<MyCoursesCard />)
     expect(container).toBeEmptyDOMElement()
   })
