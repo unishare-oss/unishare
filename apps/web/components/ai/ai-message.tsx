@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AiReply } from '@/components/ai/ai-reply'
 import { CopyReplyButton } from '@/components/ai/copy-reply-button'
@@ -26,6 +26,13 @@ interface AiMessageProps {
    * arriving, and a copy of half an answer is a trap.
    */
   showCopy?: boolean
+  /** The reply is still arriving, so a caret trails the last word. */
+  streaming?: boolean
+  /**
+   * Asks the question again. Pass it only for the latest reply, and only once it has finished:
+   * the host knows both, this component does not.
+   */
+  onRegenerate?: () => void
 }
 
 /**
@@ -37,8 +44,15 @@ interface AiMessageProps {
  * text as markup would let a question containing `#` or `- ` come back looking like a heading or
  * a list they never wrote.
  */
-export function AiMessage({ message, footer, showCopy = true }: AiMessageProps) {
+export function AiMessage({
+  message,
+  footer,
+  showCopy = true,
+  streaming = false,
+  onRegenerate,
+}: AiMessageProps) {
   const isUser = message.role === 'user'
+  const canCopy = !isUser && !message.offTopic && Boolean(message.content) && showCopy
 
   return (
     <div className={cn('flex gap-2 text-sm', isUser ? 'justify-end' : 'justify-start')}>
@@ -57,15 +71,30 @@ export function AiMessage({ message, footer, showCopy = true }: AiMessageProps) 
             {message.offTopic && (
               <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-brand-edge" />
             )}
-            {isUser ? <span>{message.content}</span> : <AiReply>{message.content}</AiReply>}
+            {isUser ? (
+              <span>{message.content}</span>
+            ) : (
+              <AiReply streaming={streaming}>{message.content}</AiReply>
+            )}
           </div>
           {footer}
         </div>
       </div>
       {/* Beside the bubble, not in it, so the order of answer then footer inside it is untouched. */}
-      {!isUser && !message.offTopic && message.content && showCopy && (
-        <div className="flex items-end">
-          <CopyReplyButton text={message.content} />
+      {!isUser && (canCopy || onRegenerate) && (
+        <div className="flex flex-col items-start justify-end gap-0.5">
+          {canCopy && <CopyReplyButton text={message.content} />}
+          {onRegenerate && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              aria-label="Regenerate reply"
+              className="inline-flex items-center gap-1 rounded px-1 py-0.5 font-mono text-[10px] uppercase tracking-wide text-text-muted transition-colors hover:text-foreground"
+            >
+              <RefreshCw className="size-3" strokeWidth={1.5} aria-hidden="true" />
+              Retry
+            </button>
+          )}
         </div>
       )}
     </div>

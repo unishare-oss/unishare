@@ -171,7 +171,7 @@ export function PostAiChat({ post }: PostAiChatProps) {
   const supportedFiles = post.files?.filter((f) => SUPPORTED_MIME_TYPES.includes(f.mimeType)) ?? []
   const hasSupportedFiles = supportedFiles.length > 0
 
-  const { messages, sendMessage, isPending } = usePostAiChat(post.id)
+  const { messages, sendMessage, regenerate, isPending } = usePostAiChat(post.id)
   const {
     quiz,
     round: quizRound,
@@ -264,6 +264,14 @@ export function PostAiChat({ post }: PostAiChatProps) {
                         }
                         // Not while this reply is still arriving: a copy of half an answer is a trap.
                         showCopy={!(isPending && i === messages.length - 1)}
+                        streaming={
+                          isPending && i === messages.length - 1 && msg.role === 'assistant'
+                        }
+                        onRegenerate={
+                          !isPending && i === messages.length - 1 && msg.role === 'assistant'
+                            ? regenerate
+                            : undefined
+                        }
                       />
                     ))}
                     {/* Only until the first token lands. The reply now streams into its own

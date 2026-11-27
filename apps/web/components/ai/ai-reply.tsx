@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown'
 import { Children, isValidElement, type ReactNode } from 'react'
 import { CodeBlock } from '@/components/ai/code-block'
+import { cn } from '@/lib/utils'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -74,9 +75,23 @@ function normaliseMath(text: string): string {
     .replace(/\\\(([\s\S]+?)\\\)/g, (_m, body: string) => `$${body}$`)
 }
 
-export function AiReply({ children }: { children: string }) {
+export function AiReply({
+  children,
+  streaming = false,
+}: {
+  children: string
+  streaming?: boolean
+}) {
   return (
-    <div className="flex flex-col gap-1.5 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+    <div
+      className={cn(
+        'flex flex-col gap-1.5 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+        // A caret on the last block while words are still arriving. Drawn by CSS, so it is never part
+        // of the text a student selects or copies, and it holds still for anyone who asked for less motion.
+        streaming &&
+          "[&>*:last-child]:after:ml-0.5 [&>*:last-child]:after:content-['▍'] [&>*:last-child]:after:animate-pulse motion-reduce:[&>*:last-child]:after:animate-none",
+      )}
+    >
       <ReactMarkdown
         allowedElements={ALLOWED}
         remarkPlugins={[remarkGfm, remarkMath]}

@@ -50,6 +50,50 @@ describe('AiMessage', () => {
   })
 })
 
+describe('AiMessage retry and streaming', () => {
+  it('offers a retry that calls back, when the host provides one', async () => {
+    const onRegenerate = vi.fn()
+    render(
+      <AiMessage
+        message={{ role: 'assistant', content: 'An answer.' }}
+        onRegenerate={onRegenerate}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Regenerate reply' }))
+
+    expect(onRegenerate).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers no retry unless the host provides one', () => {
+    render(<AiMessage message={{ role: 'assistant', content: 'An answer.' }} />)
+
+    expect(screen.queryByRole('button', { name: 'Regenerate reply' })).toBeNull()
+  })
+
+  it('still offers a retry on a refusal, which has nothing to copy', () => {
+    render(
+      <AiMessage
+        message={{ role: 'assistant', content: 'No.', offTopic: true }}
+        onRegenerate={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Regenerate reply' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy reply' })).toBeNull()
+  })
+
+  it('marks the last block with a caret only while the reply is arriving', () => {
+    const { container, rerender } = render(
+      <AiMessage message={{ role: 'assistant', content: 'Half an ans' }} streaming />,
+    )
+    expect(container.innerHTML).toContain('after:content-')
+
+    rerender(<AiMessage message={{ role: 'assistant', content: 'Half an ans' }} />)
+    expect(container.innerHTML).not.toContain('after:content-')
+  })
+})
+
 describe('AiThinking', () => {
   it('says the assistant is working', () => {
     render(<AiThinking />)
