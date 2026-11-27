@@ -265,3 +265,35 @@ describe('MyCoursesService.save', () => {
     expect(repo.replaceChangesAndConfirm).not.toHaveBeenCalled()
   })
 })
+
+describe('MyCoursesService.findStudentIdsTaking', () => {
+  const repo = { findStudentIdsTaking: jest.fn() }
+  const config = { get: (_key: string, fallback: number) => fallback } as unknown as ConfigService
+  const service = new MyCoursesService(repo as unknown as MyCoursesRepository, config)
+
+  beforeEach(() => repo.findStudentIdsTaking.mockReset())
+
+  it('uses this academic year and the automatic enrollment year for a leveled course', async () => {
+    repo.findStudentIdsTaking.mockResolvedValue(['automatic', 'added'])
+    const course = { id: 'c1', departmentId: 'd1', yearLevel: 2 }
+
+    await expect(service.findStudentIdsTaking(course, NOW)).resolves.toEqual(['automatic', 'added'])
+    expect(repo.findStudentIdsTaking).toHaveBeenCalledWith(course, 2026, 2025)
+  })
+
+  it('also matches future enrollment years for a year-one course', async () => {
+    repo.findStudentIdsTaking.mockResolvedValue([])
+    const course = { id: 'c1', departmentId: 'd1', yearLevel: 1 }
+
+    await service.findStudentIdsTaking(course, NOW)
+    expect(repo.findStudentIdsTaking).toHaveBeenCalledWith(course, 2026, { gte: 2026 })
+  })
+
+  it('has no automatic enrollment year for a course without a year level', async () => {
+    repo.findStudentIdsTaking.mockResolvedValue(['added'])
+    const course = { id: 'c1', departmentId: 'd1', yearLevel: null }
+
+    await expect(service.findStudentIdsTaking(course, NOW)).resolves.toEqual(['added'])
+    expect(repo.findStudentIdsTaking).toHaveBeenCalledWith(course, 2026, undefined)
+  })
+})

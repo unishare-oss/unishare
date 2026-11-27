@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
-import { StudentCourseChangeKind } from '@/generated/prisma/client'
+import { StudentCourseChangeKind, UserRole, type Course } from '@/generated/prisma/client'
 
 const courseSelect = {
   id: true,
@@ -12,6 +12,43 @@ const courseSelect = {
 @Injectable()
 export class MyCoursesRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  findStudentIdsTaking(
+    course: Pick<Course, 'id' | 'departmentId'>,
+    academicYear: number,
+    enrollmentYear?: number | { gte: number },
+  ): Promise<string[]> {
+    const added = {
+      courseChanges: {
+        some: { courseId: course.id, academicYear, kind: StudentCourseChangeKind.ADDED },
+      },
+    }
+    const automatic =
+      enrollmentYear === undefined
+        ? []
+        : [
+            {
+              enrollmentYear,
+              courseChanges: {
+                none: { courseId: course.id, academicYear, kind: StudentCourseChangeKind.REMOVED },
+              },
+            },
+          ]
+
+    // Mirrors MyCoursesService.getForStudent's final list: automatic minus REMOVED plus same-department ADDED.
+    return this.prisma.user
+      .findMany({
+        where: {
+          departmentId: course.departmentId,
+          role: UserRole.STUDENT,
+          isAnonymous: { not: true },
+          enrollmentYear: { not: null },
+          OR: [...automatic, added],
+        },
+        select: { id: true },
+      })
+      .then((users) => users.map((user) => user.id))
+  }
 
   findStudent(userId: string) {
     return this.prisma.user.findUnique({

@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
-import { computeEnrollmentYearForLevel } from '@/common/utils/academic-year'
+import { MyCoursesService } from '@/modules/my-courses/my-courses.service'
 import { UniversityScope } from '@/common/university-scope'
 import { ExamsRepository } from './exams.repository'
 import { CreateExamDto } from './dto/create-exam.dto'
@@ -19,7 +18,7 @@ export class ExamsService {
     private readonly examsRepository: ExamsRepository,
     private readonly coursesService: CoursesService,
     private readonly notificationsService: NotificationsService,
-    private readonly config: ConfigService,
+    private readonly myCoursesService: MyCoursesService,
   ) {}
 
   // Another university's course is a 404, so staff can't add exams to it.
@@ -87,19 +86,8 @@ export class ExamsService {
     const dueExams = await this.examsRepository.findDueForReminder(targetDate)
     if (dueExams.length === 0) return
 
-    const academicStartMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
-
     for (const exam of dueExams) {
-      const { departmentId, yearLevel } = exam.course
-      const enrollmentYear =
-        yearLevel != null
-          ? computeEnrollmentYearForLevel(yearLevel, now, academicStartMonth)
-          : undefined
-
-      const recipientIds = await this.examsRepository.findReminderRecipientIds(
-        departmentId,
-        enrollmentYear,
-      )
+      const recipientIds = await this.myCoursesService.findStudentIdsTaking(exam.course, now)
 
       await this.notificationsService.notifyExamReminder(
         exam.id,

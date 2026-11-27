@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { StudentCourseChangeKind } from '@/generated/prisma/client'
-import { computeYearLevel, currentAcademicYear } from '@/common/utils/academic-year'
+import { StudentCourseChangeKind, type Course } from '@/generated/prisma/client'
+import {
+  computeEnrollmentYearForLevel,
+  computeYearLevel,
+  currentAcademicYear,
+} from '@/common/utils/academic-year'
 import { MyCoursesRepository } from './my-courses.repository'
 import { MyCoursesEntity } from './entities/my-courses.entity'
 
@@ -12,7 +16,23 @@ export class MyCoursesService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Automatic courses (own department, current year level), minus removals, plus additions. */
+  findStudentIdsTaking(
+    course: Pick<Course, 'id' | 'departmentId' | 'yearLevel'>,
+    now = new Date(),
+  ): Promise<string[]> {
+    const startMonth = this.config.get<number>('ACADEMIC_START_MONTH', 9)
+    const academicYear = currentAcademicYear(now, startMonth)
+    const enrollmentYear =
+      course.yearLevel === null
+        ? undefined
+        : this.enrollmentYearFilter(course.yearLevel, now, startMonth)
+    return this.repository.findStudentIdsTaking(course, academicYear, enrollmentYear)
+  }
+
+  /**
+   * Automatic courses (own department, current year level), minus removals, plus additions.
+   * Mirrors the recipient query in MyCoursesRepository.findStudentIdsTaking; keep them in step.
+   */
   async getForStudent(userId: string, now = new Date()): Promise<MyCoursesEntity> {
     const { academicYear, departmentId, yearLevel } = await this.studentYear(userId, now)
     if (!departmentId || yearLevel === null) {
@@ -74,6 +94,12 @@ export class MyCoursesService {
     ]
     await this.repository.replaceChangesAndConfirm(userId, academicYear, changes, now)
     return this.getForStudent(userId, now)
+  }
+
+  /** computeYearLevel clamps future enrollment years to level one, so level one matches them too. */
+  private enrollmentYearFilter(yearLevel: number, now: Date, startMonth: number) {
+    const enrollmentYear = computeEnrollmentYearForLevel(yearLevel, now, startMonth)
+    return yearLevel === 1 ? { gte: enrollmentYear } : enrollmentYear
   }
 
   private async studentYear(userId: string, now: Date) {

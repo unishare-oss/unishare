@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ConfigService } from '@nestjs/config'
 import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ExamsService } from './exams.service'
 import { ExamsRepository } from './exams.repository'
 import { CoursesService } from '@/modules/courses/courses.service'
 import { NotificationsService } from '@/modules/notifications/notifications.service'
+import { MyCoursesService } from '@/modules/my-courses/my-courses.service'
 import { UniversityScope } from '@/common/university-scope'
 
 const U1: UniversityScope = { kind: 'university', universityId: 'u1' }
@@ -20,10 +20,10 @@ describe('ExamsService', () => {
     remove: jest.Mock
     findDueForReminder: jest.Mock
     markReminderSent: jest.Mock
-    findReminderRecipientIds: jest.Mock
   }
   let coursesService: { findOne: jest.Mock }
   let notificationsService: { notifyExamReminder: jest.Mock }
+  let myCoursesService: { findStudentIdsTaking: jest.Mock }
 
   beforeEach(async () => {
     repo = {
@@ -34,10 +34,10 @@ describe('ExamsService', () => {
       remove: jest.fn(),
       findDueForReminder: jest.fn(),
       markReminderSent: jest.fn(),
-      findReminderRecipientIds: jest.fn(),
     }
     coursesService = { findOne: jest.fn() }
     notificationsService = { notifyExamReminder: jest.fn() }
+    myCoursesService = { findStudentIdsTaking: jest.fn() }
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,7 +45,7 @@ describe('ExamsService', () => {
         { provide: ExamsRepository, useValue: repo },
         { provide: CoursesService, useValue: coursesService },
         { provide: NotificationsService, useValue: notificationsService },
-        { provide: ConfigService, useValue: { get: jest.fn(() => 9) } },
+        { provide: MyCoursesService, useValue: myCoursesService },
       ],
     }).compile()
 
@@ -200,45 +200,76 @@ describe('ExamsService', () => {
       expect(notificationsService.notifyExamReminder).not.toHaveBeenCalled()
     })
 
-    it('targets the whole department when the course has no yearLevel', async () => {
+    it('uses the final-list recipients for a course without a year level', async () => {
+      const course = { id: 'c1', code: 'CS101', departmentId: 'd1', yearLevel: null }
       repo.findDueForReminder.mockResolvedValue([
         {
           id: 'e1',
           title: 'Final',
           startsAt: new Date('2026-09-15'),
-          course: { code: 'CS101', departmentId: 'd1', yearLevel: null },
+          course,
         },
       ])
-      repo.findReminderRecipientIds.mockResolvedValue(['u1', 'u2'])
+      myCoursesService.findStudentIdsTaking.mockResolvedValue(['added'])
 
       await service.sendDueReminders(now)
 
-      expect(repo.findReminderRecipientIds).toHaveBeenCalledWith('d1', undefined)
+      expect(myCoursesService.findStudentIdsTaking).toHaveBeenCalledWith(course, now)
       expect(notificationsService.notifyExamReminder).toHaveBeenCalledWith(
         'e1',
         'CS101',
         'Final',
         expect.any(Date),
-        ['u1', 'u2'],
+        ['added'],
       )
       expect(repo.markReminderSent).toHaveBeenCalledWith('e1', now)
     })
 
-    it('narrows to a single enrollmentYear when the course has a yearLevel', async () => {
+    it('uses the final-list recipients for a leveled course', async () => {
+      const course = { id: 'c2', code: 'CS201', departmentId: 'd1', yearLevel: 2 }
       repo.findDueForReminder.mockResolvedValue([
         {
           id: 'e2',
           title: 'Midterm',
           startsAt: new Date('2026-09-15'),
-          course: { code: 'CS201', departmentId: 'd1', yearLevel: 2 },
+          course,
         },
       ])
-      repo.findReminderRecipientIds.mockResolvedValue(['u3'])
+      myCoursesService.findStudentIdsTaking.mockResolvedValue(['automatic', 'added'])
 
       await service.sendDueReminders(now)
 
-      // now=2026-09-01, academicStartMonth=9 -> currentAcademicYear=2026; yearLevel 2 -> enrollmentYear 2025
-      expect(repo.findReminderRecipientIds).toHaveBeenCalledWith('d1', 2025)
+      expect(myCoursesService.findStudentIdsTaking).toHaveBeenCalledWith(course, now)
+      expect(notificationsService.notifyExamReminder).toHaveBeenCalledWith(
+        'e2',
+        'CS201',
+        'Midterm',
+        expect.any(Date),
+        ['automatic', 'added'],
+      )
+    })
+
+    it('stamps the reminder even when the final list has no students taking the course', async () => {
+      repo.findDueForReminder.mockResolvedValue([
+        {
+          id: 'e3',
+          title: 'Final',
+          startsAt: new Date('2026-09-15'),
+          course: { id: 'c3', code: 'CS301', departmentId: 'd1', yearLevel: 3 },
+        },
+      ])
+      myCoursesService.findStudentIdsTaking.mockResolvedValue([])
+
+      await service.sendDueReminders(now)
+
+      expect(notificationsService.notifyExamReminder).toHaveBeenCalledWith(
+        'e3',
+        'CS301',
+        'Final',
+        expect.any(Date),
+        [],
+      )
+      expect(repo.markReminderSent).toHaveBeenCalledWith('e3', now)
     })
   })
 })
