@@ -13,6 +13,7 @@ import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import { usePracticeQuiz } from '@/hooks/use-practice-quiz'
 import { useSuggestedQuestions } from '@/hooks/use-suggested-questions'
 import { PracticeQuiz } from '@/components/post-detail/practice-quiz'
+import { CopyReplyButton } from '@/components/post-detail/copy-reply-button'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 // Mirrors SUPPORTED_MIME_TYPES in apps/api/src/modules/ai/extraction/document-extractor.service.ts,
@@ -316,6 +317,17 @@ export function PostAiChat({ post }: PostAiChatProps) {
                             )}
                           </div>
                         </div>
+                        {/* Beside the bubble, not in it, so the pinned order of answer then sources
+                            inside the bubble is untouched. Not while this reply is still arriving:
+                            a copy of half an answer is a trap. */}
+                        {msg.role === 'assistant' &&
+                          !msg.offTopic &&
+                          msg.content &&
+                          !(isPending && i === messages.length - 1) && (
+                            <div className="flex items-end">
+                              <CopyReplyButton text={msg.content} />
+                            </div>
+                          )}
                       </div>
                     ))}
                     {/* Only until the first token lands. The reply now streams into its own
