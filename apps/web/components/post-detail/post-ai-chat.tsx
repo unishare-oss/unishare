@@ -1,19 +1,18 @@
 'use client'
 
-import { useRef, useState, useEffect, KeyboardEvent } from 'react'
-import { Bot, ChevronDown, GraduationCap, Send, AlertCircle, Loader2 } from 'lucide-react'
+import { useRef, useState, useEffect } from 'react'
+import { Bot, ChevronDown, GraduationCap, AlertCircle, Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Collapsible, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
 import { usePostAiChat, type AiChatCitation } from '@/hooks/use-post-ai-chat'
-import { AiReply } from '@/components/ai/ai-reply'
 import { useAiIndexStatus } from '@/hooks/use-ai-index-status'
 import { usePracticeQuiz } from '@/hooks/use-practice-quiz'
 import { useSuggestedQuestions } from '@/hooks/use-suggested-questions'
 import { PracticeQuiz } from '@/components/post-detail/practice-quiz'
-import { CopyReplyButton } from '@/components/ai/copy-reply-button'
+import { AiMessage, AiThinking } from '@/components/ai/ai-message'
+import { AiSuggestedPrompts } from '@/components/ai/ai-suggested-prompts'
+import { AiComposer } from '@/components/ai/ai-composer'
 import type { PostDetailEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 
 // Mirrors SUPPORTED_MIME_TYPES in apps/api/src/modules/ai/extraction/document-extractor.service.ts,
@@ -161,9 +160,7 @@ interface PostAiChatProps {
 
 export function PostAiChat({ post }: PostAiChatProps) {
   const [open, setOpen] = useState(false)
-  const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Only indexable files count — a PDF next to a screenshot still has one source of pages.
   //
@@ -202,21 +199,6 @@ export function PostAiChat({ post }: PostAiChatProps) {
   }, [messages])
 
   if (!hasSupportedFiles) return null
-
-  async function handleSend() {
-    const text = input.trim()
-    if (!text || isPending) return
-    setInput('')
-    await sendMessage(text)
-    textareaRef.current?.focus()
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -262,84 +244,32 @@ export function PostAiChat({ post }: PostAiChatProps) {
                 )}
 
                 {messages.length === 0 && (
-                  <div className="flex flex-wrap gap-1.5" aria-label="Suggested questions">
-                    {suggestions.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        onClick={() => sendMessage(prompt)}
-                        disabled={isPending}
-                        className="rounded-full border border-border bg-background px-3 py-1 text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
+                  <AiSuggestedPrompts
+                    prompts={suggestions}
+                    onSelect={sendMessage}
+                    disabled={isPending}
+                  />
                 )}
 
                 {messages.length > 0 && (
                   <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
                     {messages.map((msg, i) => (
-                      <div
+                      <AiMessage
                         key={i}
-                        className={cn(
-                          'flex gap-2 text-sm',
-                          msg.role === 'user' ? 'justify-end' : 'justify-start',
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            'rounded-lg px-3 py-2 max-w-[85%] leading-relaxed',
-                            msg.role === 'user'
-                              ? 'bg-primary text-primary-foreground'
-                              : msg.offTopic
-                                ? 'bg-muted border border-border text-text-muted'
-                                : 'bg-muted border border-border',
-                          )}
-                        >
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-start gap-1.5">
-                              {msg.offTopic && (
-                                <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-brand-edge" />
-                              )}
-                              {/* Only the assistant's replies are markdown. A user's message is
-                                  echoed back verbatim, and rendering THEIR text as markup would
-                                  let a question containing `#` or `- ` come back looking like a
-                                  heading or a list they never wrote. */}
-                              {msg.role === 'assistant' ? (
-                                <AiReply>{msg.content}</AiReply>
-                              ) : (
-                                <span>{msg.content}</span>
-                              )}
-                            </div>
-                            {msg.citations && msg.citations.length > 0 && (
-                              <CitationFooter citations={msg.citations} />
-                            )}
-                          </div>
-                        </div>
-                        {/* Beside the bubble, not in it, so the pinned order of answer then sources
-                            inside the bubble is untouched. Not while this reply is still arriving:
-                            a copy of half an answer is a trap. */}
-                        {msg.role === 'assistant' &&
-                          !msg.offTopic &&
-                          msg.content &&
-                          !(isPending && i === messages.length - 1) && (
-                            <div className="flex items-end">
-                              <CopyReplyButton text={msg.content} />
-                            </div>
-                          )}
-                      </div>
+                        message={msg}
+                        footer={
+                          msg.citations && msg.citations.length > 0 ? (
+                            <CitationFooter citations={msg.citations} />
+                          ) : undefined
+                        }
+                        // Not while this reply is still arriving: a copy of half an answer is a trap.
+                        showCopy={!(isPending && i === messages.length - 1)}
+                      />
                     ))}
                     {/* Only until the first token lands. The reply now streams into its own
                         bubble while `isPending` is still true, and showing both would tell the
                         student the assistant is thinking about the answer they are reading. */}
-                    {isPending && messages[messages.length - 1]?.role === 'user' && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-text-muted">
-                          <span className="animate-pulse">Thinking…</span>
-                        </div>
-                      </div>
-                    )}
+                    {isPending && messages[messages.length - 1]?.role === 'user' && <AiThinking />}
                     <div ref={bottomRef} />
                   </div>
                 )}
@@ -438,28 +368,12 @@ export function PostAiChat({ post }: PostAiChatProps) {
                   </Button>
                 </div>
 
-                <div className="flex gap-2 items-end">
-                  <Textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask about this document…"
-                    className="resize-none min-h-[2.5rem] max-h-32 text-sm"
-                    rows={1}
-                    disabled={isPending}
-                    maxLength={500}
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleSend}
-                    disabled={!input.trim() || isPending}
-                    className="shrink-0"
-                  >
-                    <Send className="size-4" />
-                  </Button>
-                </div>
+                <AiComposer
+                  onSend={sendMessage}
+                  disabled={isPending}
+                  placeholder="Ask about this document…"
+                  maxLength={500}
+                />
               </div>
             </motion.div>
           )}
