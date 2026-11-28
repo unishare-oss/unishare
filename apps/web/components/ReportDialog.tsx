@@ -13,6 +13,12 @@ interface ReportDialogProps {
   onSuccess?: () => void
   /** Render the trigger as a labelled action pill (post detail) instead of an icon button. */
   pill?: boolean
+  /**
+   * Pass both to open the dialog from elsewhere too, such as a right-click menu. The trigger
+   * button still opens it.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 type ReportReason = 'SPAM' | 'OFFENSIVE' | 'COPYRIGHT' | 'OTHER'
@@ -24,8 +30,19 @@ const REPORT_REASONS: { value: ReportReason; label: string; description: string 
   { value: 'OTHER', label: 'Other', description: 'Other policy violation' },
 ]
 
-export function ReportDialog({ postId, onSuccess, pill = false }: ReportDialogProps) {
-  const [open, setOpen] = useState(false)
+export function ReportDialog({
+  postId,
+  onSuccess,
+  pill = false,
+  open: controlledOpen,
+  onOpenChange,
+}: ReportDialogProps) {
+  const [ownOpen, setOwnOpen] = useState(false)
+  const open = controlledOpen ?? ownOpen
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) setOwnOpen(next)
+    onOpenChange?.(next)
+  }
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null)
   const [comment, setComment] = useState('')
   const { mutate: reportPost, isPending } = useReportPost()
