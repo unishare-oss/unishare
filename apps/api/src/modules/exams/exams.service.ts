@@ -6,9 +6,22 @@ import { UniversityScope } from '@/common/university-scope'
 import { ExamsRepository } from './exams.repository'
 import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
+import type { ExamBulkSkipReason } from './exams.types'
 
 /** How far ahead of an exam its one reminder notification fires. */
 export const EXAM_REMINDER_LEAD_DAYS = 14
+
+function examKey(courseId: string, startsAt: Date): string {
+  return `${courseId}:${startsAt.toISOString()}`
+}
+
+type ExamForReminder = {
+  id: string
+  title: string
+  startsAt: Date
+  reminderSentAt: Date | null
+  course: { id: string; code: string; departmentId: string; yearLevel: number | null }
+}
 
 interface ExamRangeFilter {
   departmentId?: string
@@ -31,7 +44,56 @@ export class ExamsService {
   async create(dto: CreateExamDto, createdBy: string, scope: UniversityScope) {
     await this.coursesService.findOne(dto.courseId, scope)
     this.assertValidTimeRange(dto.startsAt, dto.endsAt)
-    return this.examsRepository.create(dto, createdBy)
+    const exam = await this.examsRepository.create(dto, createdBy)
+    await this.remindIfDue(exam, new Date())
+    return exam
+  }
+
+  async bulkCreate(rows: CreateExamDto[], createdBy: string, scope: UniversityScope) {
+    if (scope.kind !== 'university') {
+      throw new BadRequestException('A university scope is required to publish exams')
+    }
+    if (rows.length === 0) return { created: [], skipped: [] }
+
+    const courseIds = [...new Set(rows.map(({ courseId }) => courseId))]
+    const validCourseIds = new Set(await this.coursesService.findIdsInScope(courseIds, scope))
+    const invalidCourseIndex = rows.findIndex(({ courseId }) => !validCourseIds.has(courseId))
+    if (invalidCourseIndex >= 0) {
+      throw new NotFoundException(`Course in row ${invalidCourseIndex + 1} was not found`)
+    }
+    rows.forEach((row, index) => {
+      try {
+        this.assertValidTimeRange(row.startsAt, row.endsAt)
+      } catch {
+        throw new BadRequestException(`Invalid time range in row ${index + 1}`)
+      }
+    })
+
+    const existing = await this.examsRepository.findByCourseAndStart(
+      rows.map(({ courseId, startsAt }) => ({ courseId, startsAt: new Date(startsAt) })),
+    )
+    const existingKeys = new Set(
+      existing.map(({ courseId, startsAt }) => examKey(courseId, startsAt)),
+    )
+    const seenKeys = new Set<string>()
+    const rowsToCreate: CreateExamDto[] = []
+    const skipped: { index: number; reason: ExamBulkSkipReason }[] = []
+    rows.forEach((row, index) => {
+      const key = examKey(row.courseId, new Date(row.startsAt))
+      if (seenKeys.has(key)) {
+        skipped.push({ index, reason: 'duplicate_in_request' })
+      } else if (existingKeys.has(key)) {
+        skipped.push({ index, reason: 'existing' })
+      } else {
+        rowsToCreate.push(row)
+      }
+      seenKeys.add(key)
+    })
+
+    const created =
+      rowsToCreate.length > 0 ? await this.examsRepository.bulkCreate(rowsToCreate, createdBy) : []
+    await Promise.all(created.map((exam) => this.remindIfDue(exam, new Date())))
+    return { created, skipped }
   }
 
   async findInRange(
@@ -88,30 +150,51 @@ export class ExamsService {
     }
   }
 
-  /**
-   * Fires the single 14-days-out reminder for every exam whose day has just entered that
-   * window, then stamps `reminderSentAt` so a re-run (crash, lock miss) never double-sends.
-   */
+  /** Sends the one reminder for each unreminded exam in the next 14 days. */
   async sendDueReminders(now = new Date()): Promise<void> {
-    const targetDate = new Date(now)
-    targetDate.setUTCDate(targetDate.getUTCDate() + EXAM_REMINDER_LEAD_DAYS)
+    const until = this.reminderWindowEnd(now)
 
-    const dueExams = await this.examsRepository.findDueForReminder(targetDate)
+    const dueExams = await this.examsRepository.findDueForReminder(now, until)
     if (dueExams.length === 0) return
 
     for (const exam of dueExams) {
-      const recipientIds = await this.myCoursesService.findStudentIdsTaking(exam.course, now)
-
-      await this.notificationsService.notifyExamReminder(
-        exam.id,
-        exam.course.code,
-        exam.title,
-        exam.startsAt,
-        recipientIds,
-      )
-      await this.examsRepository.markReminderSent(exam.id, now)
-
-      this.logger.log(`Sent exam reminder for ${exam.id} to ${recipientIds.length} student(s)`)
+      await this.sendReminder(exam, now)
     }
+  }
+
+  async remindIfDue(exam: ExamForReminder, now: Date): Promise<void> {
+    if (
+      exam.reminderSentAt ||
+      exam.startsAt < now ||
+      exam.startsAt >= this.reminderWindowEnd(now)
+    ) {
+      return
+    }
+
+    try {
+      await this.sendReminder(exam, now)
+    } catch {
+      this.logger.warn('Exam reminder failed; nightly job will retry')
+    }
+  }
+
+  private reminderWindowEnd(now: Date): Date {
+    const until = new Date(now)
+    until.setUTCDate(until.getUTCDate() + EXAM_REMINDER_LEAD_DAYS)
+    return until
+  }
+
+  private async sendReminder(exam: ExamForReminder, now: Date): Promise<void> {
+    const recipientIds = await this.myCoursesService.findStudentIdsTaking(exam.course, now)
+
+    await this.notificationsService.notifyExamReminder(
+      exam.id,
+      exam.course.code,
+      exam.title,
+      exam.startsAt,
+      recipientIds,
+    )
+    await this.examsRepository.markReminderSent(exam.id, now)
+    this.logger.log(`Sent exam reminder for ${exam.id} to ${recipientIds.length} student(s)`)
   }
 }

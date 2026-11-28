@@ -53,12 +53,26 @@ export class CoursesRepository {
     return this.prisma.course.findUnique({ where: { code_departmentId: { code, departmentId } } })
   }
 
+  findAllInScope(scope: UniversityScope) {
+    return this.prisma.course.findMany({
+      where: courseInScope(scope),
+      select: { id: true, code: true, name: true, department: { select: { name: true } } },
+    })
+  }
+
   async findById(id: string, scope: UniversityScope) {
     const c = await this.prisma.course.findUnique({
       where: { id, AND: [courseInScope(scope)] },
       include: { department: true },
     })
     return c ? mapCourse(c) : null
+  }
+
+  findIdsInScope(ids: string[], scope: UniversityScope) {
+    return this.prisma.course.findMany({
+      where: { id: { in: ids }, AND: [courseInScope(scope)] },
+      select: { id: true },
+    })
   }
 
   findSuggestionCandidates(departmentId: string, scope: UniversityScope) {
@@ -70,8 +84,6 @@ export class CoursesRepository {
   }
 
   async findNearestCourses(vector: number[], candidateCourseIds: string[], threshold: number) {
-    if (candidateCourseIds.length === 0) return []
-
     const literal = toVectorLiteral(vector)
     const rows = await this.prisma.$queryRaw<{ courseId: string }[]>`
       WITH eligible_chunks AS MATERIALIZED (

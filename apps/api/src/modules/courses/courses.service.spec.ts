@@ -19,6 +19,7 @@ describe('CoursesService — outline', () => {
     replaceOutline: jest.Mock
     findSuggestionCandidates: jest.Mock
     findDepartmentInScope: jest.Mock
+    findIdsInScope: jest.Mock
   }
   let aiSummary: { extractTextFromBuffer: jest.Mock; extractCourseOutline: jest.Mock }
   let storageService: { getObjectBuffer: jest.Mock }
@@ -30,6 +31,7 @@ describe('CoursesService — outline', () => {
       replaceOutline: jest.fn(),
       findSuggestionCandidates: jest.fn(),
       findDepartmentInScope: jest.fn().mockResolvedValue({ id: 'd1' }),
+      findIdsInScope: jest.fn().mockResolvedValue([]),
     }
     aiSummary = { extractTextFromBuffer: jest.fn(), extractCourseOutline: jest.fn() }
     storageService = { getObjectBuffer: jest.fn() }
@@ -47,6 +49,11 @@ describe('CoursesService — outline', () => {
     }).compile()
 
     service = module.get(CoursesService)
+  })
+
+  it('returns no course IDs without querying the repository for empty input', async () => {
+    await expect(service.findIdsInScope([], U1)).resolves.toEqual([])
+    expect(repo.findIdsInScope).not.toHaveBeenCalled()
   })
 
   describe('getOutline / replaceOutline', () => {

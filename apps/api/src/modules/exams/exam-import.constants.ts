@@ -1,0 +1,1 @@
+export const MAX_EXAM_TIMETABLE_FILE_SIZE = 10 * 1024 * 1024

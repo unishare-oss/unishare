@@ -48,6 +48,26 @@ describe('CoursesRepository university scope', () => {
     expect(whereOf(prisma.course.findUnique)).toEqual({ id: 'c1', AND: [IN_U1] })
   })
 
+  it('findAllInScope returns selected course fields from the requested university', async () => {
+    const scopedCourses = [
+      {
+        id: 'c1',
+        code: 'CSC219',
+        name: 'Data Structures',
+        department: { name: 'Computer Science' },
+      },
+      { id: 'c2', code: 'MTH101', name: 'Calculus', department: { name: 'Mathematics' } },
+    ]
+    prisma.course.findMany.mockResolvedValue(scopedCourses)
+
+    await expect(repository.findAllInScope(U1)).resolves.toEqual(scopedCourses)
+
+    expect(prisma.course.findMany).toHaveBeenCalledWith({
+      where: IN_U1,
+      select: { id: true, code: true, name: true, department: { select: { name: true } } },
+    })
+  })
+
   it('loads suggestions only from the requested department inside the university scope', async () => {
     await repository.findSuggestionCandidates('d1', U1)
     expect(prisma.course.findMany).toHaveBeenCalledWith(

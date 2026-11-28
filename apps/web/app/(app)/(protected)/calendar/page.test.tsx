@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CalendarPage from './page'
 
+const auth = vi.hoisted(() => ({ role: 'ADMIN' as string }))
 const exam = {
   id: 'e-1',
   title: 'Midterm',
@@ -17,7 +18,7 @@ const exam = {
 const useExams = vi.hoisted(() => vi.fn())
 
 vi.mock('@/contexts/auth-context', () => ({
-  useAuth: () => ({ user: { role: 'ADMIN', department: { id: 'd-1' } } }),
+  useAuth: () => ({ user: { role: auth.role, department: { id: 'd-1' } } }),
 }))
 vi.mock('@/components/ui/search-select', () => ({
   SearchSelect: ({
@@ -47,9 +48,10 @@ vi.mock('@/src/lib/api/generated/exams/exams', () => ({
   useExamsControllerCreate: () => ({ mutate: vi.fn(), isPending: false }),
   useExamsControllerUpdate: () => ({ mutate: vi.fn(), isPending: false }),
   useExamsControllerRemove: () => ({ mutate: vi.fn(), isPending: false }),
+  useExamsControllerParseImport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useExamsControllerBulkCreate: () => ({ mutateAsync: vi.fn(), isPending: false }),
   getExamsControllerFindAllQueryKey: () => ['exams'],
 }))
-
 // Simulates a student whose browser still holds the old Desk feed-style value.
 beforeEach(() =>
   localStorage.setItem('unishare-feed-style', JSON.stringify({ state: { feedStyle: 'desk' } })),
@@ -57,6 +59,7 @@ beforeEach(() =>
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  auth.role = 'ADMIN'
 })
 
 const lastParams = () => useExams.mock.calls.at(-1)![0]
@@ -92,6 +95,28 @@ describe('CalendarPage filters', () => {
 })
 
 describe('CalendarPage', () => {
+  it('keeps timetable import hidden from students', () => {
+    auth.role = 'STUDENT'
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CalendarPage />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Import timetable' })).not.toBeInTheDocument()
+  })
+
+  it('shows timetable import to admins', () => {
+    auth.role = 'ADMIN'
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CalendarPage />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Import timetable' })).toBeInTheDocument()
+  })
+
   it('shows one calendar design', () => {
     render(
       <QueryClientProvider client={new QueryClient()}>

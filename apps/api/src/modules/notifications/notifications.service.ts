@@ -4,6 +4,8 @@ import { filter, map } from 'rxjs/operators'
 import { NotificationType, PostStatus } from '@/generated/prisma/client'
 import { NotificationsRepository } from './notifications.repository'
 
+const EXAM_REMINDER_TIMEZONE = 'Asia/Bangkok'
+
 interface SseEvent {
   userId: string
   data: object
@@ -191,7 +193,7 @@ export class NotificationsService {
   ) {
     if (recipientIds.length === 0) return
 
-    const message = `${courseCode} ${examTitle} is coming up on ${startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+    const message = `${courseCode} ${examTitle} is coming up on ${startsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: EXAM_REMINDER_TIMEZONE })}.`
 
     await Promise.all(
       recipientIds.map(async (userId) => {
