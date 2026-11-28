@@ -1,8 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
-import { Bookmark, FileText, Heart, MessageSquare, type LucideIcon } from 'lucide-react'
+import { useState, type CSSProperties } from 'react'
+import {
+  Bookmark,
+  BookmarkCheck,
+  ExternalLink,
+  FileText,
+  Flag,
+  Heart,
+  Link2,
+  MessageSquare,
+  type LucideIcon,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, pluralize } from '@/lib/utils'
 import { getPostType, sumReactions } from '@/lib/posts/post-type'
@@ -11,6 +22,14 @@ import { useUIStore } from '@/lib/store'
 import { useAuth } from '@/contexts/auth-context'
 import { ReportDialog } from '@/components/ReportDialog'
 import type { ApiPost } from '@/lib/api-types'
+import { useToggleSavedPost } from '@/hooks/use-toggle-saved-post'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 
 export function TypeBadge({ type }: { type: string }) {
   const { label, color } = getPostType(type)
@@ -40,6 +59,25 @@ export function PostCard({ post }: { post: ApiPost }) {
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
   const { isAuthenticated } = useAuth()
+  const { isSaved, pending: savePending, toggle: toggleSaved } = useToggleSavedPost(post)
+  const [reportOpen, setReportOpen] = useState(false)
+  const canReport = isAuthenticated && !post.isOwner
+  const href = `/posts/${post.id}`
+
+  function copyLink() {
+    // The clipboard only exists on secure pages, and reading it can throw before any promise
+    // exists, so both a missing API and a refused write end in the same toast.
+    const failed = () => toast.error('Could not copy the link')
+    try {
+      if (!navigator.clipboard) return failed()
+      navigator.clipboard
+        .writeText(`${window.location.origin}/s/${post.shortCode}`)
+        .then(() => toast.success('Link copied'))
+        .catch(failed)
+    } catch {
+      failed()
+    }
+  }
 
   const author = post.author
   const name = author?.name ?? 'Anonymous'
@@ -62,8 +100,22 @@ export function PostCard({ post }: { post: ApiPost }) {
     </>
   )
 
-  return (
-    <article className="relative grid gap-3 rounded-(--r) border-2 border-line bg-surface p-4">
+  const card = (
+    <article
+      className={cn(
+        'relative grid gap-3 rounded-(--r) border-2 border-line bg-surface p-4',
+        // The whole card is the link, so the whole card answers the pointer and the keyboard. It
+        // rises a little and takes the soft shadow; reduced motion keeps the shadow and border only.
+        'transition-[translate,box-shadow,border-color] duration-200 ease-out',
+        'hover:-translate-y-0.5 hover:border-edge hover:shadow-lift',
+        'has-[a:focus-visible]:-translate-y-0.5 has-[a:focus-visible]:border-edge has-[a:focus-visible]:shadow-lift',
+        // A press settles the card even while the title keeps keyboard focus: `:has()` outweighs
+        // `:active`, so the focus lift needs its own pressed reset.
+        'active:translate-y-0 active:shadow-none',
+        'has-[a:focus-visible]:active:translate-y-0 has-[a:focus-visible]:active:shadow-none',
+        'motion-reduce:transition-[box-shadow,border-color] motion-reduce:hover:translate-y-0 motion-reduce:has-[a:focus-visible]:translate-y-0',
+      )}
+    >
       <div className="flex min-w-0 items-center gap-2.5">
         {author ? (
           <Link
@@ -76,7 +128,9 @@ export function PostCard({ post }: { post: ApiPost }) {
           <span className="flex min-w-0 items-center gap-2.5">{who}</span>
         )}
         <span className="relative z-10 ml-auto flex items-center gap-2">
-          {isAuthenticated && !post.isOwner && <ReportDialog postId={post.id} />}
+          {canReport && (
+            <ReportDialog postId={post.id} open={reportOpen} onOpenChange={setReportOpen} />
+          )}
           <TypeBadge type={post.type} />
         </span>
       </div>
@@ -87,11 +141,11 @@ export function PostCard({ post }: { post: ApiPost }) {
         )}
       >
         <Link
-          href={`/posts/${post.id}`}
+          href={href}
           onClick={() => markRead(post.id)}
           // The ::after overlay stretches the link over the whole card; the author link and
-          // report button sit above it with z-10.
-          className="underline-offset-[3px] after:absolute after:inset-0 after:rounded-(--r) after:content-[''] hover:underline"
+          // report button sit above it with z-10. Focus shows on the card, not as an outline here.
+          className="outline-none after:absolute after:inset-0 after:rounded-(--r) after:content-['']"
         >
           {post.title}
         </Link>
@@ -109,5 +163,39 @@ export function PostCard({ post }: { post: ApiPost }) {
         <Count icon={Bookmark} count={post._count.savedBy} noun="save" />
       </div>
     </article>
+  )
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        <ContextMenuItem
+          onSelect={() => {
+            markRead(post.id)
+            window.open(href, '_blank', 'noopener')
+          }}
+        >
+          <ExternalLink aria-hidden="true" />
+          Open in new tab
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={copyLink}>
+          <Link2 aria-hidden="true" />
+          Copy link
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={toggleSaved} disabled={savePending}>
+          {isSaved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+          {isSaved ? 'Remove from saved' : 'Save'}
+        </ContextMenuItem>
+        {canReport && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onSelect={() => setReportOpen(true)}>
+              <Flag aria-hidden="true" />
+              Report
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
