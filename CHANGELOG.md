@@ -1,3 +1,12 @@
+# [0.37.0](https://github.com/unishare-oss/unishare/compare/v0.36.0...v0.37.0) (2026-11-14)
+
+### Features
+
+- **api:** emit structured JSON logs in production ([9ce61fc](https://github.com/unishare-oss/unishare/commit/9ce61fc98f185a99b1f76f4f454c222e80e5934c))
+- **api:** expose trace id to clients and log user id ([9f851df](https://github.com/unishare-oss/unishare/commit/9f851df8b33eabeb4b78e533a62cb649fac43062))
+- **api:** use log level names Loki can detect ([3825394](https://github.com/unishare-oss/unishare/commit/3825394baef6662cec7406db09027d9d2cf88540))
+- **web:** show a copyable Error ID on server errors ([5cb0137](https://github.com/unishare-oss/unishare/commit/5cb013790910092e686849de577039acc8dd282d))
+
 # [0.36.0](https://github.com/unishare-oss/unishare/compare/v0.35.4...v0.36.0) (2026-11-09)
 
 ### Bug Fixes
