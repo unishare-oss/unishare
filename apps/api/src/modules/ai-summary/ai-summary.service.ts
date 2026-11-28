@@ -19,6 +19,7 @@ import { AiChatCitationDto } from '../posts/dto/ai-chat.dto'
 import { groupIntoWindows, SUMMARY_WINDOW_CHARS } from '../ai/chunking/windows'
 import { chunkDocument } from '../ai/chunking/chunker'
 import { isOffTopicReply, SentinelGate } from './off-topic'
+import { buildSuggestionPrompt, parseSuggestedQuestions } from './suggested-questions'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -775,6 +776,9 @@ export class AiSummaryService {
 
       this.logger.log(`Summarized post ${postId} from ${windows.length} window(s)`)
 
+      // Written now, with the summary, so opening the chat panel never waits on a model call.
+      await this.generateAndStoreSuggestions(postId, summary)
+
       // Auto-tag only if post has no existing tags
       if (post.tags.length === 0) {
         await this.autoTagPost(postId, summary)
@@ -1082,6 +1086,53 @@ export class AiSummaryService {
 
     this.logger.error(`Question generation failed: ${lastError.message}`)
     throw lastError
+  }
+
+  /**
+   * Three tappable questions about a document, written from its summary.
+   *
+   * Decoration for the chat panel, so a model that returns nothing usable yields an empty list
+   * rather than an error; the caller falls back to generic prompts. An unconfigured provider still
+   * throws, as every other AI entry point here does.
+   */
+  async generateSuggestedQuestions(summary: string): Promise<string[]> {
+    if (!this.llm.enabled) {
+      throw new ServiceUnavailableException('AI service not configured')
+    }
+
+    const reply = await this.llm.chat(buildSuggestionPrompt(summary), {
+      maxTokens: 150,
+      temperature: 0.3,
+    })
+    return parseSuggestedQuestions(reply)
+  }
+
+  /**
+   * Writes the suggested questions for a post and saves them on it.
+   *
+   * Never throws: the summary they come from is already stored, and a failed or empty attempt just
+   * leaves the post without suggestions, which the chat panel covers with generic prompts.
+   * Returns what was saved.
+   *
+   * The write is conditional on the post still holding `summary`, compared as stored. Generation
+   * takes a model call, and a summary can be cleared or replaced during it (a re-upload does
+   * both); an unconditional write would then pin questions about the old document to the post.
+   * When the summary has moved on, nothing is saved and nothing is returned.
+   */
+  async generateAndStoreSuggestions(postId: string, summary: string): Promise<string[]> {
+    try {
+      const questions = await this.generateSuggestedQuestions(summary)
+      if (questions.length === 0) return []
+
+      const { count } = await this.prisma.post.updateMany({
+        where: { id: postId, summary },
+        data: { suggestedQuestions: questions },
+      })
+      return count > 0 ? questions : []
+    } catch (err) {
+      this.logger.warn(`Suggested questions failed for post ${postId}: ${(err as Error).message}`)
+      return []
+    }
   }
 
   /**

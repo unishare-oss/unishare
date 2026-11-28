@@ -61,6 +61,8 @@ model User {
   sessions                Session[]
   studyMaterialsUploaded  StudyMaterial[]          @relation("StudyMaterialsUploaded")
   department              Department?              @relation(fields: [departmentId], references: [id])
+  courseChanges           StudentCourseChange[]
+  courseChecks            StudentCourseCheck[]
   university              University?              @relation(fields: [universityId], references: [id])
 
   @@map("user")
@@ -105,23 +107,54 @@ model University {
 }
 
 model Course {
-  id             String                @id @default(cuid())
-  code           String
-  name           String
-  departmentId   String
-  createdAt      DateTime              @default(now())
-  yearLevel      Int?
-  department     Department            @relation(fields: [departmentId], references: [id])
-  moduleOutlines CourseModuleOutline[]
-  exams          Exam[]
-  posts          Post[]
-  postRequests   PostRequest[]
-  quizzes        Quiz[]
-  studyMaterials StudyMaterial[]
+  id                   String                @id @default(cuid())
+  code                 String
+  name                 String
+  departmentId         String
+  createdAt            DateTime              @default(now())
+  yearLevel            Int?
+  department           Department            @relation(fields: [departmentId], references: [id])
+  moduleOutlines       CourseModuleOutline[]
+  exams                Exam[]
+  posts                Post[]
+  postRequests         PostRequest[]
+  quizzes              Quiz[]
+  studyMaterials       StudyMaterial[]
+  studentCourseChanges StudentCourseChange[]
 
   @@unique([code, departmentId])
   @@index([departmentId])
   @@map("course")
+}
+
+enum StudentCourseChangeKind {
+  ADDED
+  REMOVED
+}
+
+model StudentCourseChange {
+  id           String                  @id @default(cuid())
+  userId       String
+  courseId     String
+  academicYear Int
+  kind         StudentCourseChangeKind
+  createdAt    DateTime                @default(now())
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course                  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, academicYear])
+  @@index([userId, academicYear])
+  @@map("student_course_change")
+}
+
+model StudentCourseCheck {
+  userId       String
+  academicYear Int
+  confirmedAt  DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, academicYear])
+  @@map("student_course_check")
 }
 
 model CourseModuleOutline {
@@ -183,6 +216,7 @@ model Post {
   trendingScore       Float                    @default(0)
   summarizedAt        DateTime?
   summary             String?
+  suggestedQuestions  String[]                 @default([])
   contentWarning      String?
   comments            Comment[]
   files               File[]

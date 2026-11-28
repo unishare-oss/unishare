@@ -37,6 +37,7 @@ import { ReadingListsModule } from './modules/reading-lists/reading-lists.module
 import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
 import { ExamsModule } from './modules/exams/exams.module'
+import { MyCoursesModule } from './modules/my-courses/my-courses.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
 import { UniauthModule } from './modules/uniauth/uniauth.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
@@ -121,6 +122,7 @@ import { BullMQOtel } from 'bullmq-otel'
     QuizzesModule,
     DecksModule,
     ExamsModule,
+    MyCoursesModule,
     UniversitiesModule,
     UniauthModule,
     McpModule,

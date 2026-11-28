@@ -63,16 +63,19 @@ export function PostCard({ post }: { post: ApiPost }) {
   )
 
   return (
-    <article className="grid gap-3 rounded-(--r) border-2 border-line bg-surface p-4">
+    <article className="relative grid gap-3 rounded-(--r) border-2 border-line bg-surface p-4">
       <div className="flex min-w-0 items-center gap-2.5">
         {author ? (
-          <Link href={`/users/${author.id}`} className="flex min-w-0 items-center gap-2.5">
+          <Link
+            href={`/users/${author.id}`}
+            className="relative z-10 flex min-w-0 items-center gap-2.5"
+          >
             {who}
           </Link>
         ) : (
           <span className="flex min-w-0 items-center gap-2.5">{who}</span>
         )}
-        <span className="ml-auto flex items-center gap-2">
+        <span className="relative z-10 ml-auto flex items-center gap-2">
           {isAuthenticated && !post.isOwner && <ReportDialog postId={post.id} />}
           <TypeBadge type={post.type} />
         </span>
@@ -86,7 +89,9 @@ export function PostCard({ post }: { post: ApiPost }) {
         <Link
           href={`/posts/${post.id}`}
           onClick={() => markRead(post.id)}
-          className="underline-offset-[3px] hover:underline"
+          // The ::after overlay stretches the link over the whole card; the author link and
+          // report button sit above it with z-10.
+          className="underline-offset-[3px] after:absolute after:inset-0 after:rounded-(--r) after:content-[''] hover:underline"
         >
           {post.title}
         </Link>
