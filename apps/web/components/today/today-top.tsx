@@ -19,7 +19,7 @@ export function TodayTop() {
   const from = dayStart.toISOString()
   const to = addDays(dayStart, WINDOW_DAYS).toISOString()
   const { data: exams, isLoading } = useExamsControllerFindAll(
-    { from, to },
+    { from, to, mine: true },
     { query: { enabled: hasDepartment, select: (response) => response.data } },
   )
 
