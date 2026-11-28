@@ -79,6 +79,7 @@ export class MyCoursesRepository {
     confirmedAt: Date,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`
       await tx.studentCourseChange.deleteMany({ where: { userId, academicYear } })
       if (changes.length > 0) {
         await tx.studentCourseChange.createMany({

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     { id: 'a', code: 'CSC213', name: 'Data Structures', yearLevel: 2 },
     { id: 'b', code: 'CSC311', name: 'Operating Systems', yearLevel: 3 },
     { id: 'c', code: 'CSC290', name: 'Special Topics', yearLevel: null },
+    { id: 'd', code: 'CSC499', name: 'Saved course', yearLevel: 4 },
   ],
 }))
 
@@ -29,6 +30,9 @@ vi.mock('@/src/lib/api/generated/users/users', () => ({
     mocks.mutationOptions = options.mutation
     return { mutate: mocks.mutate, isPending: false }
   },
+}))
+vi.mock('@/src/lib/api/generated/exams/exams', () => ({
+  getExamsControllerFindAllQueryKey: () => ['/api/exams'],
 }))
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError, success: mocks.toastSuccess } }))
 
@@ -70,17 +74,29 @@ describe('MyCoursesDialog', () => {
     )
   })
 
+  it('shows a saved course outside the loaded results so it can be unticked', () => {
+    render(
+      <MyCoursesDialog
+        courses={{ ...courses, final: [...courses.final, mocks.courses[3]] }}
+        departmentId="d1"
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const checkbox = screen.getByRole('checkbox', { name: /CSC499 Saved course/ })
+    expect(checkbox).toBeChecked()
+    fireEvent.click(checkbox)
+    expect(checkbox).not.toBeChecked()
+  })
+
   it('invalidates the card query, closes, and toasts after a successful save', async () => {
     const onOpenChange = vi.fn()
     render(<MyCoursesDialog courses={courses} departmentId="d1" onOpenChange={onOpenChange} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save 1 course' }))
     mocks.mutationOptions?.onSuccess()
 
-    await waitFor(() =>
-      expect(mocks.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ['/api/users/me/courses'],
-      }),
-    )
+    await waitFor(() => expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2))
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['/api/users/me/courses'] })
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['/api/exams'] })
     expect(onOpenChange).toHaveBeenCalledWith(false)
     expect(mocks.toastSuccess).toHaveBeenCalledWith(
       'Saved. Reminders follow your 1 course this year.',

@@ -6,6 +6,7 @@ import {
   useMyCoursesControllerGetMine,
   useMyCoursesControllerSaveMine,
 } from '@/src/lib/api/generated/users/users'
+import { getExamsControllerFindAllQueryKey } from '@/src/lib/api/generated/exams/exams'
 
 /** The student's course list for this academic year; disabled without a department and year. */
 export function useMyCourses() {
@@ -27,7 +28,10 @@ export function useSaveMyCourses(successMessage: string, onSaved?: () => void) {
       onSuccess: () => {
         onSaved?.()
         toast.success(successMessage)
-        return queryClient.invalidateQueries({ queryKey: getMyCoursesControllerGetMineQueryKey() })
+        return Promise.all([
+          queryClient.invalidateQueries({ queryKey: getMyCoursesControllerGetMineQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getExamsControllerFindAllQueryKey() }),
+        ])
       },
       onError: () => toast.error('Failed to save courses'),
     },

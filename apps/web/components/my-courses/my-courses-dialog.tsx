@@ -58,6 +58,11 @@ export function MyCoursesDialog({ courses, departmentId, onOpenChange }: MyCours
       !automaticIds.has(course.id) &&
       (!query || `${course.code} ${course.name}`.toLowerCase().includes(query)),
   )
+  const savedOutsideResults = courses.final.filter(
+    (course) =>
+      !automaticIds.has(course.id) &&
+      !departmentCourses?.items.some((item) => item.id === course.id),
+  )
 
   function toggle(id: string) {
     setDraft((current) => {
@@ -143,8 +148,11 @@ export function MyCoursesDialog({ courses, departmentId, onOpenChange }: MyCours
               <p className="m-1 text-[13px] text-muted-foreground">
                 Could not load department courses.
               </p>
-            ) : others.length > 0 ? (
-              others.map((course) => courseRow(course, { showYear: true }))
+            ) : others.length + savedOutsideResults.length > 0 ? (
+              <>
+                {others.map((course) => courseRow(course, { showYear: true }))}
+                {savedOutsideResults.map((course) => courseRow(course, { showYear: true }))}
+              </>
             ) : (
               <p className="m-1 text-[13px] text-muted-foreground">
                 No course in your department matches.

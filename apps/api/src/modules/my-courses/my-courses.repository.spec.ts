@@ -60,3 +60,26 @@ describe('MyCoursesRepository.findStudentIdsTaking', () => {
     expect(findMany.mock.calls[0][0].where.OR[0].enrollmentYear).toEqual({ gte: 2026 })
   })
 })
+
+describe('MyCoursesRepository.replaceChangesAndConfirm', () => {
+  it('locks the student row before replacing changes', async () => {
+    const calls: string[] = []
+    const tx = {
+      studentCourseChange: {
+        deleteMany: jest.fn(async () => calls.push('delete')),
+        createMany: jest.fn(async () => calls.push('create')),
+      },
+      studentCourseCheck: {
+        upsert: jest.fn(async () => calls.push('upsert')),
+      },
+      $queryRaw: jest.fn(async () => calls.push('lock')),
+    }
+    const prisma = { $transaction: jest.fn((callback) => callback(tx)) }
+    const repository = new MyCoursesRepository(prisma as unknown as PrismaService)
+
+    await repository.replaceChangesAndConfirm('u1', 2026, [], new Date())
+
+    expect(calls).toEqual(['lock', 'delete', 'upsert'])
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1)
+  })
+})
