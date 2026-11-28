@@ -23,6 +23,10 @@ import {
  * refetch after it, is ignored, so requests cannot finish out of order and leave the post in a
  * state the user did not pick last, and a finishing request cannot clear a newer optimistic value.
  * `pending` is true for that whole time, so the caller can disable its control.
+ *
+ * After a success the confirmed value is kept until the post data reports it too. A refetch can
+ * fail and leave the old data in the cache, and falling back to it would offer to save a post the
+ * server has already saved.
  */
 export function useToggleSavedPost(post: ApiPost) {
   const { isAuthenticated } = useAuth()
@@ -36,7 +40,11 @@ export function useToggleSavedPost(post: ApiPost) {
   const { mutate: savePost } = usePostsControllerSavePost()
   const { mutate: unsavePost } = usePostsControllerUnsavePost()
 
-  const isSaved = optimistic ?? (isAuthenticated ? post.savedByCurrentUser : isGuestSaved)
+  const fromData = isAuthenticated ? post.savedByCurrentUser : isGuestSaved
+  // Adjusting state during render, as React recommends for state that follows a prop: once the
+  // post data agrees with the confirmed value, the data takes over again.
+  if (optimistic !== null && !pending && fromData === optimistic) setOptimistic(null)
+  const isSaved = optimistic ?? fromData
 
   function refresh() {
     return Promise.all([
@@ -46,8 +54,8 @@ export function useToggleSavedPost(post: ApiPost) {
     ])
   }
 
-  function settle() {
-    setOptimistic(null)
+  /** Lets the next change through. Whether to keep the shown value is the caller's decision. */
+  function release() {
     setPending(false)
     inFlight.current = false
   }
@@ -67,13 +75,14 @@ export function useToggleSavedPost(post: ApiPost) {
     mutate(
       { id: post.id },
       {
-        // Settled only once the refetch has landed, so the server's answer replaces the optimistic
-        // value without a flicker back to the old one.
+        // The value stays as confirmed; the refetch only decides when the lock is released, and
+        // its result, failed or not, never undoes what the server accepted.
         onSuccess: () => {
-          refresh().finally(settle)
+          refresh().finally(release)
         },
         onError: () => {
-          settle()
+          setOptimistic(null)
+          release()
           toast.error(next ? 'Could not save post' : 'Could not remove from saved')
         },
       },

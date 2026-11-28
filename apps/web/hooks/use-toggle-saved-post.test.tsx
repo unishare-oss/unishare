@@ -73,10 +73,9 @@ describe('useToggleSavedPost', () => {
     await act(async () => finishRefresh())
     expect(result.current.pending).toBe(false)
 
-    // Accepted again once settled. The post here is a fixed object, so the server state the
-    // refetch would bring never arrives and the toggle asks to save once more.
+    // Accepted again once settled. The confirmed save is still what shows, so this one removes it.
     act(() => result.current.toggle())
-    expect(mocks.save).toHaveBeenCalledTimes(2)
+    expect(mocks.unsave).toHaveBeenCalledTimes(1)
   })
 
   it('undoes the change and says so when the server refuses it', () => {
@@ -87,6 +86,30 @@ describe('useToggleSavedPost', () => {
 
     expect(result.current).toMatchObject({ isSaved: false, pending: false })
     expect(mocks.toastError).toHaveBeenCalledWith('Could not save post')
+  })
+
+  it('keeps the confirmed state when the refetch after it brings no news', async () => {
+    const client = new QueryClient()
+    // A failed refetch: the client resolves and keeps the old data, which still says "not saved".
+    vi.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined)
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result, rerender } = renderHook(({ p }) => useToggleSavedPost(p), {
+      wrapper,
+      initialProps: { p: post },
+    })
+
+    act(() => result.current.toggle())
+    await act(async () => callbacks(mocks.save).onSuccess())
+
+    expect(result.current).toMatchObject({ isSaved: true, pending: false })
+
+    // Once the post data catches up, it takes over again, and later changes to it show through.
+    rerender({ p: { ...post, savedByCurrentUser: true } as ApiPost })
+    expect(result.current.isSaved).toBe(true)
+    rerender({ p: { ...post, savedByCurrentUser: false } as ApiPost })
+    expect(result.current.isSaved).toBe(false)
   })
 
   it('keeps a guest’s saves in local storage, with no request', () => {
