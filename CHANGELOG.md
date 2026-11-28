@@ -1,3 +1,21 @@
+# [0.39.0](https://github.com/unishare-oss/unishare/compare/v0.38.0...v0.39.0) (2026-11-28)
+
+### Bug Fixes
+
+- **api:** remind exams created inside the 14-day window ([708e682](https://github.com/unishare-oss/unishare/commit/708e682d534505b37040b3be62df8ad253bc500d))
+- **api:** show exam reminder dates in Bangkok time ([74b2d4d](https://github.com/unishare-oss/unishare/commit/74b2d4de7e7241896544ecd5dfea3ddcf8189cb5))
+- convert Thai Buddhist-era exam dates and show 4xx import messages ([37eb60c](https://github.com/unishare-oss/unishare/commit/37eb60c37bc800d1df2fd1766e0f5bdbd6e3cf3b))
+
+### Features
+
+- **api:** parse an exam timetable file and publish its exams in bulk ([44105b0](https://github.com/unishare-oss/unishare/commit/44105b0cc7162917a9248153b7902820fa32b03c))
+- **api:** rebuild merged date rows in PDF exam timetables ([532b07f](https://github.com/unishare-oss/unishare/commit/532b07f82e380f1e9f9b637783bb8f8b1f4f8a0a))
+- explain hard timetable files and flag rows the AI couldn't read ([e136753](https://github.com/unishare-oss/unishare/commit/e136753232a04517279f4bb3b0bc4a360129e298))
+- fix exam timetable rows that didn't match a course ([7cb66af](https://github.com/unishare-oss/unishare/commit/7cb66afd9749b27054abbfc1df589c22975592e7))
+- let admins choose a university before importing a timetable ([b0887d5](https://github.com/unishare-oss/unishare/commit/b0887d5f1c9063f2d0799701019ed14a1532d277))
+- skip duplicate exams and warn about moved ones on import ([5880fa6](https://github.com/unishare-oss/unishare/commit/5880fa69f9829d647ea4cc7361f5d2d684ca7c3c))
+- **web:** import an exam timetable from the calendar ([6d6fe96](https://github.com/unishare-oss/unishare/commit/6d6fe96c4155b38c46ef776d390e065f0351f1cc))
+
 # [0.38.0](https://github.com/unishare-oss/unishare/compare/v0.37.0...v0.38.0) (2026-11-28)
 
 ### Bug Fixes
