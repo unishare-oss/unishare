@@ -1,3 +1,4 @@
+import type { Mutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ApiError } from './fetcher'
 
@@ -23,4 +24,15 @@ export function reportServerError(error: unknown) {
       },
     },
   })
+}
+
+/** MutationCache handler; a mutation that shows its own 5xx message sets `meta.reportServerError: false`. */
+export function reportMutationError(
+  error: unknown,
+  _variables: unknown,
+  _onMutateResult: unknown,
+  mutation: Mutation<unknown, unknown, unknown, unknown>,
+) {
+  if (mutation.meta?.reportServerError === false) return
+  reportServerError(error)
 }

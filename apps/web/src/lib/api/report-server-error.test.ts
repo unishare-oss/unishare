@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { toast } from 'sonner'
 import { ApiError } from './fetcher'
-import { reportServerError } from './report-server-error'
+import { reportMutationError, reportServerError } from './report-server-error'
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
@@ -33,6 +33,25 @@ describe('reportServerError', () => {
   ])('stays silent for %s', (_label, error) => {
     reportServerError(error)
 
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+})
+
+describe('reportMutationError', () => {
+  afterEach(() => {
+    vi.mocked(toast.error).mockClear()
+  })
+
+  const mutation = (meta?: { reportServerError?: boolean }) => ({ meta }) as never
+  const error = new ApiError('busy', 503, 'abc123')
+
+  it('reports server errors by default', () => {
+    reportMutationError(error, undefined, undefined, mutation())
+    expect(toast.error).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips the report when the mutation opts out', () => {
+    reportMutationError(error, undefined, undefined, mutation({ reportServerError: false }))
     expect(toast.error).not.toHaveBeenCalled()
   })
 })

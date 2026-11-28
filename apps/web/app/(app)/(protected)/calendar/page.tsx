@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { SearchSelect } from '@/components/ui/search-select'
 import { ClassicExamCalendar } from '@/components/calendar/classic-exam-calendar'
+import { ImportTimetableDialog } from '@/components/calendar/import-timetable-dialog'
 import {
   AddExamModal,
   EMPTY_EXAM_FORM,
@@ -90,6 +91,7 @@ export default function CalendarPage() {
     user?.department ? { kind: 'mine' } : { kind: 'all' },
   )
   const [modalOpen, setModalOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editingExamId, setEditingExamId] = useState<string | null>(null)
   const [form, setForm] = useState<ExamFormState>(EMPTY_EXAM_FORM)
 
@@ -211,10 +213,15 @@ export default function CalendarPage() {
         title="Exam Calendar"
         action={
           canManage && (
-            <Button onClick={openCreateModal} size="sm" variant="brand">
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              Add Exam
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setImportOpen(true)} size="sm" variant="quiet">
+                Import timetable
+              </Button>
+              <Button onClick={openCreateModal} size="sm" variant="brand">
+                <Plus className="size-3.5" strokeWidth={1.5} />
+                Add Exam
+              </Button>
+            </div>
           )
         }
       />
@@ -265,6 +272,7 @@ export default function CalendarPage() {
           submitting={creating || updating}
         />
       )}
+      {canManage && <ImportTimetableDialog open={importOpen} onOpenChange={setImportOpen} />}
     </div>
   )
 }

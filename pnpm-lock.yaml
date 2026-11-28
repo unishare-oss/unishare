@@ -255,6 +255,9 @@ importers:
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
+      pdfjs-dist:
+        specifier: 5.4.296
+        version: 5.4.296
       pg:
         specifier: ^8.22.0
         version: 8.23.0
