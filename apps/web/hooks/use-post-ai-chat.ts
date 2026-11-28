@@ -198,5 +198,25 @@ export function usePostAiChat(postId: string) {
     setMessages([])
   }, [])
 
-  return { messages, sendMessage, isPending, reset }
+  /**
+   * Asks the last question again and replaces the last answer with the new one.
+   *
+   * Works on an error reply too, which makes it the retry. It does nothing unless the conversation
+   * ends with a question and its answer, and nothing while a turn is in flight, so it can never
+   * race a live stream.
+   */
+  const regenerate = useCallback(async () => {
+    if (abortRef.current) return
+    const current = messagesRef.current
+    const answer = current[current.length - 1]
+    const question = current[current.length - 2]
+    if (answer?.role !== 'assistant' || question?.role !== 'user') return
+
+    const withoutLastTurn = current.slice(0, -2)
+    messagesRef.current = withoutLastTurn
+    setMessages(withoutLastTurn)
+    await sendMessage(question.content)
+  }, [sendMessage])
+
+  return { messages, sendMessage, regenerate, isPending, reset }
 }

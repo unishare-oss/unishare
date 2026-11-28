@@ -216,6 +216,7 @@ model Post {
   trendingScore       Float                    @default(0)
   summarizedAt        DateTime?
   summary             String?
+  suggestedQuestions  String[]                 @default([])
   contentWarning      String?
   comments            Comment[]
   files               File[]

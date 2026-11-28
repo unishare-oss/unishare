@@ -28,6 +28,7 @@ const userContentOf = (messages: LlmMessage[]): string =>
 
 describe('AiSummaryService.summarizePost', () => {
   let service: AiSummaryService
+  let suggestionsSpy: jest.SpyInstance
   let prismaMock: any
   let llmMock: any
   let extractorMock: any
@@ -71,6 +72,9 @@ describe('AiSummaryService.summarizePost', () => {
     }).compile()
 
     service = module.get(AiSummaryService)
+    // Suggested questions are their own step, covered at the bottom of this file. Stubbed here so
+    // the model-call counts these tests assert stay about summarisation.
+    suggestionsSpy = jest.spyOn(service, 'generateAndStoreSuggestions').mockResolvedValue([])
   })
 
   /**
@@ -104,6 +108,14 @@ describe('AiSummaryService.summarizePost', () => {
     })
   })
 
+  it('writes suggested questions from the new summary once it is saved', async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'short chunk one' }])
+
+    await service.summarizePost('p1')
+
+    expect(suggestionsSpy).toHaveBeenCalledWith('p1', 'A summary.\n• point')
+  })
+
   it('does not re-summarise a post that already has a summary', async () => {
     prismaMock.post.findUnique.mockResolvedValue({
       id: 'p1',
@@ -117,6 +129,7 @@ describe('AiSummaryService.summarizePost', () => {
     expect(llmMock.chat).not.toHaveBeenCalled()
     expect(prismaMock.postChunk.findMany).not.toHaveBeenCalled()
     expect(prismaMock.post.update).not.toHaveBeenCalled()
+    expect(suggestionsSpy).not.toHaveBeenCalled()
   })
 
   it('writes a fresh summary after an existing summary has been cleared for a new file', async () => {

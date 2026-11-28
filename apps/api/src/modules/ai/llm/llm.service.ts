@@ -25,6 +25,23 @@ function isTransientProviderError(err: unknown): boolean {
   return status === 429 || status === 413 || (typeof status === 'number' && status >= 500)
 }
 
+/**
+ * Provider statuses that mean the AI is switched off for now, where retrying cannot help.
+ *
+ * 402 is a spending limit used up, which a capped proxy returns; 403 is a key paused by its owner.
+ * Both are the deployment's state, not the student's mistake and not a server fault, so they reach
+ * the student as the same 503 an unconfigured provider gives, rather than as a 500.
+ */
+function isUnavailableProviderError(err: unknown): boolean {
+  const status = (err as { status?: number })?.status
+  return status === 402 || status === 403
+}
+
+function unavailable(logger: Logger, err: unknown): ServiceUnavailableException {
+  logger.warn(`AI provider refused the request: ${(err as Error).message}`)
+  return new ServiceUnavailableException('The AI service is unavailable right now.')
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -51,6 +68,7 @@ export class LlmService {
       try {
         return await this.provider.chat(messages, resolved)
       } catch (err) {
+        if (isUnavailableProviderError(err)) throw unavailable(this.logger, err)
         if (!isTransientProviderError(err)) throw err
 
         // A rate-limited provider used to escape as the raw SDK error, which the global filter
@@ -85,7 +103,8 @@ export class LlmService {
    *
    * Providers without streaming support are NOT excluded — they yield the finished reply as one
    * delta, so every caller sees the same event shape and the fallback is invisible from the
-   * outside. Today Groq and Ollama stream; Gemini takes the fallback.
+   * outside. Groq, Ollama and Gemini all stream today; the fallback is for any provider that
+   * does not.
    *
    * The try/catch spans the whole generator rather than just its first `await`, because that is
    * the difference this method exists to get right: a 429 arriving after fifty tokens is exactly
@@ -122,6 +141,7 @@ export class LlmService {
         }
         return
       } catch (err) {
+        if (isUnavailableProviderError(err)) throw unavailable(this.logger, err)
         if (!isTransientProviderError(err)) throw err
 
         if (yieldedAny || attempt === MAX_ATTEMPTS) {
