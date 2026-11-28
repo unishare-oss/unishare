@@ -17,7 +17,7 @@ interface ProfileTabsProps {
 export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: ProfileTabsProps) {
   return (
     <>
-      <div className="flex items-center gap-1 border-b border-border mb-0">
+      <div className="flex items-center gap-1 border-b border-border mb-4">
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -25,7 +25,7 @@ export function ProfileTabs({ activeTab, onTabChange, posts, loading = false }: 
             className={cn(
               'font-mono text-xs uppercase tracking-wider px-4 py-3 transition-colors duration-150 border-b-2',
               activeTab === tab
-                ? 'border-amber text-amber font-medium'
+                ? 'border-brand-edge text-foreground font-medium'
                 : 'border-transparent text-text-muted hover:text-foreground',
             )}
           >

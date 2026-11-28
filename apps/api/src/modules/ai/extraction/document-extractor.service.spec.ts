@@ -63,6 +63,21 @@ describe('DocumentExtractorService', () => {
     })
   })
 
+  describe('extractSampleFromBuffer', () => {
+    afterEach(() => jest.restoreAllMocks())
+
+    it('requests only the first three PDF pages and caps the sample at 4,000 characters', async () => {
+      const getText = jest.spyOn(PDFParse.prototype, 'getText').mockResolvedValue({
+        pages: Array.from({ length: 5 }, (_, i) => ({ num: i + 1, text: 'x'.repeat(2_000) })),
+      } as never)
+
+      const sample = await service.extractSampleFromBuffer(Buffer.from('pdf'), 'application/pdf')
+
+      expect(getText).toHaveBeenCalledWith({ first: 3 })
+      expect(sample).toHaveLength(4_000)
+    })
+  })
+
   describe('extractFromBuffer — docx', () => {
     it('returns a single synthetic page with hasPageNumbers false', async () => {
       const buffer = readFileSync(join(FIXTURES, 'sample.docx'))

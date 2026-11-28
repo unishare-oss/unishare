@@ -1,0 +1,74 @@
+/*
+ * Dresses A2UI surfaces in the app's design tokens (app/globals.css).
+ *
+ * The A2UI basic components are custom elements with their own styles; the only way in is the
+ * `--a2ui-*` variables they read. Those inherit, so setting them on this wrapper restyles every
+ * surface inside it and leaves the rest of the page alone. Each value points at an app token, so
+ * the dark theme follows without a second set of rules.
+ *
+ * The spacing and font-size scales are redeclared here rather than only changing their base. The
+ * library defines them on :root as calc() chains, and a calc() resolves where it is declared, so a
+ * new base set below would never reach the steps derived from it above.
+ */
+.a2ui-themed {
+  --a2ui-color-background: var(--surface);
+  --a2ui-color-on-background: var(--ink);
+  --a2ui-color-surface: var(--surface);
+  --a2ui-color-on-surface: var(--ink);
+
+  --a2ui-color-primary: var(--brand);
+  --a2ui-color-on-primary: var(--on-brand);
+  --a2ui-color-primary-light: color-mix(in oklab, var(--brand) 82%, white);
+  --a2ui-color-primary-dark: var(--brand-edge);
+  --a2ui-color-primary-hover: color-mix(in oklab, var(--brand) 88%, var(--ink));
+
+  --a2ui-color-secondary: var(--surface-2);
+  --a2ui-color-on-secondary: var(--ink);
+  --a2ui-color-secondary-light: var(--surface-2);
+  --a2ui-color-secondary-dark: var(--line);
+  --a2ui-color-secondary-hover: var(--line);
+
+  --a2ui-color-input: var(--surface);
+  --a2ui-color-on-input: var(--ink);
+  --a2ui-color-border: var(--line);
+  --a2ui-border-radius: var(--r-s);
+  --a2ui-border: 1px solid var(--line);
+
+  --a2ui-text-color-text: var(--ink);
+  --a2ui-text-caption-color: var(--muted-foreground);
+
+  --a2ui-grid-base: 0.5rem;
+  --a2ui-spacing-m: var(--a2ui-grid-base);
+  --a2ui-spacing-s: calc(var(--a2ui-spacing-m) / 2);
+  --a2ui-spacing-xs: calc(var(--a2ui-spacing-s) / 2);
+  --a2ui-spacing-l: calc(var(--a2ui-spacing-m) * 2);
+  --a2ui-spacing-xl: calc(var(--a2ui-spacing-l) * 2);
+
+  /* Matches the chat's text-sm, and follows the reader's font-size setting. */
+  --a2ui-font-size: calc(0.875rem * var(--font-scale, 1));
+  --a2ui-font-scale: 1.2;
+  --a2ui-font-size-m: var(--a2ui-font-size);
+  --a2ui-font-size-s: calc(var(--a2ui-font-size-m) / var(--a2ui-font-scale));
+  --a2ui-font-size-xs: calc(var(--a2ui-font-size-s) / var(--a2ui-font-scale));
+  --a2ui-font-size-l: calc(var(--a2ui-font-size-m) * var(--a2ui-font-scale));
+  --a2ui-font-size-xl: calc(var(--a2ui-font-size-l) * var(--a2ui-font-scale));
+  --a2ui-font-size-2xl: calc(var(--a2ui-font-size-xl) * var(--a2ui-font-scale));
+
+  /* The same pressed-key button the rest of the app uses. */
+  --a2ui-button-border-radius: var(--r-s);
+  --a2ui-button-font-weight: 700;
+  --a2ui-button-padding: 0.5rem 1rem;
+  --a2ui-button-box-shadow: 0 3px 0 var(--brand-edge);
+  --a2ui-button-margin: 0 0 3px;
+
+  --a2ui-card-background: var(--surface);
+  --a2ui-card-border: 1px solid var(--line);
+  --a2ui-card-border-radius: var(--r-s);
+  --a2ui-card-box-shadow: none;
+  --a2ui-card-padding: 0.875rem;
+
+  --a2ui-choicepicker-gap: 0.375rem;
+  --a2ui-choicepicker-label-color: var(--ink);
+
+  color: var(--ink);
+}

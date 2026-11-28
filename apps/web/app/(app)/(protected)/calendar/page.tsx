@@ -9,8 +9,6 @@ import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { SearchSelect } from '@/components/ui/search-select'
 import { ClassicExamCalendar } from '@/components/calendar/classic-exam-calendar'
-import { ArcadeExamCalendar } from '@/components/calendar/arcade-exam-calendar'
-import { DeskExamCalendar } from '@/components/calendar/desk-exam-calendar'
 import {
   AddExamModal,
   EMPTY_EXAM_FORM,
@@ -18,7 +16,6 @@ import {
   type ExamFormState,
 } from '@/components/calendar/add-exam-modal'
 import { useAuth } from '@/contexts/auth-context'
-import { useFeedStyleStore } from '@/lib/store'
 import { useMyDepartments } from '@/hooks/use-my-departments'
 import {
   useExamsControllerFindAll,
@@ -28,6 +25,26 @@ import {
   getExamsControllerFindAllQueryKey,
 } from '@/src/lib/api/generated/exams/exams'
 import type { ExamEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
+
+type ExamFilter = { kind: 'mine' } | { kind: 'department'; id: string } | { kind: 'all' }
+
+/** Select values are department ids plus two fixed entries. */
+const MINE_VALUE = 'mine'
+
+function filterToValue(filter: ExamFilter): string {
+  if (filter.kind === 'mine') return MINE_VALUE
+  return filter.kind === 'department' ? filter.id : ''
+}
+
+function valueToFilter(value: string): ExamFilter {
+  if (value === MINE_VALUE) return { kind: 'mine' }
+  return value ? { kind: 'department', id: value } : { kind: 'all' }
+}
+
+function filterToParams(filter: ExamFilter) {
+  if (filter.kind === 'mine') return { mine: true }
+  return filter.kind === 'department' ? { departmentId: filter.id } : {}
+}
 
 function toFormState(exam: ExamEntity): ExamFormState {
   const starts = new Date(exam.startsAt)
@@ -64,20 +81,24 @@ function statusLine(exams: ExamEntity[]): string {
 export default function CalendarPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const feedStyle = useFeedStyleStore((s) => s.feedStyle)
   const canManage = user?.role === 'ADMIN' || user?.role === 'MODERATOR'
 
   const [month, setMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date())
-  const [departmentId, setDepartmentId] = useState(user?.department?.id ?? '')
-  const [courseId, setCourseId] = useState('')
+  // 'mine' is the default filter: only exams for my courses. Picking a department drops it.
+  const [filter, setFilter] = useState<ExamFilter>(
+    user?.department ? { kind: 'mine' } : { kind: 'all' },
+  )
   const [modalOpen, setModalOpen] = useState(false)
   const [editingExamId, setEditingExamId] = useState<string | null>(null)
   const [form, setForm] = useState<ExamFormState>(EMPTY_EXAM_FORM)
 
   const { departments } = useMyDepartments()
+  const mine = filter.kind === 'mine'
+  const departmentId = filter.kind === 'department' ? filter.id : (user?.department?.id ?? '')
   const deptOptions = useMemo(
     () => [
+      { value: MINE_VALUE, label: 'My exams' },
       { value: '', label: 'All departments' },
       ...departments.map((d) => ({ value: d.id, label: d.name })),
     ],
@@ -88,7 +109,7 @@ export default function CalendarPage() {
   const to = endOfMonth(month).toISOString()
 
   const { data: exams = [] } = useExamsControllerFindAll(
-    { from, to, ...(departmentId ? { departmentId } : {}), ...(courseId ? { courseId } : {}) },
+    { from, to, ...filterToParams(filter) },
     { query: { select: (r) => r.data } },
   )
 
@@ -190,11 +211,7 @@ export default function CalendarPage() {
         title="Exam Calendar"
         action={
           canManage && (
-            <Button
-              onClick={openCreateModal}
-              size="sm"
-              className="bg-amber text-primary-foreground hover:bg-amber-hover"
-            >
+            <Button onClick={openCreateModal} size="sm" variant="brand">
               <Plus className="size-3.5" strokeWidth={1.5} />
               Add Exam
             </Button>
@@ -206,40 +223,34 @@ export default function CalendarPage() {
         <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-6">
           <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-[13px] text-text-muted">{statusLine(exams)}</p>
-            <div className="w-48 shrink-0">
-              <SearchSelect
-                options={deptOptions}
-                value={departmentId}
-                onChange={(v) => {
-                  setDepartmentId(v)
-                  setCourseId('')
-                }}
-                placeholder="All departments"
-              />
+            <div className="flex shrink-0 items-center gap-2">
+              {!mine && user?.department && (
+                <Button variant="ghost" size="sm" onClick={() => setFilter({ kind: 'mine' })}>
+                  Reset
+                </Button>
+              )}
+              <div className="w-48">
+                <SearchSelect
+                  options={deptOptions}
+                  value={filterToValue(filter)}
+                  onChange={(value) => setFilter(valueToFilter(value))}
+                  placeholder="All departments"
+                />
+              </div>
             </div>
           </div>
 
-          {(() => {
-            const ExamCalendarView =
-              feedStyle === 'arcade'
-                ? ArcadeExamCalendar
-                : feedStyle === 'desk'
-                  ? DeskExamCalendar
-                  : ClassicExamCalendar
-            return (
-              <ExamCalendarView
-                month={month}
-                onMonthChange={setMonth}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                examsByDay={examsByDay}
-                selectedDayExams={selectedDayExams}
-                canManage={canManage}
-                onEdit={openEditModal}
-                onDelete={(examId) => removeExam({ id: examId })}
-              />
-            )
-          })()}
+          <ClassicExamCalendar
+            month={month}
+            onMonthChange={setMonth}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            examsByDay={examsByDay}
+            selectedDayExams={selectedDayExams}
+            canManage={canManage}
+            onEdit={openEditModal}
+            onDelete={(examId) => removeExam({ id: examId })}
+          />
         </div>
       </div>
 

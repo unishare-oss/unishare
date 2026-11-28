@@ -9,6 +9,10 @@ export function calcYearLevel(enrollmentYear: number, academicYear: number): num
   return Math.max(1, academicYear - enrollmentYear + 1)
 }
 
+export function formatAcademicYear(year: number): string {
+  return `${year}/${String((year + 1) % 100).padStart(2, '0')}`
+}
+
 export function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural
 }

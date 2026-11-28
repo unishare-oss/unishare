@@ -48,7 +48,7 @@ export default function AdminFeedbackPage() {
             className={cn(
               'px-3 py-1.5 rounded-[6px] text-sm font-medium transition-colors duration-150',
               activeFilter === value
-                ? 'bg-amber text-primary-foreground'
+                ? 'bg-brand-soft font-semibold text-foreground'
                 : 'text-text-muted hover:text-foreground hover:bg-muted',
             )}
           >
@@ -85,13 +85,13 @@ export default function AdminFeedbackPage() {
                   <div
                     className={cn(
                       'mt-0.5 flex items-center justify-center w-7 h-7 rounded-[6px] shrink-0',
-                      isBug ? 'bg-destructive/10' : 'bg-amber/10',
+                      isBug ? 'bg-destructive/10' : 'bg-brand/10',
                     )}
                   >
                     {isBug ? (
                       <Bug className="size-3.5 text-destructive" strokeWidth={1.5} />
                     ) : (
-                      <MessageSquareHeart className="size-3.5 text-amber" strokeWidth={1.5} />
+                      <MessageSquareHeart className="size-3.5 text-brand-edge" strokeWidth={1.5} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ export default function AdminFeedbackPage() {
                       <span
                         className={cn(
                           'font-mono text-[10px] uppercase tracking-wider',
-                          isBug ? 'text-destructive' : 'text-amber',
+                          isBug ? 'text-destructive' : 'text-foreground font-semibold',
                         )}
                       >
                         {isBug ? 'Bug Report' : 'Feedback'}

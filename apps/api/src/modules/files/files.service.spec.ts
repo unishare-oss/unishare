@@ -5,7 +5,8 @@ import { StorageService } from '@/modules/storage/storage.service'
 import { PostsService } from '@/modules/posts/posts.service'
 import { AiSummaryService } from '@/modules/ai-summary/ai-summary.service'
 import { IngestionService } from '@/modules/ai/ingestion/ingestion.service'
-import { NotFoundException } from '@nestjs/common'
+import { PendingUploadsService } from '@/modules/storage/pending-uploads.service'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
 
 const ALL = { kind: 'all' } as const
 
@@ -16,6 +17,7 @@ describe('FilesService', () => {
   let postsServiceMock: any
   let aiSummaryServiceMock: any
   let ingestionServiceMock: any
+  let pendingUploadsMock: any
 
   const dto = { key: 'posts/u1/a.pdf', name: 'a.pdf', size: 10, mimeType: 'application/pdf' }
   const createdFile = { id: 'f1', postId: 'p1', ...dto, downloads: 0, ingestStatus: 'PENDING' }
@@ -23,6 +25,7 @@ describe('FilesService', () => {
   beforeEach(async () => {
     filesRepositoryMock = {
       create: jest.fn().mockResolvedValue(createdFile),
+      createWithPendingClaim: jest.fn().mockResolvedValue({ claimed: true, file: createdFile }),
       findById: jest.fn(),
       incrementDownloads: jest.fn(),
       delete: jest.fn(),
@@ -35,6 +38,7 @@ describe('FilesService', () => {
     postsServiceMock = {
       findOne: jest.fn().mockResolvedValue({ id: 'p1', isOwner: true, status: 'PENDING' }),
       assertPostInScope: jest.fn().mockResolvedValue(undefined),
+      clearSummary: jest.fn().mockResolvedValue(undefined),
     }
     aiSummaryServiceMock = {
       summarizePost: jest.fn(),
@@ -43,6 +47,9 @@ describe('FilesService', () => {
     }
     ingestionServiceMock = {
       ingestFile: jest.fn().mockResolvedValue(undefined),
+    }
+    pendingUploadsMock = {
+      getClaimableUpload: jest.fn().mockResolvedValue(null),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -53,6 +60,7 @@ describe('FilesService', () => {
         { provide: PostsService, useValue: postsServiceMock },
         { provide: AiSummaryService, useValue: aiSummaryServiceMock },
         { provide: IngestionService, useValue: ingestionServiceMock },
+        { provide: PendingUploadsService, useValue: pendingUploadsMock },
       ],
     }).compile()
 
@@ -75,6 +83,37 @@ describe('FilesService', () => {
       const result = await service.confirmUpload('p1', dto as any, 'u1', ALL)
 
       expect(result).toEqual({ id: 'f1', ...dto, downloads: 0, ingestStatus: 'PENDING' })
+      expect(filesRepositoryMock.create).toHaveBeenCalledWith('p1', dto)
+    })
+
+    it('atomically claims a pending upload from an edit or background confirmation', async () => {
+      pendingUploadsMock.getClaimableUpload.mockResolvedValue({ key: dto.key })
+
+      await service.confirmUpload('p1', dto as any, 'u1', ALL)
+
+      expect(pendingUploadsMock.getClaimableUpload).toHaveBeenCalledWith('u1', dto, false)
+      expect(filesRepositoryMock.createWithPendingClaim).toHaveBeenCalledWith('p1', dto, 'u1')
+      expect(filesRepositoryMock.create).not.toHaveBeenCalled()
+    })
+
+    it('requires a pending upload for pre-Share confirmation', async () => {
+      pendingUploadsMock.getClaimableUpload.mockRejectedValueOnce(new BadRequestException())
+
+      await expect(
+        service.confirmUpload('p1', { ...dto, preShare: true } as any, 'u1', ALL),
+      ).rejects.toThrow(BadRequestException)
+
+      expect(pendingUploadsMock.getClaimableUpload).toHaveBeenCalledWith('u1', dto, true)
+      expect(filesRepositoryMock.create).not.toHaveBeenCalled()
+    })
+
+    it('keeps MCP confirmation working when no pending upload record exists', async () => {
+      pendingUploadsMock.getClaimableUpload.mockResolvedValue(null)
+
+      const result = await service.confirmUpload('p1', dto as any, 'u1', ALL)
+
+      expect(result).toEqual({ id: 'f1', ...dto, downloads: 0, ingestStatus: 'PENDING' })
+      expect(pendingUploadsMock.getClaimableUpload).toHaveBeenCalledWith('u1', dto, false)
       expect(filesRepositoryMock.create).toHaveBeenCalledWith('p1', dto)
     })
 
@@ -125,6 +164,44 @@ describe('FilesService', () => {
         ingestDone!()
         await settle()
 
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('clears an approved post summary before ingestion and triggers a fresh summary', async () => {
+        const order: string[] = []
+        postsServiceMock.findOne.mockResolvedValue({
+          id: 'p1',
+          isOwner: true,
+          status: 'APPROVED',
+          summary: 'Old summary',
+        })
+        postsServiceMock.clearSummary.mockImplementation(async () => {
+          order.push('clear summary')
+        })
+        ingestionServiceMock.ingestFile.mockImplementation(async () => {
+          order.push('ingest file')
+        })
+
+        await service.confirmUpload('p1', dto as any, 'u1', ALL)
+        await settle()
+
+        expect(postsServiceMock.clearSummary).toHaveBeenCalledWith('p1')
+        expect(order).toEqual(['clear summary', 'ingest file'])
+        expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
+      })
+
+      it('keeps a client summary when MCP uploads the files attached at creation', async () => {
+        postsServiceMock.findOne.mockResolvedValue({
+          id: 'p1',
+          isOwner: true,
+          status: 'APPROVED',
+          summary: 'Client summary',
+        })
+
+        await service.confirmUpload('p1', dto as any, 'u1', ALL, { keepSummary: true })
+        await settle()
+
+        expect(postsServiceMock.clearSummary).not.toHaveBeenCalled()
         expect(aiSummaryServiceMock.summarizePostWhenIngested).toHaveBeenCalledWith('p1')
       })
 

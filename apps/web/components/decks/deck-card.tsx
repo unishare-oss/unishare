@@ -25,7 +25,7 @@ export function DeckCard({ deck }: { deck: DeckEntity }) {
   const downloadable = hasRenderedFiles(deck)
 
   return (
-    <article className="card-pop card-pop-hover rounded-xl bg-card flex flex-col overflow-hidden">
+    <article className="border-2 border-line rounded-xl bg-card flex flex-col overflow-hidden">
       <Link
         href={`/decks/${deck.id}`}
         className="flex items-start gap-4 p-4 group hover:bg-accent flex-1 transition-colors motion-reduce:transition-none"

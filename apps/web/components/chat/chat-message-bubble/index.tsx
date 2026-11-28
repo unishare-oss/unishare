@@ -161,8 +161,8 @@ export function ChatMessageBubble({
                   'text-sm rounded-2xl shadow-sm relative z-10 max-w-full overflow-hidden',
                   message.imageUrl || message.fileUrl ? 'w-full' : 'w-fit',
                   isMe
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-secondary text-secondary-foreground rounded-bl-sm',
+                    ? 'bg-primary text-primary-foreground [--primary-foreground:#fff] rounded-br-sm'
+                    : 'border border-line bg-surface text-foreground rounded-bl-sm',
                 )}
               >
                 {/* Inline reply quote */}

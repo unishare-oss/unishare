@@ -25,19 +25,39 @@ export const postFilesSchema = z.array(postFileSchema).max(5).optional()
 
 export type PostFileDto = z.infer<typeof postFileSchema>
 
-export const createPostSchema = z.object({
-  title: z.string().min(3).max(200),
-  description: z.string().min(1).max(2000),
-  type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
-  courseId: z.string().min(1),
-  moduleNumber: z.number().int().min(1).max(20).optional(),
-  year: z.number().int().min(1).max(6).optional(),
-  semester: z.number().int().min(1).max(3).optional(),
-  tags: z.array(z.string().min(2).max(50)).max(5).optional(),
-  examYear: z.number().int().min(1900).max(2100).optional(),
-  externalUrl: z.string().url().max(500).optional(),
-  isAnonymous: z.boolean().optional(),
-  files: postFilesSchema,
-})
+export const createPostSchema = z
+  .object({
+    title: z.string().min(3).max(200),
+    description: z.string().min(1).max(2000),
+    type: z.enum(['NOTE', 'OLD_QUESTION', 'EXERCISE']),
+    courseId: z.string().min(1),
+    moduleNumber: z.number().int().min(1).max(20).optional(),
+    year: z.number().int().min(1).max(6).optional(),
+    semester: z.number().int().min(1).max(3).optional(),
+    tags: z.array(z.string().min(2).max(50)).max(5).optional(),
+    examYear: z.number().int().min(1900).max(2100).optional(),
+    externalUrl: z.string().url().max(500).optional(),
+    isAnonymous: z.boolean().optional(),
+    files: postFilesSchema,
+    summary: z
+      .string()
+      .trim()
+      .min(1)
+      .max(2000)
+      .transform((summary) => summary.replace(/^[ \t]*[-*] /gm, '• '))
+      .optional()
+      .describe(
+        'Required when files are attached. AI-written from the files’ content as 3–6 • lines under 2000 characters.',
+      ),
+  })
+  .superRefine((post, ctx) => {
+    if (post.files?.length && !post.summary) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['summary'],
+        message: 'Write a summary from the attached files when creating a post with files',
+      })
+    }
+  })
 
 export type CreatePostDto = z.infer<typeof createPostSchema>

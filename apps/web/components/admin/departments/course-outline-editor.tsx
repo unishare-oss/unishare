@@ -189,12 +189,7 @@ export function CourseOutlineEditor({ courseId }: { courseId: string }) {
         </div>
       )}
 
-      <Button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className="self-end bg-amber text-primary-foreground hover:bg-amber-hover"
-      >
+      <Button type="button" onClick={handleSave} disabled={saving} className="self-end">
         {saving ? 'Saving…' : 'Save Outline'}
       </Button>
     </div>

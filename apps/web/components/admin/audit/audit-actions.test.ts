@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AuditLogEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { actionMeta, describeEntry, targetHref } from './audit-actions'
+import { actionMeta, describeEntry, TONE_CLASS, targetHref } from './audit-actions'
 
 const entry = (over: Partial<AuditLogEntity>): AuditLogEntity => ({
   id: 'a1',
@@ -10,6 +10,11 @@ const entry = (over: Partial<AuditLogEntity>): AuditLogEntity => ({
 })
 
 describe('audit actions', () => {
+  it('marks role changes with the emphasis tone, which has a text class', () => {
+    expect(actionMeta('user.set_role').tone).toBe('emphasis')
+    expect(TONE_CLASS.emphasis).toBe('text-foreground font-semibold')
+  })
+
   it('summarises a role change from the metadata', () => {
     expect(
       describeEntry(

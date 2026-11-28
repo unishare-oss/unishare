@@ -10,15 +10,23 @@ import { drawBoardSchema } from './dto/draw-board.dto'
 import { requestUploadUrlSchema } from './dto/request-upload-url.dto'
 import { createPostSchema } from './dto/create-post.dto'
 import { deletePostSchema } from './dto/delete-post.dto'
-import { McpRepository } from './mcp.repository'
+import { McpToolsService } from './mcp-tools.service'
 import { drawingGuide } from './mcp-drawing-guide'
 import { postGuide } from './mcp-post-guide'
 
+export const createPostToolDescription =
+  'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. ' +
+  'Call read_me before the first create_post call in a task and follow its rules: ask ONE field ' +
+  'at a time in order (title -> type -> description -> courseId from list_courses -> optional ' +
+  'fields with skip option), when files are included the AI client must write a summary from ' +
+  'their content (required, use 3–6 • lines), show it in the confirmation preview ' +
+  'for the user to edit, then confirm with the user before calling this tool.'
+
 @Injectable()
 export class McpService {
-  constructor(private readonly mcpRepository: McpRepository) {}
+  constructor(private readonly mcpToolsService: McpToolsService) {}
 
-  /** A tool with no backing repository method (e.g. read_me) has no scope requirement. */
+  /** A tool with no backing tool service method (e.g. read_me) has no scope requirement. */
   private isAllowed(session: McpAuthSession, method?: (...args: never[]) => unknown): boolean {
     if (!method) return true
     const required = getRequiredScopes(method)
@@ -32,7 +40,7 @@ export class McpService {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined }) //stateless
     const allowed = (method?: (...args: never[]) => unknown) => this.isAllowed(session, method)
 
-    if (allowed(this.mcpRepository.listBoards)) {
+    if (allowed(this.mcpToolsService.listBoards)) {
       server.registerTool(
         'list_boards',
         {
@@ -40,22 +48,22 @@ export class McpService {
           inputSchema: z.object({}),
           annotations: { readOnlyHint: true },
         },
-        async () => this.toToolResult(await this.mcpRepository.listBoards(session)),
+        async () => this.toToolResult(await this.mcpToolsService.listBoards(session)),
       )
     }
 
-    if (allowed(this.mcpRepository.createBoard)) {
+    if (allowed(this.mcpToolsService.createBoard)) {
       server.registerTool(
         'create_board',
         {
           description: 'Create a board owned by the authenticated UniShare user',
           inputSchema: createBoardSchema,
         },
-        async (input) => this.toToolResult(await this.mcpRepository.createBoard(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.createBoard(session, input)),
       )
     }
 
-    if (allowed(this.mcpRepository.deleteBoard)) {
+    if (allowed(this.mcpToolsService.deleteBoard)) {
       server.registerTool(
         'delete_board',
         {
@@ -63,11 +71,11 @@ export class McpService {
           inputSchema: boardSlugSchema,
           annotations: { destructiveHint: true },
         },
-        async (input) => this.toToolResult(await this.mcpRepository.deleteBoard(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.deleteBoard(session, input)),
       )
     }
 
-    if (allowed(this.mcpRepository.getBoard)) {
+    if (allowed(this.mcpToolsService.getBoard)) {
       server.registerTool(
         'get_board',
         {
@@ -76,11 +84,11 @@ export class McpService {
           inputSchema: boardSlugSchema,
           annotations: { readOnlyHint: true },
         },
-        async (input) => this.toToolResult(await this.mcpRepository.getBoard(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.getBoard(session, input)),
       )
     }
 
-    if (allowed(this.mcpRepository.drawBoard)) {
+    if (allowed(this.mcpToolsService.drawBoard)) {
       server.registerTool(
         'draw_board',
         {
@@ -88,11 +96,11 @@ export class McpService {
             'Draw a clear, labeled diagram. Before the first draw_board call in a task, you MUST call read_me and apply its rules. For existing boards, call get_board to check occupied space before adding more elements. Pass elements as a JSON-stringified array. Arrows accept points as relative [x, y] waypoints for orthogonal or bent routes; use endX/endY only for a straight arrow.',
           inputSchema: drawBoardSchema,
         },
-        async (input) => this.toToolResult(await this.mcpRepository.drawBoard(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.drawBoard(session, input)),
       )
     }
 
-    // No backing repository method / scope requirement — always available.
+    // No backing tool service method / scope requirement — always available.
     server.registerTool(
       'read_me',
       {
@@ -111,7 +119,7 @@ export class McpService {
       }),
     )
 
-    if (allowed(this.mcpRepository.listCourses)) {
+    if (allowed(this.mcpToolsService.listCourses)) {
       server.registerTool(
         'list_courses',
         {
@@ -120,11 +128,11 @@ export class McpService {
           inputSchema: z.object({}),
           annotations: { readOnlyHint: true },
         },
-        async () => this.toToolResult(await this.mcpRepository.listCourses(session)),
+        async () => this.toToolResult(await this.mcpToolsService.listCourses(session)),
       )
     }
 
-    if (allowed(this.mcpRepository.createUploadUrl)) {
+    if (allowed(this.mcpToolsService.createUploadUrl)) {
       server.registerTool(
         'request_upload_url',
         {
@@ -133,23 +141,22 @@ export class McpService {
           inputSchema: requestUploadUrlSchema,
         },
         async (input) =>
-          this.toToolResult(await this.mcpRepository.createUploadUrl(session, input)),
+          this.toToolResult(await this.mcpToolsService.createUploadUrl(session, input)),
       )
     }
 
-    if (allowed(this.mcpRepository.createPost)) {
+    if (allowed(this.mcpToolsService.createPost)) {
       server.registerTool(
         'create_post',
         {
-          description:
-            'Create a post (note, old question, or exercise) authored by the authenticated UniShare user. Call read_me before the first create_post call in a task and follow its rules: ask ONE field at a time in order (title -> type -> description -> courseId from list_courses -> optional fields with skip option), show a summary, and confirm with the user before calling this tool.',
+          description: createPostToolDescription,
           inputSchema: createPostSchema,
         },
-        async (input) => this.toToolResult(await this.mcpRepository.createPost(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.createPost(session, input)),
       )
     }
 
-    if (allowed(this.mcpRepository.deletePost)) {
+    if (allowed(this.mcpToolsService.deletePost)) {
       server.registerTool(
         'delete_post',
         {
@@ -157,7 +164,7 @@ export class McpService {
           inputSchema: deletePostSchema,
           annotations: { destructiveHint: true },
         },
-        async (input) => this.toToolResult(await this.mcpRepository.deletePost(session, input)),
+        async (input) => this.toToolResult(await this.mcpToolsService.deletePost(session, input)),
       )
     }
 

@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button'
 export function LandingCta() {
   return (
     <section className="mx-auto max-w-[1200px] px-4 pb-14 sm:px-6 sm:pb-16 pt-14">
-      <div className="relative overflow-hidden rounded-[24px] border-2 border-border-strong bg-card p-6 shadow-[8px_8px_0_0_var(--shadow-color)] sm:p-10">
-        <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-amber-subtle blur-2xl opacity-50" />
+      <div className="relative overflow-hidden rounded-[24px] border-2 border-border bg-card p-6 shadow-[var(--lift)] sm:p-10">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-brand-soft blur-2xl opacity-50" />
         <div className="pointer-events-none absolute -bottom-12 -left-12 size-64 rounded-full bg-info/10 blur-2xl" />
         <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-amber-subtle px-3 py-1 font-mono text-xs font-bold">
+            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-brand-soft px-3 py-1 font-mono text-xs font-bold">
               <Sparkles className="size-3.5" /> New semester? Start sharing today
             </p>
             <h2 className="mt-4 text-balance text-3xl font-black leading-tight tracking-tight sm:text-4xl">
@@ -21,7 +21,12 @@ export function LandingCta() {
               — or leave the notes you wish you’d had.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="h-12 rounded-full px-7 text-sm font-black">
+              <Button
+                asChild
+                variant="brand"
+                size="lg"
+                className="h-12 rounded-full px-7 text-sm font-black"
+              >
                 <Link href="/login">
                   Create your account <ArrowRight className="size-4" />
                 </Link>
@@ -41,7 +46,7 @@ export function LandingCta() {
           </div>
           <div className="grid gap-3">
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
                 <UploadCloud className="size-5" />
               </div>
               <div>
@@ -52,8 +57,8 @@ export function LandingCta() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
-                <Zap className="size-5 text-amber" />
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
+                <Zap className="size-5 text-brand-edge" />
               </div>
               <div>
                 <p className="text-sm font-black">Find in 10 seconds</p>
@@ -61,7 +66,7 @@ export function LandingCta() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border-2 border-border bg-muted p-4">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border-strong shadow-[2px_2px_0_0_var(--shadow-color)]">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-card border-2 border-border">
                 <Clock className="size-5 text-success" />
               </div>
               <div>

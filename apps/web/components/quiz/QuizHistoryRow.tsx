@@ -30,7 +30,7 @@ function gradeFromPercent(pct: number) {
   if (pct >= 70)
     return {
       grade: 'C',
-      className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+      className: 'bg-brand-soft text-foreground border-brand-edge/20',
     }
   if (pct >= 60)
     return {

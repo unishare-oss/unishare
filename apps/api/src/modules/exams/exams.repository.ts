@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@/prisma/prisma.service'
-import { UserRole } from '@/generated/prisma/client'
 import { courseInScope, UniversityScope } from '@/common/university-scope'
 import { CreateExamDto } from './dto/create-exam.dto'
 import { UpdateExamDto } from './dto/update-exam.dto'
@@ -40,14 +39,14 @@ export class ExamsRepository {
     to: Date,
     scope: UniversityScope,
     departmentId?: string,
-    courseId?: string,
+    courseIds?: string[],
   ) {
     return this.prisma.exam.findMany({
       where: {
         AND: [
           {
             startsAt: { gte: from, lte: to },
-            ...(courseId ? { courseId } : {}),
+            ...(courseIds ? { courseId: { in: courseIds } } : {}),
             ...(departmentId ? { course: { departmentId } } : {}),
           },
           { course: courseInScope(scope) },
@@ -92,20 +91,5 @@ export class ExamsRepository {
 
   markReminderSent(id: string, sentAt: Date) {
     return this.prisma.exam.update({ where: { id }, data: { reminderSentAt: sentAt } })
-  }
-
-  /** Students in `departmentId`, optionally narrowed to a single `enrollmentYear`. */
-  findReminderRecipientIds(departmentId: string, enrollmentYear?: number) {
-    return this.prisma.user
-      .findMany({
-        where: {
-          departmentId,
-          role: UserRole.STUDENT,
-          isAnonymous: { not: true },
-          ...(enrollmentYear !== undefined ? { enrollmentYear } : {}),
-        },
-        select: { id: true },
-      })
-      .then((users) => users.map((u) => u.id))
   }
 }

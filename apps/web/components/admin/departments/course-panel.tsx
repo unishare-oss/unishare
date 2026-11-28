@@ -33,11 +33,7 @@ export function CoursePanel({
             {deptName ?? 'Select department'}
           </h2>
         )}
-        <Button
-          onClick={onAddClick}
-          size="sm"
-          className="bg-amber text-primary-foreground hover:bg-amber-hover"
-        >
+        <Button onClick={onAddClick} size="sm" variant="brand">
           <Plus className="size-3.5" strokeWidth={1.5} />
           Add Course
         </Button>
@@ -60,7 +56,7 @@ export function CoursePanel({
               key={course.id}
               className="flex items-center gap-4 px-6 py-3.5 border-b border-border hover:bg-muted transition-colors duration-150 group"
             >
-              <span className="font-mono text-[13px] text-amber font-medium shrink-0">
+              <span className="font-mono text-[13px] text-foreground font-medium shrink-0">
                 {course.code}
               </span>
               <span className="text-sm text-foreground flex-1 min-w-0 truncate">{course.name}</span>

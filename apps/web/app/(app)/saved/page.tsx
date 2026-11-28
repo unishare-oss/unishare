@@ -66,7 +66,7 @@ export default function SavedPage() {
                 toast.error('Could not start sign-in. Please try again.'),
               )
             }
-            className="flex items-center gap-1.5 text-sm font-medium text-amber hover:underline shrink-0"
+            className="flex items-center gap-1.5 text-sm font-medium text-foreground underline underline-offset-2 shrink-0"
           >
             <LogIn className="size-3.5" strokeWidth={1.5} />
             Sign in to sync
@@ -77,7 +77,7 @@ export default function SavedPage() {
         {isAuthenticated && (
           <ReadingListsSidebar selectedListId={selectedListId} onSelect={handleListSelect} />
         )}
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-6">
           {isAuthenticated ? (
             <PostFeed
               posts={activeData?.items ?? []}

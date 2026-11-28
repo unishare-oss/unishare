@@ -56,7 +56,7 @@ export function DeckEditorFrame({ url, title }: DeckEditorFrameProps) {
 
   if (state === 'failed') {
     return (
-      <div className="card-pop rounded-xl bg-card flex min-h-80 flex-col items-center justify-center gap-3 p-6 text-center">
+      <div className="border-2 border-line rounded-xl bg-card flex min-h-80 flex-col items-center justify-center gap-3 p-6 text-center">
         <AlertCircle className="size-6 text-text-muted" strokeWidth={1.5} aria-hidden="true" />
         <p className="text-sm text-text-muted text-balance max-w-md">
           The slide editor could not be opened. Your deck is safe and both downloads still work —

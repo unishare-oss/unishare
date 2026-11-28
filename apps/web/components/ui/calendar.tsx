@@ -5,6 +5,8 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react
 import { DayPicker, getDefaultClassNames, type DayButton } from 'react-day-picker'
 
 import { cn } from '@/lib/utils'
+import type { VariantProps } from 'class-variance-authority'
+
 import { Button, buttonVariants } from '@/components/ui/button'
 
 function Calendar({
@@ -17,7 +19,7 @@ function Calendar({
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>['variant']
+  buttonVariant?: VariantProps<typeof buttonVariants>['variant']
 }) {
   const defaultClassNames = getDefaultClassNames()
 

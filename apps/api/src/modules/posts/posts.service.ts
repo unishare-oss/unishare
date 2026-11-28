@@ -1,9 +1,11 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common'
 import { nanoid } from 'nanoid'
 import {
@@ -20,6 +22,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { FollowsService } from '../follows/follows.service'
 import { TagsService } from '../tags/tags.service'
 import { AiChatStreamEvent, AiSummaryService } from '../ai-summary/ai-summary.service'
+import { buildPracticeQuiz, type PracticeQuiz } from '../ai-summary/practice-quiz-surface'
 import { PrismaService } from '@/prisma/prisma.service'
 import { PostsRepository } from './posts.repository'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -28,11 +31,14 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
 import { AiChatDto, AiChatResponse } from './dto/ai-chat.dto'
+import { PRACTICE_QUIZ_DEFAULT_COUNT, PracticeQuizDto } from './dto/practice-quiz.dto'
 import { AiIndexState, AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { SUPPORTED_MIME_TYPES } from '../ai/extraction/document-extractor.service'
 import { EmbeddingService } from '../ai/embedding/embedding.service'
 import { AuditService } from '../audit/audit.service'
 import { AuditAction } from '../audit/audit.actions'
+
+type PostSummaryOptions = { summary: string; summarizedAt: Date }
 
 @Injectable()
 export class PostsService {
@@ -64,6 +70,7 @@ export class PostsService {
     userId: string,
     departmentId: string | null | undefined,
     scope: UniversityScope,
+    summaryOptions?: PostSummaryOptions,
   ) {
     if (!departmentId) {
       throw new BadRequestException('Please set your department before creating a post')
@@ -82,7 +89,7 @@ export class PostsService {
 
     const shortCode = nanoid(8)
     const post = await this.postsRepository.create(
-      { shortCode, authorId: userId, ...postData },
+      { shortCode, authorId: userId, ...postData, ...(summaryOptions ?? {}) },
       { id: userId },
     )
 
@@ -107,6 +114,10 @@ export class PostsService {
     }
 
     return created ?? post
+  }
+
+  clearSummary(postId: string) {
+    return this.postsRepository.clearSummary(postId)
   }
 
   async findAll(
@@ -603,6 +614,72 @@ export class PostsService {
   ): Promise<AsyncIterable<AiChatStreamEvent>> {
     await this.assertChatable(postId, scope)
     return this.aiSummaryService.chatWithPostStream(postId, dto.messages)
+  }
+
+  /**
+   * A few multiple-choice questions about the post, as an A2UI surface the chat can draw.
+   *
+   * Built from the post's stored summary, as `QuizzesService.generateQuizFromPost` is, and unlike
+   * that method nothing is saved: these are for the student who asked, not a quiz others take.
+   * Same access gate as chat, so it is reachable on exactly the posts chat is.
+   */
+  async practiceQuiz(
+    postId: string,
+    dto: PracticeQuizDto,
+    scope: UniversityScope,
+  ): Promise<PracticeQuiz> {
+    await this.assertChatable(postId, scope)
+
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
+      select: { summary: true },
+    })
+    if (!post?.summary?.trim()) {
+      throw new BadRequestException('This post does not have an AI summary yet')
+    }
+
+    try {
+      const questions = await this.aiSummaryService.generateQuizQuestions(
+        post.summary,
+        dto.count ?? PRACTICE_QUIZ_DEFAULT_COUNT,
+      )
+      return buildPracticeQuiz(questions)
+    } catch (err) {
+      // An unconfigured provider is a deployment state and must stay a 503, as it is for chat.
+      if (err instanceof ServiceUnavailableException) throw err
+      this.logger.warn(`Practice quiz failed for post ${postId}: ${(err as Error).message}`)
+      throw new BadGatewayException('Could not generate practice questions')
+    }
+  }
+
+  /**
+   * Questions a student might ask about this post, for the chat panel's one-tap suggestions.
+   *
+   * Written when the summary is, so this normally just reads them back. A post summarised before
+   * that existed, or one whose summary was supplied by a client, has none stored, so they are
+   * written and saved here on first request and read from the post after that.
+   *
+   * Never an error for a missing summary or a model with nothing to say: the panel falls back to
+   * generic prompts on an empty list, and a suggestion is not worth a failed request. The access
+   * gate still applies, so it is reachable on exactly the posts chat is.
+   */
+  async suggestedQuestions(
+    postId: string,
+    scope: UniversityScope,
+  ): Promise<{ questions: string[] }> {
+    await this.assertChatable(postId, scope)
+
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null, AND: [postInScope(scope)] },
+      select: { summary: true, suggestedQuestions: true },
+    })
+    // No summary, no suggestions, whatever is stored: questions outlive nothing they came from.
+    if (!post?.summary?.trim()) return { questions: [] }
+    if (post.suggestedQuestions.length > 0) return { questions: post.suggestedQuestions }
+
+    // The summary goes in exactly as stored, because the save is conditional on it still matching.
+    const questions = await this.aiSummaryService.generateAndStoreSuggestions(postId, post.summary)
+    return { questions }
   }
 
   /**

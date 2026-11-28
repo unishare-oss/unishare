@@ -83,8 +83,8 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
       <DialogContent className="max-w-md">
         {submitted ? (
           <div className="flex flex-col items-center text-center py-6 gap-3">
-            <div className="w-12 h-12 rounded-full bg-amber/15 flex items-center justify-center">
-              <MessageSquareHeart className="size-6 text-amber" strokeWidth={1.5} />
+            <div className="w-12 h-12 rounded-full bg-brand/15 flex items-center justify-center">
+              <MessageSquareHeart className="size-6 text-brand-edge" strokeWidth={1.5} />
             </div>
             <DialogHeader>
               <DialogTitle>Thank you!</DialogTitle>
@@ -115,21 +115,21 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                     className={cn(
                       'flex flex-col items-start gap-1.5 rounded-[6px] border-2 p-3 text-left transition-all duration-150',
                       selectedType === value
-                        ? 'border-amber bg-amber-subtle'
+                        ? 'border-brand-edge bg-brand-soft'
                         : 'border-border hover:bg-muted',
                     )}
                   >
                     <Icon
                       className={cn(
                         'size-4',
-                        selectedType === value ? 'text-amber' : 'text-text-muted',
+                        selectedType === value ? 'text-brand-edge' : 'text-text-muted',
                       )}
                       strokeWidth={1.5}
                     />
                     <p
                       className={cn(
-                        'text-sm font-medium',
-                        selectedType === value ? 'text-amber' : 'text-foreground',
+                        'text-sm text-foreground',
+                        selectedType === value && 'font-semibold',
                       )}
                     >
                       {label}
@@ -148,7 +148,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                       : 'Share your thoughts, ideas, or suggestions...'
                   }
                   rows={5}
-                  className="rounded-[6px] border-border bg-card px-3 py-3 text-sm placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-amber resize-none"
+                  className="rounded-[6px] border-border bg-card px-3 py-3 text-sm placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-brand resize-none"
                 />
                 {form.formState.errors.message && (
                   <p className="text-xs text-destructive mt-1">
@@ -161,11 +161,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-amber text-primary-foreground hover:bg-amber-hover"
-                >
+                <Button type="submit" disabled={isSubmitting} variant="brand">
                   {isSubmitting ? 'Sending...' : 'Send'}
                 </Button>
               </div>

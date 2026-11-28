@@ -45,6 +45,7 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { UpdatePostStatusDto } from './dto/update-post-status.dto'
 import { ReactToPostDto } from './dto/react-to-post.dto'
 import { AiChatDto, AiChatResponseDto } from './dto/ai-chat.dto'
+import { PracticeQuizDto } from './dto/practice-quiz.dto'
 import { AiIndexStatusDto } from './dto/ai-index-status.dto'
 import { PostDetailEntity } from './entities/post.entity'
 import { PaginatedPostEntity } from './entities/paginated-post.entity'
@@ -289,6 +290,41 @@ export class PostsController {
     @UniversityScopeParam() scope: UniversityScope,
   ) {
     return this.postsService.chatWithPost(id, dto, scope)
+  }
+
+  /**
+   * Questions the student might ask about a post, for the chat panel's one-tap suggestions.
+   * Hidden from Swagger like the other chat helpers; the frontend reads it with `fetch`.
+   */
+  @Get(':id/ai-chat/suggestions')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ThrottleBucket('ai-chat')
+  @ApiExcludeEndpoint()
+  @ResponseMessage('Suggested questions generated')
+  aiChatSuggestions(@Param('id') id: string, @UniversityScopeParam() scope: UniversityScope) {
+    return this.postsService.suggestedQuestions(id, scope)
+  }
+
+  /**
+   * Practice questions about a post, as A2UI messages for the chat to draw.
+   *
+   * Excluded from Swagger like the stream endpoint: the response is A2UI protocol messages, not
+   * a contract Orval should generate a hook for, and the frontend reads it with `fetch`. Shares
+   * the `ai-chat` bucket, because it costs an LLM call just as a chat turn does.
+   */
+  @Post(':id/ai-chat/quiz')
+  @UseGuards(UserThrottlerGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @ThrottleBucket('ai-chat')
+  @ApiExcludeEndpoint()
+  @ResponseMessage('Practice questions generated')
+  aiChatQuiz(
+    @Param('id') id: string,
+    @Body() dto: PracticeQuizDto,
+    @UniversityScopeParam() scope: UniversityScope,
+  ) {
+    return this.postsService.practiceQuiz(id, dto, scope)
   }
 
   /**

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsDateString, IsOptional, IsString } from 'class-validator'
+import { Transform } from 'class-transformer'
+import { IsBoolean, IsDateString, IsOptional, IsString } from 'class-validator'
 
 export class ListExamsDto {
   @ApiProperty()
@@ -19,4 +20,12 @@ export class ListExamsDto {
   @IsOptional()
   @IsString()
   courseId?: string
+
+  @ApiPropertyOptional({
+    description: "Only exams for courses in the signed-in student's final list this year",
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  mine?: boolean
 }

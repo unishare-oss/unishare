@@ -275,7 +275,7 @@ export function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
             size="sm"
             onClick={handleSubmit}
             disabled={!isAuthenticated || !commentText.trim() || isPending}
-            className="bg-amber text-primary-foreground hover:bg-amber-hover"
+            className="bg-brand text-primary-foreground hover:bg-brand-edge"
           >
             {isPending ? 'Posting...' : 'Post'}
           </Button>

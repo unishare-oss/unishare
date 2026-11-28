@@ -28,6 +28,7 @@ const userContentOf = (messages: LlmMessage[]): string =>
 
 describe('AiSummaryService.summarizePost', () => {
   let service: AiSummaryService
+  let suggestionsSpy: jest.SpyInstance
   let prismaMock: any
   let llmMock: any
   let extractorMock: any
@@ -71,6 +72,9 @@ describe('AiSummaryService.summarizePost', () => {
     }).compile()
 
     service = module.get(AiSummaryService)
+    // Suggested questions are their own step, covered at the bottom of this file. Stubbed here so
+    // the model-call counts these tests assert stay about summarisation.
+    suggestionsSpy = jest.spyOn(service, 'generateAndStoreSuggestions').mockResolvedValue([])
   })
 
   /**
@@ -98,6 +102,48 @@ describe('AiSummaryService.summarizePost', () => {
 
     expect(extractorMock.extractFromKey).not.toHaveBeenCalled()
     expect(llmMock.chat).toHaveBeenCalledTimes(1)
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { summary: 'A summary.\n• point', summarizedAt: expect.any(Date) },
+    })
+  })
+
+  it('writes suggested questions from the new summary once it is saved', async () => {
+    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'short chunk one' }])
+
+    await service.summarizePost('p1')
+
+    expect(suggestionsSpy).toHaveBeenCalledWith('p1', 'A summary.\n• point')
+  })
+
+  it('does not re-summarise a post that already has a summary', async () => {
+    prismaMock.post.findUnique.mockResolvedValue({
+      id: 'p1',
+      summary: '• Summary supplied by the client',
+      files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+      tags: [],
+    })
+
+    await service.summarizePost('p1')
+
+    expect(llmMock.chat).not.toHaveBeenCalled()
+    expect(prismaMock.postChunk.findMany).not.toHaveBeenCalled()
+    expect(prismaMock.post.update).not.toHaveBeenCalled()
+    expect(suggestionsSpy).not.toHaveBeenCalled()
+  })
+
+  it('writes a fresh summary after an existing summary has been cleared for a new file', async () => {
+    prismaMock.post.findUnique.mockResolvedValue({
+      id: 'p1',
+      summary: null,
+      files: [{ key: 'new.pdf', mimeType: 'application/pdf' }],
+      tags: [{ tagId: 't1' }],
+    })
+    prismaMock.postChunk.findMany.mockResolvedValue([{ content: 'new file content' }])
+
+    await service.summarizePostWhenIngested('p1')
+
+    expect(llmMock.chat).toHaveBeenCalled()
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: 'p1' },
       data: { summary: 'A summary.\n• point', summarizedAt: expect.any(Date) },
@@ -536,6 +582,20 @@ describe('AiSummaryService.summarizePost', () => {
   })
 
   describe('summarizePostWhenIngested', () => {
+    it('skips summarisation after upload when the post already has a summary', async () => {
+      prismaMock.post.findUnique.mockResolvedValue({
+        id: 'p1',
+        summary: '• Summary supplied by the MCP client',
+        files: [{ key: 'k.pdf', mimeType: 'application/pdf' }],
+        tags: [],
+      })
+
+      await service.summarizePostWhenIngested('p1')
+
+      expect(llmMock.chat).not.toHaveBeenCalled()
+      expect(prismaMock.post.update).not.toHaveBeenCalled()
+    })
+
     it('waits while another file on the post is still ingesting', async () => {
       // Multi-file posts ingest one file per request. Without this the last-but-one completion
       // would summarise from a partial set of chunks, and an N-file post would be summarised N

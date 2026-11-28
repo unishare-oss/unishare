@@ -23,11 +23,11 @@ const NOTIFICATION_META: Record<NotificationEntityType, { label: string; color: 
   POST_REJECTED: { label: 'Rejected', color: 'text-red-400' },
   REQUEST_SUGGESTION_ADDED: { label: 'Suggestion', color: 'text-text-muted' },
   REQUEST_FULFILLED: { label: 'Fulfilled', color: 'text-success' },
-  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-amber' },
+  NEW_POST_FROM_FOLLOWED: { label: 'New Post', color: 'text-brand-edge' },
   COMMENT_ADDED: { label: 'Comment', color: 'text-text-muted' },
   CHAT_MESSAGE: { label: 'Message', color: 'text-info' },
   EXAM_REMINDER: { label: 'Exam', color: 'text-red-400' },
-  MENTION: { label: 'Mention', color: 'text-primary' },
+  MENTION: { label: 'Mention', color: 'text-brand-edge' },
 }
 
 function notificationHref(n: NotificationEntity) {
@@ -105,7 +105,7 @@ export default function NotificationsPage() {
           </div>
 
           {isLoading ? (
-            <div className="flex flex-col border border-border rounded-[6px] overflow-hidden">
+            <div className="flex flex-col overflow-hidden rounded-(--r) border-2 border-line bg-surface">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
@@ -129,7 +129,7 @@ export default function NotificationsPage() {
               <p className="text-sm text-text-muted">No notifications yet.</p>
             </div>
           ) : (
-            <div className="flex flex-col border border-border rounded-[6px] overflow-hidden">
+            <div className="flex flex-col overflow-hidden rounded-(--r) border-2 border-line bg-surface">
               {notifications.map((n, i) => (
                 <button
                   key={n.id}
@@ -137,14 +137,14 @@ export default function NotificationsPage() {
                   className={cn(
                     'flex items-start gap-3 px-5 py-4 text-left transition-colors duration-150',
                     i < notifications.length - 1 && 'border-b border-border',
-                    !n.read && 'bg-amber/[0.04]',
+                    !n.read && 'bg-brand/[0.04]',
                     notificationHref(n) ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <span
                     className={cn(
                       'mt-1.5 shrink-0 size-1.5 rounded-full',
-                      !n.read ? 'bg-amber' : 'bg-transparent',
+                      !n.read ? 'bg-brand' : 'bg-transparent',
                     )}
                   />
                   <div className="flex-1">

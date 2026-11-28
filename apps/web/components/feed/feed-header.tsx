@@ -1,13 +1,11 @@
 'use client'
 
-import { Search, Plus, Hash } from 'lucide-react'
-import Link from 'next/link'
+import { Search, Hash } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/auth-context'
 
 interface TagSuggestion {
   id: string
@@ -103,13 +101,14 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
       <PopoverAnchor asChild>
         <div className="relative w-full">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 size-[18px] text-muted-foreground pointer-events-none"
             strokeWidth={1.5}
           />
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Search posts or #tags…"
+            aria-label="Search your feed"
+            placeholder="Search posts or #tags"
             value={inputValue}
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => setOpen(true)}
@@ -117,7 +116,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
             aria-expanded={showDropdown}
             aria-activedescendant={activeIndex >= 0 ? `tag-option-${activeIndex}` : undefined}
             aria-autocomplete="list"
-            className="pl-9"
+            className="h-auto rounded-(--r-s) border-[1.5px] border-line bg-surface py-[9px] pr-3 pl-[38px] text-sm shadow-none focus-visible:border-sky focus-visible:ring-0 dark:bg-surface md:text-sm"
           />
         </div>
       </PopoverAnchor>
@@ -151,30 +150,7 @@ function SearchInput({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderPro
   )
 }
 
-export function FeedHeader({ searchQuery, onSearchChange, onTagSelect }: FeedHeaderProps) {
-  // Guests browse read-only.
-  const { isAuthenticated } = useAuth()
-  return (
-    <header className="sticky top-0 z-20 bg-card px-6 py-4 flex items-center justify-between gap-4">
-      <h1 className="text-lg font-extrabold tracking-tight text-foreground shrink-0">Feed</h1>
-      <div className="flex items-center gap-3 flex-1 justify-end">
-        <div className="flex flex-1 max-w-xs sm:max-w-[280px]">
-          <SearchInput
-            searchQuery={searchQuery}
-            onSearchChange={onSearchChange}
-            onTagSelect={onTagSelect}
-          />
-        </div>
-        {isAuthenticated && (
-          <Link
-            href="/posts/new"
-            className="inline-flex items-center gap-2 h-9 px-4 bg-amber text-primary-foreground text-sm font-bold rounded-md border-2 border-border-strong shadow-[3px_3px_0_0_var(--shadow-color)] hover:bg-amber-hover active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-150 shrink-0"
-          >
-            <Plus className="size-4" strokeWidth={1.5} />
-            <span className="hidden sm:inline">New Post</span>
-          </Link>
-        )}
-      </div>
-    </header>
-  )
+/** The feed's search box, with tag suggestions. */
+export function FeedHeader(props: FeedHeaderProps) {
+  return <SearchInput {...props} />
 }

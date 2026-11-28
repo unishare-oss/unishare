@@ -9,7 +9,7 @@ import {
   importPublicKey,
   generateRoomKey,
 } from '@/src/lib/crypto'
-import { getPrivateKey } from '@/src/lib/indexeddb'
+import { getPrivateKey, PRIVATE_KEY_CHANGED_EVENT } from '@/src/lib/indexeddb'
 import { useAuth } from '@/contexts/auth-context'
 
 interface CryptoContextValue {
@@ -38,9 +38,25 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
   const [roomKeyVersion, setRoomKeyVersion] = useState(0)
   const [hasPrivateKey, setHasPrivateKey] = useState(false)
 
+  // Re-check when the key is stored or cleared later (created at sign-in, restored, removed);
+  // reading it only on mount left the "key isn't on this device" overlay up until a reload.
   useEffect(() => {
     if (!userId) return
-    getPrivateKey(userId).then((key) => setHasPrivateKey(!!key))
+    let active = true
+    let latestCheck = 0
+    const check = () => {
+      const thisCheck = ++latestCheck
+      getPrivateKey(userId).then((key) => {
+        // Ignore an older read that resolves after a newer one.
+        if (active && thisCheck === latestCheck) setHasPrivateKey(!!key)
+      })
+    }
+    check()
+    window.addEventListener(PRIVATE_KEY_CHANGED_EVENT, check)
+    return () => {
+      active = false
+      window.removeEventListener(PRIVATE_KEY_CHANGED_EVENT, check)
+    }
   }, [userId])
 
   const loadRoomKey = async (roomId: string, encryptedRoomKey: string) => {

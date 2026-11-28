@@ -95,13 +95,13 @@ export default function ChangelogPage() {
         ) : (
           <div className="space-y-8">
             {releases.map((release) => (
-              <div key={release.version} className="border-l-2 border-amber pl-6 pb-8">
+              <div key={release.version} className="border-l-2 border-brand-edge pl-6 pb-8">
                 <div className="flex items-baseline gap-3 mb-4 flex-wrap">
                   <a
                     href={release.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-2xl font-semibold text-amber hover:underline"
+                    className="text-2xl font-semibold text-foreground hover:underline"
                   >
                     {release.version}
                   </a>
@@ -115,12 +115,15 @@ export default function ChangelogPage() {
                     components={{
                       h2: ({ node, ...props }) => (
                         <h3
-                          className="text-lg font-bold mt-4 mb-3 px-3 py-2 rounded-md bg-amber/10 text-amber border-l-2 border-amber"
+                          className="text-lg font-bold mt-4 mb-3 px-3 py-2 rounded-md bg-brand/10 text-foreground border-l-2 border-brand-edge"
                           {...props}
                         />
                       ),
                       h3: ({ node, ...props }) => (
-                        <h4 className="text-base font-semibold mt-3 mb-2 text-amber" {...props} />
+                        <h4
+                          className="text-base font-semibold mt-3 mb-2 text-foreground"
+                          {...props}
+                        />
                       ),
                       p: ({ node, ...props }) => <p className="mb-2" {...props} />,
                       ul: ({ node, ...props }) => (
@@ -131,7 +134,7 @@ export default function ChangelogPage() {
                       ),
                       li: ({ node, ...props }) => <li className="mb-1" {...props} />,
                       a: ({ node, ...props }) => (
-                        <a className="text-amber hover:underline" {...props} />
+                        <a className="text-foreground font-semibold hover:underline" {...props} />
                       ),
                       code: ({ node, ...props }) => (
                         <code

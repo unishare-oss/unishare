@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import {
+  BadGatewayException,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import {
   IngestStatus,
   PostPublicationStatus,
@@ -47,6 +53,8 @@ describe('PostsService', () => {
   let aiSummaryMock: {
     chatWithPost: jest.Mock
     chatWithPostStream: jest.Mock
+    generateQuizQuestions: jest.Mock
+    generateAndStoreSuggestions: jest.Mock
     summarizePost: jest.Mock
   }
 
@@ -60,6 +68,8 @@ describe('PostsService', () => {
     aiSummaryMock = {
       chatWithPost: jest.fn().mockResolvedValue({ reply: 'ok' }),
       chatWithPostStream: jest.fn().mockResolvedValue([]),
+      generateQuizQuestions: jest.fn(),
+      generateAndStoreSuggestions: jest.fn().mockResolvedValue([]),
       summarizePost: jest.fn(),
     }
     repoMock = {
@@ -71,6 +81,7 @@ describe('PostsService', () => {
       findSaved: jest.fn(),
       findByIds: jest.fn().mockResolvedValue([]),
       savePost: jest.fn(),
+      clearSummary: jest.fn().mockResolvedValue(undefined),
       toggleReaction: jest.fn(),
       recordView: jest.fn().mockResolvedValue(undefined),
       update: jest.fn(),
@@ -526,6 +537,49 @@ describe('PostsService', () => {
       expect(aiSummaryMock.summarizePost).toHaveBeenCalledWith('p2')
     })
 
+    it('skips the summary LLM after approval when a summary already exists', async () => {
+      const summaryPrisma = {
+        post: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'p2',
+            summary: 'Client supplied summary',
+            files: [{ key: 'k.pdf', mimeType: PDF }],
+            tags: [],
+          }),
+          update: jest.fn(),
+        },
+        postChunk: { findMany: jest.fn() },
+        file: { count: jest.fn() },
+      }
+      const llm = { enabled: true, chat: jest.fn() }
+      const summaryService = new AiSummaryService(
+        summaryPrisma as never,
+        {} as never,
+        llm as never,
+        {} as never,
+        { enabled: true } as never,
+        {} as never,
+      )
+      const summarizePost = jest.fn(summaryService.summarizePost.bind(summaryService))
+      aiSummaryMock.summarizePost = summarizePost
+      repoMock.findInScope.mockResolvedValue({
+        id: 'p2',
+        authorId: 'author-1',
+        title: 'T',
+        status: PostStatus.PENDING,
+        summary: 'Client supplied summary',
+        author: { name: 'A' },
+      })
+
+      await service.updateStatus('p2', approve, ALL, { id: 'mod-1', role: UserRole.MODERATOR })
+      await new Promise((resolve) => setImmediate(resolve))
+
+      expect(summarizePost).toHaveBeenCalledWith('p2')
+      expect(summaryPrisma.post.findUnique).toHaveBeenCalled()
+      expect(llm.chat).not.toHaveBeenCalled()
+      expect(summaryPrisma.post.update).not.toHaveBeenCalled()
+    })
+
     it.each([
       ['tagPost', (s: PostsService) => s.tagPost('p2', ['x'], 'mod-1', UserRole.MODERATOR, U1)],
       ['untagPost', (s: PostsService) => s.untagPost('p2', 't1', 'mod-1', UserRole.MODERATOR, U1)],
@@ -538,6 +592,27 @@ describe('PostsService', () => {
   })
 
   describe('create in scope', () => {
+    it('passes summary metadata through the post creation path', async () => {
+      const summarizedAt = new Date('2026-11-17T00:00:00.000Z')
+      repoMock.findCourseDepartmentInScope = jest
+        .fn()
+        .mockResolvedValue({ id: 'c1', departmentId: 'd1' })
+      repoMock.create = jest.fn().mockResolvedValue({ id: 'p2' })
+
+      await service.create(
+        { courseId: 'c1', title: 'T', type: PostType.NOTE } as never,
+        'u1',
+        'd1',
+        U1,
+        { summary: 'Client summary', summarizedAt },
+      )
+
+      expect(repoMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ summary: 'Client summary', summarizedAt }),
+        { id: 'u1' },
+      )
+    })
+
     it("gives 404 for another university's course, before the department check", async () => {
       repoMock.findCourseDepartmentInScope = jest.fn().mockResolvedValue(null)
       repoMock.create = jest.fn()
@@ -557,6 +632,165 @@ describe('PostsService', () => {
         service.create({ courseId: 'c2', title: 't' } as never, 'u1', 'd1', U1),
       ).rejects.toThrow(ForbiddenException)
       expect(repoMock.create).not.toHaveBeenCalled()
+    })
+  })
+
+  it('clears a post summary through PostsRepository', async () => {
+    await expect(service.clearSummary('p1')).resolves.toBeUndefined()
+
+    expect(repoMock.clearSummary).toHaveBeenCalledWith('p1')
+  })
+
+  describe('suggestedQuestions', () => {
+    function givenChatablePost(post: { summary: string | null; suggestedQuestions: string[] }) {
+      prismaMock.post.findFirst
+        .mockResolvedValueOnce({
+          id: 'p2',
+          publicationStatus: PostPublicationStatus.PUBLISHED,
+          status: PostStatus.APPROVED,
+        })
+        .mockResolvedValueOnce(post)
+    }
+
+    it('answers 404 for a post outside the university and writes nothing', async () => {
+      prismaMock.post.findFirst.mockResolvedValue(null)
+
+      await expect(service.suggestedQuestions('p2', U1)).rejects.toThrow(NotFoundException)
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
+    })
+
+    it('answers 403 for a post that is not published and approved', async () => {
+      prismaMock.post.findFirst.mockResolvedValue({
+        id: 'p2',
+        publicationStatus: PostPublicationStatus.DRAFT,
+        status: PostStatus.APPROVED,
+      })
+
+      await expect(service.suggestedQuestions('p2', ALL)).rejects.toThrow(ForbiddenException)
+    })
+
+    it('returns no stored questions for a post whose summary is gone', async () => {
+      givenChatablePost({ summary: null, suggestedQuestions: ['Stale question here?'] })
+
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
+    })
+
+    it('returns the questions stored on the post without asking the model', async () => {
+      givenChatablePost({ summary: 'A summary.', suggestedQuestions: ['What is a norm?'] })
+
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({
+        questions: ['What is a norm?'],
+      })
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
+    })
+
+    it('writes and saves them on first request when a post has a summary but none stored', async () => {
+      givenChatablePost({ summary: '  A summary.  ', suggestedQuestions: [] })
+      aiSummaryMock.generateAndStoreSuggestions.mockResolvedValue(['What is a norm?'])
+
+      const result = await service.suggestedQuestions('p2', ALL)
+
+      expect(result).toEqual({ questions: ['What is a norm?'] })
+      // Exactly as stored: the save is conditional on the post still holding this very string.
+      expect(aiSummaryMock.generateAndStoreSuggestions).toHaveBeenCalledWith('p2', '  A summary.  ')
+    })
+
+    it.each([[null], ['  ']])('returns no questions when the summary is %j', async (summary) => {
+      givenChatablePost({ summary, suggestedQuestions: [] })
+
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
+      expect(aiSummaryMock.generateAndStoreSuggestions).not.toHaveBeenCalled()
+    })
+
+    it('returns no questions when the model has none to give', async () => {
+      givenChatablePost({ summary: 'A summary.', suggestedQuestions: [] })
+      aiSummaryMock.generateAndStoreSuggestions.mockResolvedValue([])
+
+      await expect(service.suggestedQuestions('p2', ALL)).resolves.toEqual({ questions: [] })
+    })
+  })
+
+  describe('practiceQuiz', () => {
+    const question = {
+      content: 'What is an eigenvalue?',
+      options: ['A scalar', 'A matrix', 'A vector', 'A basis'],
+      correctAnswer: 0,
+      explanation: 'Av = λv.',
+      difficulty: 'easy' as const,
+    }
+
+    function givenChatablePostWithSummary(summary: string | null = 'A summary of the notes.') {
+      prismaMock.post.findFirst
+        .mockResolvedValueOnce({
+          id: 'p2',
+          publicationStatus: PostPublicationStatus.PUBLISHED,
+          status: PostStatus.APPROVED,
+        })
+        .mockResolvedValueOnce({ summary })
+    }
+
+    it('answers 404 for a post outside the university and generates nothing', async () => {
+      prismaMock.post.findFirst.mockResolvedValue(null)
+
+      await expect(service.practiceQuiz('p2', {}, U1)).rejects.toThrow(NotFoundException)
+      expect(prismaMock.post.findFirst.mock.calls[0][0].where.AND).toEqual([IN_U1])
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it('answers 403 for a post that is not published and approved', async () => {
+      prismaMock.post.findFirst.mockResolvedValue({
+        id: 'p2',
+        publicationStatus: PostPublicationStatus.DRAFT,
+        status: PostStatus.APPROVED,
+      })
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(ForbiddenException)
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it.each([[null], ['   ']])('answers 400 when the post summary is %j', async (summary) => {
+      givenChatablePostWithSummary(summary)
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(BadRequestException)
+      expect(aiSummaryMock.generateQuizQuestions).not.toHaveBeenCalled()
+    })
+
+    it('asks for three questions by default and returns the surface with the answers', async () => {
+      givenChatablePostWithSummary('A summary of the notes.')
+      aiSummaryMock.generateQuizQuestions.mockResolvedValue([question])
+
+      const result = await service.practiceQuiz('p2', {}, ALL)
+
+      expect(aiSummaryMock.generateQuizQuestions).toHaveBeenCalledWith('A summary of the notes.', 3)
+      expect(result.answers).toEqual([
+        { correct: 0, correctLabel: 'A scalar', explanation: 'Av = λv.' },
+      ])
+      expect(result.messages).toHaveLength(3)
+    })
+
+    it('asks for the requested number of questions', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockResolvedValue([question])
+
+      await service.practiceQuiz('p2', { count: 5 }, ALL)
+
+      expect(aiSummaryMock.generateQuizQuestions).toHaveBeenCalledWith(expect.any(String), 5)
+    })
+
+    it('keeps an unconfigured AI provider a 503', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockRejectedValue(
+        new ServiceUnavailableException('AI service not configured'),
+      )
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(ServiceUnavailableException)
+    })
+
+    it('reports any other generation failure as a bad gateway', async () => {
+      givenChatablePostWithSummary()
+      aiSummaryMock.generateQuizQuestions.mockRejectedValue(new Error('Invalid response format'))
+
+      await expect(service.practiceQuiz('p2', {}, ALL)).rejects.toThrow(BadGatewayException)
     })
   })
 })

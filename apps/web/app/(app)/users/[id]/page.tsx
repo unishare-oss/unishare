@@ -102,7 +102,7 @@ function PublicProfileHeader({
           </div>
           {user.yearLevel != null && (
             <p
-              className="font-mono text-[13px] text-amber mt-2 cursor-help"
+              className="font-mono text-[13px] text-foreground font-semibold mt-2 cursor-help"
               title="Based on enrollment year + academic calendar"
             >
               Year {user.yearLevel} Student
@@ -134,7 +134,7 @@ function UserPosts({ userId }: { userId: string }) {
     { query: { select: (r) => r.data } },
   )
   return (
-    <div className="border border-border rounded-[6px] overflow-hidden">
+    <div>
       <PostFeed
         posts={data?.items ?? []}
         loading={isLoading}
@@ -299,7 +299,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
                     className={cn(
                       'font-mono text-xs uppercase tracking-wider px-4 py-3 border-b-2 transition-colors',
                       activeTab === t.key
-                        ? 'border-amber text-amber font-medium'
+                        ? 'border-brand-edge text-foreground font-medium'
                         : 'border-transparent text-text-muted hover:text-foreground',
                     )}
                   >

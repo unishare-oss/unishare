@@ -5,9 +5,12 @@ import { THEME_COOKIE } from '@unishare-oss/unitheme'
 
 const { getCookie } = vi.hoisted(() => ({ getCookie: vi.fn() }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: getCookie }) }))
-vi.mock('next/font/google', () => ({
-  Space_Grotesk: () => ({ variable: 'space-grotesk' }),
-  Fira_Code: () => ({ variable: 'fira-code' }),
+const fontOptions = vi.hoisted(() => [] as { src: unknown; variable: string }[])
+vi.mock('next/font/local', () => ({
+  default: (options: { src: unknown; variable: string }) => {
+    fontOptions.push(options)
+    return { variable: `var${options.variable}` }
+  },
 }))
 vi.mock('next/script', () => ({ default: () => null }))
 vi.mock('@/components/ui/sonner', () => ({ Toaster: () => null }))
@@ -53,4 +56,30 @@ describe('server-rendered theme', () => {
       expect(html).not.toContain('alert(1)')
     },
   )
+})
+
+describe('fonts', () => {
+  it('loads the four self-hosted fonts', async () => {
+    getCookie.mockReturnValue(undefined)
+    const html = renderToString(await RootLayout({ children: null }))
+    const bodyClass = html.match(/<body class="([^"]+)"/)?.[1].split(' ')
+    expect(bodyClass).toEqual(
+      expect.arrayContaining([
+        'var--font-baloo',
+        'var--font-lexend',
+        'var--font-literata',
+        'var--font-plex-mono',
+      ]),
+    )
+    const paths = fontOptions.flatMap(({ src }) =>
+      typeof src === 'string' ? [src] : (src as { path: string }[]).map((face) => face.path),
+    )
+    expect(paths.sort()).toEqual([
+      '../fonts/Baloo2.woff2',
+      '../fonts/IBMPlexMono-Bold.woff2',
+      '../fonts/IBMPlexMono-Medium.woff2',
+      '../fonts/Lexend.woff2',
+      '../fonts/Literata.woff2',
+    ])
+  })
 })

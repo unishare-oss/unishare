@@ -82,8 +82,8 @@ function getCommentLayerStyle(depth: number): CommentLayerStyle {
 
   const palette = [
     {
-      accentClassName: 'bg-amber',
-      badgeClassName: 'text-amber',
+      accentClassName: 'bg-brand',
+      badgeClassName: 'text-brand',
     },
     {
       accentClassName: 'bg-info',
@@ -147,13 +147,13 @@ export function CommentThreadItem({
     <div
       id={`comment-${comment.id}`}
       className={cn(
-        'group py-4 scroll-mt-24',
+        'group py-3 scroll-mt-24',
         isTopLevelComment && 'border-b border-border/70 last:border-b-0',
-        depth > 0 && 'pb-0',
+        depth > 0 && 'pt-2 pb-0',
         layerStyle.indentClassName,
       )}
     >
-      <div className={cn(depth > 0 && 'pt-1')}>
+      <div className={cn(depth > 0 && 'pt-0.5')}>
         <div className={cn('relative', depth > 0 && 'pl-5')}>
           {depth > 0 && (
             <button
@@ -174,7 +174,7 @@ export function CommentThreadItem({
               />
             </button>
           )}
-          <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="mb-1 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <Link href={`/users/${comment.userId}`} className="shrink-0">
@@ -192,7 +192,7 @@ export function CommentThreadItem({
                 {isOriginalPosterComment && (
                   <Badge
                     variant="outline"
-                    className="h-5 rounded-full border-amber/30 bg-amber-subtle/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-amber"
+                    className="h-5 rounded-full border-brand/30 bg-brand-soft/60 px-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-brand-edge"
                   >
                     OP
                   </Badge>
@@ -239,7 +239,7 @@ export function CommentThreadItem({
                   ? comment.content
                   : renderWithMentions(comment.content, comment.mentions, 'text-primary')}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-1 pl-8.5">
+              <div className="mt-1 flex flex-wrap items-center gap-1 pl-8.5">
                 {canReply && (
                   <Button
                     type="button"
@@ -297,8 +297,8 @@ export function CommentThreadItem({
             </div>
           )}
           {hasReplies && (
-            <div className="mt-3 pl-8.5">
-              <span className="inline-flex h-8 items-center">
+            <div className="mt-0.5 pl-8.5">
+              <span className="inline-flex h-6 items-center">
                 <ChevronDown
                   className={cn(
                     'mr-1 size-3 transition-transform',
@@ -324,7 +324,7 @@ export function CommentThreadItem({
         </div>
 
         {hasReplies && areRepliesOpen && (
-          <div className="mt-2">
+          <div className="mt-1">
             {comment.children?.map((child) => (
               <CommentThreadItem
                 key={child.id}
