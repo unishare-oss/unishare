@@ -5,7 +5,7 @@ import { PostFeed } from './post-feed'
 
 vi.mock('@/contexts/auth-context', () => ({ useAuth: () => ({ isAuthenticated: false }) }))
 vi.mock('@/hooks/use-toggle-saved-post', () => ({
-  useToggleSavedPost: () => ({ isSaved: false, toggle: () => undefined }),
+  useToggleSavedPost: () => ({ isSaved: false, pending: false, toggle: () => undefined }),
 }))
 
 afterEach(cleanup)

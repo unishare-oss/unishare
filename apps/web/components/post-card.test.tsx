@@ -7,6 +7,7 @@ import type { ApiPost } from '@/lib/api-types'
 const mocks = vi.hoisted(() => ({
   isAuthenticated: true,
   isSaved: false,
+  savePending: false,
   toggleSaved: vi.fn(),
   markRead: vi.fn(),
   toastSuccess: vi.fn(),
@@ -17,7 +18,11 @@ vi.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({ isAuthenticated: mocks.isAuthenticated }),
 }))
 vi.mock('@/hooks/use-toggle-saved-post', () => ({
-  useToggleSavedPost: () => ({ isSaved: mocks.isSaved, toggle: mocks.toggleSaved }),
+  useToggleSavedPost: () => ({
+    isSaved: mocks.isSaved,
+    pending: mocks.savePending,
+    toggle: mocks.toggleSaved,
+  }),
 }))
 vi.mock('@/lib/store', () => ({
   useUIStore: (select: (s: object) => unknown) =>
@@ -53,6 +58,7 @@ describe('PostCard right-click menu', () => {
   beforeEach(() => {
     mocks.isAuthenticated = true
     mocks.isSaved = false
+    mocks.savePending = false
     vi.clearAllMocks()
   })
 
@@ -98,6 +104,26 @@ describe('PostCard right-click menu', () => {
     expect(screen.getByRole('menuitem', { name: 'Remove from saved' })).toBeInTheDocument()
   })
 
+  it('disables Save while a change is still on its way', async () => {
+    mocks.savePending = true
+    render(<PostCard post={post} />)
+
+    await openMenu()
+
+    expect(screen.getByRole('menuitem', { name: 'Save' })).toHaveAttribute('data-disabled')
+  })
+
+  it('shows the error toast when the page has no clipboard', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
+    render(<PostCard post={post} />)
+
+    await openMenu()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Copy link' }))
+
+    expect(mocks.toastError).toHaveBeenCalledWith('Could not copy the link')
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
   it('opens the report dialog from the menu', async () => {
     render(<PostCard post={post} />)
 
@@ -129,6 +155,8 @@ describe('PostCard hover', () => {
     expect(card.className).toContain('hover:-translate-y-0.5')
     expect(card.className).toContain('has-[a:focus-visible]:shadow-lift')
     expect(card.className).toContain('motion-reduce:hover:translate-y-0')
+    // A press settles the card even while the title keeps keyboard focus.
+    expect(card.className).toContain('has-[a:focus-visible]:active:translate-y-0')
     expect(screen.getByRole('link', { name: 'Linear algebra notes' }).className).not.toContain(
       'hover:underline',
     )

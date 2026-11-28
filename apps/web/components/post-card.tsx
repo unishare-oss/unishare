@@ -59,16 +59,24 @@ export function PostCard({ post }: { post: ApiPost }) {
   const isRead = useUIStore((s) => s.readPostIds.includes(post.id))
   const markRead = useUIStore((s) => s.markRead)
   const { isAuthenticated } = useAuth()
-  const { isSaved, toggle: toggleSaved } = useToggleSavedPost(post)
+  const { isSaved, pending: savePending, toggle: toggleSaved } = useToggleSavedPost(post)
   const [reportOpen, setReportOpen] = useState(false)
   const canReport = isAuthenticated && !post.isOwner
   const href = `/posts/${post.id}`
 
   function copyLink() {
-    navigator.clipboard
-      .writeText(`${window.location.origin}/s/${post.shortCode}`)
-      .then(() => toast.success('Link copied'))
-      .catch(() => toast.error('Could not copy the link'))
+    // The clipboard only exists on secure pages, and reading it can throw before any promise
+    // exists, so both a missing API and a refused write end in the same toast.
+    const failed = () => toast.error('Could not copy the link')
+    try {
+      if (!navigator.clipboard) return failed()
+      navigator.clipboard
+        .writeText(`${window.location.origin}/s/${post.shortCode}`)
+        .then(() => toast.success('Link copied'))
+        .catch(failed)
+    } catch {
+      failed()
+    }
   }
 
   const author = post.author
@@ -101,7 +109,10 @@ export function PostCard({ post }: { post: ApiPost }) {
         'transition-[translate,box-shadow,border-color] duration-200 ease-out',
         'hover:-translate-y-0.5 hover:border-edge hover:shadow-lift',
         'has-[a:focus-visible]:-translate-y-0.5 has-[a:focus-visible]:border-edge has-[a:focus-visible]:shadow-lift',
+        // A press settles the card even while the title keeps keyboard focus: `:has()` outweighs
+        // `:active`, so the focus lift needs its own pressed reset.
         'active:translate-y-0 active:shadow-none',
+        'has-[a:focus-visible]:active:translate-y-0 has-[a:focus-visible]:active:shadow-none',
         'motion-reduce:transition-[box-shadow,border-color] motion-reduce:hover:translate-y-0 motion-reduce:has-[a:focus-visible]:translate-y-0',
       )}
     >
@@ -171,7 +182,7 @@ export function PostCard({ post }: { post: ApiPost }) {
           <Link2 aria-hidden="true" />
           Copy link
         </ContextMenuItem>
-        <ContextMenuItem onSelect={toggleSaved}>
+        <ContextMenuItem onSelect={toggleSaved} disabled={savePending}>
           {isSaved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
           {isSaved ? 'Remove from saved' : 'Save'}
         </ContextMenuItem>
